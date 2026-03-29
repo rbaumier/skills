@@ -1,0 +1,7 @@
+{
+  "name": "language-typescript",
+  "private": true,
+  "dependencies": {
+    "eslint-plugin-sonarjs": "^4.0.0"
+  }
+}
