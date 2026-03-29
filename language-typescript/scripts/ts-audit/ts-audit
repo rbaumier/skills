@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+CONFIG='{"plugins":["typescript","import","unicorn","jsdoc","promise","vue"],"jsPlugins":["eslint-plugin-sonarjs"],"overrides":[{"files":["*.vue"],"rules":{"import/no-default-export":"off","unicorn/filename-case":"off","jsdoc/require-jsdoc":"off","jsdoc/require-description":"off","jsdoc/require-example":"off","no-magic-numbers":"off","typescript/consistent-type-imports":"off"}}],"rules":{"typescript/no-explicit-any":"error","typescript/no-unsafe-type-assertion":"error","typescript/array-type":["error",{"default":"array"}],"typescript/consistent-type-imports":"error","typescript/no-non-null-assertion":"error","typescript/prefer-as-const":"error","typescript/prefer-ts-expect-error":"error","typescript/no-unsafe-function-type":"error","typescript/no-require-imports":"error","import/no-default-export":"error","no-else-return":"error","max-depth":["error",{"max":2}],"max-params":["error",{"max":3}],"no-magic-numbers":["error",{"ignore":[0,1,-1],"ignoreArrayIndexes":true,"ignoreDefaultValues":true}],"prefer-const":"error","no-var":"error","no-empty-catch-clause":"error","unicorn/filename-case":["error",{"case":"kebabCase"}],"unicorn/no-array-for-each":"error","unicorn/prefer-array-flat-map":"error","oxc/no-accumulating-spread":"error","oxc/no-barrel-file":"error","oxc/misrefactored-assign-op":"error","promise/catch-or-return":"error","promise/always-return":"error","promise/no-multiple-resolved":"error","promise/no-nesting":"error","promise/no-return-wrap":"error","promise/prefer-await-to-then":"error","promise/prefer-await-to-callbacks":"error","promise/no-return-in-finally":"error","promise/param-names":"error","jsdoc/require-jsdoc":"error","jsdoc/require-description":"error","jsdoc/require-example":"error","sonarjs/cognitive-complexity":["error",5],"sonarjs/no-identical-functions":"error","sonarjs/no-duplicate-string":"error","sonarjs/no-empty-collection":"error","sonarjs/no-gratuitous-expressions":"error","sonarjs/no-all-duplicated-branches":"error","sonarjs/no-redundant-assignments":"error","sonarjs/no-alphabetical-sort":"error","sonarjs/no-collapsible-if":"error","sonarjs/no-redundant-boolean":"error","sonarjs/no-nested-template-literals":"error","sonarjs/prefer-immediate-return":"error","sonarjs/no-hardcoded-passwords":"error","sonarjs/no-hardcoded-ip":"error","sonarjs/no-clear-text-protocols":"error","sonarjs/code-eval":"error"}}'
+
+usage() {
+  echo "Usage: ts-audit [--last-commit | --working-tree | --staged | --commit <sha>] [path]"
+  echo ""
+  echo "Modes:"
+  echo "  --last-commit    Lint files changed in the last commit"
+  echo "  --commit <sha>   Lint files changed in a specific commit"
+  echo "  --working-tree   Lint files modified in the working tree"
+  echo "  --staged         Lint staged files only"
+  echo "  (no flag)        Lint all files in path (default: .)"
+  exit 0
+}
+
+MODE="all"
+TARGET=""
+COMMIT_SHA=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --last-commit) MODE="last-commit"; shift ;;
+    --commit) MODE="commit"; COMMIT_SHA="$2"; shift 2 ;;
+    --working-tree) MODE="working-tree"; shift ;;
+    --staged) MODE="staged"; shift ;;
+    -h|--help) usage ;;
+    *) TARGET="$1"; shift ;;
+  esac
+done
+
+PKG_RUNNER=$(command -v bunx >/dev/null 2>&1 && echo "bunx" || echo "npx")
+
+TMP_CONFIG=$(mktemp /tmp/oxlintrc.XXXXXX.json)
+echo "$CONFIG" > "$TMP_CONFIG"
+trap 'rm -f "$TMP_CONFIG"' EXIT
+
+export NODE_PATH="$SKILL_DIR/node_modules"
+
+get_files() {
+  local diff_args="$1"
+  eval "git diff $diff_args --name-only --diff-filter=d --relative" | grep -E '\.(ts|tsx|js|jsx|mts|mjs|vue)$' || true
+}
+
+lint_files() {
+  local files="$1"
+  local label="$2"
+  if [[ -z "$files" ]]; then
+    echo "No TS/JS/Vue files changed in $label."
+    exit 0
+  fi
+  echo "$files" | xargs $PKG_RUNNER oxlint@latest --vue-plugin -c "$TMP_CONFIG"
+}
+
+case "$MODE" in
+  last-commit)
+    lint_files "$(get_files "HEAD~1")" "last commit"
+    ;;
+  commit)
+    lint_files "$(get_files "${COMMIT_SHA}~1 ${COMMIT_SHA}")" "commit ${COMMIT_SHA}"
+    ;;
+  working-tree)
+    lint_files "$(get_files "")" "working tree"
+    ;;
+  staged)
+    lint_files "$(get_files "--cached")" "staged files"
+    ;;
+  all)
+    $PKG_RUNNER oxlint@latest --vue-plugin -c "$TMP_CONFIG" "${TARGET:-.}"
+    ;;
+esac
