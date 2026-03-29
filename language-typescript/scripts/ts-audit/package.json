@@ -1,0 +1,7 @@
+{
+  "name": "ts-audit",
+  "private": true,
+  "dependencies": {
+    "eslint-plugin-sonarjs": "^4.0.2"
+  }
+}

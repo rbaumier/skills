@@ -1,0 +1,72 @@
+{
+  "plugins": ["typescript", "import", "unicorn", "jsdoc", "promise", "vue"],
+  "jsPlugins": [
+    { "name": "sonarjs-js", "specifier": "__SONARJS_PATH__" }
+  ],
+  "overrides": [
+    {
+      "files": ["*.vue"],
+      "rules": {
+        "import/no-default-export": "off",
+        "unicorn/filename-case": "off",
+        "jsdoc/require-jsdoc": "off",
+        "jsdoc/require-description": "off",
+        "jsdoc/require-example": "off",
+        "no-magic-numbers": "off",
+        "typescript/consistent-type-imports": "off"
+      }
+    }
+  ],
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/array-type": ["error", { "default": "array" }],
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/prefer-as-const": "error",
+    "typescript/prefer-ts-expect-error": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-require-imports": "error",
+    "import/no-default-export": "error",
+    "no-else-return": "error",
+    "max-depth": ["error", { "max": 2 }],
+    "max-params": ["error", { "max": 3 }],
+    "no-magic-numbers": ["error", { "ignore": [0, 1, -1], "ignoreArrayIndexes": true, "ignoreDefaultValues": true }],
+    "prefer-const": "error",
+    "no-var": "error",
+    "no-empty-catch-clause": "error",
+    "unicorn/filename-case": ["error", { "case": "kebabCase" }],
+    "unicorn/no-array-for-each": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "oxc/no-accumulating-spread": "error",
+    "oxc/no-barrel-file": "error",
+    "oxc/misrefactored-assign-op": "error",
+    "promise/catch-or-return": "error",
+    "promise/always-return": "error",
+    "promise/no-multiple-resolved": "error",
+    "promise/no-nesting": "error",
+    "promise/no-return-wrap": "error",
+    "promise/prefer-await-to-then": "error",
+    "promise/prefer-await-to-callbacks": "error",
+    "promise/no-return-in-finally": "error",
+    "promise/param-names": "error",
+    "jsdoc/require-jsdoc": "error",
+    "jsdoc/require-description": "error",
+    "jsdoc/require-example": "error",
+    "sonarjs-js/cognitive-complexity": ["error", 5],
+    "sonarjs-js/no-identical-functions": "error",
+    "sonarjs-js/no-empty-collection": "error",
+    "sonarjs-js/no-gratuitous-expressions": "error",
+    "sonarjs-js/no-all-duplicated-branches": "error",
+    "sonarjs-js/no-redundant-assignments": "error",
+    "sonarjs-js/no-alphabetical-sort": "error",
+    "sonarjs-js/no-collapsible-if": "error",
+    "sonarjs-js/no-redundant-boolean": "error",
+    "sonarjs-js/no-nested-template-literals": "error",
+    "sonarjs-js/prefer-immediate-return": "error",
+    "sonarjs-js/no-hardcoded-passwords": "error",
+    "sonarjs-js/no-hardcoded-ip": "error",
+    "sonarjs-js/no-clear-text-protocols": "error",
+    "sonarjs-js/code-eval": "error"
+  }
+}
