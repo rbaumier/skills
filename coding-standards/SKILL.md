@@ -83,10 +83,10 @@ Comments lower cognitive load. Good comments prevent reading code at all.
 - **Why** — reason behind non-obvious code. "What" is readable; "why" is invisible
 - **Teacher** — domain knowledge (math, protocol, data structure) the reader lacks
 - **Checklist** — "if you modify X, also update Y" when language can't enforce coupling
-- **Guide** — section dividers, rhythm, confirm understanding. Use liberally
+- **Guide** — section dividers for long functions with multiple phases. Never for type/const/import grouping — language keywords are the guide
 
 **Never write these:**
-- **Trivial** — cognitive load >= code's (`i++ // increment i`)
+- **Trivial** — cognitive load >= code's (`i++ // increment i`, `// --- Types ---`)
 - **Backup** — commented-out code. Git is your backup
 - **Debt** — `TODO`/`FIXME` without tracking issue
 
