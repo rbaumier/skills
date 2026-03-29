@@ -42,7 +42,7 @@ MANDATORY: After ANY modification to TypeScript/JavaScript files, you MUST run t
 </EXTREMELY-IMPORTANT>
 
 ```bash
-~/.claude/skills/language-typescript/ts-audit --working-tree
+~/.claude/skills/language-typescript/scripts/ts-audit --working-tree
 ```
 
 Fix all errors before committing. Modes: `--working-tree`, `--last-commit`, `--commit <sha>`, `--staged`, or no flag for full scan.
