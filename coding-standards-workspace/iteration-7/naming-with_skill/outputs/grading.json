@@ -1,0 +1,38 @@
+{
+  "task": "naming",
+  "iteration": 7,
+  "variant": "with_skill",
+  "overall": "FAIL",
+  "score": "3/6",
+  "criteria": {
+    "intent-over-implementation": {
+      "pass": false,
+      "notes": "FAIL. (1) 'processAccountClosure' uses the vague verb 'process' which is implementation-oriented. Should convey intent: e.g. closeAccount, finalizeAccountClosure. (2) Parameter named 'data' is completely generic -- should be 'account' or 'accountData' at minimum to convey intent. (3) 'formatter' parameter is declared but NEVER USED in the function body -- dead parameter."
+    },
+    "symmetry": {
+      "pass": true,
+      "notes": "startTimestamp/endTimestamp show proper symmetry. closureResult/amount/user return shape is consistent."
+    },
+    "boolean-prefix": {
+      "pass": true,
+      "notes": "isActive correctly uses 'is' prefix."
+    },
+    "no-mental-mapping": {
+      "pass": false,
+      "notes": "FAIL. 'data' requires mental mapping -- reader must look at the type annotation (AccountData) to understand what it represents. The parameter name alone communicates nothing."
+    },
+    "explicit-units": {
+      "pass": true,
+      "notes": "elapsedMs has explicit millisecond unit suffix. startTimestamp/endTimestamp imply time. bufferSize could be more explicit (bufferSizeBytes?) but is borderline acceptable."
+    },
+    "no-acronyms": {
+      "pass": true,
+      "notes": "No problematic acronyms. 'Ms' is a standard abbreviation for milliseconds."
+    }
+  },
+  "critical_issues": [
+    "formatter parameter is declared but never used -- dead code that should have been removed or utilized.",
+    "Function name 'processAccountClosure' violates intent-over-implementation with the vague verb 'process'.",
+    "Parameter 'data: AccountData' violates both intent-over-implementation and no-mental-mapping."
+  ]
+}

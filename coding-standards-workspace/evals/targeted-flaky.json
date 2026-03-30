@@ -1,0 +1,39 @@
+{
+  "skill_name": "coding-standards",
+  "description": "Targeted prompts for 3 flaky assertions — 1 prompt per assertion",
+  "evals": [
+    {
+      "id": "t1",
+      "name": "intent-over-implementation-targeted",
+      "prompt": "Refactor this function to improve naming:\n\n```typescript\nfunction processData(records: DataRecord[]) {\n  const processed = records.filter(r => r.active).map(r => ({\n    ...r,\n    score: computeScore(r)\n  }));\n  return processed;\n}\n```\n\nThe function is used to score active customer records for a loyalty program.",
+      "assertions": [
+        {
+          "text": "intent-over-implementation",
+          "description": "Function renamed from processData to something intent-based like scoreActiveCustomers or computeLoyaltyScores — 'process' must not appear in ANY function name"
+        }
+      ]
+    },
+    {
+      "id": "t2",
+      "name": "no-boolean-flags-targeted",
+      "prompt": "Refactor this function to improve control flow:\n\n```typescript\nfunction sendNotification(userId: string, message: string, isUrgent: boolean) {\n  if (isUrgent) {\n    return pushToPhone(userId, message, { priority: 'critical' });\n  }\n  return queueEmail(userId, message);\n}\n```",
+      "assertions": [
+        {
+          "text": "no-boolean-flags",
+          "description": "isUrgent boolean parameter eliminated — must produce TWO separate independently callable functions (e.g. sendUrgentNotification + sendNormalNotification). A single function with a ternary or if/else on a boolean parameter is NOT a fix. A single function accepting an options object with 'urgent' field is NOT a fix either."
+        }
+      ]
+    },
+    {
+      "id": "t3",
+      "name": "bound-every-input-targeted",
+      "prompt": "Refactor this function to fix data and type issues:\n\n```typescript\nconst TAX_RATES: Record<string, number> = { US: 0.08, CA: 0.13, UK: 0.20 };\n\nfunction calculateTax(amount: number, country: string): number {\n  const rate = TAX_RATES[country] ?? 0;\n  return amount * rate;\n}\n```",
+      "assertions": [
+        {
+          "text": "bound-every-input",
+          "description": "Unknown country must throw/return error — must NOT use ?? 0, ?? defaultValue, or any silent fallback. The function must reject unknown countries with an explicit error (throw, Result error, or guard clause that stops execution). Falling back to 0 or any default tax rate hides bugs."
+        }
+      ]
+    }
+  ]
+}

@@ -559,6 +559,12 @@ Agent found new rationalization? Add explicit counter. Re-test until bulletproof
 - Plugging holes systematically
 - Meta-testing techniques
 
+## Key Learnings
+
+1. **Be extremely concise.** Sacrifice grammar for concision. Every word must earn its place.
+2. **Positives beat negatives.** Reformulate "DO NOT do X" as "DO Y instead" — followed more reliably. Exception: keep 3-5 absolute safety interdictions as negatives (e.g. "NEVER skip tests", "NEVER deploy untested skills").
+3. **Targeted tests over section tests.** 1 prompt = 1 assertion is faster and more precise than 1 prompt = N assertions. Use targeted prompts to iterate on flaky assertions. Reserve section prompts for full sweeps.
+
 ## Anti-Patterns
 
 ### ❌ Narrative Example

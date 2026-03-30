@@ -1,0 +1,29 @@
+{
+  "task": "data-types",
+  "iteration": 7,
+  "variant": "with_skill",
+  "overall": "FAIL",
+  "score": "3/5",
+  "criteria": {
+    "immutable-by-default": {
+      "pass": true,
+      "notes": "readonly on CartItem.weight, Cart.items (readonly array), ShippingResult.itemCosts. Primitives are inherently immutable."
+    },
+    "no-magic-numbers": {
+      "pass": true,
+      "notes": "All numeric values extracted to named constants: HEAVY_WEIGHT_KG, MEDIUM_WEIGHT_KG, rates, surcharges, multipliers, LIGHT_FLAT_COST."
+    },
+    "strict-typing": {
+      "pass": true,
+      "notes": "CountryCode union type exists. Interfaces for Cart, CartItem, ShippingResult. Function signatures are typed. The 'as CountryCode' cast in getCountryMultiplier is a smell but types are present."
+    },
+    "externalize-config": {
+      "pass": false,
+      "notes": "All configuration (rates, thresholds, multipliers, country codes) is hardcoded as module-level constants. Rule requires externalization to env vars or a config/defaults file. These are business parameters that change across environments."
+    },
+    "bound-every-input": {
+      "pass": false,
+      "notes": "CRITICAL FAIL. (1) getCountryMultiplier silently falls back to INTERNATIONAL_MULTIPLIER via ?? for unknown countries -- rule explicitly says 'REJECT invalid, never silent fallback/default'. (2) No validation that item weights are positive -- negative or zero weights silently produce LIGHT_FLAT_COST. (3) Empty cart (items.length === 0) silently returns totalShipping: 0 instead of rejecting."
+    }
+  }
+}

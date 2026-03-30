@@ -17,7 +17,7 @@ description: Enforce engineering standards — readability, robustness, maintain
 
 ## Naming
 
-- Intent over implementation: `closeAccount()` instead of `setStatusToClosed()` — names describe the business action, not the mechanical step. Vague names like `process`, `data`, `handle` are almost always wrong; name what you're actually doing and what the data represents
+- **Intent over implementation**: `closeAccount()` instead of `setStatusToClosed()` — names describe the business action, not the mechanical step. **Banned words in function names: `process`, `handle`, `data`, `do`, `execute`, `run`, `perform`** — these are vague verbs that describe mechanics. Replace with the specific business action: `processOrder` → `fulfillOrder`, `handlePayment` → `chargeCustomer`, `processData` → `scoreCustomers`. In reviews: if any function contains a banned word, rename it
 - Symmetry: `get/set`, `add/remove`, `start/stop` — asymmetric pairs confuse readers
 - Booleans: `is`/`has`/`should`/`can` prefix. Use positive form (`isEnabled` instead of `isNotDisabled`)
 - Use full words for all names (`user` instead of `u`, `account` instead of `acct`). This applies to object properties too — if you receive `d.ts`, `d.buf`, `d.uid`, destructure into meaningful names: `const { timestamp, buffer, userId } = record`. Remove unused parameters entirely
@@ -27,7 +27,7 @@ description: Enforce engineering standards — readability, robustness, maintain
 
 - Guard clauses, exit early. Keep `return` paths flat. Max 2 indent levels
 - `switch`/object maps over `if/else` chains
-- **Split boolean flags into two named functions**: `processUrgentOrder()` / `processNormalOrder()` instead of `processOrder(order, isUrgent)`. A ternary selecting between functions is still a boolean flag. Two independently callable units must exist
+- **Split boolean flags into two named functions**: `sendUrgentNotification()` / `sendNormalNotification()` instead of `sendNotification(msg, isUrgent)`. **A single function with a ternary, if/else, or options object is NOT a fix** — the boolean flag still exists as a parameter. The result must be two independently callable functions with zero boolean parameters. In reviews: if a function accepts a boolean that controls branching, split it into two functions
 - Too much state → state machine
 - Return new data instead of mutating input objects
 - `Promise.all` for independent async ops
@@ -47,7 +47,7 @@ description: Enforce engineering standards — readability, robustness, maintain
 - Extract all literals to named constants
 - Strict typing required everywhere
 - Externalize config — shipping rates, thresholds, multipliers belong in config objects, not inline constants. Business params must be changeable without editing function bodies
-- **Bound every input — reject, always reject** — every parameter from outside your trust boundary must be validated and **rejected** if invalid. `weight` must be `> 0 && < MAX_WEIGHT` or throw/return error. `country` must be in an allowed set or throw/return error — **always throw on unknown values, use explicit error instead of `?? defaultValue`**. `couponCode` must match a known pattern or throw/return error. Silent defaults hide bugs. Add guard clauses at the top that **stop execution** on bad input
+- **Bound every input — reject, always reject** — every parameter from outside your trust boundary must be validated and **rejected** if invalid. `weight` must be `> 0 && < MAX_WEIGHT` or throw/return error. `country` must be in an allowed set or throw/return error. `couponCode` must match a known pattern or throw/return error. **NEVER use `?? defaultValue`, `?? 0`, `|| fallback`, or any silent default for unknown/invalid inputs** — these hide bugs. The only correct response to invalid input is to **throw an error or return a Result error that stops execution**. In reviews: if you see `?? value` or `|| default` on an external input, flag it as a silent-failure bug and replace with a throw/guard clause
 - Pin all versions — lock exact versions in lockfile
 
 ## Error Handling
