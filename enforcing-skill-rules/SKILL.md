@@ -38,7 +38,10 @@ Every rule = 1 assertion. No rule left unmeasured.
 
 ## Step 2: Write Trap Prompts
 
-Save to `{skill}-workspace/evals/evals.json`. 1 prompt per section — realistic code/scenario that **violates every rule in that section**.
+Save to `{skill}-workspace/evals/evals.json`. Two modes:
+
+**Section prompts** (full sweep): 1 prompt per section — realistic code/scenario that violates every rule in that section.
+**Targeted prompts** (single assertion): 1 prompt testing exactly 1 rule. Use for re-testing flaky assertions — faster and more precise than re-running full sections.
 
 - Code sections (naming, functions, data-types): "Refactor this code" + violating code
 - Review sections (architecture): "Review this and list issues" + bad code
