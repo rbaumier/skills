@@ -1,0 +1,325 @@
+{
+  "sections": [
+    {
+      "name": "async-data-fetching",
+      "assertions": [
+        {
+          "text": "promise-all-independent",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "4 sequential awaits replaced with `Promise.all`",
+          "evidence_without": "Parallelize all independent queries ... await Promise.all([...])"
+        },
+        {
+          "text": "start-early-await-late",
+          "with_skill": false,
+          "without_skill": false,
+          "evidence_with": "Not mentioned -- uses Promise.all but does not discuss starting promises early and awaiting late",
+          "evidence_without": "Not mentioned -- uses Promise.all but does not discuss start-early-await-late pattern"
+        },
+        {
+          "text": "after-non-blocking",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Analytics moved to `after()` callback ... after(() => { analytics.track(...) })",
+          "evidence_without": "Fire-and-forget analytics (non-blocking) ... Intentionally not awaited -- analytics must never block the response"
+        },
+        {
+          "text": "lru-cross-request",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Cache check moved before DB queries ... Check cache FIRST -- skip all work if hit",
+          "evidence_without": "Cache check moved before DB queries ... Eliminates all DB/network cost on cache hit"
+        },
+        {
+          "text": "react-cache-dedup",
+          "with_skill": false,
+          "without_skill": false,
+          "evidence_with": "No mention of React.cache() or per-request dedup",
+          "evidence_without": "No mention of React.cache() or per-request dedup"
+        }
+      ]
+    },
+    {
+      "name": "bundle-loading",
+      "assertions": [
+        {
+          "text": "dynamic-imports",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "const PDFExporter = dynamic(() => import('@/components/PDFExporter')...) ... const AIAssistant = dynamic(() => import('@/components/AIAssistant')...)",
+          "evidence_without": "const PDFExporter = lazy(() => import('@/components/PDFExporter')...) ... Conditionally import() only when the feature flag is active"
+        },
+        {
+          "text": "defer-third-party",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Script strategy='lazyOnload' ... Defer non-essential third-party scripts",
+          "evidence_without": "strategy='lazyOnload' for both ... Defer non-critical scripts"
+        },
+        {
+          "text": "conditional-modules",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "AIAssistant conditionally loaded only when feature flag active ... {aiEnabled ? <AIAssistant /> : null}",
+          "evidence_without": "LazyAIAssistant ... if (!isEnabled) return null ... conditionally import() only when the feature flag is active"
+        },
+        {
+          "text": "no-barrel-imports",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Barrel files (index.ts) defeat tree-shaking ... Split barrel @/components/ui into direct imports",
+          "evidence_without": "Barrel re-exports (index.ts) defeat tree-shaking ... Use direct path imports (@/components/ui/Button)"
+        },
+        {
+          "text": "preload-on-hover",
+          "with_skill": false,
+          "without_skill": false,
+          "evidence_with": "No mention of preloading on hover or focus",
+          "evidence_without": "No mention of preloading on hover or focus"
+        }
+      ]
+    },
+    {
+      "name": "state-rendering",
+      "assertions": [
+        {
+          "text": "derive-during-render",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Derived during render -- no effect, no extra state, no wasted render cycle",
+          "evidence_without": "Derived State Stored in useState (Critical) ... Replace with useMemo. Derived data should be computed, not synchronized"
+        },
+        {
+          "text": "no-unnecessary-memo",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "greeting is a string concatenation -- zero cost ... count is .length -- a property access ... Remove both useMemo calls; inline",
+          "evidence_without": "Pointless useMemo Wrappers ... greeting: string concatenation is trivially cheap ... count: .length is O(1) ... Remove both useMemo calls; inline the expressions"
+        },
+        {
+          "text": "hoist-default-props",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Hoisted outside component -- stable reference ... const DEFAULT_STYLE moved to module scope",
+          "evidence_without": "Object Literal Created Every Render Defeats React.memo ... Move the constant outside the component ... const CARD_STYLE at module level"
+        },
+        {
+          "text": "initializer-function",
+          "with_skill": false,
+          "without_skill": true,
+          "evidence_with": "Removed windowWidth entirely (unused state) -- did not demonstrate initializer function pattern",
+          "evidence_without": "useState(() => typeof window !== 'undefined' ? window.innerWidth : 0) -- lazy initializer with typeof guard"
+        },
+        {
+          "text": "event-handlers-not-effects",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Missing resize listener cleanup ... Removed entirely (unused)",
+          "evidence_without": "Memory Leak: Missing Cleanup in Resize Listener ... return () => window.removeEventListener('resize', handler)"
+        },
+        {
+          "text": "subscribe-derived-booleans",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "isAdmin never toggled ... Moved to prop ... should come from outside",
+          "evidence_without": "Unused State: isAdmin ... never set to true ... should come from props or context"
+        },
+        {
+          "text": "primitive-deps",
+          "with_skill": false,
+          "without_skill": false,
+          "evidence_with": "No mention of using primitive values as deps",
+          "evidence_without": "No mention of using primitive values as deps"
+        },
+        {
+          "text": "ternary-not-ampersand",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "{isAdmin ? <AdminPanel users={users} /> : null} ... Use ternary operator, not && for conditional rendering",
+          "evidence_without": "{isAdmin && <AdminPanel users={users} />} -- still uses && pattern, not changed to ternary"
+        },
+        {
+          "text": "functional-setstate",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')",
+          "evidence_without": "setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))"
+        }
+      ]
+    },
+    {
+      "name": "rsc-server",
+      "assertions": [
+        {
+          "text": "dynamic-cookies-headers",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "cookies(), headers() make the entire route dynamic. One call in a layout makes ALL child pages dynamic. The cookies() call already makes this dynamic",
+          "evidence_without": "Does not flag cookies() as making the route dynamic -- mentions unused headers import but not the dynamic route implication of cookies()"
+        },
+        {
+          "text": "parallelize-server-fetches",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "3 sequential awaits = total time is sum of all three ... Parallelized in each Suspense section",
+          "evidence_without": "Sequential Data Fetching ... Use Promise.all for parallel fetching"
+        },
+        {
+          "text": "minimize-rsc-props",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Oversized serialization boundary -- too much data passed to client component ... Minimize data passed from server to client components",
+          "evidence_without": "Unnecessary Client Component Boundary ... entire dataset is serialized into the RSC payload"
+        },
+        {
+          "text": "no-duplicate-serialization",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "categories is passed to both Sidebar and ProductList (duplicate serialization) ... Avoid duplicate serialization in RSC props",
+          "evidence_without": "Does not explicitly flag categories being passed to both components as duplicate serialization"
+        },
+        {
+          "text": "auth-server-actions",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "No authentication or authorization check before creating the order ... Added auth() check",
+          "evidence_without": "No Input Validation on Server Action ... Prices must come from the database ... Moved to actions.ts with 'use server' ... no auth check mentioned but input validation and security addressed"
+        },
+        {
+          "text": "suspense-streaming",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Use Suspense boundaries to stream content progressively ... <Suspense fallback=...>",
+          "evidence_without": "Suspense boundaries ... sidebar and product list load independently, streaming to the client"
+        }
+      ]
+    },
+    {
+      "name": "perf-micro",
+      "assertions": [
+        {
+          "text": "refs-for-transient",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "Use refs for transient high-frequency values ... ref + direct DOM mutation in isolated TrackedCursor",
+          "evidence_without": "Extracted TrackedCursor with its own state -- still uses useState for mousePos, not useRef"
+        },
+        {
+          "text": "single-loop-transforms",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "Combine chained filter/map/reduce into single loop ... Single for loop",
+          "evidence_without": "Still uses filter then sort pattern, does not combine into single loop"
+        },
+        {
+          "text": "loop-for-minmax",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Use loop for min/max instead of sort()[0] ... Single-pass max tracking",
+          "evidence_without": "Single-pass O(n) ... replaced 8x iteration + sorts with one loop via Map ... tracks maxEvent in single pass"
+        },
+        {
+          "text": "hoist-regexp",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "Hoist RegExp creation outside loops ... Module-level EMAIL_REGEX",
+          "evidence_without": "Regex created on every render mentioned as issue #7 but removed validEmails as dead code rather than hoisting regex"
+        },
+        {
+          "text": "set-map-lookups",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "Use Set for O(1) dedup ... [...new Set(events.map(e => e.type))]",
+          "evidence_without": "Removed validEmails and uniqueTypes as dead code -- did not demonstrate Set usage"
+        },
+        {
+          "text": "build-map-index",
+          "with_skill": false,
+          "without_skill": true,
+          "evidence_with": "typeBreakdown uses explicit loop with array of hardcoded types, not a Map index",
+          "evidence_without": "Map-based O(1) lookup ... const map = new Map<string, { count: number; maxEvent: ... }>()"
+        },
+        {
+          "text": "cache-object-access",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Cache localStorage reads ... useState(readDarkMode) initializer",
+          "evidence_without": "useRef for localStorage read ... Read once on mount instead of every render"
+        },
+        {
+          "text": "hoist-static-jsx",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Hoist static JSX outside component functions ... const STATIC_HEADER = <header>...",
+          "evidence_without": "memo on StaticHeader ... Constant props -- never needs to re-render"
+        },
+        {
+          "text": "content-visibility-auto",
+          "with_skill": false,
+          "without_skill": false,
+          "evidence_with": "No mention of content-visibility: auto",
+          "evidence_without": "No mention of content-visibility: auto"
+        }
+      ]
+    },
+    {
+      "name": "gotchas",
+      "assertions": [
+        {
+          "text": "useeffect-not-cdm",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "The comment says 'This runs like componentDidMount' but the skill explicitly warns: useEffect with an empty dep array [] is NOT componentDidMount. It runs after paint, not before.",
+          "evidence_without": "Does not flag the 'runs like componentDidMount' comment as incorrect -- focuses on hydration mismatch but not the componentDidMount misconception"
+        },
+        {
+          "text": "memo-only-when-needed",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "useMemo/useCallback for every value is premature optimization ... hasUnread and bellColor are single boolean/ternary checks -- Remove",
+          "evidence_without": "Over-memoization of trivial derivations ... hasUnread and bellColor ... memoization cost exceeds the computation they save"
+        },
+        {
+          "text": "auto-batching",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "State updates in React 18+ are auto-batched everywhere ... Don't wrap in flushSync unless you specifically need synchronous rendering",
+          "evidence_without": "flushSync forces a synchronous re-render, bypassing React's batching ... already works with normal React 18 batching"
+        },
+        {
+          "text": "dynamic-cookies-headers",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "cookies(), headers() make the entire route dynamic. One call in a layout makes ALL child pages dynamic. Calling cookies() in app/layout.tsx means every single page becomes dynamically rendered.",
+          "evidence_without": "Does not flag cookies() in layout as making all pages dynamic -- says 'The cookies() usage with await is correct for Next.js 15+' and marks it as 'OTHERWISE CORRECT'"
+        },
+        {
+          "text": "start-transition",
+          "with_skill": true,
+          "without_skill": false,
+          "evidence_with": "Prefer useTransition over manual loading state booleans",
+          "evidence_without": "Does not mention useTransition for the refresh loading pattern"
+        },
+        {
+          "text": "uselatest-pattern",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "stale-closure race condition ... Use an AbortController for cleanup",
+          "evidence_without": "classic React async effect race condition ... Use an ignore flag (or AbortController) in the effect cleanup"
+        },
+        {
+          "text": "hydration-flicker",
+          "with_skill": true,
+          "without_skill": true,
+          "evidence_with": "Hydration flicker ... user sees it, then the effect runs and switches to the saved theme -- causing a visible flash of wrong theme (FOUC)",
+          "evidence_without": "A visible flash of wrong theme (FOIT/FOUC) ... A React hydration mismatch warning"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "with_skill": { "pass": 33, "fail": 9, "total": 42 },
+    "without_skill": { "pass": 26, "fail": 16, "total": 42 }
+  }
+}

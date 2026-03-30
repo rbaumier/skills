@@ -22,64 +22,72 @@ description: React and Next.js performance optimization, diagnosis, and health-c
 - State updates in React 18+ are auto-batched everywhere (including promises, timeouts). Don't wrap in `flushSync` unless you specifically need synchronous rendering.
 - Next.js App Router: `cookies()`, `headers()` make the entire route dynamic. One call in a layout makes ALL child pages dynamic.
 
-## Rules
-- Move await into branches where actually needed, don't block early
-- Use Promise.all() for independent async operations
-- Use partial-dependency helpers (better-all) when promises depend on each other
-- Start promises early, await late in API routes
+## Async & Data Fetching
+- **Start promises early, await late** — declare all promises BEFORE awaiting any: `const pUser = db.user.find(id); const pOrders = db.order.findMany(userId); const [user, orders] = await Promise.all([pUser, pOrders]);`. The key insight: call the function (starts I/O) and store the promise in a variable, THEN await all together. `Promise.all([fetchA(), fetchB()])` also works but "start early, await late" is more flexible when some results depend on others. In reviews: if you see `const a = await f(); const b = await g();` where f and g are independent, refactor to start-early-await-late
+- **Use React.cache() for per-request deduplication** — in server components, wrap data-fetching functions in `React.cache()`: `const getUser = React.cache(async (id: string) => db.user.find(id))`. Multiple components calling `getUser(id)` in the same request get the same promise. Always mention `React.cache()` by name when reviewing server components that fetch data. In reviews: if 2+ server components call the same fetch function, recommend wrapping it in `React.cache()`
+- Use LRU cache for cross-request server caching
+- Use after() for non-blocking post-response work (analytics, logging)
 - Use Suspense boundaries to stream content progressively
+- Use SWR for automatic client request deduplication
+
+## Bundle & Loading
 - Import directly from modules, avoid barrel files
 - Use next/dynamic for heavy/rarely-used components
-- Defer third-party scripts (analytics, logging) until after hydration
+- Defer third-party scripts (analytics, logging) with `strategy="lazyOnload"`
 - Conditionally load modules only when feature is activated
-- Preload resources on hover/focus for perceived speed
+- **Preload on hover/focus** — for lazy-loaded components (modals, exporters, heavy panels), trigger `import()` on the button's `onMouseEnter`/`onFocus` so the chunk loads during the ~200ms before click. In reviews: if a component uses next/dynamic or React.lazy, check that the trigger element preloads on hover
+
+## Server Components & RSC
 - Authenticate server actions like API routes
-- Use React.cache() for per-request deduplication
-- Use LRU cache for cross-request server caching
 - Avoid duplicate serialization in RSC props
 - Minimize data passed from server to client components
 - Restructure server components to parallelize fetches
-- Use after() for non-blocking post-response work
-- Use SWR for automatic client request deduplication
-- Deduplicate global event listeners
-- Use passive event listeners for scroll/touch
-- Version and minimize localStorage data schemas
+
+## State & Rendering
+- Derive state during render, never in effects
+- Don't wrap simple primitive expressions in useMemo
+- **Pass initializer function to useState for expensive or SSR-unsafe defaults** — `useState(window.innerWidth)` crashes in SSR and runs every render. Use `useState(() => window.innerWidth)`. In reviews: if useState argument is a function call or browser API, wrap in `() =>`
+- Use functional setState for stable callbacks
+- Put interaction logic in event handlers, not effects
+- Use startTransition for non-urgent state updates — prefer `useTransition` over manual `const [loading, setLoading] = useState(false)` patterns
+- Hoist default non-primitive props outside render (objects, arrays, styles)
+- **Use primitive values as effect/memo dependencies** — `useEffect(() => { ... }, [user])` re-runs when the object reference changes even if contents are the same. Extract what you need: `useEffect(() => { ... }, [user.id])`. In reviews: if a dep array contains an object, array, or function, flag it and recommend extracting the primitive field (`.id`, `.length`, `.name`). This is one of the most common sources of infinite loops and wasted renders
+- Subscribe to derived booleans, not full objects
 - Don't subscribe to state only used inside callbacks
 - Extract expensive subtrees into memoized components
-- Hoist default non-primitive props outside render
-- Use primitive values as effect/memo dependencies
-- Subscribe to derived booleans, not full objects
-- Derive state during render, never in effects
-- Use functional setState for stable callbacks
-- Pass initializer function to useState for expensive defaults
-- Don't wrap simple primitive expressions in useMemo
-- Put interaction logic in event handlers, not effects
-- Use startTransition for non-urgent state updates
-- Use refs for transient high-frequency values
-- Animate a div wrapper around SVGs, not the SVG element
-- Use content-visibility: auto for long off-screen lists
-- Hoist static JSX outside component functions
-- Reduce SVG coordinate decimal precision
-- Use inline script tags to prevent hydration flicker for client-only data
-- Use suppressHydrationWarning for expected mismatches
-- Use Activity component for preserving hidden component state
 - Use ternary operator, not && for conditional rendering
-- Prefer useTransition over manual loading state booleans
-- Group DOM/CSS changes via classes or cssText, not individual properties
-- Build Map/index for repeated collection lookups
+- Use refs for transient high-frequency values (mouse position, scroll offset)
+- **Use useLatest/ref pattern for stable callback references** — store callbacks in a ref to avoid stale closures and unnecessary effect re-runs: `const fnRef = useRef(fn); fnRef.current = fn;`. In reviews: if a useEffect re-runs because a callback dep changes, suggest the ref pattern
+
+## Performance Micro-optimizations
+- **Build Map/index for repeated collection lookups** — if you loop over items and call `.find()` or `.filter()` on another array each iteration, build a `Map` first: `const catMap = new Map(categories.map(c => [c.id, c]))`. In reviews: if you see `.find()` inside `.map()` or a loop, flag it as O(n*m) and recommend Map
 - Cache object property access in tight loops
 - Cache expensive function results in module-level Map
-- Cache localStorage/sessionStorage reads, don't read repeatedly
-- Combine chained filter/map/reduce into single loop
-- Check array length before expensive element comparisons
-- Return early from functions to avoid deep nesting
-- Hoist RegExp creation outside loops
+- Cache localStorage/sessionStorage reads — read once into state/ref, not every render
+- Combine chained filter/map/reduce into single loop when processing large arrays
+- Hoist RegExp creation outside component functions
 - Use loop for min/max instead of sort()[0]
 - Use Set/Map for O(1) lookups instead of Array.includes
 - Use toSorted()/toReversed() for immutable array transforms
+- Hoist static JSX outside component functions
+- **Use content-visibility: auto for long off-screen lists** — add `content-visibility: auto; contain-intrinsic-size: auto 200px` to list item containers. This gives free browser-level virtualization without any library. In reviews: if a component renders 20+ items in a list or a `.map()` producing many DOM nodes, always recommend `content-visibility: auto` as a CSS optimization
+- Group DOM/CSS changes via classes or cssText, not individual properties
+
+## Hydration & SSR
+- **Use inline script tags to prevent hydration flicker** — for theme/dark-mode stored in localStorage, read it in an inline `<script>` in `<head>` BEFORE React hydrates. useEffect runs AFTER paint, causing a visible flash. `suppressHydrationWarning` on the element is complementary but does not prevent the flicker itself
+- Use suppressHydrationWarning for expected mismatches (timestamps, random IDs)
+- Use Activity component for preserving hidden component state
+- Animate a div wrapper around SVGs, not the SVG element
+- Reduce SVG coordinate decimal precision
+
+## Other
+- Deduplicate global event listeners
+- Use passive event listeners for scroll/touch
+- Version and minimize localStorage data schemas
 - Store event handlers in refs to avoid effect re-runs
 - Initialize expensive singletons once per app load, not per render
-- Use useLatest pattern for stable callback references
+- Return early from functions to avoid deep nesting
+- Check array length before expensive element comparisons
 
 ## Diagnosis & Health Check
 
