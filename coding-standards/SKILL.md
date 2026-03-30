@@ -68,13 +68,15 @@ description: Enforce engineering standards — readability, robustness, maintain
 - Newspaper metaphor — high-level at top
 - Colocation — tests near source, not separate tree
 - Group by feature, not by type
+- Max 300 lines per file — approaching this limit signals the file has multiple responsibilities. Split before it gets worse
 
 ## Architecture
 
 - **Vertical slices** — each feature owns schema/errors/data/logic/API
 - **Factory DI** — `createOrderService({ db, emailer, logger })`. No containers, no decorators
 - **Crosscutting via wrapping** — `withTracing(service)` / `withLogging(service)` wrappers intercept every method. Never scatter `logger.info()` in business logic. In reviews: if logging is inside a service method, recommend the wrapper pattern by name
-- **Structured API errors** — `{ type, code, status, detail }`. Never bare `{ message }`
+- **Structured API errors** — `{ type, code, status, detail }`. Always use machine-readable format instead of bare `{ message }` strings
+- **Map DB entities to DTOs for API responses** — always create dedicated response types (DTOs/view models) for API outputs. Return the DTO, keep the entity internal. In reviews: if a handler returns a raw DB entity, flag "missing DTO mapping"
 - **API-first** — define schema (OpenAPI, route schema) BEFORE handler. Zod for runtime parsing is NOT api-first. The contract must exist as standalone artifact clients generate types from. In reviews: if handler exists without schema, flag "missing API contract"
 
 ## Project Hygiene
