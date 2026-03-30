@@ -1,0 +1,88 @@
+{
+  "skill_name": "react",
+  "evals": [
+    {
+      "id": 1,
+      "name": "async-data-fetching",
+      "prompt": "Review and refactor this Next.js API route for performance:\n\n```typescript\n// app/api/dashboard/route.ts\nimport { db } from '@/lib/db';\nimport { cache } from '@/lib/cache';\nimport { analytics } from '@/lib/analytics';\n\nexport async function GET(req: Request) {\n  const session = await getSession(req);\n  const userId = session.userId;\n\n  // Fetch everything sequentially\n  const user = await db.user.findUnique({ where: { id: userId } });\n  const orders = await db.order.findMany({ where: { userId } });\n  const recommendations = await getRecommendations(userId);\n  const notifications = await db.notification.findMany({ where: { userId, read: false } });\n\n  // Log analytics after response\n  await analytics.track('dashboard_view', { userId });\n  await analytics.track('active_user', { userId });\n\n  // Cache result\n  const cacheKey = `dashboard:${userId}`;\n  const cached = cache.get(cacheKey);\n  if (cached) return Response.json(cached);\n\n  const result = { user, orders, recommendations, notifications };\n  cache.set(cacheKey, result, { ttl: 60 });\n  return Response.json(result);\n}\n```",
+      "assertions": [
+        { "text": "promise-all-independent", "description": "user, orders, recommendations, notifications fetched in parallel via Promise.all or similar" },
+        { "text": "start-early-await-late", "description": "Promises started before they're needed, awaited only when result is required" },
+        { "text": "after-non-blocking", "description": "Analytics tracking moved to after() or similar non-blocking post-response mechanism" },
+        { "text": "lru-cross-request", "description": "Cache check moved BEFORE database queries, or recommends LRU/cross-request caching strategy" },
+        { "text": "react-cache-dedup", "description": "Mentions React.cache() or request-level deduplication for repeated calls" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "bundle-loading",
+      "prompt": "Review this Next.js page for bundle size and loading performance:\n\n```typescript\n// app/dashboard/page.tsx\nimport { Chart } from '@/components/Chart';\nimport { DataTable } from '@/components/DataTable';\nimport { PDFExporter } from '@/components/PDFExporter';\nimport { AIAssistant } from '@/components/AIAssistant';\nimport { format } from 'lodash';\nimport { motion } from 'framer-motion';\nimport Script from 'next/script';\nimport { Button, Card, Input, Modal, Tooltip, Badge, Avatar, Dropdown } from '@/components/ui';\n\nexport default function DashboardPage() {\n  return (\n    <>\n      <Script src=\"https://analytics.example.com/tracker.js\" />\n      <Script src=\"https://chat.example.com/widget.js\" />\n      <motion.div animate={{ opacity: 1 }}>\n        <Chart data={chartData} />\n        <DataTable rows={rows} />\n        <PDFExporter data={exportData} />\n        <AIAssistant />\n      </motion.div>\n    </>\n  );\n}\n```\n\nThe PDFExporter is only used when the user clicks \"Export\". The AIAssistant is behind a feature flag. The UI components come from a barrel file at @/components/ui/index.ts.",
+      "assertions": [
+        { "text": "dynamic-imports", "description": "PDFExporter and/or AIAssistant loaded via next/dynamic or lazy import since they're not always needed" },
+        { "text": "defer-third-party", "description": "Third-party scripts (analytics, chat widget) deferred with strategy='lazyOnload' or loaded after hydration" },
+        { "text": "conditional-modules", "description": "AIAssistant conditionally loaded only when feature flag is active" },
+        { "text": "no-barrel-imports", "description": "Flags the barrel import from @/components/ui — recommends importing directly from each component file" },
+        { "text": "preload-on-hover", "description": "Suggests preloading PDFExporter on hover/focus of the Export button for perceived speed" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "state-rendering",
+      "prompt": "Refactor this React component to fix state and rendering issues:\n\n```typescript\nimport { useState, useEffect, useMemo, useCallback } from 'react';\n\ninterface User { id: string; name: string; email: string; role: string; lastLogin: Date; preferences: Record<string, unknown>; }\n\nfunction UserDashboard({ users }: { users: User[] }) {\n  const [searchTerm, setSearchTerm] = useState('');\n  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);\n  const [isAdmin, setIsAdmin] = useState(false);\n  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n\n  // Derive filtered users in effect\n  useEffect(() => {\n    const result = users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));\n    setFilteredUsers(result);\n  }, [users, searchTerm]);\n\n  // Track window width\n  useEffect(() => {\n    const handler = () => setWindowWidth(window.innerWidth);\n    window.addEventListener('resize', handler);\n  }, []);\n\n  // Unnecessary memos\n  const greeting = useMemo(() => `Hello, ${searchTerm}`, [searchTerm]);\n  const count = useMemo(() => filteredUsers.length, [filteredUsers]);\n\n  const handleSort = useCallback(() => {\n    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');\n  }, []);\n\n  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {\n    setSearchTerm(e.target.value);\n  }, []);\n\n  const sortedUsers = [...filteredUsers].sort((a, b) => {\n    return sortDirection === 'asc'\n      ? a.name.localeCompare(b.name)\n      : b.name.localeCompare(a.name);\n  });\n\n  const DEFAULT_STYLE = { padding: '16px', border: '1px solid #ccc' };\n\n  return (\n    <div>\n      <p>{greeting}</p>\n      <p>Count: {count}</p>\n      <input onChange={handleSearch} />\n      <button onClick={handleSort}>Sort</button>\n      {sortedUsers.map((user, index) => (\n        <UserCard key={index} user={user} style={DEFAULT_STYLE} isAdmin={isAdmin} />\n      ))}\n      {isAdmin && <AdminPanel users={users} />}\n    </div>\n  );\n}\n\nconst UserCard = React.memo(({ user, style, isAdmin }: { user: User; style: React.CSSProperties; isAdmin: boolean }) => (\n  <div style={style}>\n    <p>{user.name}</p>\n    {isAdmin && <button>Edit</button>}\n  </div>\n));\n```",
+      "assertions": [
+        { "text": "derive-during-render", "description": "filteredUsers derived during render instead of useEffect+setState" },
+        { "text": "no-unnecessary-memo", "description": "useMemo removed from greeting (string template) and count (simple .length)" },
+        { "text": "hoist-default-props", "description": "DEFAULT_STYLE moved outside the component to avoid new object each render" },
+        { "text": "initializer-function", "description": "useState(window.innerWidth) changed to useState(() => window.innerWidth) for SSR safety" },
+        { "text": "event-handlers-not-effects", "description": "Resize listener has cleanup (removeEventListener) added" },
+        { "text": "subscribe-derived-booleans", "description": "isAdmin not subscribed to full user object — or flags that it's unused/should come from context" },
+        { "text": "primitive-deps", "description": "Dependencies use primitive values where possible" },
+        { "text": "ternary-not-ampersand", "description": "isAdmin && <AdminPanel> changed to ternary (isAdmin ? <AdminPanel> : null)" },
+        { "text": "functional-setstate", "description": "setSortDirection uses functional form (already correct — should not break it)" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "rsc-server",
+      "prompt": "Review this Next.js App Router code for server component best practices:\n\n```typescript\n// app/products/page.tsx (Server Component)\nimport { cookies, headers } from 'next/headers';\nimport { ProductList } from './ProductList';\nimport { Sidebar } from './Sidebar';\n\nexport default async function ProductsPage() {\n  const cookieStore = await cookies();\n  const theme = cookieStore.get('theme')?.value ?? 'light';\n\n  const products = await fetch('https://api.example.com/products').then(r => r.json());\n  const categories = await fetch('https://api.example.com/categories').then(r => r.json());\n  const userPrefs = await fetch('https://api.example.com/preferences').then(r => r.json());\n\n  return (\n    <div className={theme}>\n      <Sidebar categories={categories} userPrefs={userPrefs} />\n      <ProductList products={products} categories={categories} userPrefs={userPrefs} />\n    </div>\n  );\n}\n\n// app/products/ProductList.tsx\n'use client';\n\nexport function ProductList({ products, categories, userPrefs }: {\n  products: Product[];\n  categories: Category[];\n  userPrefs: UserPreferences;\n}) {\n  const [search, setSearch] = useState('');\n  const filtered = products.filter(p => p.name.includes(search));\n\n  return (\n    <div>\n      <input value={search} onChange={e => setSearch(e.target.value)} />\n      {filtered.map(p => (\n        <ProductCard\n          key={p.id}\n          product={p}\n          category={categories.find(c => c.id === p.categoryId)}\n          userPrefs={userPrefs}\n        />\n      ))}\n    </div>\n  );\n}\n```\n\n```typescript\n// app/api/checkout/route.ts\n'use server';\n\nexport async function createOrder(formData: FormData) {\n  const items = JSON.parse(formData.get('items') as string);\n  const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);\n  await db.order.create({ data: { items, total } });\n  return { success: true };\n}\n```",
+      "assertions": [
+        { "text": "dynamic-cookies-headers", "description": "Flags that cookies() makes the entire route dynamic — suggests moving to a layout or isolating" },
+        { "text": "parallelize-server-fetches", "description": "Sequential fetches (products, categories, userPrefs) should be parallelized" },
+        { "text": "minimize-rsc-props", "description": "Flags that too much data (categories, userPrefs) is passed to the client component — only needed data should cross the boundary" },
+        { "text": "no-duplicate-serialization", "description": "categories passed to both Sidebar and ProductList — flags duplicate serialization" },
+        { "text": "auth-server-actions", "description": "createOrder server action has no authentication check — flags missing auth" },
+        { "text": "suspense-streaming", "description": "Suggests wrapping slow-loading sections in Suspense boundaries for progressive streaming" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "perf-micro",
+      "prompt": "Optimize this React component for performance:\n\n```typescript\nimport { useState, useEffect } from 'react';\n\nfunction AnalyticsDashboard({ events }: { events: AnalyticsEvent[] }) {\n  const [selectedType, setSelectedType] = useState('all');\n  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });\n\n  useEffect(() => {\n    const handler = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('mousemove', handler);\n    return () => window.removeEventListener('mousemove', handler);\n  }, []);\n\n  // Find top events by filtering, mapping, and reducing\n  const topEvents = events\n    .filter(e => selectedType === 'all' || e.type === selectedType)\n    .map(e => ({ ...e, score: e.views * 0.3 + e.clicks * 0.7 }))\n    .filter(e => e.score > 10)\n    .sort((a, b) => b.score - a.score)\n    .slice(0, 20);\n\n  // Find event by type in a loop\n  const typeBreakdown = ['click', 'view', 'scroll', 'hover'].map(type => {\n    const count = events.filter(e => e.type === type).length;\n    const maxEvent = events\n      .filter(e => e.type === type)\n      .sort((a, b) => b.views - a.views)[0];\n    return { type, count, maxEvent };\n  });\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  const validEmails = events\n    .map(e => e.userEmail)\n    .filter(email => emailRegex.test(email));\n\n  const uniqueTypes = events.map(e => e.type).filter((t, i, arr) => arr.indexOf(t) === i);\n\n  const darkMode = localStorage.getItem('darkMode') === 'true';\n\n  return (\n    <div className={darkMode ? 'dark' : 'light'}>\n      <Cursor x={mousePos.x} y={mousePos.y} />\n      <StaticHeader title=\"Analytics\" subtitle=\"Dashboard\" />\n      {topEvents.map((event, i) => (\n        <EventCard key={i} event={event} />\n      ))}\n      {typeBreakdown.map(tb => (\n        <TypeRow key={tb.type} {...tb} />\n      ))}\n    </div>\n  );\n}\n\nconst StaticHeader = ({ title, subtitle }: { title: string; subtitle: string }) => (\n  <header><h1>{title}</h1><p>{subtitle}</p></header>\n);\n```",
+      "assertions": [
+        { "text": "refs-for-transient", "description": "mousePos tracked via useRef instead of useState to avoid re-renders on every mousemove" },
+        { "text": "single-loop-transforms", "description": "Chained filter/map/filter/sort combined into fewer passes or single loop" },
+        { "text": "loop-for-minmax", "description": "sort()[0] for finding maxEvent replaced with a loop or reduce for O(n)" },
+        { "text": "hoist-regexp", "description": "emailRegex hoisted outside the component (created once, not every render)" },
+        { "text": "set-map-lookups", "description": "uniqueTypes uses Set instead of filter+indexOf for O(n) vs O(n²)" },
+        { "text": "build-map-index", "description": "typeBreakdown builds a Map/index instead of filtering events array repeatedly" },
+        { "text": "cache-object-access", "description": "localStorage read cached or moved to state/ref instead of reading every render" },
+        { "text": "hoist-static-jsx", "description": "StaticHeader with constant props hoisted outside or memoized to avoid re-creation" },
+        { "text": "content-visibility-auto", "description": "Suggests content-visibility: auto for long event list that may be off-screen" }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "gotchas",
+      "prompt": "Review this code and identify React/Next.js gotchas:\n\n```typescript\n// Component 1: Theme initialization\nfunction ThemeProvider({ children }: { children: React.ReactNode }) {\n  const [theme, setTheme] = useState('light');\n\n  useEffect(() => {\n    // This runs like componentDidMount\n    const saved = localStorage.getItem('theme');\n    if (saved) setTheme(saved);\n  }, []);\n\n  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;\n}\n\n// Component 2: Notifications with memoization\nfunction NotificationBell() {\n  const [notifications, setNotifications] = useState<Notification[]>([]);\n\n  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);\n  const hasUnread = useMemo(() => unreadCount > 0, [unreadCount]);\n  const bellColor = useMemo(() => hasUnread ? 'red' : 'gray', [hasUnread]);\n\n  const handleClick = useCallback(() => {\n    setNotifications(prev => prev.map(n => ({ ...n, read: true })));\n  }, []);\n\n  return <Bell color={bellColor} count={unreadCount} onClick={handleClick} />;\n}\n\n// Component 3: Data fetching\nfunction UserProfile({ userId }: { userId: string }) {\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(false);\n\n  async function fetchUser() {\n    setLoading(true);\n    try {\n      const res = await fetch(`/api/users/${userId}`);\n      const data = await res.json();\n      setUser(data);\n    } finally {\n      setLoading(false);\n    }\n  }\n\n  useEffect(() => {\n    fetchUser();\n  }, [userId]);\n\n  // Wrap state updates to ensure immediate DOM update\n  const handleRefresh = () => {\n    flushSync(() => setLoading(true));\n    fetchUser();\n  };\n\n  return loading ? <Spinner /> : <div>{user?.name}</div>;\n}\n\n// Component 4: Next.js layout\n// app/layout.tsx\nimport { cookies } from 'next/headers';\n\nexport default async function RootLayout({ children }) {\n  const cookieStore = await cookies();\n  const locale = cookieStore.get('locale')?.value ?? 'en';\n\n  return <html lang={locale}><body>{children}</body></html>;\n}\n```",
+      "assertions": [
+        { "text": "useeffect-not-cdm", "description": "Flags the comment 'runs like componentDidMount' as wrong — useEffect runs AFTER paint, not before" },
+        { "text": "memo-only-when-needed", "description": "Flags hasUnread and bellColor as unnecessary useMemo — simple boolean/ternary expressions don't need memoization" },
+        { "text": "auto-batching", "description": "Flags flushSync as unnecessary — React 18+ auto-batches state updates including in async functions" },
+        { "text": "dynamic-cookies-headers", "description": "Flags cookies() in layout — makes ALL child pages dynamic, explains the blast radius" },
+        { "text": "start-transition", "description": "Suggests useTransition for the refresh loading state instead of manual loading boolean" },
+        { "text": "uselatest-pattern", "description": "Suggests storing fetchUser in a ref or using useLatest to avoid stale closure issues with userId" },
+        { "text": "hydration-flicker", "description": "Flags theme flash — localStorage read in useEffect causes flash of wrong theme, suggests inline script or suppressHydrationWarning" }
+      ]
+    }
+  ]
+}

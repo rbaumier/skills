@@ -1,0 +1,62 @@
+{
+  "assertions": [
+    {
+      "text": "start-early-await-late: promises declared BEFORE awaiting, not just Promise.all",
+      "v1_result": "FAIL",
+      "v2_result": "FAIL",
+      "evidence": "Refactored code uses `await Promise.all([db.user.findUnique(...), ...])` with inline calls. Does not start promises early and await late (no `const p1 = ...; const p2 = ...; await Promise.all([p1, p2])` pattern)."
+    },
+    {
+      "text": "react-cache-dedup: mentions React.cache() for per-request deduplication",
+      "v1_result": "FAIL",
+      "v2_result": "FAIL",
+      "evidence": "No mention of React.cache() anywhere in the async review output."
+    },
+    {
+      "text": "preload-on-hover: preloading component on hover/focus of trigger button",
+      "v1_result": "FAIL",
+      "v2_result": "PASS",
+      "evidence": "Defines `preloadPDFExporter = () => { void import('@/components/PDFExporter') }` and applies `onMouseEnter={preloadPDFExporter} onFocus={preloadPDFExporter}` on the Export PDF button."
+    },
+    {
+      "text": "primitive-deps: mentions using primitive values as effect/memo deps",
+      "v1_result": "FAIL",
+      "v2_result": "FAIL",
+      "evidence": "No explicit mention of preferring primitive values as effect/memo dependencies. The review discusses removing unnecessary useMemo/useCallback but does not state the primitive-deps rule."
+    },
+    {
+      "text": "initializer-function: useState(() => window.innerWidth) lazy initializer used (NOT removing the state)",
+      "v1_result": "FAIL",
+      "v2_result": "PASS",
+      "evidence": "Issue #5 explicitly states: 'Use lazy initializer `useState(() => window.innerWidth)`' before suggesting removal as an alternative. The lazy initializer pattern is clearly mentioned."
+    },
+    {
+      "text": "build-map-index: builds a Map for repeated lookups (typeBreakdown)",
+      "v1_result": "FAIL",
+      "v2_result": "PASS",
+      "evidence": "Refactored typeBreakdown uses `const stats = new Map<string, { count: number; maxEvent: ... }>()` for single-pass accumulation instead of repeated array iterations."
+    },
+    {
+      "text": "content-visibility-auto: suggests content-visibility: auto for long lists",
+      "v1_result": "FAIL",
+      "v2_result": "FAIL",
+      "evidence": "No mention of content-visibility CSS property anywhere in the perf-micro review."
+    },
+    {
+      "text": "uselatest-pattern: suggests ref/useLatest for stale closure in fetchUser",
+      "v1_result": "FAIL",
+      "v2_result": "PASS",
+      "evidence": "Issue #5 in gotchas review states: 'use the `useLatest`/ref pattern for the callback' as a fix for the fragile fetchUser closure."
+    },
+    {
+      "text": "hydration-flicker: flags theme flash and suggests inline script (not just useLayoutEffect)",
+      "v1_result": "FAIL",
+      "v2_result": "PASS",
+      "evidence": "Issue #1 flags 'flash of the default light theme' and provides inline `<script dangerouslySetInnerHTML>` code example in `<head>` to read theme from localStorage before React hydrates."
+    }
+  ],
+  "summary": {
+    "fixed": 5,
+    "still_failing": 4
+  }
+}
