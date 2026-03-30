@@ -1,0 +1,88 @@
+{
+  "skill": "ui-ux",
+  "version": "2026-03-30-v1",
+  "tests": [
+    {
+      "id": "t1-card-layout",
+      "section": "design-philosophy",
+      "prompt": "Build a dashboard page with three equal-width metric cards showing Revenue, Users, and Orders. Each card should have a big number, a label below it, and a gradient accent bar at the top. Use a dark background with cyan and purple accents.",
+      "assertions": [
+        { "name": "no-3-col-equal-cards", "rule": "Anti-pattern #6: Never use 3-column equal card grids. Use asymmetric grid, zig-zag, or horizontal scroll." },
+        { "name": "no-ai-color-palette", "rule": "Anti-pattern #1: Cyan-on-dark, purple-to-blue gradients are BANNED." },
+        { "name": "no-gradient-text-or-accent", "rule": "Anti-pattern #4: Gradient text/accents on metrics are decorative, not meaningful." },
+        { "name": "no-hero-metric-layout", "rule": "Anti-pattern #7: Big number + small label + gradient accent = template. Avoid." },
+        { "name": "no-pure-black-bg", "rule": "Anti-pattern #9: Never use pure black (#000). Use off-black, zinc-950, charcoal." },
+        { "name": "distinctive-font-choice", "rule": "Anti-pattern #2: Don't use Inter/Roboto/Arial. Use Geist, Outfit, Cabinet Grotesk, Satoshi etc." }
+      ]
+    },
+    {
+      "id": "t2-color-palette",
+      "section": "design-principles",
+      "prompt": "Create a color palette and theme system for a SaaS analytics product. Include primary, secondary, accent colors, and a full grey scale. Show the CSS custom properties.",
+      "assertions": [
+        { "name": "oklch-color-space", "rule": "Use OKLCH for perceptually uniform palettes." },
+        { "name": "tinted-neutrals", "rule": "Tint neutrals toward brand hue (even 0.01 chroma creates cohesion). Never pure grey." },
+        { "name": "no-pure-black-white", "rule": "Never pure black (#000) or pure white (#fff) -- always tint." },
+        { "name": "60-30-10-rule", "rule": "60% neutrals / 30% secondary / 10% accent distribution." },
+        { "name": "semantic-token-naming", "rule": "Token naming: {category}-{property}-{variant}-{state}. Semantic tokens only." },
+        { "name": "dark-mode-strategy", "rule": "Dark mode: lighter surfaces for depth (not shadows), desaturate accents, reduce font weight." }
+      ]
+    },
+    {
+      "id": "t3-shadow-system",
+      "section": "design-principles",
+      "prompt": "Create a shadow/elevation system for a design system. Include shadows for buttons, dropdowns, cards, and modals. Show CSS custom properties and example usage.",
+      "assertions": [
+        { "name": "layered-shadows", "rule": "Layer multiple shadows with increasing blur and decreasing opacity." },
+        { "name": "no-pure-black-shadows", "rule": "Never pure black shadows -- use tinted deep neutrals like rgba(17,24,39,0.08)." },
+        { "name": "shadow-tokens-scale", "rule": "Shadow scale as tokens: --shadow-1 (buttons), --shadow-2 (dropdowns), --shadow-3 (modals)." },
+        { "name": "animate-via-pseudo", "rule": "Animate shadows via pseudo-element opacity, never transition: box-shadow." },
+        { "name": "consistent-light-source", "rule": "Top light source: lighter top edges, darker bottom, shadows cast downward." },
+        { "name": "concentric-radius", "rule": "Concentric border radius: outer = inner + padding." }
+      ]
+    },
+    {
+      "id": "t4-form-design",
+      "section": "accessibility-and-interaction",
+      "prompt": "Build a user registration form with fields for name, email, password, and a submit button. Include validation and error handling.",
+      "assertions": [
+        { "name": "label-above-input", "rule": "Label above input, error below, helper text optional." },
+        { "name": "correct-input-types", "rule": "Correct type, inputmode, autocomplete attributes on inputs." },
+        { "name": "no-paste-blocking", "rule": "Never block paste on any input." },
+        { "name": "button-for-actions", "rule": "Use <button> for actions, <a> for navigation -- never <div onClick>." },
+        { "name": "verb-noun-buttons", "rule": "Button labels use verb + noun pattern (e.g. 'Create Account' not 'Submit')." },
+        { "name": "inline-errors-focus", "rule": "Errors inline next to fields; focus first error on submit." },
+        { "name": "error-messages-include-fix", "rule": "Error messages: what happened + why + how to fix. Never blame the user." },
+        { "name": "touch-targets-44px", "rule": "Touch targets >= 44px minimum." }
+      ]
+    },
+    {
+      "id": "t5-empty-state",
+      "section": "enhancement-and-refinement",
+      "prompt": "Design an empty state for a project management app's task list when a user first signs up. No tasks exist yet.",
+      "assertions": [
+        { "name": "what-will-be-here", "rule": "Empty state must explain what will be here." },
+        { "name": "why-it-matters", "rule": "Empty state must explain why it matters / the value proposition." },
+        { "name": "how-to-get-started", "rule": "Empty state must show how to get started (clear CTA)." },
+        { "name": "visual-interest", "rule": "Empty state must have visual interest (illustration, not just text)." },
+        { "name": "no-ai-slop-copy", "rule": "No AI-slop copy cliches: 'elevate', 'seamless', 'unleash', 'next-gen'." },
+        { "name": "no-generic-loading-copy", "rule": "No cliche loading messages like 'herding pixels' or 'teaching robots to dance'." },
+        { "name": "active-voice-copy", "rule": "Active voice: 'Create your first task' not 'Your first task can be created'." }
+      ]
+    },
+    {
+      "id": "t6-hero-section",
+      "section": "creative-arsenal",
+      "prompt": "Build a hero section for a developer tools landing page. Include a headline, subheadline, CTA button, and a visual element.",
+      "assertions": [
+        { "name": "no-centered-text-over-dark", "rule": "Hero paradigm: asymmetric text alignment, not centered text over dark image." },
+        { "name": "no-bounce-easing", "rule": "Anti-pattern #8: No bounce/elastic easing. Use ease-out-quart/quint/expo." },
+        { "name": "action-hierarchy", "rule": "Primary action = solid background high contrast (1 per section). Secondary = outline/muted." },
+        { "name": "dramatic-size-contrast", "rule": "Create dramatic size jumps (3x-5x differences, not 1.5x)." },
+        { "name": "no-h-screen", "rule": "Use min-h-[100dvh] not h-screen to prevent mobile layout jumping." },
+        { "name": "weight-contrast", "rule": "Weight contrast: pair 900 with 200, not 600 with 400." },
+        { "name": "no-glassmorphism", "rule": "Anti-pattern #3: No decorative glassmorphism/blur effects." }
+      ]
+    }
+  ]
+}

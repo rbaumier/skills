@@ -1,0 +1,237 @@
+{
+  "skill": "frontend",
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "section": "gotchas",
+      "assertions": [
+        {
+          "id": "G1",
+          "rule": "use client is NOT needed for every component — only when using hooks, event handlers, or browser APIs",
+          "question": "I'm building a Next.js app. Should I add 'use client' to all my components to be safe?",
+          "pass_criteria": "Must explicitly say NO and explain that 'use client' should only be used when hooks, event handlers, or browser APIs are needed. Must mention harm to SSR."
+        },
+        {
+          "id": "G2",
+          "rule": "useEffect for derived state is a React anti-pattern",
+          "question": "I have a component that computes fullName from firstName and lastName. Should I use useEffect to keep fullName in sync?",
+          "pass_criteria": "Must say NO and recommend computing inline during render (derived state). Must call useEffect for derived state an anti-pattern."
+        },
+        {
+          "id": "G3",
+          "rule": "key={index} on dynamic lists causes silent bugs",
+          "question": "I'm rendering a dynamic list of todo items. Is it okay to use the array index as the key?",
+          "pass_criteria": "Must say NO for dynamic lists and explain silent bugs on reorder/delete. Must recommend stable unique IDs."
+        },
+        {
+          "id": "G4",
+          "rule": "Next.js fetch() in Server Components caches by default",
+          "question": "My Next.js Server Component fetches user data but it seems stale in production. What could be wrong?",
+          "pass_criteria": "Must mention that fetch() caches by default in production Server Components. Must recommend cache: 'no-store' or revalidate."
+        },
+        {
+          "id": "G5",
+          "rule": "Importing server component into client component silently becomes client-side",
+          "question": "Can I import a Server Component into a Client Component in Next.js?",
+          "pass_criteria": "Must explicitly warn that it silently becomes client-side. Must explain the correct direction (client into server is fine, not reverse)."
+        }
+      ]
+    },
+    {
+      "section": "component-architecture",
+      "assertions": [
+        {
+          "id": "CA1",
+          "rule": "Prefer composition (Card + CardHeader) over boolean props",
+          "question": "I'm building a Card component. Should I add props like hasHeader, hasFooter, hasSidebar to control what's shown?",
+          "pass_criteria": "Must recommend composition pattern (Card + CardHeader + CardFooter) instead. Must explain boolean props double possible states."
+        },
+        {
+          "id": "CA2",
+          "rule": "Use compound components (Context + Provider) for shared state",
+          "question": "I have a Tabs component where Tab and TabPanel need to share active state. How should I wire this up?",
+          "pass_criteria": "Must recommend compound components with Context + Provider pattern. Must NOT suggest prop drilling."
+        },
+        {
+          "id": "CA3",
+          "rule": "Create explicit variant components instead of boolean modes",
+          "question": "My Button component has props: isPrimary, isOutlined, isGhost, isDanger. It's getting hard to manage. What should I do?",
+          "pass_criteria": "Must recommend explicit variant components or a variant prop with defined values instead of boolean mode props."
+        },
+        {
+          "id": "CA4",
+          "rule": "Prefer children over renderX props; render props only when passing data back",
+          "question": "I'm designing a Modal component API. Should I use renderHeader, renderBody, renderFooter props?",
+          "pass_criteria": "Must recommend children pattern over renderX props. Must clarify render props are only appropriate when passing data back to the consumer."
+        },
+        {
+          "id": "CA5",
+          "rule": "Component order: types -> hooks -> useMemo -> useCallback -> render -> default export",
+          "question": "What order should I structure the internals of a React component file?",
+          "pass_criteria": "Must specify the order: types, hooks, useMemo, useCallback, render, default export — in that sequence."
+        }
+      ]
+    },
+    {
+      "section": "state-management",
+      "assertions": [
+        {
+          "id": "SM1",
+          "rule": "Zustand: always use granular selectors, never destructure full store",
+          "question": "I'm using Zustand. Is it okay to destructure the entire store like: const { count, name, items } = useStore()?",
+          "pass_criteria": "Must say NO and explain to use granular selectors like useStore(s => s.count). Must warn about re-render issues from full destructuring."
+        },
+        {
+          "id": "SM2",
+          "rule": "Suspense-first data fetching: useSuspenseQuery + Suspense fallback with Skeleton",
+          "question": "How should I handle loading states for data fetching in a React app using TanStack Query?",
+          "pass_criteria": "Must recommend useSuspenseQuery with Suspense boundary and Skeleton fallback. Must NOT recommend isLoading early returns as primary pattern."
+        },
+        {
+          "id": "SM3",
+          "rule": "Never use isLoading early returns; use if (loading && !data) pattern",
+          "question": "I have `if (isLoading) return <Spinner />` at the top of my component. Is this the right pattern?",
+          "pass_criteria": "Must say this is NOT the right pattern. Must recommend checking loading && !data instead, to avoid flash of loading state when data exists."
+        },
+        {
+          "id": "SM4",
+          "rule": "No inline fetch in components; isolate API calls in feature api/ layer",
+          "question": "Is it okay to call fetch() directly inside my React component?",
+          "pass_criteria": "Must say NO. Must recommend isolating API calls in a feature api/ layer."
+        }
+      ]
+    },
+    {
+      "section": "performance",
+      "assertions": [
+        {
+          "id": "P1",
+          "rule": "Virtualize lists >50 items with @tanstack/react-virtual",
+          "question": "I'm rendering a list of 200 items and the page is laggy. What should I do?",
+          "pass_criteria": "Must recommend virtualization and specifically mention @tanstack/react-virtual (or equivalent). Must mention the >50 items threshold."
+        },
+        {
+          "id": "P2",
+          "rule": "No barrel imports from heavy libraries; use direct imports",
+          "question": "I'm importing from a UI library like: import { Button, Icon, Modal } from '@mylib'. Performance seems slow. Any ideas?",
+          "pass_criteria": "Must warn about barrel imports from heavy libraries and recommend direct/specific imports."
+        },
+        {
+          "id": "P3",
+          "rule": "Eliminate waterfalls: Promise.all() independent ops, start promises early / await late",
+          "question": "I have 3 independent API calls in sequence: await getUser(), await getPosts(), await getComments(). Is this optimal?",
+          "pass_criteria": "Must identify this as a waterfall. Must recommend Promise.all() for independent operations. Should mention 'start early, await late'."
+        },
+        {
+          "id": "P4",
+          "rule": "Debounce search inputs 300-500ms, cleanup all effects",
+          "question": "My search input fires an API call on every keystroke. How should I optimize it?",
+          "pass_criteria": "Must recommend debouncing with a specific range of 300-500ms. Must mention cleanup of effects."
+        },
+        {
+          "id": "P5",
+          "rule": "Profile before optimizing; no premature optimization",
+          "question": "My React app feels slow. Should I wrap everything in useMemo and useCallback right away?",
+          "pass_criteria": "Must say NO. Must recommend profiling first before optimizing. Must warn against premature optimization."
+        }
+      ]
+    },
+    {
+      "section": "project-structure",
+      "assertions": [
+        {
+          "id": "PS1",
+          "rule": "Organize by feature: features/{name}/api/, components/, hooks/, types/, index.ts",
+          "question": "How should I organize my React project's folder structure?",
+          "pass_criteria": "Must recommend feature-based organization with the specific structure: features/{name}/api/, components/, hooks/, types/, index.ts."
+        },
+        {
+          "id": "PS2",
+          "rule": "Types colocated with feature, not in global types/ dump",
+          "question": "Should I put all my TypeScript types in a global types/ folder?",
+          "pass_criteria": "Must say NO. Must recommend colocating types with their feature, not in a global types/ dump."
+        },
+        {
+          "id": "PS3",
+          "rule": "No feature logic in shared components/; no prop drilling",
+          "question": "I need my shared Button component to handle order submission logic. Where should this logic go?",
+          "pass_criteria": "Must say feature logic should NOT be in shared components. Must recommend keeping it in the feature layer and suggest hooks/context instead of prop drilling."
+        }
+      ]
+    },
+    {
+      "section": "ux-patterns",
+      "assertions": [
+        {
+          "id": "UX1",
+          "rule": "Error hierarchy: inline (field) > toast (recoverable) > banner (partial) > full screen (fatal)",
+          "question": "How should I handle different types of errors in my UI?",
+          "pass_criteria": "Must describe the specific error hierarchy: inline for field errors, toast for recoverable, banner for partial failures, full screen for fatal errors."
+        },
+        {
+          "id": "UX2",
+          "rule": "Always disable buttons + show loading during async submission",
+          "question": "When a user clicks submit on a form, what should happen while the request is in flight?",
+          "pass_criteria": "Must recommend BOTH disabling the button AND showing a loading indicator during async submission."
+        },
+        {
+          "id": "UX3",
+          "rule": "Every list must have an empty state",
+          "question": "I have a list component that shows items. Do I need to handle the case when there are zero items?",
+          "pass_criteria": "Must say YES, every list must have an empty state. Must not dismiss this as optional."
+        }
+      ]
+    },
+    {
+      "section": "react-19",
+      "assertions": [
+        {
+          "id": "R19_1",
+          "rule": "useActionState for forms, useOptimistic for optimistic UI, use() for promises/context; ref is regular prop",
+          "question": "I'm migrating to React 19. What new hooks and patterns should I adopt for forms and optimistic updates?",
+          "pass_criteria": "Must mention useActionState for forms, useOptimistic for optimistic UI, and use() for promises/context. Must mention ref is now a regular prop (no forwardRef needed)."
+        },
+        {
+          "id": "R19_2",
+          "rule": "React Compiler handles memoization; less manual useMemo/useCallback needed",
+          "question": "With React 19 and the React Compiler, do I still need to manually wrap things in useMemo and useCallback?",
+          "pass_criteria": "Must explain that the React Compiler handles memoization automatically and that less manual useMemo/useCallback is needed."
+        }
+      ]
+    },
+    {
+      "section": "accessibility",
+      "assertions": [
+        {
+          "id": "A1",
+          "rule": "Focus trap in modals, restore focus on close",
+          "question": "I built a modal dialog. What accessibility features am I probably missing?",
+          "pass_criteria": "Must specifically mention focus trapping inside modals AND restoring focus to the trigger element on close."
+        },
+        {
+          "id": "A2",
+          "rule": "Color contrast WCAG 2.1 AA, prefers-reduced-motion: disable transforms, opacity only",
+          "question": "How should I handle animations for users who prefer reduced motion?",
+          "pass_criteria": "Must mention prefers-reduced-motion media query. Must recommend disabling transforms and using opacity only as the fallback."
+        }
+      ]
+    },
+    {
+      "section": "styling",
+      "assertions": [
+        {
+          "id": "S1",
+          "rule": "Never hard-code colors/spacing; always use design tokens",
+          "question": "Is it okay to use hex color values like #1a1a2e directly in my component styles?",
+          "pass_criteria": "Must say NO. Must recommend using design tokens instead of hard-coded colors/spacing values."
+        },
+        {
+          "id": "S2",
+          "rule": "Dark theme: bg-neutral-bg1/bg2/bg3 layers, border-border-subtle, glass classes via @layer",
+          "question": "How should I implement dark theme background layers in my design system?",
+          "pass_criteria": "Must mention layered backgrounds (bg1/bg2/bg3 pattern). Must mention border-subtle and @layer for glass classes."
+        }
+      ]
+    }
+  ]
+}

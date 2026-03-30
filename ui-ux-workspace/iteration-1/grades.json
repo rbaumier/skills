@@ -1,0 +1,256 @@
+{
+  "iteration": 1,
+  "date": "2026-03-30",
+  "tests": [
+    {
+      "id": "t1-card-layout",
+      "section": "design-philosophy",
+      "assertions": [
+        {
+          "name": "no-3-col-equal-cards",
+          "without_skill": "FAIL — uses `grid-template-columns: repeat(3, 1fr)` (exact anti-pattern)",
+          "with_skill": "PASS — uses asymmetric `2fr 1fr 1fr` grid with explicit rejection of equal cards"
+        },
+        {
+          "name": "no-ai-color-palette",
+          "without_skill": "FAIL — uses `#06b6d4` (cyan) and `#8b5cf6` (purple) on dark, the exact banned palette",
+          "with_skill": "PASS — explicitly rejects cyan/purple, uses warm earth tone accent oklch(65% 0.15 45)"
+        },
+        {
+          "name": "no-gradient-text-or-accent",
+          "without_skill": "FAIL — gradient accent bars AND gradient text on every metric number",
+          "with_skill": "PASS — explicitly states 'No gradients anywhere', uses weight and color for hierarchy"
+        },
+        {
+          "name": "no-hero-metric-layout",
+          "without_skill": "FAIL — exact template: big number + small label + gradient accent on every card",
+          "with_skill": "PASS — adds contextual data (trend %, time range) instead of bare number+label"
+        },
+        {
+          "name": "no-pure-black-bg",
+          "without_skill": "FAIL — uses `background: #000`",
+          "with_skill": "PASS — uses zinc-950 `#09090b` with explicit note"
+        },
+        {
+          "name": "distinctive-font-choice",
+          "without_skill": "FAIL — uses `Inter, sans-serif` (explicitly banned)",
+          "with_skill": "PASS — uses `Geist` with explanation"
+        }
+      ]
+    },
+    {
+      "id": "t2-color-palette",
+      "section": "design-principles",
+      "assertions": [
+        {
+          "name": "oklch-color-space",
+          "without_skill": "FAIL — all colors in hex (#eff6ff, etc.), no mention of OKLCH",
+          "with_skill": "PASS — entire palette defined in oklch() with explicit rationale"
+        },
+        {
+          "name": "tinted-neutrals",
+          "without_skill": "FAIL — pure untinted greys (#f9fafb, #6b7280, etc.), no brand hue tinting",
+          "with_skill": "PASS — all greys tinted at hue 250 with 0.005-0.02 chroma"
+        },
+        {
+          "name": "no-pure-black-white",
+          "without_skill": "FAIL — uses `#000000` for bg-dark and text-primary, `#ffffff` for bg-primary",
+          "with_skill": "PASS — darkest is oklch(13% ...), lightest is oklch(98.5% ...), both tinted"
+        },
+        {
+          "name": "60-30-10-rule",
+          "without_skill": "FAIL — mentions the ratio but doesn't structure the palette around it",
+          "with_skill": "PASS — explicit usage guide mapping neutrals=60%, primary=30%, accent=10%"
+        },
+        {
+          "name": "semantic-token-naming",
+          "without_skill": "FAIL — uses flat naming (--primary-50, --grey-50) not semantic pattern",
+          "with_skill": "PASS — uses {category}-{property}-{variant} pattern: --color-surface-base, --color-text-primary, --color-status-success-bg"
+        },
+        {
+          "name": "dark-mode-strategy",
+          "without_skill": "FAIL — dark mode just swaps to #000 bg with #fff text, no depth/desaturation strategy",
+          "with_skill": "PASS — lighter surfaces for depth (raised > base), desaturated primary (chroma 0.18→0.14), explicit notes"
+        }
+      ]
+    },
+    {
+      "id": "t3-shadow-system",
+      "section": "design-principles",
+      "assertions": [
+        {
+          "name": "layered-shadows",
+          "without_skill": "FAIL — single shadow per level (e.g., `0 4px 6px rgba(0,0,0,0.1)`)",
+          "with_skill": "PASS — 2-3 layers per level with increasing blur and decreasing opacity"
+        },
+        {
+          "name": "no-pure-black-shadows",
+          "without_skill": "FAIL — all shadows use `rgba(0, 0, 0, ...)` (pure black)",
+          "with_skill": "PASS — all shadows use `rgba(17, 24, 39, ...)` (deep navy tint)"
+        },
+        {
+          "name": "shadow-tokens-scale",
+          "without_skill": "FAIL — uses Tailwind-style naming (--shadow-sm/md/lg) not semantic scale",
+          "with_skill": "PASS — uses --shadow-1 through --shadow-4 with explicit element mapping"
+        },
+        {
+          "name": "animate-via-pseudo",
+          "without_skill": "FAIL — uses `transition: box-shadow 0.3s ease` directly",
+          "with_skill": "PASS — full pseudo-element technique with ::after, opacity transition, pointer-events: none"
+        },
+        {
+          "name": "consistent-light-source",
+          "without_skill": "FAIL — no mention of light source direction",
+          "with_skill": "PASS — explicitly states top light source, all shadows cast downward"
+        },
+        {
+          "name": "concentric-radius",
+          "without_skill": "FAIL — no mention of concentric radius",
+          "with_skill": "PASS — full code example with outer = inner + padding formula"
+        }
+      ]
+    },
+    {
+      "id": "t4-form-design",
+      "section": "accessibility-and-interaction",
+      "assertions": [
+        {
+          "name": "label-above-input",
+          "without_skill": "PASS — labels are above inputs",
+          "with_skill": "PASS — labels display:block above inputs, errors below"
+        },
+        {
+          "name": "correct-input-types",
+          "without_skill": "FAIL — email uses type='text' instead of type='email', no inputmode or autocomplete",
+          "with_skill": "PASS — type='email', inputmode='email', autocomplete='email/name/new-password' on each input"
+        },
+        {
+          "name": "no-paste-blocking",
+          "without_skill": "PASS — no paste blocking present (but not explicitly addressed)",
+          "with_skill": "PASS — explicitly notes 'no onPaste handler anywhere'"
+        },
+        {
+          "name": "button-for-actions",
+          "without_skill": "FAIL — uses `<div onclick='handleSubmit()'>` instead of `<button>`",
+          "with_skill": "PASS — uses `<button type='submit'>`, explicitly notes 'never <div onClick>'"
+        },
+        {
+          "name": "verb-noun-buttons",
+          "without_skill": "FAIL — button says 'Submit' (generic verb, no noun)",
+          "with_skill": "PASS — button says 'Create Account' (verb + noun)"
+        },
+        {
+          "name": "inline-errors-focus",
+          "without_skill": "FAIL — uses alert() for errors, no inline display, no focus management",
+          "with_skill": "PASS — inline error <p> elements below fields, firstError.focus() on submit"
+        },
+        {
+          "name": "error-messages-include-fix",
+          "without_skill": "FAIL — terse messages like 'Email is required', no guidance on how to fix",
+          "with_skill": "PASS — each error includes fix: 'Check for a missing @ or domain (e.g., you@company.com)'"
+        },
+        {
+          "name": "touch-targets-44px",
+          "without_skill": "FAIL — inputs use padding: 8px (~32px height), button has padding: 10px 20px (~36px)",
+          "with_skill": "PASS — all inputs and button have min-height: 44px"
+        }
+      ]
+    },
+    {
+      "id": "t5-empty-state",
+      "section": "enhancement-and-refinement",
+      "assertions": [
+        {
+          "name": "what-will-be-here",
+          "without_skill": "FAIL — 'No tasks yet' is negation, doesn't describe what WILL be here",
+          "with_skill": "PASS — 'Your tasks live here' clearly states what the space is for"
+        },
+        {
+          "name": "why-it-matters",
+          "without_skill": "FAIL — no value proposition, just slop copy about 'unleashing productivity'",
+          "with_skill": "PASS — 'Track what needs doing, assign deadlines, see progress across your whole project'"
+        },
+        {
+          "name": "how-to-get-started",
+          "without_skill": "PASS — has an 'Add Task' button",
+          "with_skill": "PASS — 'Create your first task' button + keyboard shortcut hint"
+        },
+        {
+          "name": "visual-interest",
+          "without_skill": "FAIL — uses a clipboard emoji, not a custom illustration",
+          "with_skill": "PASS — custom SVG illustration with task-list motif (stacked bars + add circle)"
+        },
+        {
+          "name": "no-ai-slop-copy",
+          "without_skill": "FAIL — uses 'unleash', 'seamless', 'elevate', 'next level' (4 banned words)",
+          "with_skill": "PASS — zero banned words, concrete language throughout"
+        },
+        {
+          "name": "no-generic-loading-copy",
+          "without_skill": "PASS — no loading copy present in this context",
+          "with_skill": "PASS — no loading copy present in this context"
+        },
+        {
+          "name": "active-voice-copy",
+          "without_skill": "FAIL — passive phrasing 'Get started by creating' instead of direct imperative",
+          "with_skill": "PASS — 'Create your first task', 'Track what needs doing' (active voice)"
+        }
+      ]
+    },
+    {
+      "id": "t6-hero-section",
+      "section": "creative-arsenal",
+      "assertions": [
+        {
+          "name": "no-centered-text-over-dark",
+          "without_skill": "FAIL — centered text on dark background with text-align: center",
+          "with_skill": "PASS — asymmetric 55/45 grid, left-aligned text"
+        },
+        {
+          "name": "no-bounce-easing",
+          "without_skill": "FAIL — uses `animation: bounce 1s infinite` with bounce keyframes",
+          "with_skill": "PASS — uses cubic-bezier(0.16, 1, 0.3, 1) (ease-out-expo)"
+        },
+        {
+          "name": "action-hierarchy",
+          "without_skill": "FAIL — primary CTA has gradient bg (decorative), secondary is plain outline, no clear hierarchy reasoning",
+          "with_skill": "PASS — 1 solid high-contrast primary 'Start Building' + 1 ghost secondary 'Read the Docs'"
+        },
+        {
+          "name": "dramatic-size-contrast",
+          "without_skill": "FAIL — h1=64px, body=20px = 3.2x ratio, but no explicit dramatic jump strategy",
+          "with_skill": "PASS — h1=72px, body=18px = 4x ratio, explicitly noted as design decision"
+        },
+        {
+          "name": "no-h-screen",
+          "without_skill": "FAIL — uses `min-height: 100vh` (should be 100dvh)",
+          "with_skill": "PASS — uses `min-height: 100dvh`"
+        },
+        {
+          "name": "weight-contrast",
+          "without_skill": "FAIL — heading font-weight: 600, body implied default (400) = weak contrast",
+          "with_skill": "PASS — heading 800, body 300 = strong contrast, explicitly noted"
+        },
+        {
+          "name": "no-glassmorphism",
+          "without_skill": "FAIL — uses `backdrop-filter: blur(20px)` decoratively on code card",
+          "with_skill": "PASS — solid bg terminal card, explicitly rejects glassmorphism"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_assertions": 40,
+    "without_skill": {
+      "pass": 4,
+      "fail": 36,
+      "pass_rate": "10%"
+    },
+    "with_skill": {
+      "pass": 40,
+      "fail": 0,
+      "pass_rate": "100%"
+    },
+    "discrimination_rate": "90%"
+  }
+}
