@@ -57,7 +57,7 @@ Reference these guidelines when:
 - `type-use-z-infer` - Use z.infer instead of manual types
 - `type-input-vs-output` - Distinguish z.input from z.infer for transforms
 - `type-export-schemas-and-types` - Export both schemas and inferred types
-- `type-branded-types` - Use branded types for domain safety
+- `type-branded-types` - **Use `.brand()` for domain IDs** — `z.string().uuid().brand('UserId')` creates a nominal type that prevents mixing `UserId` with `OrderId` even though both are UUID strings. In reviews: if a schema has an `id` field as plain `z.string().uuid()`, recommend `.brand('EntityNameId')` for type-level safety
 - `type-enable-strict-mode` - Enable TypeScript strict mode
 
 ### 4. Error Handling (HIGH)

@@ -1,0 +1,217 @@
+{
+  "skill": "drizzle-orm",
+  "iteration": 1,
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "schema",
+      "name": "Schema Definition",
+      "assertions": [
+        {
+          "id": "A1",
+          "rule": "Use pgTable with correct column type imports from drizzle-orm/pg-core",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Imports pgTable, serial, text, integer, json, timestamp, index from 'drizzle-orm/pg-core' and uses pgTable()",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Imports pgTable, serial, text, integer, json from 'drizzle-orm/pg-core' and uses pgTable()"
+        },
+        {
+          "id": "A2",
+          "rule": "Use $type<T>() for JSON columns instead of leaving as unknown/any",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses json('metadata').$type<{ color: string; weight: number }>()",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses json('metadata') without $type — left as unknown"
+        },
+        {
+          "id": "A3",
+          "rule": "Use $inferSelect and $inferInsert for TypeScript type inference",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses typeof products.$inferSelect and typeof products.$inferInsert",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses InferSelectModel<typeof products> and InferInsertModel — the older API. Not $inferSelect/$inferInsert."
+        },
+        {
+          "id": "A4",
+          "rule": "Use camelCase for TS property names, snake_case for DB column names",
+          "with_skill": "PASS",
+          "with_skill_evidence": "productId (camelCase) maps to 'product_id' (snake_case)",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses product_id as the TS property name (snake_case in TS), violating the naming convention"
+        },
+        {
+          "id": "A5",
+          "rule": "Define indexes on foreign keys and frequently queried columns",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Defines index('reviews_product_id_idx').on(table.productId) on the FK column",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No indexes defined on any column"
+        }
+      ]
+    },
+    {
+      "id": "relations",
+      "name": "Relations & Relational Queries",
+      "assertions": [
+        {
+          "id": "A6",
+          "rule": "Use relations() helper from drizzle-orm with one/many",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Imports relations from 'drizzle-orm' and defines usersRelations, postsRelations, tagsRelations, postsToTagsRelations",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Imports relations from 'drizzle-orm' and defines usersRelations, postsRelations, postTagsRelations"
+        },
+        {
+          "id": "A7",
+          "rule": "Many-to-many requires explicit junction table with composite primaryKey",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Creates postsToTags table with primaryKey({ columns: [table.postId, table.tagId] })",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Creates postTags junction table but does NOT define a composite primaryKey — no third argument with primaryKey()"
+        },
+        {
+          "id": "A8",
+          "rule": "Use db.query.X.findMany({ with: ... }) for relational queries",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses db.query.users.findMany({ with: { posts: { with: { tags: { with: { tag: true } } } } } })",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses manual leftJoin chains instead of db.query.users.findMany with 'with', requiring manual reshaping"
+        }
+      ]
+    },
+    {
+      "id": "queries",
+      "name": "Queries & Filtering",
+      "assertions": [
+        {
+          "id": "A9",
+          "rule": "Import filter operators (eq, gt, like, and, inArray, etc.) from drizzle-orm",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Imports eq, gt, like, and, inArray, asc, sql from 'drizzle-orm'",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Imports eq, gt, like, and, inArray, desc, sql from 'drizzle-orm'"
+        },
+        {
+          "id": "A10",
+          "rule": "Use sql template tag for raw SQL, never string concatenation",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Analytics query uses sql`...` tagged template with table references",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Uses sql`...` tagged template for analytics query"
+        },
+        {
+          "id": "A11",
+          "rule": "Use cursor-based pagination instead of OFFSET for large datasets",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses gt(users.id, lastSeenId) with orderBy(asc(users.id)).limit(pageSize) — explicitly notes OFFSET scans skipped rows",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses .offset(page * pageSize) for the 10M row table"
+        }
+      ]
+    },
+    {
+      "id": "transactions",
+      "name": "Transactions & Data Integrity",
+      "assertions": [
+        {
+          "id": "A12",
+          "rule": "Use db.transaction() for multi-step data modifications",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Both transferMoney and createUserWithProfile are wrapped in db.transaction(async (tx) => { ... })",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "transferMoney uses db.transaction() but createUserWithProfile does NOT — runs two separate inserts outside a transaction"
+        },
+        {
+          "id": "A13",
+          "rule": "Transaction auto-rolls back on error",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly explains: 'db.transaction() auto-rolls back on error. If any query inside the callback throws... the entire transaction is rolled back — no partial writes occur.'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Does not explain auto-rollback. Says 'the transaction will handle it' vaguely, and for user+profile says 'you'd need to manually clean up' — showing lack of understanding"
+        }
+      ]
+    },
+    {
+      "id": "migrations",
+      "name": "Migrations & Config",
+      "assertions": [
+        {
+          "id": "A14",
+          "rule": "Use drizzle-kit generate then drizzle-kit migrate for migration workflow",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Shows 'npx drizzle-kit generate' then 'npx drizzle-kit migrate' in sequence",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Shows 'npx drizzle-kit generate' and 'npx drizzle-kit migrate'"
+        },
+        {
+          "id": "A15",
+          "rule": "Config object uses satisfies Config pattern",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Export ends with } satisfies Config;",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses const config: Config = { ... }; export default config; instead of satisfies Config"
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "name": "Performance & Red Flags",
+      "assertions": [
+        {
+          "id": "A16",
+          "rule": "Type JSON columns with $type<T>() - no any/unknown",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses json('metadata').$type<UserMetadata>() with a defined interface",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses json('metadata') without $type, then casts with 'as' at read time"
+        },
+        {
+          "id": "A17",
+          "rule": "No raw SQL string building - always use sql template",
+          "with_skill": "PASS",
+          "with_skill_evidence": "JSONB query uses sql`${users.metadata}->>'theme' = ${theme}`",
+          "without_skill": "PASS",
+          "without_skill_evidence": "No raw SQL string concatenation present (no raw SQL used at all beyond eq)"
+        },
+        {
+          "id": "A18",
+          "rule": "Select specific columns for large tables instead of select()",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses db.select({ id: users.id, email: users.email, name: users.name, createdAt: users.createdAt }) — explicitly excludes bio",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses db.select().from(users) — fetches all columns including the large bio for 500K rows"
+        },
+        {
+          "id": "A19",
+          "rule": "Paginate production queries - never fetch all rows",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses cursor pagination with gt(users.id, lastSeenId) and .limit(pageSize)",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses db.select().from(users) with no limit or pagination — fetches all 500K rows"
+        },
+        {
+          "id": "A20",
+          "rule": "Reuse connection in serverless - cache db instance outside handler",
+          "with_skill": "PASS",
+          "with_skill_evidence": "cachedDb declared outside handler, getDb() returns cached instance, pool max: 1",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Creates new Pool inside every handler invocation, then calls pool.end() — no connection reuse"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_assertions": 20,
+    "with_skill": {
+      "pass": 20,
+      "fail": 0,
+      "pass_rate": "100%"
+    },
+    "without_skill": {
+      "pass": 5,
+      "fail": 15,
+      "pass_rate": "25%"
+    },
+    "delta": "75%"
+  }
+}

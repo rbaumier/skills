@@ -1,0 +1,154 @@
+{
+  "skill": "drizzle-orm",
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "schema",
+      "name": "Schema Definition",
+      "prompt": "I'm building a PostgreSQL app with Drizzle ORM. Create a `products` table with id, name, price, category, and a metadata JSON column that stores `{ color: string; weight: number }`. Also create a `reviews` table with id, product_id (FK), rating, and comment. Show how to get TypeScript types from the schema.",
+      "trap": "Trap: Will the LLM use $type<T>() for JSON? Will it use $inferSelect/$inferInsert? Will it add indexes on FK columns? Will it use snake_case for DB names and camelCase for TS?",
+      "assertions": [
+        {
+          "id": "A1",
+          "rule": "Use pgTable with correct column type imports from drizzle-orm/pg-core",
+          "check": "Code imports from 'drizzle-orm/pg-core' and uses pgTable()"
+        },
+        {
+          "id": "A2",
+          "rule": "Use $type<T>() for JSON columns instead of leaving as unknown/any",
+          "check": "JSON metadata column uses .$type<{ color: string; weight: number }>()"
+        },
+        {
+          "id": "A3",
+          "rule": "Use $inferSelect and $inferInsert for TypeScript type inference",
+          "check": "Exports types using typeof table.$inferSelect and $inferInsert"
+        },
+        {
+          "id": "A4",
+          "rule": "Use camelCase for TS property names, snake_case for DB column names",
+          "check": "TS field is productId but DB column string is 'product_id'"
+        },
+        {
+          "id": "A5",
+          "rule": "Define indexes on foreign keys and frequently queried columns",
+          "check": "Defines an index on reviews.productId (the FK column)"
+        }
+      ]
+    },
+    {
+      "id": "relations",
+      "name": "Relations & Relational Queries",
+      "prompt": "Using Drizzle ORM with PostgreSQL, I have users, posts, and tags tables. Users have many posts (one-to-many). Posts and tags have a many-to-many relationship. Show me the complete schema with relations and a query that fetches all users with their posts and each post's tags.",
+      "trap": "Trap: Will it use relations() helper? Will many-to-many use a junction table with composite PK? Will it use db.query.X.findMany with 'with'?",
+      "assertions": [
+        {
+          "id": "A6",
+          "rule": "Use relations() helper from drizzle-orm with one/many",
+          "check": "Imports relations from 'drizzle-orm' and defines relation objects"
+        },
+        {
+          "id": "A7",
+          "rule": "Many-to-many requires explicit junction table with composite primaryKey",
+          "check": "Creates postsToTags junction table with primaryKey({ columns: [...] })"
+        },
+        {
+          "id": "A8",
+          "rule": "Use db.query.X.findMany({ with: ... }) for relational queries",
+          "check": "Uses db.query.users.findMany({ with: { posts: { with: { tags: true } } } })"
+        }
+      ]
+    },
+    {
+      "id": "queries",
+      "name": "Queries & Filtering",
+      "prompt": "I need to build a search endpoint with Drizzle ORM (PostgreSQL). Requirements: 1) Filter users by name pattern AND role. 2) Get users created after a date who are in a list of IDs. 3) Paginate results for a table with 10 million rows. 4) Run a raw SQL query to get custom analytics. Show me the code.",
+      "trap": "Trap: Will it import operators from drizzle-orm? Will it use sql`` template for raw SQL? Will it use cursor-based pagination instead of OFFSET?",
+      "assertions": [
+        {
+          "id": "A9",
+          "rule": "Import filter operators (eq, gt, like, and, inArray, etc.) from drizzle-orm",
+          "check": "Imports like, and, gt, inArray from 'drizzle-orm'"
+        },
+        {
+          "id": "A10",
+          "rule": "Use sql template tag for raw SQL, never string concatenation",
+          "check": "Uses sql`...` tagged template literal for the analytics query"
+        },
+        {
+          "id": "A11",
+          "rule": "Use cursor-based pagination instead of OFFSET for large datasets",
+          "check": "Uses where(gt(id, lastSeenId)) pattern instead of .offset() for the 10M row table"
+        }
+      ]
+    },
+    {
+      "id": "transactions",
+      "name": "Transactions & Data Integrity",
+      "prompt": "I need to implement a money transfer between two user accounts in Drizzle ORM (PostgreSQL). Deduct from sender and credit to receiver. Also show me how to create a user and their initial profile in one atomic operation. What happens if something fails?",
+      "trap": "Trap: Will it wrap multi-step operations in db.transaction()? Will it explain auto-rollback?",
+      "assertions": [
+        {
+          "id": "A12",
+          "rule": "Use db.transaction() for multi-step data modifications",
+          "check": "Wraps both the transfer and user+profile creation in db.transaction(async (tx) => { ... })"
+        },
+        {
+          "id": "A13",
+          "rule": "Transaction auto-rolls back on error",
+          "check": "Explains that if any query inside the transaction fails, the entire transaction rolls back automatically"
+        }
+      ]
+    },
+    {
+      "id": "migrations",
+      "name": "Migrations & Config",
+      "prompt": "I'm setting up Drizzle ORM for the first time in a new project. Show me the drizzle.config.ts file, explain how to generate and apply migrations, and show what a typical migration workflow looks like.",
+      "trap": "Trap: Will it use satisfies Config? Will it use drizzle-kit generate then migrate?",
+      "assertions": [
+        {
+          "id": "A14",
+          "rule": "Use drizzle-kit generate then drizzle-kit migrate for migration workflow",
+          "check": "Shows npx drizzle-kit generate followed by npx drizzle-kit migrate"
+        },
+        {
+          "id": "A15",
+          "rule": "Config object uses satisfies Config pattern",
+          "check": "Export uses } satisfies Config at the end of the config object"
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "name": "Performance & Red Flags",
+      "prompt": "I have a Drizzle ORM app deployed as serverless functions. The users table has 500K rows with columns: id, email, name, bio (large text), avatar_url, metadata (json), created_at. Write code to: 1) List users for an admin dashboard. 2) Set up the database connection properly for serverless. 3) Store and query the metadata JSON column.",
+      "trap": "Trap: Will it select specific columns instead of select()? Will it cache/reuse db connection? Will it type the JSON column with $type? Will it add pagination?",
+      "assertions": [
+        {
+          "id": "A16",
+          "rule": "Type JSON columns with $type<T>() - no any/unknown",
+          "check": "metadata column uses .$type<SomeInterface>() with a concrete type"
+        },
+        {
+          "id": "A17",
+          "rule": "No raw SQL string building - always use sql template",
+          "check": "Any raw SQL uses sql`...` template, not string concatenation"
+        },
+        {
+          "id": "A18",
+          "rule": "Select specific columns for large tables instead of select()",
+          "check": "Admin dashboard query uses db.select({ id: users.id, email: users.email, ... }) not db.select().from(users)"
+        },
+        {
+          "id": "A19",
+          "rule": "Paginate production queries - never fetch all rows",
+          "check": "Admin listing uses .limit() and either cursor or offset pagination"
+        },
+        {
+          "id": "A20",
+          "rule": "Reuse connection in serverless - cache db instance outside handler",
+          "check": "DB instance is created outside the handler function and reused across warm starts"
+        }
+      ]
+    }
+  ]
+}

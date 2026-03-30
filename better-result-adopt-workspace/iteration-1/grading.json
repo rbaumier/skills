@@ -1,0 +1,155 @@
+{
+  "skill": "better-result-adopt",
+  "date": "2026-03-30",
+  "iteration": 1,
+  "sections": [
+    {
+      "id": "migration-strategy",
+      "assertions": [
+        {
+          "id": "start-at-boundaries",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly states 'Start at I/O boundaries, NOT internal utilities' and identifies fetchFromWarehouse and updateDatabase as boundaries",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Agrees with starting from utility functions: 'Starting with utility functions is a good approach since they're simpler'"
+        },
+        {
+          "id": "no-big-bang",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly pushes back: 'Converting 200+ modules in one PR is a recipe for disaster. Adopt better-result incrementally'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Agrees with big-bang: 'Converting all 200+ modules in one PR is ambitious but doable'"
+        },
+        {
+          "id": "categorize-errors",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Provides explicit error categorization table with Domain/Infrastructure/Bugs categories",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of categorizing errors before migration"
+        },
+        {
+          "id": "domain-errors-use-tagged-error",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Defines ItemValidationError, WarehouseFetchError, DatabaseWriteError all extending TaggedError",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses plain Error: 'catch: (e) => e instanceof Error ? e : new Error(String(e))'"
+        },
+        {
+          "id": "infra-errors-use-try-promise",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Wraps fetchFromWarehouse and updateDatabase with Result.tryPromise + TaggedError",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses Result.try (not tryPromise) and wraps everything in one block instead of at boundaries"
+        },
+        {
+          "id": "bugs-let-throw",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly states 'Don't wrap bugs/defects in Result... They should throw and become Panic'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Agrees with wrapping null pointers: 'Wrapping null pointer exceptions in Result.try is fine'"
+        },
+        {
+          "id": "migration-order",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Follows correct order: Step 2 defines TaggedErrors, Step 3 wraps boundaries, Step 4 converts validation, Step 5 composes with generators",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of migration order; jumps straight to wrapping everything"
+        }
+      ]
+    },
+    {
+      "id": "pattern-transformations",
+      "assertions": [
+        {
+          "id": "try-catch-to-result-try",
+          "with_skill": "PASS",
+          "with_skill_evidence": "parseConfig uses Result.try with try/catch callbacks and TaggedError",
+          "without_skill": "PASS",
+          "without_skill_evidence": "parseConfig uses Result.try with try/catch callbacks (though uses plain Error)"
+        },
+        {
+          "id": "async-to-try-promise",
+          "with_skill": "PASS",
+          "with_skill_evidence": "loadUserProfile uses Result.tryPromise with TaggedError types",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "loadUserProfile uses manual try/catch returning Result.ok/Result.err, NOT Result.tryPromise"
+        },
+        {
+          "id": "null-checks-to-result",
+          "with_skill": "PASS",
+          "with_skill_evidence": "getActiveSession returns Result<Session, SessionNotFoundError | SessionExpiredError> using Result.ok and Result.err",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "getActiveSession returns Session | undefined, not a Result type at all"
+        },
+        {
+          "id": "callback-hell-to-generator",
+          "with_skill": "PASS",
+          "with_skill_evidence": "checkout uses Result.gen with yield* Result.await for each step, clean composition",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "checkout uses manual try/catch with Result.ok/Result.err, no Result.gen or yield*"
+        }
+      ]
+    },
+    {
+      "id": "workflow-pitfalls",
+      "assertions": [
+        {
+          "id": "no-over-wrapping",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly flags add() as over-wrapping: 'Don't wrap every function in Result. a + b cannot fail'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Approves add(): 'This is fine - wrapping pure functions in Result gives you consistent error handling'"
+        },
+        {
+          "id": "preserve-error-info",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Flags missing cause/context: 'there's no cause or structured context - you're losing error information'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of missing cause or context in the error class"
+        },
+        {
+          "id": "no-mixed-paradigms",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Flags controller: 'Once a module returns Result, callers should use Result too... Mixing try/catch with Result defeats the purpose'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Approves mixing: 'The try/catch in the controller is actually a good defensive practice'"
+        },
+        {
+          "id": "never-catch-panic",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Flags Panic catching: 'You should NEVER catch Panic... Fix the underlying bugs instead'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Approves catching all errors: 'Catching all errors and mapping them to your domain error type is a common pattern'"
+        },
+        {
+          "id": "use-tagged-error",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Flags 'Domain errors should extend TaggedError, not plain Error' with fix showing TaggedError + _tag",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Suggests adding statusCode property to Error, no mention of TaggedError"
+        },
+        {
+          "id": "check-opensrc",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Opens with 'I'd recommend checking if there's an opensrc/ directory in the project'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of opensrc/ or checking source code"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_assertions": 17,
+    "with_skill": {
+      "pass": 17,
+      "fail": 0,
+      "pass_rate": "100%"
+    },
+    "without_skill": {
+      "pass": 1,
+      "fail": 16,
+      "pass_rate": "5.9%"
+    },
+    "delta": "94.1%"
+  }
+}

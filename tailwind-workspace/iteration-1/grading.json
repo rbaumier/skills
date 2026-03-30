@@ -1,0 +1,353 @@
+{
+  "date": "2026-03-30",
+  "iteration": 1,
+  "sections": [
+    {
+      "id": "class-management",
+      "assertions": [
+        {
+          "id": "use-cn",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill uses cn() (twMerge + clsx). Without-skill only suggests clsx, not cn()/twMerge."
+        },
+        {
+          "id": "use-cva",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill recommends cva() for variants. Without-skill recommends @apply instead."
+        },
+        {
+          "id": "avoid-apply",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill explicitly discourages @apply for variants. Without-skill recommends @apply."
+        },
+        {
+          "id": "class-order",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill specifies exact order: layout > sizing > spacing > typography > visual > interactive > dark > responsive. Without-skill gives vague grouping advice."
+        },
+        {
+          "id": "tailwind-merge",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill explicitly mentions tailwind-merge for conflict resolution. Without-skill does not."
+        }
+      ]
+    },
+    {
+      "id": "responsive-mobile",
+      "assertions": [
+        {
+          "id": "mobile-first",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both correctly identify mobile-first approach. General Tailwind knowledge covers this."
+        },
+        {
+          "id": "responsive-text",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both show responsive text scaling. With-skill uses the exact pattern text-4xl sm:text-5xl lg:text-6xl."
+        },
+        {
+          "id": "container-queries",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill mentions container queries with @container. Without-skill does not mention them."
+        }
+      ]
+    },
+    {
+      "id": "spacing-sizing",
+      "assertions": [
+        {
+          "id": "spacing-scale",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill flags p-5 and mb-7 as non-standard. Without-skill says they're 'fine to use'."
+        },
+        {
+          "id": "no-arbitrary-px",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both suggest text-base over text-[16px], though without-skill is less emphatic."
+        },
+        {
+          "id": "size-shorthand",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill recommends size-12 and size-8. Without-skill does not mention size-* shorthand."
+        }
+      ]
+    },
+    {
+      "id": "semantic-tokens",
+      "assertions": [
+        {
+          "id": "semantic-over-raw",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both recommend semantic tokens over raw colors."
+        },
+        {
+          "id": "css-var-theming",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both show CSS variable-based theming."
+        },
+        {
+          "id": "oklch-format",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill uses OKLCH format throughout. Without-skill uses hex colors."
+        },
+        {
+          "id": "color-mix",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill mentions color-mix() in oklab. Without-skill does not mention it."
+        },
+        {
+          "id": "clear-defaults",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill uses --color-*: initial to clear defaults. Without-skill does not mention it."
+        },
+        {
+          "id": "theme-block",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill uses @theme block. Without-skill uses tailwind.config.js extend approach."
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "assertions": [
+        {
+          "id": "focus-styles",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both add focus:ring-2. With-skill also adds focus:ring-offset-2 consistently."
+        },
+        {
+          "id": "touch-targets",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill flags 44x44px minimum and uses size-11. Without-skill does not mention touch targets."
+        },
+        {
+          "id": "sr-only-aria",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both add aria-label. With-skill also shows sr-only pattern."
+        },
+        {
+          "id": "motion-reduce",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both add motion-reduce variant."
+        },
+        {
+          "id": "contrast-more",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill adds contrast-more: variant. Without-skill does not mention it."
+        }
+      ]
+    },
+    {
+      "id": "animations-perf",
+      "assertions": [
+        {
+          "id": "gpu-only",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill explicitly flags transition-all with w/h and recommends GPU properties. Without-skill mentions reflow but doesn't strongly prohibit it."
+        },
+        {
+          "id": "skeleton-pattern",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows full pattern with animate-pulse + rounded-md + bg-gray-200 dark:bg-gray-800. Without-skill shows animate-pulse but misses dark mode colors."
+        },
+        {
+          "id": "starting-style",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows @starting-style for popover animations. Without-skill suggests Framer Motion or CSS transitions."
+        },
+        {
+          "id": "animation-tokens",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill defines --animate-* and @keyframes in @theme. Without-skill does not mention @theme tokens."
+        }
+      ]
+    },
+    {
+      "id": "dark-mode",
+      "assertions": [
+        {
+          "id": "v4-dark-builtin",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows @custom-variant dark (&:where(.dark, .dark *)). Without-skill is vague about v4 dark mode config."
+        },
+        {
+          "id": "dark-css-override",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both show .dark {} block for overriding variables."
+        },
+        {
+          "id": "semantic-body",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill sets bg-background text-foreground on body and border-border on *. Without-skill does not mention this pattern."
+        }
+      ]
+    },
+    {
+      "id": "v4-migration",
+      "assertions": [
+        {
+          "id": "v4-import",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both correctly replace @tailwind with @import 'tailwindcss'."
+        },
+        {
+          "id": "v4-theme-css",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both move theme to @theme {} in CSS."
+        },
+        {
+          "id": "v4-auto-content",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both mention automatic content detection."
+        },
+        {
+          "id": "v4-opacity",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both replace bg-opacity-50 with /50 modifier."
+        },
+        {
+          "id": "v4-native-animations",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill explicitly replaces tailwindcss-animate with native CSS. Without-skill says 'check for v4-compatible versions'."
+        },
+        {
+          "id": "v4-utility-directive",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows @utility directive. Without-skill does not mention it."
+        },
+        {
+          "id": "v4-custom-variant",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows @custom-variant. Without-skill does not mention it."
+        },
+        {
+          "id": "v4-build-integration",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows @tailwindcss/postcss and @tailwindcss/vite with code. Without-skill only vaguely mentions 'PostCSS plugin or Vite plugin'."
+        },
+        {
+          "id": "content-scope",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill flags node_modules in content paths as problematic. Without-skill does not flag it."
+        }
+      ]
+    },
+    {
+      "id": "layout-patterns",
+      "assertions": [
+        {
+          "id": "grid-overflow",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill adds min-w-0 + truncate. Without-skill adds overflow-hidden + truncate but misses min-w-0."
+        },
+        {
+          "id": "aspect-ratio",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both use aspect-video + object-cover."
+        },
+        {
+          "id": "z-index-system",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both recommend systematic z-index values and flag arbitrary values."
+        },
+        {
+          "id": "truncation",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both mention truncate. With-skill also covers line-clamp-N for multi-line."
+        }
+      ]
+    },
+    {
+      "id": "components-react",
+      "assertions": [
+        {
+          "id": "compound-component",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill shows compound component pattern (Dialog.Trigger, Dialog.Content). Without-skill keeps monolithic structure."
+        },
+        {
+          "id": "radix-primitives",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill recommends Radix primitives with code. Without-skill does not mention Radix."
+        },
+        {
+          "id": "react-19-ref",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill flags forwardRef as unnecessary in React 19. Without-skill keeps forwardRef."
+        },
+        {
+          "id": "zod-rhf",
+          "with_skill": "PASS",
+          "without_skill": "PASS",
+          "notes": "Both recommend Zod + React Hook Form."
+        },
+        {
+          "id": "dynamic-classes",
+          "with_skill": "PASS",
+          "without_skill": "FAIL",
+          "notes": "With-skill warns against dynamic class concatenation with string map solution. Without-skill does not address it."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_assertions": 44,
+    "with_skill": {
+      "pass": 44,
+      "fail": 0,
+      "pass_rate": "100%"
+    },
+    "without_skill": {
+      "pass": 16,
+      "fail": 28,
+      "pass_rate": "36.4%"
+    },
+    "skill_delta": "63.6%",
+    "sections_needing_iteration": []
+  }
+}

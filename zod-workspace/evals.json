@@ -1,0 +1,54 @@
+{
+  "skill_name": "zod",
+  "evals": [
+    {
+      "id": 1,
+      "name": "schema-parsing",
+      "prompt": "Review and refactor this Zod validation code:\n\n```typescript\nimport { z } from 'zod';\n\n// User schema\nconst UserSchema = z.object({\n  name: z.any(),\n  email: z.string(),\n  age: z.string(),\n  role: z.string(),\n  bio: z.string().optional().optional().optional(),\n});\n\n// Manual type\ninterface User {\n  name: any;\n  email: string;\n  age: string;\n  role: string;\n  bio?: string;\n}\n\n// Parse form data\napp.post('/api/users', (req, res) => {\n  try {\n    const data = UserSchema.parse(req.body);\n    // age comes as string from form, need to convert\n    const age = parseInt(data.age);\n    if (isNaN(age)) return res.status(400).json({ error: 'Invalid age' });\n    \n    // role must be admin, user, or guest\n    if (!['admin', 'user', 'guest'].includes(data.role)) {\n      return res.status(400).json({ error: 'Invalid role' });\n    }\n    \n    createUser({ ...data, age });\n    res.json({ success: true });\n  } catch (e) {\n    res.status(400).json({ error: e.message });\n  }\n});\n```",
+      "assertions": [
+        { "id": "use-unknown-not-any", "trap": "z.any() used for name instead of z.unknown() or proper type" },
+        { "id": "use-safeparse", "trap": "parse() with try/catch instead of safeParse() for user input" },
+        { "id": "use-z-infer", "trap": "manual User interface instead of z.infer<typeof UserSchema>" },
+        { "id": "coercion-for-forms", "trap": "age is z.string() then parseInt, should use z.coerce.number()" },
+        { "id": "use-enums", "trap": "role validated with includes() instead of z.enum(['admin', 'user', 'guest'])" },
+        { "id": "string-validations", "trap": "email has no .email() validation" },
+        { "id": "avoid-optional-abuse", "trap": ".optional().optional().optional() chained redundantly" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "error-handling",
+      "prompt": "Review the error handling in this Zod validation:\n\n```typescript\nimport { z } from 'zod';\n\nconst OrderSchema = z.object({\n  items: z.array(z.object({\n    productId: z.string(),\n    quantity: z.number().min(1),\n    price: z.number().positive(),\n  })),\n  shippingAddress: z.object({\n    street: z.string(),\n    city: z.string(),\n    zip: z.string(),\n  }),\n  coupon: z.string().optional(),\n});\n\napp.post('/api/orders', (req, res) => {\n  const result = OrderSchema.safeParse(req.body);\n  if (!result.success) {\n    // Only show first error\n    const firstError = result.error.issues[0];\n    return res.status(400).json({ error: firstError.message });\n  }\n  processOrder(result.data);\n});\n\n// Refinement\nconst PasswordSchema = z.string().refine((val) => {\n  if (val.length < 8) throw new Error('Too short');\n  if (!/[A-Z]/.test(val)) throw new Error('Need uppercase');\n  return true;\n});\n```",
+      "assertions": [
+        { "id": "handle-all-issues", "trap": "only first error shown, not all validation issues" },
+        { "id": "use-flatten", "trap": "manual error extraction instead of .flatten() or .format()" },
+        { "id": "path-for-nested", "trap": "nested errors (items[0].quantity) lose path info with current approach" },
+        { "id": "custom-messages", "trap": "no custom error messages on schema fields" },
+        { "id": "no-throw-in-refine", "trap": "throwing inside refine() instead of returning false" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "object-composition",
+      "prompt": "Review this schema design:\n\n```typescript\nimport { z } from 'zod';\n\n// Full user schema\nconst UserSchema = z.object({\n  id: z.string().uuid(),\n  name: z.string().min(1),\n  email: z.string().email(),\n  password: z.string().min(8),\n  role: z.string(),\n  createdAt: z.date(),\n});\n\n// Create user (copy-paste without id/createdAt)\nconst CreateUserSchema = z.object({\n  name: z.string().min(1),\n  email: z.string().email(),\n  password: z.string().min(8),\n  role: z.string(),\n});\n\n// Update user (all fields optional, copy-paste again)\nconst UpdateUserSchema = z.object({\n  name: z.string().min(1).optional(),\n  email: z.string().email().optional(),\n  password: z.string().min(8).optional(),\n  role: z.string().optional(),\n});\n\n// API response type\ntype Shape = 'circle' | 'square' | 'triangle';\nconst ShapeSchema = z.object({\n  type: z.string(),\n  radius: z.number().optional(),\n  side: z.number().optional(),\n  base: z.number().optional(),\n  height: z.number().optional(),\n});\n\n// Validation: extra fields silently accepted\nconst ConfigSchema = z.object({ port: z.number(), host: z.string() });\nconst config = ConfigSchema.parse({ port: 3000, host: 'localhost', debug: true, secret: 'leaked' });\n```",
+      "assertions": [
+        { "id": "pick-omit", "trap": "CreateUserSchema duplicates fields instead of UserSchema.omit({ id, createdAt })" },
+        { "id": "partial-for-updates", "trap": "UpdateUserSchema duplicates with .optional() instead of CreateUserSchema.partial()" },
+        { "id": "discriminated-unions", "trap": "ShapeSchema uses optional fields instead of z.discriminatedUnion on type" },
+        { "id": "strict-vs-strip", "trap": "ConfigSchema silently strips unknown keys (debug, secret) — should use .strict()" },
+        { "id": "branded-types", "trap": "id is just z.string().uuid() — could use .brand() for UserId type safety" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "advanced",
+      "prompt": "Review this code for Zod best practices:\n\n```typescript\nimport { z } from 'zod';\n\n// API response parsing\nconst rawData = await fetch('/api/data').then(r => r.json());\nconst data = rawData as ApiResponse; // trust JSON output\n\n// Schema created in render loop\nfunction ValidatedForm({ fields }: { fields: Field[] }) {\n  // Created every render\n  const schema = z.object(\n    Object.fromEntries(fields.map(f => [f.name, f.required ? z.string().min(1) : z.string().optional()]))\n  );\n  return <Form schema={schema} />;\n}\n\n// Transform schema\nconst DateSchema = z.string().transform((s) => new Date(s));\ntype DateInput = z.infer<typeof DateSchema>; // Date, but input is actually string\n\n// Recursive schema\ninterface TreeNode { value: string; children: TreeNode[]; }\nconst TreeSchema: z.ZodType<TreeNode> = z.object({\n  value: z.string(),\n  children: z.array(TreeSchema), // ReferenceError: TreeSchema used before init\n});\n```",
+      "assertions": [
+        { "id": "never-trust-json", "trap": "raw JSON cast as ApiResponse instead of parsing with schema" },
+        { "id": "avoid-dynamic-creation", "trap": "schema created inside component render on every cycle" },
+        { "id": "input-vs-output", "trap": "z.infer on transform gives output type (Date), should use z.input for input type (string)" },
+        { "id": "lazy-recursive", "trap": "self-referencing schema causes ReferenceError, should use z.lazy()" }
+      ]
+    }
+  ]
+}

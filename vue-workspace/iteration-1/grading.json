@@ -1,0 +1,242 @@
+{
+  "created": "2026-03-30",
+  "iteration": 1,
+  "sections": [
+    {
+      "id": "reactivity",
+      "name": "Reactivity & Composition API",
+      "assertions": [
+        {
+          "id": "reactivity-composition-api",
+          "rule": "Always use Composition API with <script setup lang=\"ts\">",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses <script setup lang=\"ts\"> and explicitly calls out the switch from Options API",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Uses setup() function but NOT <script setup lang=\"ts\"> — uses export default { setup() } instead"
+        },
+        {
+          "id": "reactivity-computed",
+          "rule": "Derive everything possible with computed, avoid recomputing in templates",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses computed() for total, explicitly explains caching benefit vs method call",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Keeps total() as a method called in the template — does not use computed()"
+        },
+        {
+          "id": "reactivity-no-destructure",
+          "rule": "Destructuring reactive objects breaks reactivity",
+          "with_skill": "PASS",
+          "with_skill_notes": "Explicitly warns about the gotcha, avoids destructuring, uses ref instead",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Destructures reactive object: const { items } = cart — breaks reactivity"
+        },
+        {
+          "id": "reactivity-ref-value",
+          "rule": "ref() auto-unwraps in templates but NOT in script — always use .value in script",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses .value in script (items.value), notes auto-unwrap in template",
+          "without_skill": "PASS",
+          "without_skill_notes": "Uses reactive() not ref, so .value is not applicable — no incorrect usage"
+        },
+        {
+          "id": "reactivity-shallowref",
+          "rule": "Prefer shallowRef over ref if deep reactivity is not needed",
+          "with_skill": "PASS",
+          "with_skill_notes": "Explicitly justifies why ref() is appropriate (needs deep reactivity for array mutations) and mentions shallowRef as alternative",
+          "without_skill": "FAIL",
+          "without_skill_notes": "No mention of shallowRef at all"
+        },
+        {
+          "id": "reactivity-typescript",
+          "rule": "Prefer TypeScript over JavaScript",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses TypeScript with CartItem interface and typed parameters",
+          "without_skill": "FAIL",
+          "without_skill_notes": "No TypeScript — no types, no lang=\"ts\", no interfaces"
+        }
+      ]
+    },
+    {
+      "id": "sfc-structure",
+      "name": "SFC Structure & Template Safety",
+      "assertions": [
+        {
+          "id": "sfc-section-order",
+          "rule": "SFC sections order: <script> -> <template> -> <style>",
+          "with_skill": "PASS",
+          "with_skill_notes": "Correctly orders script, then template, then style. Explicitly calls it out.",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Puts <template> before <script> — wrong order"
+        },
+        {
+          "id": "sfc-v-html-warning",
+          "rule": "Apply Vue template safety rules (v-html)",
+          "with_skill": "PASS",
+          "with_skill_notes": "Removes v-html, warns about XSS, suggests DOMPurify as sanitization option",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Keeps v-html without any XSS warning or sanitization"
+        },
+        {
+          "id": "sfc-v-for-key",
+          "rule": "v-for must have :key",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses :key=\"user.id\" with stable identifier",
+          "without_skill": "FAIL",
+          "without_skill_notes": "v-for has no :key binding at all"
+        },
+        {
+          "id": "sfc-v-if-v-else",
+          "rule": "Use v-if/v-else properly for conditional rendering",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses v-if/v-else instead of two opposite v-if conditions",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Uses v-if=\"loading\" and v-if=\"!loading\" — two separate conditions instead of v-else"
+        },
+        {
+          "id": "sfc-computed-filter",
+          "rule": "Move branching/derivation to script; keep templates declarative",
+          "with_skill": "PASS",
+          "with_skill_notes": "Filtering logic in computed() property",
+          "without_skill": "PASS",
+          "without_skill_notes": "Also uses computed for filteredUsers"
+        }
+      ]
+    },
+    {
+      "id": "component-splitting",
+      "name": "Component Splitting & Architecture",
+      "assertions": [
+        {
+          "id": "split-crud-feature",
+          "rule": "For CRUD/list features, split into: container, input/form, list/item, footer/actions",
+          "with_skill": "PASS",
+          "with_skill_notes": "Splits into TodoApp (container), TodoInput, TodoList, TodoFooter — matches the rule exactly",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Everything in a single App.vue — no splitting at all"
+        },
+        {
+          "id": "split-entry-thin",
+          "rule": "Keep entry/root and route view components thin",
+          "with_skill": "PASS",
+          "with_skill_notes": "App.vue is a thin composition surface that just mounts <TodoApp />",
+          "without_skill": "FAIL",
+          "without_skill_notes": "App.vue contains all state, logic, and template — mega component"
+        },
+        {
+          "id": "split-composable",
+          "rule": "Move state/side effects into composables",
+          "with_skill": "PASS",
+          "with_skill_notes": "Extracts useTodos() composable with all state and actions",
+          "without_skill": "FAIL",
+          "without_skill_notes": "All state inline in the component, no composable"
+        },
+        {
+          "id": "split-component-map",
+          "rule": "Create a brief component map before implementation",
+          "with_skill": "PASS",
+          "with_skill_notes": "Provides a component map table with responsibilities and props/emits before any code",
+          "without_skill": "FAIL",
+          "without_skill_notes": "No component map or planning — goes straight to code"
+        },
+        {
+          "id": "split-feature-folder",
+          "rule": "Prefer feature folder layout when adding more than one component",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses components/todos/ folder and composables/useTodos.ts",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Single file, no folder structure"
+        }
+      ]
+    },
+    {
+      "id": "data-flow",
+      "name": "Component Data Flow & Contracts",
+      "assertions": [
+        {
+          "id": "flow-props-events",
+          "rule": "Props down, events up as the primary model",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses v-model (props+events) instead of provide/inject, explains why props/events is correct here",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Uses provide/inject for direct parent-child — implicit data flow"
+        },
+        {
+          "id": "flow-provide-inject-scope",
+          "rule": "Use provide/inject only for deep-tree dependencies",
+          "with_skill": "PASS",
+          "with_skill_notes": "Explicitly rejects provide/inject for shallow tree, explains when it would be appropriate",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Uses provide/inject for one-level-deep parent-child relationship"
+        },
+        {
+          "id": "flow-typed-contracts",
+          "rule": "Keep contracts explicit and typed with defineProps, defineEmits, InjectionKey",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses defineModel<Theme> and defineModel<boolean> with TypeScript generics",
+          "without_skill": "FAIL",
+          "without_skill_notes": "inject() calls are untyped strings, no InjectionKey, no TypeScript safety"
+        },
+        {
+          "id": "flow-v-model",
+          "rule": "Use v-model only for true two-way component contracts",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses v-model for form-like controls (theme selector, checkbox toggle) — genuine two-way contracts. Justifies why.",
+          "without_skill": "PASS",
+          "without_skill_notes": "Does not use v-model at all (uses provide/inject instead), so no misuse"
+        },
+        {
+          "id": "flow-no-reactive-destructure",
+          "rule": "Discourage using Reactive Props Destructure",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses defineModel, no reactive props destructure. Explicitly notes this.",
+          "without_skill": "PASS",
+          "without_skill_notes": "Does not destructure props (uses inject instead)"
+        }
+      ]
+    },
+    {
+      "id": "optional-features",
+      "name": "Optional Features & Performance",
+      "assertions": [
+        {
+          "id": "optional-not-default",
+          "rule": "Do not add optional features by default; only when requirements call for them",
+          "with_skill": "PASS",
+          "with_skill_notes": "Audits each feature, rejects Suspense/KeepAlive/virtualization/v-memo as unjustified, explains why",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Implements ALL requested features without questioning whether they're needed"
+        },
+        {
+          "id": "perf-after-behavior",
+          "rule": "Performance work is a post-functionality pass",
+          "with_skill": "PASS",
+          "with_skill_notes": "Implements core behavior first, explains perf features should come after. Provides 'When to add these features' section.",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Mixes performance optimization (v-memo, virtual list) with core implementation"
+        },
+        {
+          "id": "optional-simplest-animation",
+          "rule": "Pick the simplest animation approach",
+          "with_skill": "PASS",
+          "with_skill_notes": "Uses TransitionGroup with simple CSS transitions — simplest approach for mount animation",
+          "without_skill": "PASS",
+          "without_skill_notes": "Also uses TransitionGroup with CSS — reasonable approach"
+        },
+        {
+          "id": "optional-justify",
+          "rule": "Use less-common features only when there is explicit need",
+          "with_skill": "PASS",
+          "with_skill_notes": "Provides a feature audit table, rejects each unjustified feature with reasoning, explains when each would be appropriate",
+          "without_skill": "FAIL",
+          "without_skill_notes": "Implements all features without justification or questioning need"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_assertions": 25,
+    "with_skill": { "pass": 25, "fail": 0, "pass_rate": "100%" },
+    "without_skill": { "pass": 5, "fail": 20, "pass_rate": "20%" },
+    "delta": "80%"
+  }
+}

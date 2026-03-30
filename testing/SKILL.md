@@ -44,7 +44,7 @@ description: "Testing strategy, TDD, UI testing, Vitest, Playwright. Trigger on 
 - One concept per test — multiple assertions OK if same concept
 - Descriptive names: sentences with scenario + expected outcome
 - No logic in tests — no loops, conditionals; keep declarative and flat
-- Mock at boundaries only — mock external systems (API, DB, 3rd party); never mock internal implementation
+- **Mock at boundaries only** — mock ONLY external I/O: network (API calls), filesystem, database, time, randomness. **Never spy on or mock internal collaborators** like loggers, event emitters, or internal services within the same codebase. Spying on `logger.info` or `eventBus.emit` couples tests to implementation — if you refactor logging, tests break even though behavior is unchanged. In reviews: if you see `vi.spyOn` on a class that is NOT an external boundary (network, DB, filesystem), flag it as mocking an internal implementation detail
 
 ### Data & State Management
 - Factories over fixtures — dynamic builders, not static JSON

@@ -1,0 +1,101 @@
+{
+  "iteration": 1,
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "schema-design",
+      "name": "Schema Design & Modeling",
+      "assertions": [
+        { "id": "sd-1", "rule": "UUIDv7 for primary keys", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Explicitly uses UUIDv7 and explains why not UUIDv4", "notes_without": "Uses gen_random_uuid() which is UUIDv4" },
+        { "id": "sd-2", "rule": "FK indexes explicit", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "CREATE INDEX on every FK column", "notes_without": "No FK indexes at all" },
+        { "id": "sd-3", "rule": "TEXT over VARCHAR", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses TEXT everywhere", "notes_without": "Uses VARCHAR(255), VARCHAR(100)" },
+        { "id": "sd-4", "rule": "TIMESTAMPTZ over TIMESTAMP", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses TIMESTAMPTZ on all temporal columns", "notes_without": "Uses bare TIMESTAMP" },
+        { "id": "sd-5", "rule": "NUMERIC for money", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses NUMERIC for price_estimate", "notes_without": "Uses FLOAT for price_estimate" },
+        { "id": "sd-6", "rule": "JSONB for semi-structured", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses JSONB for preferences", "notes_without": "Uses JSON (not JSONB)" },
+        { "id": "sd-7", "rule": "snake_case naming", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "All snake_case", "notes_without": "All snake_case (common convention)" },
+        { "id": "sd-8", "rule": "Soft delete via deleted_at or history table", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses deleted_at with partial unique index", "notes_without": "Uses is_deleted BOOLEAN" },
+        { "id": "sd-9", "rule": "CHECK constraints", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "CHECK on price >= 0 and status IN list", "notes_without": "No CHECK constraints" }
+      ]
+    },
+    {
+      "id": "performance-indexing",
+      "name": "Performance & Indexing",
+      "assertions": [
+        { "id": "pi-1", "rule": "Index based on query patterns", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Each index tied to specific query", "notes_without": "Indexes match queries but less explicitly" },
+        { "id": "pi-2", "rule": "Covering indexes with INCLUDE", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses INCLUDE clauses on multiple indexes", "notes_without": "No INCLUDE clauses anywhere" },
+        { "id": "pi-3", "rule": "Partial indexes", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "WHERE status = 'active' partial index", "notes_without": "No partial indexes" },
+        { "id": "pi-4", "rule": "BRIN for time-series", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Explicitly recommends BRIN for created_at", "notes_without": "Uses standard B-tree index on created_at" },
+        { "id": "pi-5", "rule": "No SELECT *", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "All queries use explicit columns, warns against SELECT *", "notes_without": "Uses SELECT * in all example queries" },
+        { "id": "pi-6", "rule": "Cursor-based pagination", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Full keyset pagination example, warns OFFSET is O(N)", "notes_without": "Uses OFFSET/LIMIT pattern" },
+        { "id": "pi-7", "rule": "TSVECTOR + GIN for text search", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "TSVECTOR + GIN, warns against LIKE '%term%'", "notes_without": "Uses LIKE '%term%' then suggests pg_trgm as improvement" }
+      ]
+    },
+    {
+      "id": "migrations",
+      "name": "Operational & Migrations",
+      "assertions": [
+        { "id": "mg-1", "rule": "Expand and Contract pattern", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Full 5-step expand-and-contract for rename", "notes_without": "Direct ALTER TABLE RENAME COLUMN" },
+        { "id": "mg-2", "rule": "Lock timeout during migrations", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "SET lock_timeout = '5s' on every DDL", "notes_without": "No lock_timeout mentioned" },
+        { "id": "mg-3", "rule": "CREATE INDEX CONCURRENTLY", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Uses CONCURRENTLY with explanation", "notes_without": "Mentions CONCURRENTLY as an option" },
+        { "id": "mg-4", "rule": "NOT VALID then VALIDATE", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Two-step ADD CONSTRAINT NOT VALID then VALIDATE", "notes_without": "Direct ALTER COLUMN SET NOT NULL" },
+        { "id": "mg-5", "rule": "Tune autovacuum, never disable", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Tunes per-table autovacuum params, warns against disabling", "notes_without": "Suggests disabling autovacuum and managing manually as an option" }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security & Access Control",
+      "assertions": [
+        { "id": "sc-1", "rule": "Least privilege, no superuser", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Explicitly states never superuser, shows GRANT specific permissions", "notes_without": "Uses service role key directly, no discussion of DB-level privileges" },
+        { "id": "sc-2", "rule": "RLS on every table", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "RLS on every table with performant policy advice", "notes_without": "Mentions RLS but not on every table, no performance guidance" },
+        { "id": "sc-3", "rule": "bcrypt/argon2, no plain text secrets", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "bcrypt with pgcrypto, warns against plain text API keys", "notes_without": "Defers to Supabase Auth for passwords, stores API keys as plain TEXT" },
+        { "id": "sc-4", "rule": "Parameterized queries, no concatenation", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Shows parameterized example, warns against concatenation", "notes_without": "Uses Supabase client which parameterizes internally (mentioned)" },
+        { "id": "sc-5", "rule": "PII identification and encryption", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Mentions identifying PII, encrypting with pgcrypto for compliance", "notes_without": "No mention of PII or encryption" }
+      ]
+    },
+    {
+      "id": "gotchas",
+      "name": "Gotchas",
+      "assertions": [
+        { "id": "gt-1", "rule": "SELECT * wastes bandwidth", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Flags and provides fix with explicit columns", "notes_without": "Mentions SELECT * is discouraged" },
+        { "id": "gt-2", "rule": "FK columns need explicit indexes", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Explicitly flags both FK columns, explains cascade lock issues", "notes_without": "Says 'foreign key references look correct', misses missing indexes" },
+        { "id": "gt-3", "rule": "NOW() in transaction behavior", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Warns about NOW() returning same value, suggests clock_timestamp()", "notes_without": "No mention of NOW() transaction behavior" },
+        { "id": "gt-4", "rule": "Connection pool math 5x20=100", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Calculates 5x20=100 hitting default, recommends PgBouncer", "notes_without": "Says make sure max_connections is high enough (200) — wrong fix, should use PgBouncer" },
+        { "id": "gt-5", "rule": "TRUNCATE not MVCC-safe", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Flags ACCESS EXCLUSIVE lock, recommends DELETE FROM", "notes_without": "Mentions it's DDL but doesn't flag the lock/MVCC issue for live traffic" },
+        { "id": "gt-6", "rule": "VARCHAR should be TEXT", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Flags VARCHAR(255), recommends TEXT", "notes_without": "Mentions TEXT as an option but says VARCHAR is 'fine'" },
+        { "id": "gt-7", "rule": "FLOAT should be NUMERIC", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Flags FLOAT, recommends NUMERIC", "notes_without": "Mentions precision issues, suggests DECIMAL(10,2)" },
+        { "id": "gt-8", "rule": "TIMESTAMP should be TIMESTAMPTZ", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Flags bare TIMESTAMP, recommends TIMESTAMPTZ", "notes_without": "Mentions considering TIMESTAMP WITH TIME ZONE" }
+      ]
+    },
+    {
+      "id": "drizzle-orm",
+      "name": "Drizzle ORM",
+      "assertions": [
+        { "id": "do-1", "rule": "pgTable() with typed columns", "with_skill": "PASS", "without_skill": "PASS", "notes_with": "Uses pgTable() correctly", "notes_without": "Uses pgTable() correctly" },
+        { "id": "do-2", "rule": "UUIDv7 with .$defaultFn", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Uses .$defaultFn(() => uuidv7())", "notes_without": "Uses serial() or defaultRandom() (UUIDv4)" },
+        { "id": "do-3", "rule": "Timestamps with withTimezone: true", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "All timestamps use { withTimezone: true }", "notes_without": "Uses bare timestamp() without withTimezone" },
+        { "id": "do-4", "rule": "Constraints in third argument", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "check(), uniqueIndex(), index() in third arg", "notes_without": "Only shows index in third arg, no check() constraint" },
+        { "id": "do-5", "rule": "InferSelectModel for types", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Exports InferSelectModel<typeof users>", "notes_without": "Uses deprecated InferModel instead of InferSelectModel" },
+        { "id": "do-6", "rule": "CLI output not production-ready", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Explicit warning with specific issues to check", "notes_without": "Says output is 'generally reliable and can be used directly'" }
+      ]
+    },
+    {
+      "id": "repository-pattern",
+      "name": "Repository Pattern & Typed Errors",
+      "assertions": [
+        { "id": "rp-1", "rule": "Return errors as values, never throw", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "All functions return error types in union, never throw", "notes_without": "Throws Error in all cases" },
+        { "id": "rp-2", "rule": "Domain-specific error classes", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "DiffNotFoundError, CommentForbiddenError, etc.", "notes_without": "Uses generic Error with string messages" },
+        { "id": "rp-3", "rule": "DatabaseError wraps cause", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "DatabaseError class with cause field", "notes_without": "No DatabaseError class" },
+        { "id": "rp-4", "rule": "Errors colocated in errors.ts", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "features/diffs/errors.ts file shown", "notes_without": "No separate error file" },
+        { "id": "rp-5", "rule": "Exhaustive matchError()", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "matchError() with exhaustive switch on _tag", "notes_without": "String matching on error.message in catch block" },
+        { "id": "rp-6", "rule": "Transaction returns union of all errors", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "Return type is explicit union of all step errors", "notes_without": "Transaction has no typed error return" },
+        { "id": "rp-7", "rule": "ReturnType<typeof factory> for repo type", "with_skill": "PASS", "without_skill": "FAIL", "notes_with": "type DiffRepository = ReturnType<typeof createDiffRepository>", "notes_without": "Uses class-based pattern, no factory" }
+      ]
+    }
+  ],
+  "summary": {
+    "total_assertions": 47,
+    "with_skill": { "pass": 47, "fail": 0 },
+    "without_skill": { "pass": 10, "fail": 37 },
+    "skill_lift": "78.7% (37 assertions rescued by skill)"
+  }
+}

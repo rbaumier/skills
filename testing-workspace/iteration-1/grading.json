@@ -1,0 +1,174 @@
+{
+  "sections": [
+    {
+      "name": "strategy",
+      "assertions": [
+        {
+          "id": "test-behavior-not-impl",
+          "description": "flags _cache access as testing implementation",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "no-snapshot-trap",
+          "description": "flags toMatchSnapshot as maintenance trap",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "no-logic-in-tests",
+          "description": "flags if/else conditional in test",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "descriptive-names",
+          "description": "flags vague test names ('register', 'should work correctly')",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "factories-over-fixtures",
+          "description": "flags shared static testUser, recommends factory/builder",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "dont-test-types",
+          "description": "flags type check test as testing what TypeScript guarantees",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "specific-matchers",
+          "description": "flags toMatchSnapshot, recommends specific field assertions",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "mock-boundaries-only",
+          "description": "flags Logger spy as mocking internal implementation (not external boundary)",
+          "with_skill": "FAIL",
+          "without_skill": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "tdd-workflow",
+      "assertions": [
+        {
+          "id": "vertical-slices",
+          "description": "flags writing all tests first as horizontal slicing",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "tracer-bullet",
+          "description": "recommends one test -> one impl -> repeat",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "never-refactor-red",
+          "description": "flags refactoring while tests are failing",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "minimal-code",
+          "description": "mentions writing only enough code to pass current test",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        }
+      ]
+    },
+    {
+      "name": "ui-testing",
+      "assertions": [
+        {
+          "id": "user-centric-selectors",
+          "description": "flags CSS class selectors, recommends role/label",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "zero-sleep",
+          "description": "flags waitForTimeout, recommends proper waits",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "api-seeding",
+          "description": "flags registering user through UI, recommends API seeding",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "page-object-model",
+          "description": "flags missing POM pattern",
+          "with_skill": "PASS",
+          "without_skill": "FAIL"
+        },
+        {
+          "id": "fresh-contexts",
+          "description": "flags shared browser context",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "determinism",
+          "description": "flags flaky test due to shared state/timeouts",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "mock-third-party",
+          "description": "flags real payment gateway, recommends mocking",
+          "with_skill": "PASS",
+          "without_skill": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "gotchas",
+      "assertions": [
+        {
+          "id": "vi-mock-hoisting",
+          "description": "flags mockFetch being undefined due to vi.mock hoisting",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "no-manual-cleanup",
+          "description": "flags manual cleanup() as unnecessary with Vitest",
+          "with_skill": "PASS",
+          "without_skill": "FAIL"
+        },
+        {
+          "id": "locator-auto-wait",
+          "description": "flags page.click()/page.$() as deprecated, recommends locator pattern",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        },
+        {
+          "id": "snapshot-specific",
+          "description": "flags toMatchSnapshot on empty state, recommends specific assertion",
+          "with_skill": "PASS",
+          "without_skill": "PASS"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "with_skill": {
+      "pass": 22,
+      "fail": 1,
+      "total": 23
+    },
+    "without_skill": {
+      "pass": 20,
+      "fail": 3,
+      "total": 23
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "skill": "tanstack",
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "query-v5-syntax",
+      "name": "Query v5 Syntax & Renames",
+      "prompt": "Write a React component that fetches a list of todos using TanStack Query. The component should:\n1. Use useQuery to fetch todos from '/api/todos'\n2. Show a loading spinner while data loads for the first time\n3. Handle errors with useErrorBoundary\n4. Set cacheTime to 5 minutes\n5. When filter changes, use keepPreviousData: true to avoid flicker\n6. On successful fetch, log the data with onSuccess callback",
+      "assertions": [
+        { "id": "object-syntax", "rule": "Always object syntax: useQuery({ queryKey, queryFn })", "expects": "useQuery called with single object argument, not positional args" },
+        { "id": "array-keys", "rule": "Always array query keys", "expects": "queryKey is an array like ['todos'] not a string" },
+        { "id": "isPending", "rule": "Use isPending not isLoading for initial load", "expects": "Uses isPending (or explains the distinction) instead of isLoading" },
+        { "id": "gcTime", "rule": "Use gcTime not cacheTime", "expects": "Uses gcTime instead of cacheTime" },
+        { "id": "throwOnError", "rule": "Use throwOnError not useErrorBoundary", "expects": "Uses throwOnError instead of useErrorBoundary" },
+        { "id": "keepPreviousData", "rule": "Use placeholderData: keepPreviousData", "expects": "Uses placeholderData: keepPreviousData instead of keepPreviousData: true" },
+        { "id": "no-query-callbacks", "rule": "No onSuccess/onError/onSettled on useQuery", "expects": "Does NOT use onSuccess; uses useEffect or alternative instead" }
+      ]
+    },
+    {
+      "id": "query-v5-patterns",
+      "name": "Query v5 Advanced Patterns",
+      "prompt": "Write a React component with TanStack Query v5 that:\n1. Has an infinite scroll list fetching pages from '/api/items'\n2. Uses useSuspenseQuery for SSR-safe data fetching\n3. Shows a background refetch indicator based on fetchStatus\n4. After a mutation succeeds, refreshes the list\n5. Uses enabled: false on the suspense query when user is logged out\n6. Handles the case where refetchOnMount: false but query previously errored",
+      "assertions": [
+        { "id": "initialPageParam", "rule": "Always initialPageParam for infinite queries", "expects": "Includes initialPageParam in useInfiniteQuery options" },
+        { "id": "no-enabled-suspense", "rule": "No enabled on useSuspenseQuery", "expects": "Does NOT use enabled with useSuspenseQuery; uses conditional rendering instead" },
+        { "id": "no-fetchStatus-suspense", "rule": "Don't conditionally render on fetchStatus with useSuspenseQuery + streaming", "expects": "Avoids conditional rendering based on fetchStatus with useSuspenseQuery" },
+        { "id": "invalidate-after-mutation", "rule": "Invalidate queries after mutations", "expects": "Uses queryClient.invalidateQueries after mutation success" },
+        { "id": "retryOnMount", "rule": "refetchOnMount: false ignored for errored queries; add retryOnMount: false", "expects": "Mentions or uses retryOnMount: false alongside refetchOnMount: false" },
+        { "id": "signal-cancellation", "rule": "Pass signal to fetch for auto-cancellation", "expects": "Passes signal parameter to fetch call in queryFn" },
+        { "id": "throw-in-queryFn", "rule": "Throw errors in queryFn", "expects": "Throws error when response is not ok in queryFn" }
+      ]
+    },
+    {
+      "id": "start-server-functions",
+      "name": "TanStack Start Server Functions & Middleware",
+      "prompt": "I'm building a TanStack Start app. Write:\n1. A server function that creates a new todo item, accepting title and description\n2. A middleware that checks if the user is authenticated\n3. The server function should use the auth middleware\n4. Store the session token in localStorage for persistence",
+      "assertions": [
+        { "id": "createServerFn", "rule": "Use createServerFn() for server-side logic", "expects": "Uses createServerFn for the todo creation" },
+        { "id": "validate-inputs", "rule": "Always validate server function inputs with schema", "expects": "Uses Zod or similar schema validation on inputs" },
+        { "id": "post-for-mutations", "rule": "Default method is GET; use POST for mutations", "expects": "Uses .method('POST') or equivalent for the mutation" },
+        { "id": "middleware-context", "rule": "Middleware adds context via next({ context: {...} })", "expects": "Auth middleware calls next with context containing user/session" },
+        { "id": "httponly-cookies", "rule": "Use HTTP-only cookies for sessions, never localStorage", "expects": "Uses HTTP-only cookies, explicitly warns against localStorage" }
+      ]
+    },
+    {
+      "id": "start-ssr-errors",
+      "name": "TanStack Start SSR & Error Handling",
+      "prompt": "I'm using TanStack Start. Help me:\n1. Set up a route that loads user profile data for SSR\n2. Handle the case where the user is not found (404)\n3. Handle authentication failures in route loading\n4. I have some heavy analytics data - how should I load it without blocking the page?\n5. I need to use Date.now() to show 'page generated at' timestamp",
+      "assertions": [
+        { "id": "loader-data", "rule": "Pass dynamic data from loaders to prevent hydration mismatches", "expects": "Passes Date.now() or dynamic data through loader, not inline in component" },
+        { "id": "suspense-streaming", "rule": "Stream non-critical content with Suspense boundaries", "expects": "Uses Suspense for analytics data, prefetch without await" },
+        { "id": "notFound-404", "rule": "Use notFound() for 404s", "expects": "Uses notFound() function for user not found case" },
+        { "id": "redirect-auth", "rule": "Use redirect() for auth errors", "expects": "Uses redirect() for authentication failures" },
+        { "id": "beforeLoad-protection", "rule": "Protect routes with beforeLoad", "expects": "Uses beforeLoad in route definition for auth check" },
+        { "id": "critical-await", "rule": "Critical path data awaited in loader; non-critical prefetched without await", "expects": "Awaits user profile data but does not await analytics data in loader" }
+      ]
+    },
+    {
+      "id": "start-file-org",
+      "name": "TanStack Start File Organization & Environment",
+      "prompt": "I'm organizing a TanStack Start project. I have:\n- Database queries for fetching users\n- Server functions that wrap the DB queries\n- Shared validation schemas for user forms\n- API keys and database URLs\n\nHow should I organize these files and handle the environment variables? Show the file structure and naming conventions.",
+      "assertions": [
+        { "id": "server-ts", "rule": ".server.ts for server-only logic (db, secrets)", "expects": "Uses .server.ts extension for database queries" },
+        { "id": "functions-ts", "rule": ".functions.ts for server function wrappers", "expects": "Uses .functions.ts extension for server function files" },
+        { "id": "shared-schemas", "rule": "Share validation schemas between client forms and server functions", "expects": "Shared schemas in plain .ts files importable by both" },
+        { "id": "env-validation", "rule": "Validate env vars at startup with Zod", "expects": "Uses Zod to validate environment variables" },
+        { "id": "vite-prefix", "rule": "Use VITE_ prefix for client-accessible variables", "expects": "Mentions VITE_ prefix for client-side env vars" },
+        { "id": "no-secrets-in-errors", "rule": "Keep secrets out of error messages and logs", "expects": "Warns about not exposing secrets in errors" }
+      ]
+    }
+  ]
+}

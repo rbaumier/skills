@@ -1,0 +1,311 @@
+{
+  "skill": "tailwind",
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "class-management",
+      "name": "Class Management",
+      "prompt": "I have a React Button component. I want to conditionally add classes based on props. Here's my current code:\n\n```tsx\nconst Button = ({ variant, disabled, className }) => {\n  const classes = `btn ${variant === 'primary' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`;\n  return <button className={classes}>{children}</button>;\n};\n```\n\nAlso, I want to create reusable variants. Should I use @apply for that? How should I organize the class order?",
+      "assertions": [
+        {
+          "id": "use-cn",
+          "rule": "Always use cn() helper (twMerge + clsx) for conditional/merged classes",
+          "check": "Response uses cn() (or mentions twMerge + clsx combined helper) instead of template literal concatenation"
+        },
+        {
+          "id": "use-cva",
+          "rule": "Use cva() for reusable component variants, not @apply",
+          "check": "Response recommends cva() for variant definitions"
+        },
+        {
+          "id": "avoid-apply",
+          "rule": "Avoid @apply except for global base/typography prose styles",
+          "check": "Response explicitly discourages @apply for component variants, limiting it to base/prose styles"
+        },
+        {
+          "id": "class-order",
+          "rule": "Class order: layout > sizing > spacing > typography > visual > interactive > dark > responsive",
+          "check": "Response specifies the prescribed class ordering convention"
+        },
+        {
+          "id": "tailwind-merge",
+          "rule": "Use tailwind-merge to resolve conflicting utility classes",
+          "check": "Response mentions tailwind-merge for conflict resolution"
+        }
+      ]
+    },
+    {
+      "id": "responsive-mobile",
+      "name": "Responsive & Mobile-First",
+      "prompt": "I'm building a card grid layout. I want it to be 1 column on desktop and 3 columns on mobile. Here's my code:\n\n```tsx\n<div className=\"grid grid-cols-3 mobile:grid-cols-1\">\n  <Card /><Card /><Card />\n</div>\n```\n\nAlso, I have a heading that should be large everywhere:\n```tsx\n<h1 className=\"text-6xl\">Welcome</h1>\n```\n\nHow should I fix these?",
+      "assertions": [
+        {
+          "id": "mobile-first",
+          "rule": "Always design mobile-first: base = mobile, add sm:/md:/lg: for larger",
+          "check": "Response corrects to mobile-first approach: base styles for mobile, breakpoint prefixes (sm:/md:/lg:) for larger screens"
+        },
+        {
+          "id": "responsive-text",
+          "rule": "Responsive text: text-4xl sm:text-5xl lg:text-6xl, never fixed large sizes",
+          "check": "Response shows responsive text scaling pattern instead of fixed text-6xl"
+        },
+        {
+          "id": "container-queries",
+          "rule": "Container queries: @container parent + @lg:/@2xl: children for component-level responsiveness",
+          "check": "Response mentions container queries as an option for component-level responsiveness"
+        }
+      ]
+    },
+    {
+      "id": "spacing-sizing",
+      "name": "Spacing & Sizing",
+      "prompt": "Review this component's spacing and sizing:\n\n```tsx\n<div className=\"p-5 mb-7 w-12 h-12\">\n  <p className=\"text-[16px] leading-[24px]\">Hello</p>\n  <div className=\"w-8 h-8 bg-blue-500 rounded\"></div>\n</div>\n```\n\nAre there any issues with the spacing values or sizing approach?",
+      "assertions": [
+        {
+          "id": "spacing-scale",
+          "rule": "Use spacing scale increments of 4 (4, 6, 8, 12, 16, 24), avoid odd values like p-5 mb-7",
+          "check": "Response flags p-5 and mb-7 as non-standard spacing values and recommends multiples of 4"
+        },
+        {
+          "id": "no-arbitrary-px",
+          "rule": "Use Tailwind size classes (text-base) not arbitrary px values (text-[16px])",
+          "check": "Response flags text-[16px] and recommends text-base or standard Tailwind size class"
+        },
+        {
+          "id": "size-shorthand",
+          "rule": "Use size-* shorthand instead of w-* h-* when both dimensions are equal",
+          "check": "Response recommends size-12 instead of w-12 h-12, and size-8 instead of w-8 h-8"
+        }
+      ]
+    },
+    {
+      "id": "semantic-tokens",
+      "name": "Semantic Tokens & Colors",
+      "prompt": "I'm setting up a theme for my app. Here's my current approach:\n\n```css\n:root {\n  --primary: #3b82f6;\n  --card-bg: #ffffff;\n}\n```\n\n```tsx\n<div className=\"bg-white text-black dark:bg-gray-900 dark:text-white\">\n  <button className=\"bg-blue-500 hover:bg-blue-600\">Click</button>\n</div>\n```\n\nHow should I structure my color tokens and theming?",
+      "assertions": [
+        {
+          "id": "semantic-over-raw",
+          "rule": "Prefer semantic tokens (bg-primary, bg-card, text-foreground) over raw colors (bg-white, bg-blue-500)",
+          "check": "Response recommends semantic token names like bg-primary, text-foreground instead of raw color utilities"
+        },
+        {
+          "id": "css-var-theming",
+          "rule": "CSS variable-based theming with rgb() for opacity support",
+          "check": "Response shows CSS variable-based theming pattern"
+        },
+        {
+          "id": "oklch-format",
+          "rule": "Define colors in @theme { --color-*: value } with OKLCH format",
+          "check": "Response uses or mentions OKLCH color format for token definitions"
+        },
+        {
+          "id": "color-mix",
+          "rule": "Use color-mix() in oklab for semi-transparent color variants",
+          "check": "Response mentions color-mix() for creating semi-transparent variants"
+        },
+        {
+          "id": "clear-defaults",
+          "rule": "Use --color-*: initial to clear defaults before custom palette",
+          "check": "Response mentions using initial to clear default colors"
+        },
+        {
+          "id": "theme-block",
+          "rule": "Define colors in @theme { --color-*: value }",
+          "check": "Response uses @theme block for color token definitions"
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "name": "Accessibility",
+      "prompt": "I have these interactive elements:\n\n```tsx\n<button className=\"bg-blue-500 text-white rounded p-1\" onClick={toggle}>\n  <SearchIcon />\n</button>\n\n<a href=\"/settings\" className=\"text-blue-500 underline\">Settings</a>\n\n<div className=\"animate-spin\">\n  <Spinner />\n</div>\n```\n\nAre there any accessibility concerns?",
+      "assertions": [
+        {
+          "id": "focus-styles",
+          "rule": "Focus styles required on all interactive elements (focus:ring-2 focus:ring-offset-2)",
+          "check": "Response adds focus:ring-2 focus:ring-offset-2 or similar focus ring styles to interactive elements"
+        },
+        {
+          "id": "touch-targets",
+          "rule": "Minimum 44x44px touch targets on mobile interactive elements",
+          "check": "Response flags the small p-1 button as too small for touch and recommends minimum 44x44px"
+        },
+        {
+          "id": "sr-only-aria",
+          "rule": "Use sr-only for screen-reader-only text; icon buttons need aria-label",
+          "check": "Response adds aria-label to icon button or uses sr-only span for accessible text"
+        },
+        {
+          "id": "motion-reduce",
+          "rule": "Respect motion-reduce: add motion-reduce:transition-none for animations",
+          "check": "Response adds motion-reduce variant to the spinning animation"
+        },
+        {
+          "id": "contrast-more",
+          "rule": "Use contrast-more: variant for high-contrast mode support",
+          "check": "Response mentions contrast-more: variant for high-contrast support"
+        }
+      ]
+    },
+    {
+      "id": "animations-perf",
+      "name": "Animations & Performance",
+      "prompt": "I'm adding animations to my component:\n\n```tsx\n<div className=\"transition-all duration-300\" style={{ width: isOpen ? '300px' : '0px', height: isOpen ? '500px' : '0px' }}>\n  <Content />\n</div>\n\n<div className=\"loading-skeleton w-full h-24 bg-gray-100\"></div>\n```\n\nAlso, I want to animate a popover entrance. What's the best approach?",
+      "assertions": [
+        {
+          "id": "gpu-only",
+          "rule": "Only animate GPU-accelerated properties (transform, opacity); avoid transition-all with w/h",
+          "check": "Response flags transition-all with width/height as problematic and recommends transform/opacity"
+        },
+        {
+          "id": "skeleton-pattern",
+          "rule": "Skeleton loading: animate-pulse + rounded-md bg-gray-200 dark:bg-gray-800",
+          "check": "Response shows the animate-pulse skeleton pattern with proper dark mode colors"
+        },
+        {
+          "id": "starting-style",
+          "rule": "Use @starting-style for native popover/entry animations",
+          "check": "Response mentions @starting-style for popover/entry animations"
+        },
+        {
+          "id": "animation-tokens",
+          "rule": "Define animation tokens as --animate-* and @keyframes inside @theme blocks",
+          "check": "Response defines animation tokens in @theme blocks"
+        }
+      ]
+    },
+    {
+      "id": "dark-mode",
+      "name": "Dark Mode",
+      "prompt": "I'm implementing dark mode in my Tailwind v4 project. I have some v3 code:\n\n```js\n// tailwind.config.js\nmodule.exports = {\n  darkMode: 'class',\n  // ...\n}\n```\n\n```tsx\n<html className=\"dark\">\n  <body className=\"bg-white text-black dark:bg-gray-900 dark:text-white\">\n    <div className=\"border border-gray-200 dark:border-gray-700\">\n```\n\nHow should I migrate dark mode to v4?",
+      "assertions": [
+        {
+          "id": "v4-dark-builtin",
+          "rule": "Dark mode v4: built-in, use @custom-variant dark (&:where(.dark, .dark *))",
+          "check": "Response shows @custom-variant dark with the :where(.dark, .dark *) selector for v4"
+        },
+        {
+          "id": "dark-css-override",
+          "rule": "Override dark colors via .dark { --color-*: value } in CSS",
+          "check": "Response shows overriding color variables in .dark {} block"
+        },
+        {
+          "id": "semantic-body",
+          "rule": "Set border-border on * and bg-background text-foreground on body",
+          "check": "Response uses semantic tokens bg-background text-foreground on body and border-border on *"
+        }
+      ]
+    },
+    {
+      "id": "v4-migration",
+      "name": "Tailwind v4 Migration",
+      "prompt": "I'm migrating from Tailwind v3 to v4. My current setup:\n\n```js\n// tailwind.config.ts\nexport default {\n  content: ['./src/**/*.{ts,tsx}', './node_modules/@acme/ui/**/*.js'],\n  theme: { extend: { colors: { brand: '#ff6600' } } },\n  plugins: [require('tailwindcss-animate')],\n}\n```\n\n```css\n@tailwind base;\n@tailwind components;\n@tailwind utilities;\n```\n\n```tsx\n<div className=\"bg-brand bg-opacity-50\">Content</div>\n```\n\nWhat changes do I need?",
+      "assertions": [
+        {
+          "id": "v4-import",
+          "rule": "v4: @import \"tailwindcss\" replaces @tailwind directives",
+          "check": "Response replaces @tailwind directives with @import 'tailwindcss'"
+        },
+        {
+          "id": "v4-theme-css",
+          "rule": "v4: @theme {} in CSS replaces tailwind.config.ts theme config",
+          "check": "Response moves theme config to @theme {} in CSS"
+        },
+        {
+          "id": "v4-auto-content",
+          "rule": "v4: content detection is automatic, no content array needed",
+          "check": "Response mentions automatic content detection and removing the content array"
+        },
+        {
+          "id": "v4-opacity",
+          "rule": "v4: use opacity modifier syntax (bg-black/50) not bg-opacity-50",
+          "check": "Response replaces bg-opacity-50 with opacity modifier syntax (bg-brand/50)"
+        },
+        {
+          "id": "v4-native-animations",
+          "rule": "Replace tailwindcss-animate plugin with native CSS animations in v4",
+          "check": "Response mentions replacing tailwindcss-animate with native CSS animations"
+        },
+        {
+          "id": "v4-utility-directive",
+          "rule": "v4: @utility directive for custom utilities with variant support",
+          "check": "Response mentions @utility directive for custom utilities"
+        },
+        {
+          "id": "v4-custom-variant",
+          "rule": "v4: @custom-variant for custom conditional styles",
+          "check": "Response mentions @custom-variant directive"
+        },
+        {
+          "id": "v4-build-integration",
+          "rule": "v4: use @tailwindcss/postcss or @tailwindcss/vite for build integration",
+          "check": "Response mentions @tailwindcss/postcss or @tailwindcss/vite"
+        },
+        {
+          "id": "content-scope",
+          "rule": "Scope content paths tightly; never include node_modules or overly broad globs",
+          "check": "Response flags node_modules in content paths as problematic"
+        }
+      ]
+    },
+    {
+      "id": "layout-patterns",
+      "name": "Layout Patterns",
+      "prompt": "I have these layout issues:\n\n```tsx\n{/* Grid with long text */}\n<div className=\"grid grid-cols-3 gap-4\">\n  <div className=\"bg-white p-4\">\n    <p>This is a very long text that might overflow the grid cell and cause layout issues in production</p>\n  </div>\n</div>\n\n{/* Image card */}\n<div className=\"w-full\">\n  <img src=\"/hero.jpg\" className=\"w-full\" />\n  <p>Caption</p>\n</div>\n\n{/* Stacking layers */}\n<div className=\"z-[999]\">\n  <Modal />\n</div>\n<div className=\"z-[1000]\">\n  <Tooltip />\n</div>\n```\n\nWhat improvements should I make?",
+      "assertions": [
+        {
+          "id": "grid-overflow",
+          "rule": "Add min-w-0 + truncate in grid cells to prevent text overflow",
+          "check": "Response adds min-w-0 and truncate (or line-clamp) to grid cells"
+        },
+        {
+          "id": "aspect-ratio",
+          "rule": "Use aspect-video/aspect-square with object-cover to prevent layout shift on images",
+          "check": "Response adds aspect-ratio and object-cover to the image"
+        },
+        {
+          "id": "z-index-system",
+          "rule": "Z-index: systematic increments of 10 (0, 10, 20, 40, 50)",
+          "check": "Response flags arbitrary z-index values and recommends systematic increments of 10"
+        },
+        {
+          "id": "truncation",
+          "rule": "Truncation: truncate for single line, line-clamp-N for multi-line",
+          "check": "Response mentions truncate and/or line-clamp for text overflow handling"
+        }
+      ]
+    },
+    {
+      "id": "components-react",
+      "name": "Components & React Integration",
+      "prompt": "I'm building a Dialog component with Tailwind. Here's my approach:\n\n```tsx\nconst Dialog = forwardRef<HTMLDivElement, DialogProps>((props, ref) => {\n  return (\n    <div ref={ref} className=\"fixed inset-0 z-50\">\n      <div className=\"bg-black/50\" onClick={onClose} />\n      <div className=\"bg-white rounded-lg p-6\">\n        <h2>{title}</h2>\n        <div>{children}</div>\n        <button onClick={onClose}>Close</button>\n      </div>\n    </div>\n  );\n});\n```\n\nI also need a form inside with validation. What's the best architecture?",
+      "assertions": [
+        {
+          "id": "compound-component",
+          "rule": "Use compound component pattern for complex UI (Card, Dialog)",
+          "check": "Response recommends compound component pattern (Dialog.Trigger, Dialog.Content, etc.)"
+        },
+        {
+          "id": "radix-primitives",
+          "rule": "Use Radix primitives for accessible unstyled components",
+          "check": "Response recommends Radix (or similar headless) primitives for the Dialog"
+        },
+        {
+          "id": "react-19-ref",
+          "rule": "React 19: ref is a regular prop, no forwardRef needed",
+          "check": "Response flags forwardRef as unnecessary in React 19"
+        },
+        {
+          "id": "zod-rhf",
+          "rule": "Validate forms with Zod + React Hook Form",
+          "check": "Response recommends Zod + React Hook Form for form validation"
+        },
+        {
+          "id": "dynamic-classes",
+          "rule": "Never concatenate dynamic classes (text-${color}-500); use full string maps or safelist",
+          "check": "Response warns against dynamic class concatenation"
+        }
+      ]
+    }
+  ]
+}
