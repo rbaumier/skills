@@ -3,100 +3,76 @@ name: frontend
 description: "Build UI components, pages, dashboards, 3D scenes. Trigger on 'component', 'page', 'layout', 'design system', 'responsive', 'forms', 'server component'."
 ---
 
-## When to use
-- React/Next.js components, pages, features
-- 3D web (Three.js, R3F, Spline), scroll-driven experiences
-- Dark-themed dashboards, design systems
-- HTML presentations, PPT conversion
-- Portfolios, component scaffolding
-- Performance, accessibility, state management fixes
-- Refactoring components with many boolean props
-- Building component libraries or flexible component APIs
-- Implementing compound components, context providers, or CSS-in-JS solutions
-- Multi-framework component work (React, Vue, Svelte)
-
-## When not to use
-- Pure backend/API with no UI
-- Native mobile outside web
-- Non-web 3D (game engines)
-- Simple one-off components with few props (no pattern needed)
-
 ## Gotchas
-- `"use client"` is NOT needed for every component — only when using hooks, event handlers, or browser APIs. Over-marking kills SSR.
-- `useEffect` for derived state is a React anti-pattern. Compute inline during render instead of syncing with effects.
-- `key={index}` on dynamic lists causes silent bugs on reorder/delete. Use stable IDs.
-- Next.js `fetch()` in Server Components caches by default in production. Add `{ cache: 'no-store' }` or `revalidate` for dynamic data.
-- Importing a client component into a server component is fine. Importing a server component into a client component is NOT — it silently becomes client-side.
+- `"use client"` only for hooks/event handlers/browser APIs — over-marking kills SSR
+- `useEffect` for derived state = anti-pattern. Compute inline during render, never sync with effects
+- `key={index}` dynamic lists = silent bugs on reorder/delete. Stable IDs only
+- Next.js `fetch()` Server Components caches by default prod. `{ cache: 'no-store' }` or `revalidate`
+- Importing server component into client component silently becomes client-side. Client-into-server fine, reverse NOT
 
 ## Rules
-- Organize by feature: features/{name}/api/, components/, hooks/, types/, index.ts
-- Shared UI primitives in components/ui/, layouts in components/layout/
-- Use import aliases: @/ = src/
-- Component order: types -> hooks -> useMemo -> useCallback -> render -> default export
-- Prefer composition (Card + CardHeader) for reusable UI primitives; avoid boolean props (each doubles possible states)
-- Use compound components (Context + Provider) for shared state between children
-- Create explicit variant components instead of boolean modes
-- Define context interface with state, actions, meta for DI; provider is the only place that knows state implementation
-- Lift state into provider components for sibling access
-- Prefer children over renderX props; render props only when passing data back
-- Support controlled and uncontrolled modes via slot pattern
-- Use semantic prop names (isLoading not loading), provide sensible defaults for all optional props
-- Allow style overrides via className or style
-- Wrap features in Error Boundaries with retry
-- React 19: useActionState for forms, useOptimistic for optimistic UI, use() for promises/context; ref is a regular prop (no forwardRef)
-- React Compiler handles memoization; less manual useMemo/useCallback needed
-- Prefer server components; use "use client" only when interactivity or browser APIs needed
-- Minimize serialization at RSC boundaries, only pass fields client needs
-- useState/useReducer for local state, Context+Reducer for feature-shared state
-- TanStack Query / SWR for server data, Zustand/Jotai for global lightweight state
-- Zustand: always use granular selectors, never destructure full store
-- Suspense-first data fetching: useSuspenseQuery + Suspense fallback with Skeleton
-- Never use isLoading early returns; use if (loading && !data) pattern
-- No inline fetch in components; isolate API calls in feature api/ layer
-- All API responses must be typed
+
+### Component Architecture
+- Composition (Card+CardHeader) not boolean props (each doubles states)
+- Compound components (Context+Provider) for sibling shared state. Never prop-drill
+- Variant prop with defined values, not boolean modes (isPrimary, isGhost...)
+- Children over renderX props. Render props ONLY when passing data back
+- File order: types -> hooks -> useMemo -> useCallback -> render -> default export
+- Context: state+actions+meta; provider only place knowing state impl. Lift state into provider for sibling access
+- Controlled/uncontrolled via slot pattern. Semantic props (isLoading not loading), sensible defaults
+- className/style overrides. Error Boundaries with retry
+
+### React 19 + Server Components
+- `useActionState` forms, `useOptimistic` optimistic UI, `use()` promises/context; ref is regular prop (no forwardRef)
+- React Compiler auto-memoizes; less manual useMemo/useCallback
+- Prefer server components; `"use client"` only for interactivity/browser APIs
+- Minimize RSC boundary serialization, pass only needed fields
+
+### State Management
+- local: useState/useReducer. feature-shared: Context+Reducer. server: TanStack Query/SWR. global: Zustand/Jotai
+- Zustand: ALWAYS `useStore(s => s.count)`, NEVER destructure full store — unnecessary re-renders
+- Suspense-first: `useSuspenseQuery` + `<Suspense fallback={<Skeleton/>}>`. NOT isLoading early returns
+- Never `if (isLoading) return <Spinner/>` — use `if (loading && !data)` to avoid flash when data exists
+- No inline fetch; isolate in feature `api/` layer. All responses typed
+
+### UX Patterns
 - Error hierarchy: inline (field) > toast (recoverable) > banner (partial) > full screen (fatal)
-- Always disable buttons + show loading during async submission
-- Every list must have an empty state
-- Never hard-code colors/spacing; always use design tokens
-- Tailwind + CVA for utility-first, CSS Modules for zero-runtime scoped CSS, MUI sx prop for enterprise, @layer + backdrop-blur for glassmorphism
-- Dark theme: bg-neutral-bg1/bg2/bg3 layers, border-border-subtle, glass classes via @layer
-- Lazy load routes, feature entries, charts, editors, large modals
-- Virtualize lists >50 items with @tanstack/react-virtual
-- No barrel imports from heavy libraries; use direct imports
-- Eliminate waterfalls: Promise.all() independent ops, start promises early / await late
-- next/dynamic for heavy components, defer third-party scripts
-- Debounce search inputs 300-500ms, cleanup all effects
-- Optimize Core Web Vitals: LCP, INP, CLS
-- Image lazy loading, font-display: swap, variable fonts
-- Performance regressions are bugs
-- See `react` skill for 45+ Vercel performance rules
-- Semantic HTML (section, nav, main, dialog), ARIA labels/roles, keyboard nav
-- Focus trap in modals, restore focus on close
-- Color contrast WCAG 2.1 AA, prefers-reduced-motion: disable transforms, opacity only
-- Framer Motion: staggerChildren for lists, spring for hover/tap, useScroll for scroll-driven
-- GSAP ScrollTrigger for complex timelines + scrub, Lenis for smooth scroll
-- Parallax speeds: bg 0.2x, mid 0.5x, foreground 1.0x, floating 1.2x
-- No scroll hijacking, no animation overload, no desktop-only effects
-- R3F for React 3D, Spline for quick prototypes, Three.js vanilla for max control
-- 3D pipeline: reduce polys <100K, bake textures, GLB + draco + webp, target <5MB
-- Only use 3D if an image wouldn't suffice; always add loading state
-- HTML presentations: single file, zero deps, inline CSS/JS, scroll-snap slides
-- Presentation JS: keyboard nav, touch/swipe, progress bar, IntersectionObserver for .visible
-- PPT conversion: extract with python-pptx, confirm structure, apply style, generate HTML
-- Portfolio 30-second test: identity, skills, best work, contact must be immediately clear
-- Case studies: hero -> overview -> challenge -> process -> quantified results -> links
-- Frame impact as outcomes ("Increased conversions 40%"), not tasks ("Built website")
-- React Flow nodes: memo wrap, NodeResizer, typed data extending Record<string, unknown>
-- Component scaffold output: component, types, styles, tests (RTL + axe), stories, barrel index
-- TypeScript strict mode, no any, explicit returns, import type, JSDoc on public interfaces
-- Types colocated with feature, not in global types/ dump
-- Folder-based routing (TanStack Router / Next.js App Router), lazy-load route components
-- Next.js: leverage parallel routes and intercepting routes
-- No feature logic in shared components/; no prop drilling (use hooks/context)
-- No raw platform components; use design system primitives
-- No silent error swallowing; always surface via toast or UI
-- No index as list key; use stable unique IDs
-- No useEffect for everything; prefer server components and derived state
-- Profile before optimizing; no premature optimization
-- Vue 3: use composables with provide/inject; Svelte 5: use runes and snippets
-- FFCI score (Fit + Reusability + Perf - Complexity - Maintenance): proceed >= 6, redesign <= 2
+- Disable buttons + loading indicator during async submission. Every list needs empty state
+
+### Project Structure
+- Feature-based: `features/{name}/api/`, `components/`, `hooks/`, `types/`, `index.ts`
+- Shared UI `components/ui/`, layouts `components/layout/`. `@/` = src/
+- Types colocated with feature, NOT global `types/` dump
+- No feature logic in shared components; use hooks/context not prop drilling
+- TS strict, no `any`, `import type`, JSDoc public APIs. Folder-based routing, lazy-load routes
+
+### Styling
+- Design tokens always, never hard-coded colors/spacing
+- Dark: bg-neutral-bg1/bg2/bg3 layers, border-border-subtle, glass via `@layer`
+- Tailwind+CVA | CSS Modules | MUI sx | @layer+backdrop-blur glassmorphism
+
+### Performance
+- Virtualize >50 items: `@tanstack/react-virtual`. No barrel imports; direct imports
+- `Promise.all()` independent ops, start early/await late. Debounce search 300-500ms, cleanup effects
+- next/dynamic heavy components, lazy load routes/charts/modals. Core Web Vitals (LCP/INP/CLS)
+- Profile before optimizing. Performance regressions = bugs
+
+### Accessibility
+- Semantic HTML, ARIA labels/roles, keyboard nav
+- Focus trap modals, restore focus to trigger on close
+- WCAG 2.1 AA contrast. `prefers-reduced-motion`: disable transforms, opacity only
+
+### Animation & 3D
+- Framer Motion staggerChildren/spring/useScroll. GSAP ScrollTrigger+scrub, Lenis smooth scroll
+- Parallax: bg 0.2x, mid 0.5x, fg 1.0x, floating 1.2x. No scroll hijacking/overload
+- R3F | Spline | Three.js. <100K polys, GLB+draco+webp <5MB. 3D only if image won't suffice
+
+### Presentations & Portfolio
+- HTML: single file, zero deps, inline CSS/JS, scroll-snap, keyboard+touch, progress bar
+- PPT: python-pptx extract -> confirm -> style -> HTML
+- Portfolio 30s: identity/skills/work/contact. Case studies: quantified outcomes not tasks
+
+### Misc
+- React Flow: memo nodes, NodeResizer, typed data. Scaffold: component/types/styles/tests/stories/barrel
+- No silent errors; surface via toast/UI. Vue 3: composables+provide/inject. Svelte 5: runes+snippets
+- FFCI (Fit+Reuse+Perf-Complexity-Maintenance): proceed >=6, redesign <=2
