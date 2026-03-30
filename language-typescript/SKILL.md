@@ -16,9 +16,30 @@ These override Claude's defaults — the reason this skill exists.
 | No `enum` | `as const` + `typeof` | Emits runtime code, numeric reverse-mapping surprises |
 | No `default export` | Named exports only | Refactoring, tree-shaking, naming consistency |
 | No `any`/`as` | `unknown`, type guards, `satisfies` | Exceptions: utility type constraints, branded factories, `as const` |
-| Errors are values | `better-result` Result type | Never throw for expected failures. Null = normal absence; typed error = problem |
+| Errors are values | `better-result` Result type | **Never `throw` for expected failures.** `throw` is NOT a fix — return `{ ok, error }`. Null = normal absence; typed error = problem |
 | Types by default | `interface` only for extension/perf | See compiler-performance.md |
 | `using`/`await using` | Over try/finally (TS 5.2+) | Deterministic resource cleanup |
+
+### Errors as values — before/after
+
+```typescript
+// WRONG — throw for expected failure
+async function getUser(id: string): Promise<User> {
+  const res = await fetch(`/api/users/${id}`);
+  if (!res.ok) throw new Error('User not found'); // ← NO
+  return res.json() as Promise<User>;
+}
+
+// RIGHT — return Result
+async function getUser(id: string): Promise<Result<User, 'not-found' | 'parse-error'>> {
+  const res = await fetch(`/api/users/${id}`);
+  if (!res.ok) return err('not-found');
+  const data: unknown = await res.json();
+  const parsed = UserSchema.safeParse(data);
+  if (!parsed.success) return err('parse-error');
+  return ok(parsed.data);
+}
+```
 
 ## Tool Choices
 
@@ -34,6 +55,10 @@ These override Claude's defaults — the reason this skill exists.
 - Files: kebab-case.ts
 - JSDoc: `@description` + `@example` (with formatted function call & return data) only — no `@param`/`@returns` (types are the docs)
 - Parse at boundaries (`unknown` in, typed out), trust inside
+- ESM only: `"type": "module"` in package.json. Never mix CJS imports (`require`) with ESM modules
+- Declare param/prop types as named types above the function, not inline objects
+- `Set.has()` over `Array.includes()` for repeated lookups in loops/hot paths
+- Validate `JSON.parse` output with type guards — never cast with `as` (`JSON.parse` returns `unknown` in spirit)
 
 ## Post-Modification Audit
 
@@ -42,7 +67,7 @@ MANDATORY: After ANY modification to TypeScript/JavaScript files, you MUST run t
 </EXTREMELY-IMPORTANT>
 
 ```bash
-~/.claude/skills/language-typescript/scripts/ts-audit --working-tree
+~/.claude/skills/language-typescript/scripts/ts-audit/ts-audit --working-tree
 ```
 
 Fix all errors before committing. Modes: `--working-tree`, `--last-commit`, `--commit <sha>`, `--staged`, or no flag for full scan.
