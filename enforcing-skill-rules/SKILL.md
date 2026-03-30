@@ -38,7 +38,7 @@ Every rule = 1 assertion. No rule left unmeasured.
 
 ## Step 2: Write Trap Prompts
 
-Save to `{skill}-workspace/evals/evals.json`. Two modes:
+Save to `{skill}/enforcing-skill-rules/evals.json`. Two modes:
 
 **Section prompts** (full sweep): 1 prompt per section — realistic code/scenario that violates every rule in that section.
 **Targeted prompts** (single assertion): 1 prompt testing exactly 1 rule. Use for re-testing flaky assertions — faster and more precise than re-running full sections.
@@ -47,13 +47,28 @@ Save to `{skill}-workspace/evals/evals.json`. Two modes:
 - Review sections (architecture): "Review this and list issues" + bad code
 - Meta sections (project-hygiene): "Review this plan" + bad plan
 
+**Every assertion must have a `trap` field** explaining what specific code/scenario tests it. This is how future sessions know *what was tested*:
+
+```json
+{
+  "name": "concurrency",
+  "prompt": "Refactor this async code...",
+  "assertions": [
+    { "id": "channels-over-mutex", "trap": "process_batch uses Arc<Mutex<Vec>> to collect spawn_blocking results" },
+    { "id": "cancellation-safety", "trap": "guard held across .await with no cleanup on drop" }
+  ]
+}
+```
+
+If a trap doesn't naturally exercise a rule (both with/without pass or fail identically), the trap is bad — write a targeted prompt for that assertion.
+
 ## Step 3: Run Baseline
 
 Spawn subagents in parallel (use `model: sonnet` for speed):
 - **with-skill**: agent reads the skill first, then executes the prompt
 - **without-skill**: same prompt, no skill
 
-Save outputs to `{skill}-workspace/iteration-N/{section}-{with,without}_skill/outputs/`
+Save outputs to `{skill}/enforcing-skill-rules/iteration-N/{section}-{with,without}-skill.md`
 
 Increment N for each iteration. Never overwrite previous iterations.
 
