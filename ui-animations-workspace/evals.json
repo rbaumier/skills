@@ -1,0 +1,238 @@
+{
+  "skill": "ui-animations",
+  "version": "2.1",
+  "created": "2026-03-30",
+  "sections": [
+    {
+      "id": "timing",
+      "name": "Timing & Easing",
+      "prompt": "I need to add hover effects and page transitions to my React SaaS dashboard. What durations and easing should I use?",
+      "assertions": [
+        {
+          "id": "timing-hover-range",
+          "rule": "Hover/press feedback: 120-180ms",
+          "pass_criteria": "Explicitly mentions 120-180ms range (or subset within it) for hover/press"
+        },
+        {
+          "id": "timing-page-transition-range",
+          "rule": "Page transitions: 500-800ms",
+          "pass_criteria": "Mentions 500-800ms range for page transitions"
+        },
+        {
+          "id": "timing-gpu-only",
+          "rule": "Only animate transform and opacity (GPU-accelerated)",
+          "pass_criteria": "States to only animate transform and opacity, or mentions GPU acceleration"
+        },
+        {
+          "id": "timing-no-linear",
+          "rule": "No linear easing for motion",
+          "pass_criteria": "Warns against using linear easing for motion animations"
+        },
+        {
+          "id": "timing-custom-bezier",
+          "rule": "Custom Bezier curves instead of built-in easing",
+          "pass_criteria": "Recommends custom cubic-bezier values or specific named curves rather than default ease/ease-in-out"
+        },
+        {
+          "id": "timing-scale-range",
+          "rule": "Scale deformation range: 0.95-1.05 (never from 0)",
+          "pass_criteria": "Mentions not scaling from 0, or recommends 0.9+ / 0.95+ starting scale"
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "name": "Accessibility",
+      "prompt": "Build me a scroll-triggered parallax hero section with a staggered text reveal for a marketing site using GSAP and React.",
+      "assertions": [
+        {
+          "id": "a11y-reduced-motion",
+          "rule": "Must respect prefers-reduced-motion",
+          "pass_criteria": "Code or instructions include prefers-reduced-motion handling"
+        },
+        {
+          "id": "a11y-no-vestibular",
+          "rule": "No excessive vestibular triggers (zoom, spin, parallax)",
+          "pass_criteria": "Mentions vestibular concerns or reducing/disabling parallax for accessibility"
+        },
+        {
+          "id": "a11y-keyboard",
+          "rule": "Keyboard navigation must work, keyboard-initiated actions should not animate",
+          "pass_criteria": "Mentions keyboard accessibility or not animating keyboard-initiated actions"
+        }
+      ]
+    },
+    {
+      "id": "gsap-react",
+      "name": "GSAP React Integration",
+      "prompt": "Show me how to set up GSAP with ScrollTrigger in a Next.js App Router project and create a scroll-triggered animation.",
+      "assertions": [
+        {
+          "id": "gsap-use-client",
+          "rule": "Must add 'use client' directive in Next.js App Router",
+          "pass_criteria": "Code includes 'use client' directive"
+        },
+        {
+          "id": "gsap-use-gsap-hook",
+          "rule": "Use useGSAP hook from @gsap/react, not raw useEffect",
+          "pass_criteria": "Uses useGSAP hook (not useEffect/useLayoutEffect for GSAP animations)"
+        },
+        {
+          "id": "gsap-scope",
+          "rule": "Must pass scope to useGSAP to scope selectors",
+          "pass_criteria": "Passes scope (container ref) to useGSAP options"
+        },
+        {
+          "id": "gsap-context-safe",
+          "rule": "Use contextSafe() for event handlers with GSAP",
+          "pass_criteria": "Mentions contextSafe for click/event handlers, or uses it in code"
+        },
+        {
+          "id": "gsap-register-plugin",
+          "rule": "Must register ScrollTrigger plugin with gsap.registerPlugin",
+          "pass_criteria": "Shows gsap.registerPlugin(ScrollTrigger) call"
+        }
+      ]
+    },
+    {
+      "id": "motion-gaps",
+      "name": "Motion Gap Analysis",
+      "prompt": "I have a React dashboard with tabs, a settings panel with conditional controls, and modals. Currently everything just appears/disappears instantly. How should I add animations?",
+      "assertions": [
+        {
+          "id": "gaps-animate-presence",
+          "rule": "Conditional renders need AnimatePresence wrapper",
+          "pass_criteria": "Recommends AnimatePresence for conditional rendering"
+        },
+        {
+          "id": "gaps-exit-animations",
+          "rule": "Elements must have exit animations, not just appear/disappear",
+          "pass_criteria": "Explicitly addresses exit animations, not just enter"
+        },
+        {
+          "id": "gaps-tab-content",
+          "rule": "Mode switches (tabs, toggles) should animate content changes",
+          "pass_criteria": "Recommends animating tab content transitions, not just the tab indicator"
+        },
+        {
+          "id": "gaps-enter-recipe",
+          "rule": "Enter animations combine opacity + translateY + blur",
+          "pass_criteria": "Enter animation includes all three: opacity, translateY, and blur"
+        },
+        {
+          "id": "gaps-exit-subtler",
+          "rule": "Exit animations should be subtler than enter animations",
+          "pass_criteria": "States exit should be more subtle/faster/smaller than enter"
+        }
+      ]
+    },
+    {
+      "id": "sound",
+      "name": "Sound Design",
+      "prompt": "I want to add UI sounds to my web app for button clicks, form submissions, and error states. How should I implement this?",
+      "assertions": [
+        {
+          "id": "sound-default-volume",
+          "rule": "Default volume: 0.3, never 1.0",
+          "pass_criteria": "Specifies low default volume (0.3 or similar), warns against full volume"
+        },
+        {
+          "id": "sound-no-decorative",
+          "rule": "No decorative sound for hover, focus, typing, scrolling",
+          "pass_criteria": "Warns against sounds on hover/focus/typing/scrolling"
+        },
+        {
+          "id": "sound-visual-equivalent",
+          "rule": "Visual equivalent required for every audio cue",
+          "pass_criteria": "Requires visual feedback alongside every sound"
+        },
+        {
+          "id": "sound-toggle",
+          "rule": "Must provide toggle setting to disable sounds",
+          "pass_criteria": "Mentions user toggle/preference to disable sounds"
+        },
+        {
+          "id": "sound-single-context",
+          "rule": "Reuse a single AudioContext, never create one per sound",
+          "pass_criteria": "Mentions reusing AudioContext or warns against creating multiple"
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "name": "Audit Workflow",
+      "prompt": "I want you to review the animation quality of my React app. It's a SaaS productivity tool similar to Linear. How would you approach this?",
+      "assertions": [
+        {
+          "id": "audit-3-designers",
+          "rule": "Use the 3-designer framework (Emil, Jakub, Jhey)",
+          "pass_criteria": "References the three designers by name: Emil Kowalski, Jakub Krehel, Jhey Tompkins"
+        },
+        {
+          "id": "audit-context-first",
+          "rule": "Step 1 is context reconnaissance before auditing code",
+          "pass_criteria": "Describes gathering project context before reviewing animations"
+        },
+        {
+          "id": "audit-perspective-weighting",
+          "rule": "SaaS dashboard: Emil primary, Jakub secondary, Jhey selective",
+          "pass_criteria": "For SaaS/productivity, weights Emil as primary perspective"
+        },
+        {
+          "id": "audit-motion-gap-search",
+          "rule": "Search for conditional renders without AnimatePresence",
+          "pass_criteria": "Mentions searching for conditional renders or motion gaps as part of audit"
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "name": "Library Selection",
+      "prompt": "I need to add smooth scrolling plus scroll-driven animations to my React site, and also some simple hover effects. Which animation libraries should I use?",
+      "assertions": [
+        {
+          "id": "lib-lenis-smooth-scroll",
+          "rule": "Smooth scroll: Lenis + ReactLenis",
+          "pass_criteria": "Recommends Lenis specifically for smooth scrolling"
+        },
+        {
+          "id": "lib-gsap-scroll-driven",
+          "rule": "Scroll-driven animations: GSAP + ScrollTrigger",
+          "pass_criteria": "Recommends GSAP ScrollTrigger for scroll-driven animations"
+        },
+        {
+          "id": "lib-lenis-gsap-integration",
+          "rule": "Must integrate Lenis with ScrollTrigger for them to work together",
+          "pass_criteria": "Mentions integrating Lenis with GSAP ScrollTrigger or potential conflict"
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "name": "Performance",
+      "prompt": "I'm building complex scroll animations and drag interactions in React. What performance best practices should I follow?",
+      "assertions": [
+        {
+          "id": "perf-will-change",
+          "rule": "Use will-change sparingly, apply before animation, remove after",
+          "pass_criteria": "Warns about overusing will-change or mentions applying/removing it"
+        },
+        {
+          "id": "perf-transform-opacity-only",
+          "rule": "Only animate transform and opacity, not layout properties",
+          "pass_criteria": "States to avoid animating layout properties (width, height, top, left)"
+        },
+        {
+          "id": "perf-drag-direct-style",
+          "rule": "Direct style updates for drag operations, not CSS variables",
+          "pass_criteria": "Recommends direct style manipulation for drag, warns against CSS variables for drag"
+        },
+        {
+          "id": "perf-velocity-swipe",
+          "rule": "Velocity-based thresholds (not distance) for swipe dismiss",
+          "pass_criteria": "Mentions velocity-based thresholds for swipe/dismiss gestures"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,320 @@
+{
+  "iteration": 1,
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "timing",
+      "name": "Timing & Easing",
+      "assertions": [
+        {
+          "id": "timing-hover-range",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly states '120-180ms for hover/press feedback'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Says '200-300ms' for hover, outside the specified range"
+        },
+        {
+          "id": "timing-page-transition-range",
+          "with_skill": "PASS",
+          "with_skill_evidence": "States '500-800ms' in duration table",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Says '300-500ms' for page transitions, below skill range"
+        },
+        {
+          "id": "timing-gpu-only",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly states 'Only animate transform and opacity (GPU-accelerated properties)'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Animates background-color in CSS example"
+        },
+        {
+          "id": "timing-no-linear",
+          "with_skill": "PASS",
+          "with_skill_evidence": "States 'No linear easing for motion -- linear feels mechanical'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of avoiding linear easing"
+        },
+        {
+          "id": "timing-custom-bezier",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Provides specific custom curves: [0.16, 1, 0.3, 1] and [0.87, 0, 0.13, 1]",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses default 'ease-in-out' throughout"
+        },
+        {
+          "id": "timing-scale-range",
+          "with_skill": "PASS",
+          "with_skill_evidence": "States 'Scale deformation: Stay within 0.95-1.05 range. Never scale from 0'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Mentions scale(0.95) but no rule about avoiding scale(0)"
+        }
+      ],
+      "with_skill_score": "6/6",
+      "without_skill_score": "0/6"
+    },
+    {
+      "id": "accessibility",
+      "name": "Accessibility",
+      "assertions": [
+        {
+          "id": "a11y-reduced-motion",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Full prefers-reduced-motion check with matchMedia, disables all animations",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of prefers-reduced-motion"
+        },
+        {
+          "id": "a11y-no-vestibular",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Caps parallax at 30%, explicitly mentions 'vestibular triggers'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses yPercent: 50 with no vestibular concern mentioned"
+        },
+        {
+          "id": "a11y-keyboard",
+          "with_skill": "PASS",
+          "with_skill_evidence": "States 'Keyboard-initiated actions should never animate (Emil's rule)'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of keyboard accessibility"
+        }
+      ],
+      "with_skill_score": "3/3",
+      "without_skill_score": "0/3"
+    },
+    {
+      "id": "gsap-react",
+      "name": "GSAP React Integration",
+      "assertions": [
+        {
+          "id": "gsap-use-client",
+          "with_skill": "PASS",
+          "with_skill_evidence": "'use client' in all component files and gsap.ts",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No 'use client' directive anywhere"
+        },
+        {
+          "id": "gsap-use-gsap-hook",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Uses useGSAP hook, explains why not useEffect",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses useEffect for GSAP animations"
+        },
+        {
+          "id": "gsap-scope",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Passes { scope: containerRef } to useGSAP, explains why",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No scope concept, uses raw refs"
+        },
+        {
+          "id": "gsap-context-safe",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Full contextSafe example with click handler",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of contextSafe"
+        },
+        {
+          "id": "gsap-register-plugin",
+          "with_skill": "PASS",
+          "with_skill_evidence": "gsap.registerPlugin(ScrollTrigger, useGSAP) in lib/gsap.ts",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Shows gsap.registerPlugin(ScrollTrigger)"
+        }
+      ],
+      "with_skill_score": "5/5",
+      "without_skill_score": "1/5"
+    },
+    {
+      "id": "motion-gaps",
+      "name": "Motion Gap Analysis",
+      "assertions": [
+        {
+          "id": "gaps-animate-presence",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Recommends AnimatePresence for all conditional renders",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Uses AnimatePresence for modal and tabs"
+        },
+        {
+          "id": "gaps-exit-animations",
+          "with_skill": "PASS",
+          "with_skill_evidence": "All examples include exit prop with specific values",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Includes exit animations in examples"
+        },
+        {
+          "id": "gaps-tab-content",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly states 'Mode switches must animate their content changes, not just the tab indicator'",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Shows tab panel animation (though doesn't distinguish from indicator)"
+        },
+        {
+          "id": "gaps-enter-recipe",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Enter: opacity + translateY(8) + blur(4px) -- all three present",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Enter only uses opacity + scale, no blur"
+        },
+        {
+          "id": "gaps-exit-subtler",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explicitly states exit is subtler: 'smaller translateY (10 vs 20), less blur (2px vs 4px)'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Exit uses same values as enter (symmetric)"
+        }
+      ],
+      "with_skill_score": "5/5",
+      "without_skill_score": "3/5"
+    },
+    {
+      "id": "sound",
+      "name": "Sound Design",
+      "assertions": [
+        {
+          "id": "sound-default-volume",
+          "with_skill": "PASS",
+          "with_skill_evidence": "States 'Default volume 0.3, NEVER 1.0' multiple times",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No volume specification"
+        },
+        {
+          "id": "sound-no-decorative",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Lists: 'Never use sound for: hover, focus, typing, scrolling'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Adds click sound to buttons (decorative/high-freq)"
+        },
+        {
+          "id": "sound-visual-equivalent",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Lists as mandatory: 'Visual equivalent for every audio cue'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of visual equivalents"
+        },
+        {
+          "id": "sound-toggle",
+          "with_skill": "PASS",
+          "with_skill_evidence": "SoundManager has toggle() method, listed as mandatory requirement",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Mentions 'allow disabling sounds' in tips"
+        },
+        {
+          "id": "sound-single-context",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Singleton AudioContext pattern with explicit comment 'NEVER create one per sound'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses HTMLAudioElement per sound, not AudioContext"
+        }
+      ],
+      "with_skill_score": "5/5",
+      "without_skill_score": "1/5"
+    },
+    {
+      "id": "audit",
+      "name": "Audit Workflow",
+      "assertions": [
+        {
+          "id": "audit-3-designers",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Names all three: Emil Kowalski, Jakub Krehel, Jhey Tompkins",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No designer framework mentioned"
+        },
+        {
+          "id": "audit-context-first",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Step 1 is 'Context Reconnaissance (Before Touching Any Code)'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Starts with 'Inventory Existing Animations' -- code first, not context"
+        },
+        {
+          "id": "audit-perspective-weighting",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Emil as primary for SaaS productivity, Jakub secondary, Jhey selective for onboarding",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No perspective weighting concept"
+        },
+        {
+          "id": "audit-motion-gap-search",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Includes grep commands for conditional renders, labels as 'CRITICAL'",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Only greps for animation keywords, not motion gaps"
+        }
+      ],
+      "with_skill_score": "4/4",
+      "without_skill_score": "0/4"
+    },
+    {
+      "id": "library",
+      "name": "Library Selection",
+      "assertions": [
+        {
+          "id": "lib-lenis-smooth-scroll",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Recommends 'Lenis + ReactLenis' for smooth scrolling",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Recommends Locomotive Scroll or CSS scroll-behavior, not Lenis"
+        },
+        {
+          "id": "lib-gsap-scroll-driven",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Recommends 'GSAP + ScrollTrigger + useGSAP' for scroll-driven",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Mentions GSAP ScrollTrigger as an option"
+        },
+        {
+          "id": "lib-lenis-gsap-integration",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Full integration code with explanation of why they conflict without it",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of integration between smooth scroll and ScrollTrigger"
+        }
+      ],
+      "with_skill_score": "3/3",
+      "without_skill_score": "1/3"
+    },
+    {
+      "id": "performance",
+      "name": "Performance",
+      "assertions": [
+        {
+          "id": "perf-will-change",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Explains apply before, remove after pattern with code example",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Suggests adding will-change but no apply/remove lifecycle"
+        },
+        {
+          "id": "perf-transform-opacity-only",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Lists specific layout properties to avoid: width, height, top, left, margin, padding",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Mentions using transform instead of layout properties"
+        },
+        {
+          "id": "perf-drag-direct-style",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Shows good vs bad examples, explains CSS variable overhead",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of CSS variables vs direct style for drag"
+        },
+        {
+          "id": "perf-velocity-swipe",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Full velocity-based dismiss implementation with threshold explanation",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of velocity-based thresholds for swipe"
+        }
+      ],
+      "with_skill_score": "4/4",
+      "without_skill_score": "1/4"
+    }
+  ],
+  "totals": {
+    "with_skill": "35/35 (100%)",
+    "without_skill": "7/35 (20%)",
+    "discrimination_rate": "80%"
+  }
+}
