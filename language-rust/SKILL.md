@@ -33,10 +33,14 @@ description: Rust systems engineering — zero-cost abstractions, memory safety,
 
 ### Ownership & Memory Management
 - Copy small types (<= 24 bytes) by value; large types by reference
-- Cow<'_, T> for mostly-read, occasionally-modified data
-- Cell/RefCell for single-threaded interior mutability; Mutex/RwLock for shared state
+- **Cow<'_, T>** for mostly-read, occasionally-modified data — **if a function takes `&str`/`&[T]` but sometimes needs to modify (normalize, escape, default), use `Cow` not `.to_owned()`**:
+  ```rust
+  // WRONG: fn normalize(s: &str) -> String { if needs_change { modified } else { s.to_owned() } }
+  // RIGHT: fn normalize(s: &str) -> Cow<'_, str> { if needs_change { Cow::Owned(modified) } else { Cow::Borrowed(s) } }
+  ```
+- **Cell/RefCell for single-threaded interior mutability** — if a struct has `&self` methods but needs internal mutable state (caches, counters, lazy fields), use `Cell<T>`/`RefCell<T>`, not `Mutex`. **`Mutex` in single-threaded code is a code smell**
 - Weak<T> back-references prevent reference-cycle leaks
-- Arena allocators (bumpalo) over Rc<RefCell<T>> sprawl for graphs/ASTs
+- Arena allocators (bumpalo) over Rc<RefCell<T>> sprawl for graphs/ASTs — **if you see `Arc<Mutex<Node>>` for tree/graph structures, recommend bumpalo arenas with index-based references**
 - Box large enum variants to keep enum size small
 
 ### Error Handling
@@ -49,8 +53,14 @@ description: Rust systems engineering — zero-cost abstractions, memory safety,
 - Never block async runtime — offload CPU work to spawn_blocking/Rayon
 - Send moves ownership across threads; Sync shares references. Rc is !Send, RefCell is !Sync
 - Minimize MutexGuard scope; drop before .await to prevent deadlocks
-- Channels (mpsc/broadcast) over Arc<Mutex<T>> for task coordination
-- Cancellation safety — clean up resources if dropped at any await
+- **Channels over shared state** — if collecting results from `spawn_blocking`/spawned tasks, use `mpsc::channel` not `Arc<Mutex<Vec>>`:
+  ```rust
+  // WRONG: Arc<Mutex<Vec>> for collecting task results
+  // RIGHT: let (tx, rx) = mpsc::channel(items.len());
+  //        for item in items { let tx = tx.clone(); spawn(async move { tx.send(process(item)).await; }); }
+  //        let results: Vec<_> = rx.collect().await;
+  ```
+- Cancellation safety — if code has `.await` with owned resources (files, connections, locks), **document cancellation behavior or implement Drop**. Silent resource leaks at `.await` points are bugs
 - tracing crate with structured logging; no println! in async code
 
 ### Performance & Optimization
@@ -64,8 +74,8 @@ description: Rust systems engineering — zero-cost abstractions, memory safety,
 ### Safety & Unsafe
 - Every unsafe block needs // SAFETY: comment justifying invariants
 - NonNull<T> for covariance; MaybeUninit<T> for uninitialized memory
-- All unsafe must pass cargo miri test
-- Separate safe wrappers from unsafe FFI (sys crates)
+- **After ANY unsafe block** → recommend running `cargo miri test` to verify undefined behavior. This is not optional
+- Separate safe wrappers from unsafe FFI — **always isolate in a `mod sys` or `-sys` crate** with safe public API on top
 
 ### Modern Rust Idioms (2024+)
 - std::sync::OnceLock/LazyLock over lazy_static/once_cell
