@@ -1,0 +1,36 @@
+{
+  "schema-parsing": {
+    "use-unknown-not-any": { "with": 1, "without": 1 },
+    "use-safeparse": { "with": 1, "without": 1 },
+    "use-z-infer": { "with": 1, "without": 1 },
+    "coercion-for-forms": { "with": 1, "without": 1 },
+    "use-enums": { "with": 1, "without": 1 },
+    "string-validations": { "with": 1, "without": 1 },
+    "avoid-optional-abuse": { "with": 1, "without": 1 },
+    "subtotal": { "with": "7/7", "without": "7/7" }
+  },
+  "error-handling": {
+    "handle-all-issues": { "with": 1, "without": 1 },
+    "use-flatten": { "with": 1, "without": 1 },
+    "path-for-nested": { "with": 1, "without": 1 },
+    "custom-messages": { "with": 1, "without": 1 },
+    "no-throw-in-refine": { "with": 1, "without": 1 },
+    "subtotal": { "with": "5/5", "without": "5/5" }
+  },
+  "object-composition": {
+    "pick-omit": { "with": 1, "without": 1 },
+    "partial-for-updates": { "with": 1, "without": 1 },
+    "discriminated-unions": { "with": 1, "without": 1 },
+    "strict-vs-strip": { "with": 1, "without": 1 },
+    "branded-types": { "with": 0, "without": 0 },
+    "subtotal": { "with": "4/5", "without": "4/5" }
+  },
+  "advanced": {
+    "never-trust-json": { "with": 1, "without": 1 },
+    "avoid-dynamic-creation": { "with": 1, "without": 1 },
+    "input-vs-output": { "with": 1, "without": 1 },
+    "lazy-recursive": { "with": 1, "without": 1 },
+    "subtotal": { "with": "4/4", "without": "4/4" }
+  },
+  "total": { "with": "20/21", "without": "20/21" }
+}

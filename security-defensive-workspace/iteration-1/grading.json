@@ -1,0 +1,71 @@
+{
+  "sections": [
+    {
+      "name": "input-validation",
+      "assertions": [
+        { "id": "schema-allowlists", "with_skill": true, "without_skill": true },
+        { "id": "parameterized-queries", "with_skill": true, "without_skill": true },
+        { "id": "array-args-commands", "with_skill": true, "without_skill": true },
+        { "id": "path-traversal", "with_skill": true, "without_skill": true },
+        { "id": "no-unsafe-deserialization", "with_skill": true, "without_skill": true },
+        { "id": "no-internal-errors", "with_skill": true, "without_skill": true }
+      ]
+    },
+    {
+      "name": "xss-client",
+      "assertions": [
+        { "id": "no-innerhtml", "with_skill": true, "without_skill": true },
+        { "id": "sanitize-html", "with_skill": true, "without_skill": true },
+        { "id": "sanitize-urls", "with_skill": true, "without_skill": false },
+        { "id": "csp-nonce-hash", "with_skill": true, "without_skill": true },
+        { "id": "sri-external-scripts", "with_skill": true, "without_skill": true }
+      ]
+    },
+    {
+      "name": "auth-jwt",
+      "assertions": [
+        { "id": "jwt-httponly-cookies", "with_skill": true, "without_skill": true },
+        { "id": "rs256-public", "with_skill": true, "without_skill": true },
+        { "id": "short-lived-tokens", "with_skill": true, "without_skill": true },
+        { "id": "validate-jwt-claims", "with_skill": true, "without_skill": true },
+        { "id": "bcrypt-argon2", "with_skill": true, "without_skill": true },
+        { "id": "authz-before-ops", "with_skill": true, "without_skill": true },
+        { "id": "no-hardcoded-secrets", "with_skill": true, "without_skill": true }
+      ]
+    },
+    {
+      "name": "csrf-headers",
+      "assertions": [
+        { "id": "samesite-strict", "with_skill": true, "without_skill": true },
+        { "id": "validate-origin-referer", "with_skill": true, "without_skill": true },
+        { "id": "security-headers", "with_skill": true, "without_skill": true },
+        { "id": "no-wildcard-cors", "with_skill": true, "without_skill": true },
+        { "id": "rate-limiting", "with_skill": true, "without_skill": true },
+        { "id": "helmet-middleware", "with_skill": true, "without_skill": true }
+      ]
+    },
+    {
+      "name": "secrets-infra",
+      "assertions": [
+        { "id": "no-hardcoded-secrets", "with_skill": true, "without_skill": true },
+        { "id": "env-gitignore-scanning", "with_skill": true, "without_skill": true },
+        { "id": "no-log-sensitive", "with_skill": true, "without_skill": true },
+        { "id": "structured-audit-logs", "with_skill": true, "without_skill": false },
+        { "id": "mtls-service-comms", "with_skill": true, "without_skill": true },
+        { "id": "lockfile-committed", "with_skill": true, "without_skill": true }
+      ]
+    },
+    {
+      "name": "file-upload-ssrf",
+      "assertions": [
+        { "id": "file-upload-validation", "with_skill": true, "without_skill": true },
+        { "id": "ssrf-url-allowlist", "with_skill": true, "without_skill": true },
+        { "id": "path-traversal-upload", "with_skill": true, "without_skill": true }
+      ]
+    }
+  ],
+  "summary": {
+    "with_skill": { "pass": 33, "fail": 0, "total": 33 },
+    "without_skill": { "pass": 31, "fail": 2, "total": 33 }
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "skill": "vue",
+  "skill_path": "/Users/rbaumier/www/enforcing-skill-rules/vue/SKILL.md",
+  "created": "2026-03-30",
+  "sections": [
+    {
+      "id": "reactivity",
+      "name": "Reactivity & Composition API",
+      "prompt": "Create a Vue component for a shopping cart. It should track items (name, price, quantity), compute the total price, and allow adding/removing items. Use reactive() to store the items array and compute the total inside the template expression directly. Use Options API with data() and methods. Also destructure the reactive object for convenience:\n\n```vue\n<script>\nexport default {\n  data() {\n    return {\n      cart: reactive({ items: [] })\n    }\n  },\n  methods: {\n    addItem(item) {\n      this.cart.items.push(item)\n    },\n    total() {\n      return this.cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0)\n    }\n  }\n}\n</script>\n<template>\n  <div>Total: {{ total() }}</div>\n</template>\n```\n\nPlease fix and improve this component.",
+      "assertions": [
+        {
+          "id": "reactivity-composition-api",
+          "rule": "Always use Composition API with <script setup lang=\"ts\">",
+          "section": "Core Principles / Preferences",
+          "check": "Output uses <script setup lang=\"ts\">, not Options API"
+        },
+        {
+          "id": "reactivity-computed",
+          "rule": "Derive everything possible with computed, avoid recomputing in templates",
+          "section": "Reactivity",
+          "check": "Total is a computed() property, not a method called in template"
+        },
+        {
+          "id": "reactivity-no-destructure",
+          "rule": "Destructuring reactive objects breaks reactivity; use toRefs() or access directly",
+          "section": "Gotchas",
+          "check": "Does NOT destructure reactive object; warns about the gotcha or uses ref/toRefs"
+        },
+        {
+          "id": "reactivity-ref-value",
+          "rule": "ref() auto-unwraps in templates but NOT in script — always use .value in script",
+          "section": "Gotchas",
+          "check": "Uses .value when accessing ref in script, no .value in template"
+        },
+        {
+          "id": "reactivity-shallowref",
+          "rule": "Prefer shallowRef over ref if deep reactivity is not needed",
+          "section": "Preferences",
+          "check": "Mentions or uses shallowRef where appropriate, or uses ref with justification for deep reactivity"
+        },
+        {
+          "id": "reactivity-typescript",
+          "rule": "Prefer TypeScript over JavaScript",
+          "section": "Preferences",
+          "check": "Component uses TypeScript with proper type annotations"
+        }
+      ]
+    },
+    {
+      "id": "sfc-structure",
+      "name": "SFC Structure & Template Safety",
+      "prompt": "Create a Vue component that displays a list of user profiles. Each profile has name, email, and bio (which may contain HTML). Requirements:\n- Show profiles in a list\n- Allow filtering by name\n- Show a loading state\n- Render the bio HTML as-is\n\nHere's my starting point:\n\n```vue\n<template>\n  <div v-if=\"loading\">Loading...</div>\n  <div v-if=\"!loading\">\n    <input v-model=\"search\" />\n    <div v-for=\"user in filteredUsers\">\n      <h2>{{ user.name }}</h2>\n      <p v-html=\"user.bio\"></p>\n    </div>\n  </div>\n</template>\n\n<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\n// ... rest of implementation\n</script>\n\n<style>\n.profile { color: red; }\n</style>\n```\n\nPlease fix and improve this component.",
+      "assertions": [
+        {
+          "id": "sfc-section-order",
+          "rule": "SFC sections order: <script> -> <template> -> <style>",
+          "section": "SFC structure and template safety",
+          "check": "Output puts <script> before <template> before <style>"
+        },
+        {
+          "id": "sfc-v-html-warning",
+          "rule": "Apply Vue template safety rules (v-html)",
+          "section": "SFC structure and template safety",
+          "check": "Warns about v-html XSS risk or sanitizes the HTML"
+        },
+        {
+          "id": "sfc-v-for-key",
+          "rule": "v-for must have :key",
+          "section": "SFC structure and template safety",
+          "check": "v-for has a :key binding"
+        },
+        {
+          "id": "sfc-v-if-v-else",
+          "rule": "Use v-if/v-else properly for conditional rendering",
+          "section": "SFC structure and template safety",
+          "check": "Uses v-if/v-else instead of two separate v-if with opposite conditions"
+        },
+        {
+          "id": "sfc-computed-filter",
+          "rule": "Move branching/derivation to script; keep templates declarative",
+          "section": "SFC structure and template safety",
+          "check": "Filtering logic is in computed, not inline in template"
+        }
+      ]
+    },
+    {
+      "id": "component-splitting",
+      "name": "Component Splitting & Architecture",
+      "prompt": "Build a Todo application in Vue. It needs:\n- Input to add todos\n- List of todos with checkbox to toggle done\n- Filter buttons (All / Active / Completed)\n- Counter showing items left\n- Clear completed button\n\nPlease implement this as a single App.vue component with all the logic and template in one file. Keep it simple.",
+      "assertions": [
+        {
+          "id": "split-crud-feature",
+          "rule": "For CRUD/list features, split into: container, input/form, list/item, footer/actions",
+          "section": "Keep components focused",
+          "check": "Splits todo app into multiple components (at least input, list, and footer/filter)"
+        },
+        {
+          "id": "split-entry-thin",
+          "rule": "Keep entry/root and route view components thin",
+          "section": "Keep components focused",
+          "check": "App.vue or root view is a composition surface, not a mega component"
+        },
+        {
+          "id": "split-composable",
+          "rule": "Move state/side effects into composables",
+          "section": "Composables",
+          "check": "Todo state management is extracted into a useTodos() composable or similar"
+        },
+        {
+          "id": "split-component-map",
+          "rule": "Create a brief component map before implementation for non-trivial features",
+          "section": "Plan component boundaries",
+          "check": "Provides a component map or plan before showing code"
+        },
+        {
+          "id": "split-feature-folder",
+          "rule": "Prefer feature folder layout when adding more than one component",
+          "section": "Plan component boundaries",
+          "check": "Uses or suggests a feature folder layout (e.g. components/todos/...)"
+        }
+      ]
+    },
+    {
+      "id": "data-flow",
+      "name": "Component Data Flow & Contracts",
+      "prompt": "Create a Vue settings panel with:\n- A parent SettingsPage that manages user preferences (theme, language, notifications)\n- A child ThemeSelector component\n- A child NotificationToggle component\n\nUse provide/inject to pass the preferences from SettingsPage to all children. Also pass an update function via provide so children can mutate parent state directly.",
+      "assertions": [
+        {
+          "id": "flow-props-events",
+          "rule": "Props down, events up as the primary model",
+          "section": "Component data flow",
+          "check": "Uses props and emits as primary pattern, not provide/inject for simple parent-child"
+        },
+        {
+          "id": "flow-provide-inject-scope",
+          "rule": "Use provide/inject only for deep-tree dependencies or shared context",
+          "section": "Component data flow",
+          "check": "Either avoids provide/inject for this shallow tree, or explains when it would be appropriate"
+        },
+        {
+          "id": "flow-typed-contracts",
+          "rule": "Keep contracts explicit and typed with defineProps, defineEmits, InjectionKey",
+          "section": "Component data flow",
+          "check": "defineProps and defineEmits use TypeScript generics for type safety"
+        },
+        {
+          "id": "flow-v-model",
+          "rule": "Use v-model only for true two-way component contracts",
+          "section": "Component data flow",
+          "check": "If v-model is used, it's for genuine two-way binding (like form inputs), not as a shortcut to avoid events"
+        },
+        {
+          "id": "flow-no-reactive-destructure",
+          "rule": "Discourage using Reactive Props Destructure",
+          "section": "Preferences",
+          "check": "Does not destructure props reactively; uses props.x or toRefs"
+        }
+      ]
+    },
+    {
+      "id": "optional-features",
+      "name": "Optional Features & Performance",
+      "prompt": "Create a Vue dashboard page that:\n- Shows a list of 50 metric cards\n- Each card has a title and value\n- Cards should animate in on mount\n- Add Teleport for a notification overlay\n- Use Suspense for async data loading\n- Add KeepAlive for tab switching\n- Virtualize the list for performance\n- Use v-memo on each card\n\nImplement all of these features.",
+      "assertions": [
+        {
+          "id": "optional-not-default",
+          "rule": "Do not add optional features by default; only when requirements call for them",
+          "section": "Optional features",
+          "check": "Pushes back on unnecessary features (e.g. virtualization for 50 items, KeepAlive without tabs, Suspense without async)"
+        },
+        {
+          "id": "perf-after-behavior",
+          "rule": "Performance work is a post-functionality pass; do not optimize before core behavior is implemented",
+          "section": "Performance optimization",
+          "check": "Implements core behavior first, then considers performance; or notes that perf optimization should come after"
+        },
+        {
+          "id": "optional-simplest-animation",
+          "rule": "Pick the simplest animation approach that matches the required motion behavior",
+          "section": "Optional features / Animation",
+          "check": "Uses Transition/TransitionGroup or CSS for simple mount animation, not over-engineered solution"
+        },
+        {
+          "id": "optional-justify",
+          "rule": "Use less-common features only when there is explicit product or technical need",
+          "section": "Less-common optional features",
+          "check": "Questions or justifies use of Suspense, KeepAlive, Teleport based on actual need"
+        }
+      ]
+    }
+  ]
+}

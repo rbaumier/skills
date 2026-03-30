@@ -1,0 +1,56 @@
+{
+  "skill_name": "testing",
+  "evals": [
+    {
+      "id": 1,
+      "name": "strategy",
+      "prompt": "Review this test suite for quality and suggest improvements:\n\n```typescript\nimport { UserService } from './user-service';\nimport { Database } from './database';\nimport { EmailService } from './email-service';\nimport { Logger } from './logger';\n\ndescribe('UserService', () => {\n  let db: Database;\n  let emailService: EmailService;\n  let logger: Logger;\n  let service: UserService;\n\n  // Shared fixture\n  const testUser = { id: '1', name: 'John', email: 'john@test.com', role: 'admin' };\n\n  beforeAll(async () => {\n    db = new Database();\n    await db.connect();\n    await db.seed([testUser]);\n  });\n\n  beforeEach(() => {\n    emailService = new EmailService();\n    logger = new Logger();\n    vi.spyOn(emailService, 'send');\n    vi.spyOn(logger, 'info');\n    service = new UserService(db, emailService, logger);\n  });\n\n  test('register', async () => {\n    const input = { name: 'Jane', email: 'jane@test.com', password: 'pass123' };\n    const result = await service.register(input);\n    expect(result).toMatchSnapshot();\n    expect(emailService.send).toHaveBeenCalledWith('jane@test.com', expect.any(String));\n    expect(logger.info).toHaveBeenCalledWith('User registered', { userId: result.id });\n    const dbUser = await db.findById(result.id);\n    expect(dbUser).toBeDefined();\n    expect(dbUser.name).toBe('Jane');\n  });\n\n  test('should work correctly', async () => {\n    const result = await service.getUser('1');\n    if (result) {\n      expect(result.name).toBe('John');\n    } else {\n      expect(result).toBeNull();\n    }\n  });\n\n  test('delete', async () => {\n    // Test implementation detail: checks internal cache map\n    await service.register({ name: 'Del', email: 'del@test.com', password: 'p' });\n    const cacheSize = (service as any)._cache.size;\n    await service.delete('del@test.com');\n    expect((service as any)._cache.size).toBe(cacheSize - 1);\n  });\n\n  test('type check', () => {\n    const user: User = { id: '1', name: 'Test', email: 'test@test.com', role: 'user' };\n    expect(typeof user.id).toBe('string');\n    expect(typeof user.name).toBe('string');\n  });\n});\n```",
+      "assertions": [
+        { "id": "test-behavior-not-impl", "trap": "delete test accesses private _cache, testing implementation not behavior" },
+        { "id": "no-snapshot-trap", "trap": "register test uses toMatchSnapshot() instead of specific assertions" },
+        { "id": "no-logic-in-tests", "trap": "getUser test has if/else conditional logic" },
+        { "id": "descriptive-names", "trap": "'register', 'should work correctly', 'delete', 'type check' are vague names" },
+        { "id": "factories-over-fixtures", "trap": "shared static testUser fixture instead of factory/builder" },
+        { "id": "dont-test-types", "trap": "type check test verifies string types already guaranteed by TypeScript" },
+        { "id": "specific-matchers", "trap": "uses toMatchSnapshot instead of specific field assertions" },
+        { "id": "mock-boundaries-only", "trap": "spying on Logger.info (internal implementation) instead of only mocking external boundaries" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tdd-workflow",
+      "prompt": "I'm implementing a shopping cart module. Here's my plan:\n\n1. Write all the tests first:\n   - test addItem\n   - test removeItem\n   - test updateQuantity\n   - test calculateTotal\n   - test applyDiscount\n   - test checkout\n\n2. Then implement all the cart methods\n\n3. Then refactor\n\nHere's what I have so far — I wrote all 6 tests and they're all failing. Now I'm going to write the implementation:\n\n```typescript\ndescribe('ShoppingCart', () => {\n  test('addItem adds product to cart', () => { /* RED */ });\n  test('removeItem removes product', () => { /* RED */ });\n  test('updateQuantity changes count', () => { /* RED */ });\n  test('calculateTotal sums prices', () => { /* RED */ });\n  test('applyDiscount reduces total', () => { /* RED */ });\n  test('checkout creates order', () => { /* RED */ });\n});\n```\n\nAlso, I noticed my calculateTotal test is failing because of a rounding issue. Should I refactor the implementation to fix it?\n\nReview my TDD approach.",
+      "assertions": [
+        { "id": "vertical-slices", "trap": "user wrote all tests first then all implementation (horizontal slicing)" },
+        { "id": "tracer-bullet", "trap": "should do one test → one impl → repeat, not batch" },
+        { "id": "never-refactor-red", "trap": "user wants to refactor while tests are failing (RED)" },
+        { "id": "minimal-code", "trap": "should write only enough code to pass current test, not anticipate" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "ui-testing",
+      "prompt": "Review this Playwright E2E test:\n\n```typescript\nimport { test, expect } from '@playwright/test';\n\ntest('user can complete checkout', async ({ page }) => {\n  // Register user through UI\n  await page.goto('/register');\n  await page.fill('.email-input', 'test@example.com');\n  await page.fill('.password-input', 'Test123!');\n  await page.click('.submit-btn');\n  await page.waitForTimeout(3000);\n\n  // Login\n  await page.goto('/login');\n  await page.fill('.email-input', 'test@example.com');\n  await page.fill('.password-input', 'Test123!');\n  await page.click('.submit-btn');\n  await page.waitForTimeout(2000);\n\n  // Add item to cart\n  await page.goto('/products');\n  await page.click('.product-card:first-child .add-to-cart');\n  await page.waitForTimeout(1000);\n\n  // Checkout\n  await page.goto('/checkout');\n  await page.fill('#card-number', '4242424242424242');\n  await page.click('.pay-btn');\n  await page.waitForTimeout(5000);\n\n  const confirmation = await page.textContent('.confirmation-message');\n  expect(confirmation).toContain('Order confirmed');\n});\n```\n\nThis test runs in the same browser context as other tests. Sometimes it fails because the previous test left items in the cart.",
+      "assertions": [
+        { "id": "user-centric-selectors", "trap": "uses CSS class selectors (.email-input, .submit-btn) instead of role/label selectors" },
+        { "id": "zero-sleep", "trap": "uses waitForTimeout(3000) multiple times instead of proper waits" },
+        { "id": "api-seeding", "trap": "registers user through UI instead of API seeding" },
+        { "id": "page-object-model", "trap": "no POM, selectors/actions inline in test" },
+        { "id": "fresh-contexts", "trap": "shares browser context, previous test contaminates state" },
+        { "id": "determinism", "trap": "test is flaky due to shared state and arbitrary timeouts" },
+        { "id": "mock-third-party", "trap": "real payment gateway (4242...) instead of mocked service" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "gotchas",
+      "prompt": "I'm writing Vitest tests and hitting some issues. Review this code:\n\n```typescript\nimport { render, cleanup } from '@testing-library/react';\nimport { vi, describe, test, expect, afterEach } from 'vitest';\n\n// Mock setup\nconst mockFetch = vi.fn();\nvi.mock('./api', () => ({\n  fetchUsers: mockFetch,\n}));\n\nafterEach(() => {\n  cleanup();\n  vi.restoreAllMocks();\n});\n\ndescribe('UserList', () => {\n  test('renders users', async () => {\n    mockFetch.mockResolvedValue([{ id: 1, name: 'Alice' }]);\n    const { container } = render(<UserList />);\n    // Use old page.click pattern\n    await page.click('.user-item');\n    expect(container.querySelector('.user-name')?.textContent).toBe('Alice');\n  });\n\n  test('handles empty state', async () => {\n    mockFetch.mockResolvedValue([]);\n    const result = render(<UserList />);\n    expect(result).toMatchSnapshot();\n  });\n});\n```\n\nAlso, my test for a Playwright locator:\n```typescript\ntest('button click', async ({ page }) => {\n  await page.click('#submit-btn');\n  // Check if success message appears\n  const msg = await page.$('.success-msg');\n  expect(msg).toBeTruthy();\n});\n```",
+      "assertions": [
+        { "id": "vi-mock-hoisting", "trap": "mockFetch defined before vi.mock but vi.mock hoists — mockFetch will be undefined" },
+        { "id": "no-manual-cleanup", "trap": "manual cleanup() call in afterEach when Vitest does it automatically" },
+        { "id": "locator-auto-wait", "trap": "uses page.click() and page.$() instead of locator pattern with auto-wait assertions" },
+        { "id": "snapshot-specific", "trap": "toMatchSnapshot on empty state instead of specific assertion" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "skill": "database",
+  "sections": [
+    {
+      "id": "schema-design",
+      "name": "Schema Design & Modeling",
+      "prompt": "Design a PostgreSQL schema for a SaaS multi-tenant project management app. Requirements:\n- Projects belong to organizations\n- Tasks belong to projects, have a title, description, status, price estimate\n- Users can be soft-deleted\n- Need to store user preferences as flexible key-value data\n\nProvide the complete CREATE TABLE statements.",
+      "trap_notes": "Trap: will they use VARCHAR instead of TEXT? TIMESTAMP instead of TIMESTAMPTZ? FLOAT for price? Random UUID v4? Skip foreign key indexes? Use boolean is_deleted instead of proper soft-delete pattern? Skip CHECK constraints?",
+      "assertions": [
+        { "id": "sd-1", "rule": "UUIDv7 for primary keys (not UUIDv4)", "check": "Output uses UUIDv7 or explicitly mentions time-sortable/index-friendly UUIDs, not random UUIDv4" },
+        { "id": "sd-2", "rule": "Foreign keys enforced in DB with explicit indexes", "check": "All foreign key columns have explicit CREATE INDEX statements" },
+        { "id": "sd-3", "rule": "TEXT over VARCHAR", "check": "Uses TEXT type, not VARCHAR for string columns" },
+        { "id": "sd-4", "rule": "TIMESTAMPTZ over TIMESTAMP", "check": "Uses TIMESTAMPTZ (or TIMESTAMP WITH TIME ZONE), never bare TIMESTAMP" },
+        { "id": "sd-5", "rule": "NUMERIC for money, never FLOAT", "check": "Price/money columns use NUMERIC (or DECIMAL), not FLOAT/REAL/DOUBLE PRECISION" },
+        { "id": "sd-6", "rule": "JSONB for semi-structured data", "check": "User preferences use JSONB type" },
+        { "id": "sd-7", "rule": "snake_case naming", "check": "All table and column names are snake_case" },
+        { "id": "sd-8", "rule": "Soft delete via deleted_at or history table", "check": "Soft delete uses deleted_at column with partial unique index, or a separate history table — not a boolean is_deleted" },
+        { "id": "sd-9", "rule": "CHECK constraints for validity", "check": "Includes CHECK constraints (e.g., price > 0, status IN list)" }
+      ]
+    },
+    {
+      "id": "performance-indexing",
+      "name": "Performance & Indexing",
+      "prompt": "I have a PostgreSQL table `orders` with 50 million rows:\n```sql\nCREATE TABLE orders (\n  id SERIAL PRIMARY KEY,\n  user_id INTEGER REFERENCES users(id),\n  status TEXT,\n  created_at TIMESTAMPTZ,\n  total NUMERIC\n);\n```\nQueries I need to optimize:\n1. Get all active orders for a user, sorted by created_at DESC\n2. Search orders by a text description field\n3. Paginate through a user's order history (thousands of orders per user)\n4. Get orders created in the last hour\n\nWhat indexes should I create and what query patterns should I use?",
+      "trap_notes": "Trap: will they use OFFSET/LIMIT for pagination? LIKE '%term%' for text search? SELECT * in queries? Skip covering indexes? Skip partial indexes for status? Skip BRIN for time-series?",
+      "assertions": [
+        { "id": "pi-1", "rule": "Index based on query patterns, not intuition", "check": "Indexes are explicitly tied to the specific queries listed" },
+        { "id": "pi-2", "rule": "Covering indexes with INCLUDE", "check": "At least one index uses INCLUDE clause for index-only scans" },
+        { "id": "pi-3", "rule": "Partial indexes for subset filtering", "check": "Uses partial index (WHERE status = 'active' or similar)" },
+        { "id": "pi-4", "rule": "BRIN for time-series data", "check": "Recommends BRIN index for created_at on this large append-only-ish table" },
+        { "id": "pi-5", "rule": "No SELECT *", "check": "Explicitly warns against SELECT * or uses explicit column lists in example queries" },
+        { "id": "pi-6", "rule": "Cursor-based pagination", "check": "Recommends cursor/keyset pagination, warns that OFFSET/LIMIT is O(N) on deep pages" },
+        { "id": "pi-7", "rule": "TSVECTOR + GIN for text search, not LIKE", "check": "Recommends tsvector + GIN index for text search, warns against LIKE '%term%'" }
+      ]
+    },
+    {
+      "id": "migrations",
+      "name": "Operational & Migrations",
+      "prompt": "I need to:\n1. Rename a column `name` to `full_name` in a users table with 10M rows while the app is live\n2. Add a NOT NULL constraint to an existing nullable column `email`\n3. Add a new index on a large table\n4. My autovacuum is falling behind on a high-write table\n\nHow should I handle each of these in production?",
+      "trap_notes": "Trap: will they do a direct ALTER TABLE RENAME? Skip lock_timeout? Use regular CREATE INDEX (not CONCURRENTLY)? Suggest disabling autovacuum? Skip expand-and-contract pattern?",
+      "assertions": [
+        { "id": "mg-1", "rule": "Expand and Contract pattern for breaking changes", "check": "Uses expand-and-contract for the rename: add new column, dual write, backfill, switch reads, drop old" },
+        { "id": "mg-2", "rule": "Lock timeout during migrations", "check": "Sets lock_timeout (around 5s) to prevent write queue pileups" },
+        { "id": "mg-3", "rule": "CREATE INDEX CONCURRENTLY", "check": "Uses CREATE INDEX CONCURRENTLY for the large table index" },
+        { "id": "mg-4", "rule": "ADD CONSTRAINT NOT VALID then VALIDATE", "check": "For the NOT NULL constraint, uses NOT VALID then VALIDATE separately to avoid table lock" },
+        { "id": "mg-5", "rule": "Tune autovacuum, never disable", "check": "Recommends tuning autovacuum frequency/thresholds for high-churn table, explicitly warns against disabling" }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security & Access Control",
+      "prompt": "I'm building a multi-tenant SaaS app with Supabase. I need to:\n1. Set up database access for the application\n2. Ensure tenants can only see their own data\n3. Store user passwords and API keys\n4. Build a search feature that takes user input to query the database\n\nWhat's the right approach for each?",
+      "trap_notes": "Trap: will they use superuser? Skip RLS? Store secrets in plain text? Use string concatenation for SQL?",
+      "assertions": [
+        { "id": "sc-1", "rule": "Least privilege, no superuser for app", "check": "Explicitly states app users should never be superuser, grant only needed permissions" },
+        { "id": "sc-2", "rule": "RLS on every table", "check": "Enforces RLS on every table, mentions keeping policies performant" },
+        { "id": "sc-3", "rule": "bcrypt/argon2 for passwords, no plain text secrets", "check": "Uses bcrypt or argon2 for passwords, never stores API keys in plain text" },
+        { "id": "sc-4", "rule": "Parameterized queries, no string concatenation", "check": "Uses parameterized queries only, explicitly warns against string concatenation for SQL" },
+        { "id": "sc-5", "rule": "PII identification and encryption", "check": "Mentions identifying PII and encrypting sensitive columns (pgcrypto) if compliance requires" }
+      ]
+    },
+    {
+      "id": "gotchas",
+      "name": "Gotchas",
+      "prompt": "Review this PostgreSQL code and identify all issues:\n\n```sql\n-- Migration to clean up old records\nTRUNCATE TABLE audit_logs;\n\n-- Query to get user activity\nSELECT * FROM users u\nJOIN orders o ON o.user_id = u.id\nWHERE o.created_at > NOW()  - INTERVAL '1 hour';\n\n-- Schema\nCREATE TABLE products (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  name VARCHAR(255),\n  price FLOAT,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n\nCREATE TABLE order_items (\n  id SERIAL PRIMARY KEY,\n  order_id INTEGER REFERENCES orders(id),\n  product_id UUID REFERENCES products(id),\n  quantity INTEGER\n);\n```\n\nThe app has 5 instances each with a connection pool of 20.",
+      "trap_notes": "This is a trap-heavy prompt. Every line has an issue from the Gotchas section plus Critical Rules.",
+      "assertions": [
+        { "id": "gt-1", "rule": "SELECT * wastes bandwidth", "check": "Flags SELECT * and recommends listing columns explicitly" },
+        { "id": "gt-2", "rule": "FK columns need explicit indexes", "check": "Flags that order_id and product_id foreign keys need explicit indexes" },
+        { "id": "gt-3", "rule": "NOW() in transaction returns same value", "check": "Warns about NOW() behavior in transactions, suggests clock_timestamp() if wall-clock time needed" },
+        { "id": "gt-4", "rule": "Connection pool math: 5x20=100 hits default max", "check": "Calculates 5*20=100 hitting default max_connections, recommends PgBouncer" },
+        { "id": "gt-5", "rule": "TRUNCATE is not MVCC-safe, use DELETE FROM", "check": "Flags TRUNCATE as taking ACCESS EXCLUSIVE lock, recommends DELETE FROM for live traffic" },
+        { "id": "gt-6", "rule": "VARCHAR should be TEXT", "check": "Flags VARCHAR(255) and recommends TEXT" },
+        { "id": "gt-7", "rule": "FLOAT should be NUMERIC for price", "check": "Flags FLOAT for price and recommends NUMERIC" },
+        { "id": "gt-8", "rule": "TIMESTAMP should be TIMESTAMPTZ", "check": "Flags bare TIMESTAMP and recommends TIMESTAMPTZ" }
+      ]
+    },
+    {
+      "id": "drizzle-orm",
+      "name": "Drizzle ORM",
+      "prompt": "I'm setting up a new TypeScript project with Drizzle ORM and PostgreSQL. I need a users table with id, name, email, role, and timestamps. Show me:\n1. The Drizzle schema definition\n2. How to generate types from it\n3. How to set up the primary key\n4. How to add constraints and indexes\n\nAlso, I ran `drizzle-kit generate` and got output. Should I use it as-is?",
+      "trap_notes": "Trap: will they use bare timestamp()? Skip UUIDv7 defaultFn? Skip InferSelectModel? Use CLI output as-is? Skip withTimezone?",
+      "assertions": [
+        { "id": "do-1", "rule": "pgTable() with typed columns", "check": "Uses pgTable() for schema declaration" },
+        { "id": "do-2", "rule": "UUIDv7 with .$defaultFn(() => uuidv7())", "check": "Primary key uses .$defaultFn(() => uuidv7()) for time-sortable UUIDs" },
+        { "id": "do-3", "rule": "Timestamps with { withTimezone: true }", "check": "Timestamp columns use { withTimezone: true }, never bare timestamp()" },
+        { "id": "do-4", "rule": "Constraints in table definition third argument", "check": "Uses check(), unique(), index() in the table's third argument" },
+        { "id": "do-5", "rule": "InferSelectModel for row types", "check": "Exports InferSelectModel<typeof table> for type generation" },
+        { "id": "do-6", "rule": "CLI output is starting point, not production-ready", "check": "Warns that drizzle-kit output needs manual review/adjustment, not production-ready as-is" }
+      ]
+    },
+    {
+      "id": "repository-pattern",
+      "name": "Repository Pattern & Typed Errors",
+      "prompt": "I'm building a code review tool in TypeScript. I need a repository layer for `diffs` and `comments`. A diff has an id, repo, branch, and content. Comments belong to diffs and have an author.\n\nRequirements:\n- Fetching a diff that doesn't exist should be handled\n- Users should only be able to comment on diffs they have access to\n- Creating a thread with an initial comment should be atomic\n\nShow me the repository pattern and error handling approach.",
+      "trap_notes": "Trap: will they throw exceptions? Use generic Error? Skip exhaustive error mapping? Skip typed union returns from transactions?",
+      "assertions": [
+        { "id": "rp-1", "rule": "Return errors as values, never throw", "check": "Functions return error types as values (union return types), not throw" },
+        { "id": "rp-2", "rule": "Domain-specific error classes", "check": "Defines specific errors like RepoNotFoundError, DiffNotFoundError, CommentForbiddenError — not generic Error" },
+        { "id": "rp-3", "rule": "DatabaseError wraps unexpected failures with cause", "check": "DatabaseError class wraps unexpected DB failures and preserves original cause" },
+        { "id": "rp-4", "rule": "Errors colocated in errors.ts", "check": "Error types defined in errors.ts colocated with repository" },
+        { "id": "rp-5", "rule": "Exhaustive error mapping via matchError()", "check": "Routes use matchError() or equivalent exhaustive pattern to map every error to HTTP status" },
+        { "id": "rp-6", "rule": "Transaction returns union of all possible errors", "check": "Transaction function return type is union of all step errors" },
+        { "id": "rp-7", "rule": "Derive repo type from factory with ReturnType", "check": "Repository type derived via ReturnType<typeof createXRepository>" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "skill": "better-result-adopt",
+  "date": "2026-03-30",
+  "sections": [
+    {
+      "id": "migration-strategy",
+      "prompt": "I have a large TypeScript monorepo with 200+ modules. I want to adopt better-result for error handling. Here's my plan:\n\n1. Convert ALL modules to use Result types in one PR\n2. Start with internal utility functions first, then move to API boundaries\n3. For null pointer exceptions and type errors in callbacks, wrap them in Result.try to catch them\n4. Use plain Error objects for domain errors like NotFound and ValidationError\n\nHere's a sample module I want to convert:\n\n```typescript\nasync function syncInventory(): Promise<void> {\n  const items = await fetchFromWarehouse(); // HTTP call\n  for (const item of items) {\n    const validated = validateItem(item); // pure logic\n    if (!validated) throw new Error('Invalid item');\n    await updateDatabase(item); // DB write\n  }\n}\n```\n\nPlease convert this to use better-result.",
+      "trap_description": "Plan suggests big-bang migration, starting from internal utils (not boundaries), catching bugs as Results, using plain Error instead of TaggedError",
+      "assertions": [
+        {
+          "id": "start-at-boundaries",
+          "rule": "Begin migration at I/O boundaries (API calls, DB queries, file ops) and work inward",
+          "check": "Output should recommend starting with fetchFromWarehouse and updateDatabase (I/O boundaries) not validateItem"
+        },
+        {
+          "id": "no-big-bang",
+          "rule": "Don't attempt full-codebase migration at once",
+          "check": "Output should push back on converting all 200+ modules in one PR"
+        },
+        {
+          "id": "categorize-errors",
+          "rule": "Categorize errors into Domain/Infrastructure/Bugs before migrating",
+          "check": "Output should categorize or mention categorizing errors before converting"
+        },
+        {
+          "id": "domain-errors-use-tagged-error",
+          "rule": "Domain errors use TaggedError + Result.err",
+          "check": "Output should use TaggedError (not plain Error) for domain errors like validation"
+        },
+        {
+          "id": "infra-errors-use-try-promise",
+          "rule": "Infrastructure errors use Result.tryPromise + TaggedError",
+          "check": "Output should wrap fetchFromWarehouse and updateDatabase with Result.tryPromise"
+        },
+        {
+          "id": "bugs-let-throw",
+          "rule": "Bugs/defects should throw (become Panic), not be caught as Results",
+          "check": "Output should NOT wrap null derefs or type errors in Result.try; should let them throw or become Panic"
+        },
+        {
+          "id": "migration-order",
+          "rule": "Follow 4-step order: TaggedErrors → wrap throwing → convert checks → generators",
+          "check": "Output should define TaggedError classes BEFORE wrapping functions"
+        }
+      ]
+    },
+    {
+      "id": "pattern-transformations",
+      "prompt": "Convert these three TypeScript functions to use better-result:\n\n```typescript\n// Function 1: Sync parsing\nfunction parseConfig(raw: string): AppConfig {\n  try {\n    const parsed = JSON.parse(raw);\n    if (!parsed.version) throw new Error('Missing version');\n    return parsed as AppConfig;\n  } catch (e) {\n    throw new Error(`Config parse failed: ${e}`);\n  }\n}\n\n// Function 2: Async fetch\nasync function loadUserProfile(userId: string): Promise<UserProfile> {\n  const res = await fetch(`/api/profiles/${userId}`);\n  if (!res.ok) throw new Error(`HTTP ${res.status}`);\n  const data = await res.json();\n  return data as UserProfile;\n}\n\n// Function 3: Lookup with null\nfunction getActiveSession(token: string): Session | null {\n  const session = sessions.get(token);\n  if (!session || session.expired) return null;\n  return session;\n}\n\n// Function 4: Multi-step with nested try/catch\nasync function checkout(cartId: string) {\n  try {\n    const cart = await loadCart(cartId);\n    if (!cart) throw new Error('Cart not found');\n    try {\n      const payment = await processPayment(cart.total);\n      const order = await createOrder(cart, payment);\n      return order;\n    } catch (e) {\n      if (e instanceof PaymentError) return { error: 'payment_failed' };\n      throw e;\n    }\n  } catch (e) {\n    if (e instanceof Error && e.message === 'Cart not found') return { error: 'not_found' };\n    throw e;\n  }\n}\n```",
+      "trap_description": "Four functions covering all pattern transformation types - must use correct Result method for each",
+      "assertions": [
+        {
+          "id": "try-catch-to-result-try",
+          "rule": "Convert try/catch to Result.try with catch mapper",
+          "check": "parseConfig should use Result.try with try/catch callbacks"
+        },
+        {
+          "id": "async-to-try-promise",
+          "rule": "Convert async/await to Result.tryPromise",
+          "check": "loadUserProfile should use Result.tryPromise"
+        },
+        {
+          "id": "null-checks-to-result",
+          "rule": "Convert null returns to Result.ok/Result.err",
+          "check": "getActiveSession should return Result<Session, SomeError> using Result.ok and Result.err"
+        },
+        {
+          "id": "callback-hell-to-generator",
+          "rule": "Convert nested try/catch to Result.gen with yield*",
+          "check": "checkout should use Result.gen with yield* for sequential operations"
+        }
+      ]
+    },
+    {
+      "id": "workflow-pitfalls",
+      "prompt": "I'm adopting better-result in my Express API. Here's what I've done so far:\n\n```typescript\n// I wrapped every single function including tiny helpers:\nfunction add(a: number, b: number): Result<number, MathError> {\n  return Result.try({\n    try: () => a + b,\n    catch: (e) => new MathError({ cause: e }),\n  });\n}\n\n// My domain error:\nclass UserNotFound extends Error {\n  constructor(id: string) {\n    super(`User ${id} not found`);\n  }\n}\n\n// My service:\nasync function getUser(id: string): Promise<Result<User, UserNotFound>> {\n  return Result.tryPromise({\n    try: async () => {\n      const user = await db.query('SELECT * FROM users WHERE id = $1', [id]);\n      if (!user) throw new UserNotFound(id);\n      return user;\n    },\n    catch: (e) => {\n      if (e instanceof UserNotFound) return e;\n      // Catch the panic too, just in case\n      return new UserNotFound('unknown');\n    },\n  });\n}\n\n// My controller calls getUser but still uses try/catch:\nasync function handleGetUser(req, res) {\n  try {\n    const result = await getUser(req.params.id);\n    if (result.ok) {\n      res.json(result.value);\n    } else {\n      res.status(404).json({ error: result.error.message });\n    }\n  } catch (e) {\n    res.status(500).json({ error: 'Internal error' });\n  }\n}\n```\n\nCan you review this code and suggest improvements?",
+      "trap_description": "Code has multiple pitfalls: over-wrapping (add function), plain Error instead of TaggedError, catching Panic, mixing paradigms in controller, no cause/context in error",
+      "assertions": [
+        {
+          "id": "no-over-wrapping",
+          "rule": "Don't wrap every function - start at boundaries, propagate inward",
+          "check": "Output should flag the add() function as over-wrapping - pure arithmetic doesn't need Result"
+        },
+        {
+          "id": "preserve-error-info",
+          "rule": "Always include cause/context in TaggedError constructors",
+          "check": "Output should flag that UserNotFound loses error info - should include cause and context"
+        },
+        {
+          "id": "no-mixed-paradigms",
+          "rule": "Once module returns Result, callers should too (or explicitly unwrap)",
+          "check": "Output should flag the controller mixing try/catch with Result pattern"
+        },
+        {
+          "id": "never-catch-panic",
+          "rule": "Fix the bug causing Panic, don't catch it",
+          "check": "Output should flag catching Panic in the catch handler as wrong - should fix the underlying bug"
+        },
+        {
+          "id": "use-tagged-error",
+          "rule": "Domain errors should extend TaggedError, not plain Error",
+          "check": "Output should flag UserNotFound as extending Error instead of TaggedError"
+        },
+        {
+          "id": "check-opensrc",
+          "rule": "Look for opensrc/ directory for better-result source reference",
+          "check": "Output should mention checking for opensrc/ or reference source code"
+        }
+      ]
+    }
+  ]
+}

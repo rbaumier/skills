@@ -1,0 +1,80 @@
+{
+  "skill_name": "security-defensive",
+  "evals": [
+    {
+      "id": 1,
+      "name": "input-validation",
+      "prompt": "Review this Express endpoint for security issues:\n\n```typescript\nimport { exec } from 'child_process';\nimport { readFile } from 'fs/promises';\nimport mysql from 'mysql2';\n\napp.post('/api/convert', async (req, res) => {\n  const { filename, outputFormat, blockedExtensions } = req.body;\n\n  // Validate extension\n  if (blockedExtensions.includes(filename.split('.').pop())) {\n    return res.status(400).json({ error: 'Blocked extension' });\n  }\n\n  // Read file\n  const content = await readFile(`/uploads/${filename}`);\n\n  // Convert using shell command\n  exec(`convert /uploads/${filename} -format ${outputFormat} /output/${filename}`, (err) => {\n    if (err) return res.status(500).json({ error: err.message });\n  });\n\n  // Log conversion\n  const query = `INSERT INTO conversions (filename, format) VALUES ('${filename}', '${outputFormat}')`;\n  await mysql.query(query);\n\n  // Deserialize user preferences\n  const prefs = eval('(' + req.cookies.prefs + ')');\n\n  res.json({ status: 'converting', prefs });\n});\n```",
+      "assertions": [
+        { "id": "schema-allowlists", "trap": "blockedExtensions is a blocklist approach instead of allowlist" },
+        { "id": "parameterized-queries", "trap": "SQL query built with string concatenation" },
+        { "id": "array-args-commands", "trap": "exec() with string template instead of execFile with array args" },
+        { "id": "path-traversal", "trap": "filename used directly in readFile without realpath+prefix check" },
+        { "id": "no-unsafe-deserialization", "trap": "eval() used to deserialize cookie data" },
+        { "id": "no-internal-errors", "trap": "err.message exposed directly to client" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "xss-client",
+      "prompt": "Review this frontend code for XSS and client-side security:\n\n```typescript\n// Comment rendering component\nfunction CommentSection({ comments }) {\n  const renderComment = (comment) => {\n    const div = document.createElement('div');\n    div.innerHTML = comment.body;\n    return div;\n  };\n\n  // User profile link\n  const profileUrl = new URLSearchParams(window.location.search).get('redirect');\n  if (profileUrl) window.location.href = profileUrl;\n\n  // Load analytics\n  return (\n    <div>\n      <script src=\"https://cdn.analytics.com/v3/tracker.js\"></script>\n      {comments.map(c => <div key={c.id} dangerouslySetInnerHTML={{ __html: c.body }} />)}\n    </div>\n  );\n}\n```\n\nAlso review this CSP header:\n```\nContent-Security-Policy: default-src *; script-src 'unsafe-inline' 'unsafe-eval' *;\n```",
+      "assertions": [
+        { "id": "no-innerhtml", "trap": "innerHTML and dangerouslySetInnerHTML used with user content" },
+        { "id": "sanitize-html", "trap": "no DOMPurify or sanitization before rendering HTML" },
+        { "id": "sanitize-urls", "trap": "redirect URL used without protocol validation (could be javascript:)" },
+        { "id": "csp-nonce-hash", "trap": "CSP uses unsafe-inline and wildcard instead of nonce/hash" },
+        { "id": "sri-external-scripts", "trap": "external script loaded without SRI integrity attribute" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "auth-jwt",
+      "prompt": "Review this authentication system:\n\n```typescript\nimport jwt from 'jsonwebtoken';\nimport crypto from 'crypto';\n\nconst JWT_SECRET = 'my-super-secret-key-2024';\n\napp.post('/api/login', async (req, res) => {\n  const { email, password } = req.body;\n  const user = await db.user.findByEmail(email);\n\n  // Verify password\n  const hash = crypto.createHash('md5').update(password).digest('hex');\n  if (hash !== user.passwordHash) return res.status(401).json({ error: 'Invalid' });\n\n  // Create token\n  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {\n    algorithm: 'HS256',\n    expiresIn: '30d'\n  });\n\n  res.json({ token });\n});\n\n// Client stores token\nlocalStorage.setItem('token', response.token);\n\n// Protected route\napp.get('/api/admin/users', async (req, res) => {\n  const token = req.headers.authorization?.split(' ')[1];\n  const decoded = jwt.verify(token, JWT_SECRET);\n  const users = await db.user.findMany();\n  res.json(users);\n});\n\n// Delete user\napp.delete('/api/users/:id', async (req, res) => {\n  await db.user.delete({ where: { id: req.params.id } });\n  res.json({ success: true });\n});\n```",
+      "assertions": [
+        { "id": "jwt-httponly-cookies", "trap": "JWT stored in localStorage instead of httpOnly cookie" },
+        { "id": "rs256-public", "trap": "HS256 used with hardcoded secret for what appears to be a public API" },
+        { "id": "short-lived-tokens", "trap": "30d expiry is too long, no refresh token rotation" },
+        { "id": "validate-jwt-claims", "trap": "jwt.verify doesn't check iss, aud claims" },
+        { "id": "bcrypt-argon2", "trap": "MD5 used for password hashing instead of bcrypt/Argon2id" },
+        { "id": "authz-before-ops", "trap": "DELETE /users/:id has no authorization check" },
+        { "id": "no-hardcoded-secrets", "trap": "JWT_SECRET hardcoded in source code" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "csrf-headers",
+      "prompt": "Review this API configuration for CSRF and header security:\n\n```typescript\nimport express from 'express';\nimport cors from 'cors';\n\nconst app = express();\n\n// CORS config\napp.use(cors({\n  origin: '*',\n  credentials: true\n}));\n\n// Cookie config\napp.use(session({\n  cookie: {\n    httpOnly: true,\n    secure: false,\n    sameSite: 'lax'\n  }\n}));\n\n// Transfer endpoint (state-changing)\napp.post('/api/transfer', async (req, res) => {\n  const { to, amount } = req.body;\n  await transferFunds(req.user.id, to, amount);\n  res.json({ success: true });\n});\n\n// No rate limiting configured\n// No security headers configured\n// No Origin/Referer validation\n```",
+      "assertions": [
+        { "id": "samesite-strict", "trap": "SameSite=lax on state-changing endpoint instead of Strict, no CSRF token" },
+        { "id": "validate-origin-referer", "trap": "no Origin/Referer header validation on POST" },
+        { "id": "security-headers", "trap": "no HSTS, X-Frame-Options, nosniff, Referrer-Policy headers" },
+        { "id": "no-wildcard-cors", "trap": "CORS origin: * with credentials: true" },
+        { "id": "rate-limiting", "trap": "no rate limiting on transfer endpoint" },
+        { "id": "helmet-middleware", "trap": "Express app without helmet middleware" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "secrets-infra",
+      "prompt": "Review this service configuration:\n\n```typescript\n// config.ts\nexport const config = {\n  dbUrl: 'postgresql://admin:P@ssw0rd123@db.prod.internal:5432/app',\n  stripeKey: 'sk_live_abc123def456',\n  jwtSecret: 'change-me-in-production',\n  awsAccessKey: 'AKIA1234567890ABCDEF',\n};\n\n// logger.ts\nfunction logRequest(req, res) {\n  console.log(JSON.stringify({\n    timestamp: new Date().toISOString(),\n    path: req.path,\n    body: req.body, // includes passwords, tokens\n    headers: req.headers, // includes Authorization\n    user: req.user,\n  }));\n}\n\n// service-to-service call\nconst response = await fetch('http://internal-api:3000/data', {\n  headers: { 'Authorization': `Bearer ${config.jwtSecret}` }\n});\n```\n\nAlso: the project has no .gitignore for .env files, no lockfile committed, and no secret scanning in CI.",
+      "assertions": [
+        { "id": "no-hardcoded-secrets", "trap": "database URL, Stripe key, AWS key hardcoded in source" },
+        { "id": "env-gitignore-scanning", "trap": "no .gitignore for .env, no secret scanning mentioned" },
+        { "id": "no-log-sensitive", "trap": "logging full request body (passwords) and headers (tokens)" },
+        { "id": "structured-audit-logs", "trap": "console.log with raw data instead of structured audit fields" },
+        { "id": "mtls-service-comms", "trap": "service-to-service call over HTTP without mTLS" },
+        { "id": "lockfile-committed", "trap": "no lockfile committed for dependency pinning" }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "file-upload-ssrf",
+      "prompt": "Review this file upload and URL fetch endpoint:\n\n```typescript\napp.post('/api/upload', upload.single('file'), async (req, res) => {\n  const file = req.file;\n  // Save directly\n  await fs.writeFile(`/uploads/${file.originalname}`, file.buffer);\n  res.json({ url: `/uploads/${file.originalname}` });\n});\n\napp.get('/api/fetch-url', async (req, res) => {\n  const { url } = req.query;\n  const response = await fetch(url);\n  const data = await response.text();\n  res.json({ content: data });\n});\n```",
+      "assertions": [
+        { "id": "file-upload-validation", "trap": "no size limit, MIME type check, or extension validation on upload" },
+        { "id": "ssrf-url-allowlist", "trap": "arbitrary URL fetched without allowlist validation" },
+        { "id": "path-traversal-upload", "trap": "originalname used directly, could contain ../" }
+      ]
+    }
+  ]
+}
