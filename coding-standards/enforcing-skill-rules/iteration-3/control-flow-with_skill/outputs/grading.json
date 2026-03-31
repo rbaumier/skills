@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "control-flow",
+  "expectations": [
+    { "text": "fail-fast-guard-clauses", "passed": true, "evidence": "validateOrder returns early for each error case: `if (order.items.length === 0) return { error: \"empty order\" }`, `if (!order.customer) return { error: \"no customer\" }`, `if (!order.customer.verified) return { error: \"not verified\" }` (lines 6-8)." },
+    { "text": "max-2-indentation", "passed": true, "evidence": "Maximum nesting is 2 levels (e.g. inside processOrder: `if (result.ok && order.needsShipping)`). Original 6-level nesting eliminated." },
+    { "text": "switch-over-if-else", "passed": true, "evidence": "Strategy dispatch replaces if/else: `const process = isUrgent ? processUrgent : processNormal` (line 25). Map-style lookup, not branching." },
+    { "text": "no-boolean-flags", "passed": false, "evidence": "`isUrgent: boolean` remains as a positional boolean parameter on both processOrder (line 24) and handleOrder (line 46). Comment on lines 20-22 explicitly acknowledges keeping it. Not replaced with two separate functions or options object." },
+    { "text": "declarative-over-imperative", "passed": true, "evidence": "No mutation of order.status. Returns new object: `return { ...result, status }` (line 62). Status derived as const: `const status = result.ok ? 'completed' : 'failed'` (line 60)." },
+    { "text": "parallelize-async", "passed": true, "evidence": "`await Promise.all([processOrder(...), fetchInventory(order.warehouseId), fetchPricing(order.region)])` (lines 54-58)." }
+  ]
+}

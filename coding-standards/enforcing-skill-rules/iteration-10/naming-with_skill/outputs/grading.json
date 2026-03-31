@@ -1,0 +1,12 @@
+{
+  "result": "FAIL",
+  "criteria": {
+    "intent-over-implementation": "FAIL",
+    "symmetry": "PASS",
+    "boolean-prefix": "PASS",
+    "no-mental-mapping": "PASS",
+    "explicit-units": "PASS",
+    "no-acronyms": "PASS"
+  },
+  "reason": "processRecord is a vague name — 'process' is explicitly prohibited by the criteria. Should be renamed to a business-intent name (e.g. closeAccountAndCalculateCost)."
+}

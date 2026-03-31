@@ -1,0 +1,9 @@
+{
+  "eval_id": 7,
+  "eval_name": "file-structure",
+  "expectations": [
+    { "text": "newspaper-metaphor", "passed": true, "evidence": "Explicitly calls out: 'Issue 5: Newspaper metaphor violated — The file reads bottom-up: private helpers at top, public API at bottom. The Newspaper metaphor says high-level (exports) go at the top, implementation details sink to the bottom.'" },
+    { "text": "colocation", "passed": true, "evidence": "Proposed structure has `user.test.ts` inside `features/user/` next to source. Explicitly states: 'Colocation rule violated: tests belong next to the code they test.'" },
+    { "text": "group-by-feature", "passed": true, "evidence": "Proposes `features/user/`, `features/order/`, `features/product/` structure instead of controllers/models/services. States: 'Grouped by type, not by feature' as the core problem." }
+  ]
+}

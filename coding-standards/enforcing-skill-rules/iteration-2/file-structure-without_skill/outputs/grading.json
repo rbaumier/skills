@@ -1,0 +1,9 @@
+{
+  "eval_id": 7,
+  "eval_name": "file-structure",
+  "expectations": [
+    { "text": "newspaper-metaphor", "passed": false, "evidence": "No mention of newspaper metaphor or ordering exports/public API at top of file. The userService.ts analysis focuses on DI, mixed responsibilities, but not file ordering." },
+    { "text": "colocation", "passed": true, "evidence": "Proposes `*.test.ts beside source` and states 'Tests next to source: No mental mapping between tests/userService.test.ts and services/userService.ts.'" },
+    { "text": "group-by-feature", "passed": true, "evidence": "Proposes `features/user/`, `features/order/`, `features/product/` structure. States: 'This groups files by technical role... To work on the user feature, you touch 5+ directories.'" }
+  ]
+}

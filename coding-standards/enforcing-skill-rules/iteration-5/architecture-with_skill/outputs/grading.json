@@ -1,0 +1,25 @@
+{
+  "score": "3/5",
+  "assertions": {
+    "vertical-slices": {
+      "pass": true,
+      "evidence": "Secondary Issues table: \"Split into `orders/` feature folder: schema, service, handler, errors\" (line 127). Recommended Target Architecture shows `orders/`, `inventory/`, `shared/` feature folders (lines 139-153)."
+    },
+    "factory-di": {
+      "pass": true,
+      "evidence": "Issue #4 recommends factory-function DI: `function createOrderService({ db, emailer, logger }: OrderDeps) { return { createOrder, getOrder }; }` (lines 58-60). States: \"Compose at the entry point. Test with simple stubs.\" (line 63)."
+    },
+    "crosscutting-via-wrapping": {
+      "pass": false,
+      "evidence": "No wrapper pattern (e.g. `withTracing(service)`, `withLogging(service)`) is recommended anywhere. Logging appears only as a dependency parameter in the factory (`logger` in `OrderDeps`, line 59) and as \"fire-and-forget with error logging\" (line 131). Passing a logger is NOT the wrapping pattern — the assertion requires explicitly recommending wrapping services for cross-cutting concerns."
+    },
+    "structured-api-errors": {
+      "pass": true,
+      "evidence": "Issue #7 flags `{ message: 'Invalid order' }` as not machine-readable (line 108) and recommends structured format: `{ type: \"VALIDATION_ERROR\", code: \"INVALID_ORDER_PAYLOAD\", status: 400, detail: \"...\" }` (lines 112-117)."
+    },
+    "api-first": {
+      "pass": false,
+      "evidence": "The review never explicitly says to define the API schema/contract BEFORE writing handlers. It recommends Zod schemas (lines 77-84) and lists `order.schema.ts` in the target architecture (line 141), but these are runtime validation — not the api-first pattern. The assertion requires explicitly recommending \"define the schema/spec/contract before the handler\", which is absent."
+    }
+  }
+}

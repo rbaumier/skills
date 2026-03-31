@@ -1,0 +1,12 @@
+{
+  "eval_id": 9,
+  "eval_name": "project-hygiene",
+  "expectations": [
+    { "text": "tests-linting-ci-day-1", "passed": true, "evidence": "Section 1: 'tests written after the fact verify what code does, not what it should do... Retrofitting tests onto untested code is 3-10x more expensive.' Section 4: 'A linter on day 1 costs 15 minutes to configure.'" },
+    { "text": "constrain-first", "passed": true, "evidence": "Section 2: 'Constrain first, relax later — strict API schemas (whitelist > blacklist)... Tightening validation later is a breaking change.'" },
+    { "text": "codebase-homogeneity", "passed": true, "evidence": "Section 3: 'Prefer codebase homogeneity over partial migration — migrate all-at-once or not at all. Two frameworks means two sets of middleware, two error-handling patterns.'" },
+    { "text": "structural-guardrails", "passed": true, "evidence": "Section 4: 'Enforce conventions via automation (linter, CI, hook) — unenforced = wishes.' and 'Choose intentionally limited tools to prevent bad practices — structural guardrails over human discipline.'" },
+    { "text": "hard-cutover", "passed": true, "evidence": "Section 6: 'Use a hard cutover approach and never implement backward compatibility... deprecation notice with a deadline, then remove.'" },
+    { "text": "pin-versions", "passed": true, "evidence": "Section 5: 'Pin all dependency/image/package versions — never use latest... Pin exact versions in package.json (no ^, no ~, no latest).'" }
+  ]
+}

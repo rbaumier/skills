@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "naming",
+  "expectations": [
+    { "text": "intent-over-implementation", "passed": false, "evidence": "setStatusToClosed kept as-is (still called via `setStatusToClosed(user.acctId)`)" },
+    { "text": "symmetry", "passed": false, "evidence": "getUsr still used (not getUser), no consistent pairing" },
+    { "text": "boolean-prefix", "passed": true, "evidence": "isNotActive replaced with isActive (positive form): `if (!isActive) return null`" },
+    { "text": "no-mental-mapping", "passed": false, "evidence": "Several abbreviations remain: `getUsr(data.uid)`, `user.acctId`, `calcAmt`. Single-letter 'f' param removed but others kept" },
+    { "text": "explicit-units", "passed": true, "evidence": "`const elapsedMs = data.ts - data.ts2` — Ms suffix on variable name" },
+    { "text": "no-acronyms", "passed": false, "evidence": "Multiple abbreviations remain: getUsr, acctId, calcAmt, buf→bufferSize (partial). proc renamed but to a long name" }
+  ]
+}

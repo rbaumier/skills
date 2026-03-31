@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "control-flow",
+  "expectations": [
+    { "text": "fail-fast-guard-clauses", "passed": true, "evidence": "Early returns at top: `if (order.items.length === 0) return { error: 'empty order' }` etc." },
+    { "text": "max-2-indentation", "passed": true, "evidence": "Max nesting is 2 levels (inside function, inside if). Deeply nested original eliminated." },
+    { "text": "switch-over-if-else", "passed": false, "evidence": "No switch or map dispatch used. isUrgent handled with ternary." },
+    { "text": "no-boolean-flags", "passed": false, "evidence": "isUrgent still a bare boolean parameter: `async function handleOrder(order, isUrgent)`" },
+    { "text": "declarative-over-imperative", "passed": false, "evidence": "Still mutates order.status: `order.status = result.ok ? 'completed' : 'failed'`" },
+    { "text": "parallelize-async", "passed": false, "evidence": "fetchInventory and fetchPricing were removed entirely rather than parallelized. No Promise.all present." }
+  ]
+}

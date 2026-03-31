@@ -1,0 +1,50 @@
+{
+  "iteration": 1,
+  "sections": [
+    {
+      "eval_name": "opinionated-choices",
+      "expectations": [
+        { "id": "no-enum", "with_skill": true, "without_skill": true, "evidence_with": "Used as const + typeof pattern", "evidence_without": "Used union type (not as const pattern but removed enum)" },
+        { "id": "no-default-export", "with_skill": true, "without_skill": true, "evidence_with": "Named export class", "evidence_without": "Named export class" },
+        { "id": "no-any-no-as", "with_skill": true, "without_skill": false, "evidence_with": "Replaced with unknown + type guards at boundary", "evidence_without": "Still uses response.json() as Promise<User>" },
+        { "id": "errors-as-values", "with_skill": false, "without_skill": false, "evidence_with": "Still throws Error('User not found') — mentioned Result but didn't apply it", "evidence_without": "Throws errors" },
+        { "id": "type-over-interface", "with_skill": true, "without_skill": false, "evidence_with": "Used type for Config, ExtendedConfig, User", "evidence_without": "Used interface for Config and User" },
+        { "id": "using-disposable", "with_skill": true, "without_skill": false, "evidence_with": "Used await using conn = await openConnection()", "evidence_without": "Kept try/finally, said 'not yet widely supported'" }
+      ]
+    },
+    {
+      "eval_name": "tool-choices",
+      "expectations": [
+        { "id": "env-validation", "with_skill": true, "without_skill": false, "evidence_with": "Recommended @t3-oss/env-core + Zod by name with full example", "evidence_without": "Used raw Zod schema, not @t3-oss/env-core" },
+        { "id": "tsgo-typecheck", "with_skill": true, "without_skill": false, "evidence_with": "Recommended tsgo --noEmit", "evidence_without": "Kept tsc --noEmit, no mention of tsgo" },
+        { "id": "openapi-fetch", "with_skill": true, "without_skill": true, "evidence_with": "Full openapi-fetch example", "evidence_without": "Mentioned openapi-fetch as option (section 2c)" },
+        { "id": "zod-brand", "with_skill": true, "without_skill": false, "evidence_with": "Used z.string().uuid().brand<UserId>()", "evidence_without": "Manual branded type with __brand unique symbol, no Zod" }
+      ]
+    },
+    {
+      "eval_name": "style-conventions",
+      "expectations": [
+        { "id": "kebab-case-files", "with_skill": true, "without_skill": false, "evidence_with": "Renamed to user-profile-card.ts", "evidence_without": "Kept UserProfileCard.ts" },
+        { "id": "jsdoc-style", "with_skill": true, "without_skill": false, "evidence_with": "@description + @example only, removed @param/@returns", "evidence_without": "Removed JSDoc entirely" },
+        { "id": "parse-at-boundaries", "with_skill": true, "without_skill": false, "evidence_with": "unknown in, typed out with guards", "evidence_without": "Used RawUserData interface, loadConfig uses as Record cast" },
+        { "id": "named-param-types", "with_skill": true, "without_skill": true, "evidence_with": "Extracted UserProfile type above function", "evidence_without": "Used shared UserProfile from ./types" },
+        { "id": "esm-only", "with_skill": false, "without_skill": false, "evidence_with": "No mention of ESM or type:module", "evidence_without": "No mention" },
+        { "id": "set-over-array-includes", "with_skill": true, "without_skill": true, "evidence_with": "Set with as const satisfies", "evidence_without": "ReadonlySet" },
+        { "id": "validate-json-parse", "with_skill": true, "without_skill": false, "evidence_with": "Validated parsed as object, not null, not array", "evidence_without": "JSON.parse(raw) as Record — cast without validation" }
+      ]
+    },
+    {
+      "eval_name": "post-modification",
+      "expectations": [
+        { "id": "audit-after-modify", "with_skill": true, "without_skill": false, "evidence_with": "Explicitly mentioned ts-audit --working-tree command", "evidence_without": "Mentioned tsc, tests, lint, diff — but not ts-audit" }
+      ]
+    }
+  ],
+  "summary": {
+    "with_skill": { "pass": 16, "fail": 2, "total": 18, "rate": "89%" },
+    "without_skill": { "pass": 5, "fail": 13, "total": 18, "rate": "28%" },
+    "delta": "+61%",
+    "failed_with_skill": ["errors-as-values", "esm-only"],
+    "non_discriminating": ["no-enum", "no-default-export", "named-param-types", "set-over-array-includes", "openapi-fetch"]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "eval_id": 3,
+  "eval_name": "functions",
+  "expectations": [
+    { "text": "max-30-lines", "passed": true, "evidence": "generateReport is ~28 lines. All helper functions are under 15 lines." },
+    { "text": "pure-by-default", "passed": true, "evidence": "filterOrders, sortOrders, computeStats, formatCsv, formatJson, formatText, renderReport, buildChartSuffix are all pure." },
+    { "text": "srp", "passed": true, "evidence": "Fetch, compute, format, and delivery separated into distinct functions." },
+    { "text": "max-3-positional-args", "passed": true, "evidence": "12 args replaced with structured objects: ReportQuery, ReportOutput, EmailDelivery, ReportDeps." },
+    { "text": "cqs", "passed": true, "evidence": "Report generation (query) and email sending (command) are separate concerns; email is conditional side effect." },
+    { "text": "composition-over-inheritance", "passed": true, "evidence": "No classes. Pure function composition." },
+    { "text": "explicit-interface-contracts", "passed": true, "evidence": "Explicit interfaces: Order, User, SortField, ReportFormat, ReportQuery, ReportOutput, EmailDelivery, ReportDeps." },
+    { "text": "factory-function-di", "passed": true, "evidence": "Dependencies injected via `deps: ReportDeps` parameter containing db, cache, logger, mailer, gzip." }
+  ]
+}

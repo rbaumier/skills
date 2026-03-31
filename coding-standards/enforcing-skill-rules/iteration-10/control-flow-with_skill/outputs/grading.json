@@ -1,0 +1,12 @@
+{
+  "result": "FAIL",
+  "criteria": {
+    "fail-fast-guard-clauses": "PASS",
+    "max-2-indentation": "PASS",
+    "switch-over-if-else": "PASS",
+    "no-boolean-flags": "FAIL",
+    "declarative-over-imperative": "PASS",
+    "parallelize-async": "PASS"
+  },
+  "reason": "fulfillOrder still accepts isUrgent boolean flag. The rule requires TWO separate named functions (e.g. fulfillUrgentOrder and fulfillNormalOrder). The boolean dispatch is merely pushed into a ternary inside the single function."
+}

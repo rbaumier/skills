@@ -1,0 +1,25 @@
+{
+  "score": "5/5",
+  "assertions": {
+    "immutable-by-default": {
+      "pass": true,
+      "evidence": "Cart and CartItem interfaces use `readonly` on all properties (lines 41-48). ShippingResult also readonly (lines 51-56). `calculateShipping` returns a new object literal (lines 116-122), never mutates the input cart."
+    },
+    "no-magic-numbers": {
+      "pass": true,
+      "evidence": "Every numeric literal is a named constant: `HEAVY_WEIGHT_THRESHOLD_KG = 50`, `MEDIUM_WEIGHT_THRESHOLD_KG = 20`, `MAX_WEIGHT_KG = 500`, `HEAVY_RATE_PER_KG = 0.5`, `HEAVY_SURCHARGE = 15`, `MEDIUM_RATE_PER_KG = 0.3`, `MEDIUM_SURCHARGE = 8`, `LIGHT_FLAT_COST = 5` (lines 11-19). Country multipliers in `COUNTRY_SHIPPING_MULTIPLIER` record (lines 23-30)."
+    },
+    "strict-typing": {
+      "pass": true,
+      "evidence": "No `any` anywhere. All functions have explicit parameter and return types. Uses `asserts country is SupportedCountry` type predicate (line 66). Domain types defined as interfaces with readonly fields."
+    },
+    "externalize-config": {
+      "pass": true,
+      "evidence": "All rates and thresholds are top-level named constants (lines 9-36): weight thresholds, per-kg rates, surcharges, country multipliers, and valid coupon codes."
+    },
+    "bound-every-input": {
+      "pass": true,
+      "evidence": "`assertValidWeight` throws on non-finite, <= 0, or > MAX_WEIGHT_KG (lines 60-63). `assertSupportedCountry` throws on unknown country (lines 66-70). `assertValidCoupon` throws on invalid coupon (lines 73-76). Empty cart throws (line 100). No silent fallbacks or defaults anywhere."
+    }
+  }
+}

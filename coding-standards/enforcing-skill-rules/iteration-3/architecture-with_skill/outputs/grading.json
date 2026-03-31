@@ -1,0 +1,11 @@
+{
+  "eval_id": 8,
+  "eval_name": "architecture",
+  "expectations": [
+    { "text": "vertical-slices", "passed": true, "evidence": "Section 5 recommends splitting into feature modules: `orders/order.schema.ts`, `orders/order.service.ts`, `orders/order.repository.ts`, `orders/order.routes.ts`, `orders/order.errors.ts` (lines 77-83)." },
+    { "text": "factory-di", "passed": true, "evidence": "Section 2 explicitly recommends factory-function DI: `createOrderService({ db, emailClient, logger })` with note that 'the composition root is the only place that knows about concrete implementations' (lines 33-39)." },
+    { "text": "crosscutting-via-wrapping", "passed": false, "evidence": "No mention of extracting logging, tracing, or error handling as wrapping middleware/decorators/higher-order functions. Error handling discussed in section 3 but not framed as a cross-cutting wrapping pattern." },
+    { "text": "structured-api-errors", "passed": true, "evidence": "Section 7 explicitly recommends structured error format with fields: type ('INSUFFICIENT_STOCK'), code ('ORDER_VALIDATION_ERROR'), status (400), detail (lines 103-109). Calls out bare `{ message: '...' }` as not machine-readable." },
+    { "text": "api-first", "passed": false, "evidence": "No recommendation to define API spec first (OpenAPI/Swagger) or generate spec from code. Zod mentioned for input parsing (section 4) but not for API-first contract definition." }
+  ]
+}

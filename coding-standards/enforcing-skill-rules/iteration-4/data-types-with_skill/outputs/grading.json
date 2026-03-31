@@ -1,0 +1,27 @@
+{
+  "file": "result.ts",
+  "assertions": {
+    "immutable-by-default": {
+      "pass": true,
+      "evidence": "All interface fields use `readonly` (lines 40-41 CartItem, lines 44-48 Cart with `readonly items: readonly CartItem[]`, lines 50-53 ItemShippingCost, lines 55-60 ShippingResult). No mutation of cart or item objects anywhere — `calculateShipping` builds new `itemCosts` array via `.map()` and returns a fresh object."
+    },
+    "no-magic-numbers": {
+      "pass": true,
+      "evidence": "Lines 11-33: every numeric literal extracted to a named constant — MAX_ITEM_WEIGHT_KG, MAX_ITEMS_PER_CART, WEIGHT_TIER_HEAVY_KG, WEIGHT_TIER_MEDIUM_KG, HEAVY_RATE_PER_KG, HEAVY_BASE_FEE, MEDIUM_RATE_PER_KG, MEDIUM_BASE_FEE, LIGHT_FLAT_FEE, DEFAULT_COUNTRY_MULTIPLIER. No bare numbers in logic."
+    },
+    "strict-typing": {
+      "pass": true,
+      "evidence": "No `any` type anywhere. `CartItem` uses `[key: string]: unknown` (line 41) — `unknown` not `any`. All function signatures have explicit parameter and return types."
+    },
+    "externalize-config": {
+      "pass": true,
+      "evidence": "Lines 11-33: rates (HEAVY_RATE_PER_KG, MEDIUM_RATE_PER_KG), thresholds (WEIGHT_TIER_HEAVY_KG, WEIGHT_TIER_MEDIUM_KG), limits (MAX_ITEM_WEIGHT_KG, MAX_ITEMS_PER_CART), and country multipliers (COUNTRY_MULTIPLIER record) are all extracted to top-level named constants."
+    },
+    "bound-every-input": {
+      "pass": false,
+      "evidence": "Weight is properly bounded: lines 102-109 reject invalid/negative weight and weight exceeding MAX_ITEM_WEIGHT_KG. Cart size is bounded: lines 94-98. However, COUNTRY is NOT rejected — `getCountryMultiplier` (line 76-78) silently falls back to `DEFAULT_COUNTRY_MULTIPLIER` for unknown countries instead of throwing/returning an error. COUPON is NOT rejected — `isFreeShippingCoupon` (line 81-83) silently returns false for unrecognized coupons instead of rejecting them. The assertion requires guard clauses that REJECT invalid country/coupon, not silent fallbacks."
+    }
+  },
+  "score": "4/5",
+  "notes": "Strong implementation overall. The missing rejection for invalid country and unknown coupon codes is the only gap — a strict 'bound every input' policy demands that unrecognized values are explicitly rejected, not silently defaulted."
+}

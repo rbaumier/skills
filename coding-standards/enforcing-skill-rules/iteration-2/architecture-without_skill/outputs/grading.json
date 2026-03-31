@@ -1,0 +1,11 @@
+{
+  "eval_id": 8,
+  "eval_name": "architecture",
+  "expectations": [
+    { "text": "vertical-slices", "passed": false, "evidence": "Does not recommend splitting into feature modules. Focuses on individual issues (race condition, error handling, email) but never suggests feature folder structure like orders/, inventory/." },
+    { "text": "factory-di", "passed": false, "evidence": "No mention of injecting db via factory. DB pool usage not discussed as a DI concern." },
+    { "text": "crosscutting-via-wrapping", "passed": false, "evidence": "Mentions 'Express async error wrapper' but not as a general crosscutting wrapping pattern for logging/tracing." },
+    { "text": "structured-api-errors", "passed": false, "evidence": "No recommendation for structured error format (type, code, status, detail). Error handling section focuses on try/catch and transactions, not error response shape." },
+    { "text": "api-first", "passed": false, "evidence": "No mention of API spec generation or schema-first design." }
+  ]
+}

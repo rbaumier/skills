@@ -1,0 +1,26 @@
+{
+  "pass": true,
+  "score": "5/5",
+  "assertions": {
+    "vertical-slices": {
+      "pass": true,
+      "evidence": "\"Split into `orders/` and `inventory/` feature modules, each owning its own data access and business logic.\""
+    },
+    "factory-di": {
+      "pass": true,
+      "evidence": "\"Fix: `createOrderService({ db, emailClient, logger })` returning a plain object. The composition root (`server.ts`) is the only place that knows about concrete `Pool` and `fetch`.\""
+    },
+    "crosscutting-via-wrapping": {
+      "pass": true,
+      "evidence": "\"Fix: Apply `withTracing(orderService)` / `withLogging(orderService)` wrappers at the composition root.\""
+    },
+    "structured-api-errors": {
+      "pass": true,
+      "evidence": "\"Every error response is `{ message: \"...\" }` — not machine-readable, no error type, no error code, no HTTP status in the body.\" Fix: \"Define a structured error format: `{ type, code, status, detail }`.\""
+    },
+    "api-first": {
+      "pass": true,
+      "evidence": "\"Define an OpenAPI spec (or at minimum route-level schemas) before writing handlers. Runtime validation (Zod) is complementary but not sufficient.\""
+    }
+  }
+}

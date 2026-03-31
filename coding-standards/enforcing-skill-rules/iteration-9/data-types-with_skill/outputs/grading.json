@@ -1,0 +1,42 @@
+{
+  "score": 6,
+  "maxScore": 10,
+  "criteria": {
+    "immutable-by-default": {
+      "score": 2,
+      "maxScore": 2,
+      "pass": true,
+      "notes": "All interfaces use readonly. Uses .map/.reduce, no mutation of cart or items. Good."
+    },
+    "no-magic-numbers": {
+      "score": 2,
+      "maxScore": 2,
+      "pass": true,
+      "notes": "All numeric literals extracted into named config constants (WEIGHT_TIERS, COUNTRY_MULTIPLIERS, MAX_ITEM_WEIGHT_KG). Acceptable."
+    },
+    "strict-typing": {
+      "score": 1,
+      "maxScore": 2,
+      "pass": false,
+      "notes": "No 'any' — good. BUT CartItem has '[key: string]: unknown' index signature which defeats type safety (anything can be accessed). 'country: string' is loose — should be a union type or branded type of supported countries (e.g. keyof typeof COUNTRY_MULTIPLIERS). The index signature is especially bad — it makes the type effectively untyped."
+    },
+    "externalize-config": {
+      "score": 2,
+      "maxScore": 2,
+      "pass": true,
+      "notes": "All business params (tiers, multipliers, coupons, max weight) externalized to top-level constants. Changeable without editing function bodies."
+    },
+    "bound-every-input": {
+      "score": 1,
+      "maxScore": 2,
+      "pass": false,
+      "notes": "weight <= 0 throws (GOOD). weight > MAX throws (GOOD). Unknown country throws (GOOD). Empty cart throws (GOOD). BUT: invalid coupon codes are silently ignored — isFreeShippingCoupon returns false for unknown coupons like 'BOGUS50' instead of throwing. The criteria explicitly requires: 'Invalid coupon -> throw/error (NOT silently return false)'. A coupon that exists but is not recognized should be rejected, not silently treated as no coupon."
+    }
+  },
+  "deductions": [
+    "Invalid coupon codes silently ignored — 'BOGUS50' is treated as no coupon instead of throwing an error",
+    "[key: string]: unknown index signature on CartItem undermines strict typing",
+    "'country: string' should be derived from COUNTRY_MULTIPLIERS keys for type safety",
+    "Section divider comments ('// --- Types ---', '// --- Domain Logic ---') violate the skill's own rule: 'Never write trivial comments — section dividers for type/const/import grouping — language keywords are the guide'"
+  ]
+}

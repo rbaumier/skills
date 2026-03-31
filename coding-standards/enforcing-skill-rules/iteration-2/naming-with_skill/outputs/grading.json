@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "naming",
+  "expectations": [
+    { "text": "intent-over-implementation", "passed": true, "evidence": "setStatusToClosed renamed to closeAccount: `const closeResult = closeAccount(user.accountId)`" },
+    { "text": "symmetry", "passed": true, "evidence": "getUser/closeAccount used consistently as verb pairs" },
+    { "text": "boolean-prefix", "passed": true, "evidence": "isNotActive replaced with positive `isActive` in options object: `if (!options.isActive) return null`" },
+    { "text": "no-mental-mapping", "passed": true, "evidence": "All single-letter vars replaced: d→record, ms→elapsedMs, sz→bufferSizeBytes, usr→user, res→closeResult, amt→billingAmount, r/a/u→named properties" },
+    { "text": "explicit-units", "passed": true, "evidence": "`const elapsedMs = record.timestamp - record.previousTimestamp` — Ms suffix present" },
+    { "text": "no-acronyms", "passed": true, "evidence": "proc→processRecord, usr→user, acct→account, amt→billingAmount, buf→buffer all expanded" }
+  ]
+}

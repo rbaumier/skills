@@ -1,0 +1,347 @@
+{
+  "iteration": 1,
+  "sections": [
+    {
+      "name": "Types & Ownership",
+      "assertions": [
+        {
+          "id": 1,
+          "rule": "parse-dont-validate",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Created `pub struct Email(String)` with validated `Email::new()` constructor that returns Result",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No newtype created; send_email still accepts bare &str"
+        },
+        {
+          "id": 2,
+          "rule": "typestate-pattern",
+          "with_skill": "PASS",
+          "with_skill_evidence": "ConfigBuilder<Pending>/ConfigBuilder<Ready> with PhantomData; Connection<Disconnected>/Connected/Authenticated with compile-time state transitions",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Connection<S> with Disconnected/Connected/Authenticated states enforcing compile-time transitions"
+        },
+        {
+          "id": 3,
+          "rule": "accept-slices",
+          "with_skill": "PASS",
+          "with_skill_evidence": "send_email takes &str for body parameter",
+          "without_skill": "PASS",
+          "without_skill_evidence": "send_email changed to accept &str instead of &String"
+        },
+        {
+          "id": 4,
+          "rule": "impl-trait",
+          "with_skill": "PASS",
+          "with_skill_evidence": "host(self, host: impl Into<String>) uses impl Trait for flexible args",
+          "without_skill": "PASS",
+          "without_skill_evidence": "fn host(mut self, host: impl Into<String>) uses impl Trait"
+        },
+        {
+          "id": 5,
+          "rule": "builder-pattern",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Setters consume self and return Self/ConfigBuilder<Ready>; build() returns Config (though not Result, it's valid since typestate guarantees validity)",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Builder methods take owned self, return Self for chaining. No build() method though — Config IS the builder, no separate build step returning Result",
+          "without_skill_note": "Borderline — setters consume and return Self, but there's no build() method that returns Result. Grading PASS since the consume-and-return-Self pattern is present."
+        },
+        {
+          "id": 6,
+          "rule": "sealed-traits",
+          "with_skill": "PASS",
+          "with_skill_evidence": "mod private { pub trait Sealed {} } and pub trait Plugin: private::Sealed",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Added Send + Sync supertraits but no sealed trait pattern; Plugin is still open to external impl"
+        },
+        {
+          "id": 7,
+          "rule": "copy-small-types",
+          "with_skill": "PASS",
+          "with_skill_evidence": "#[derive(Debug, Clone, Copy)] on Point; distance() takes Point by value",
+          "without_skill": "PASS",
+          "without_skill_evidence": "#[derive(Debug, Clone, Copy)] on Point; distance takes by value"
+        },
+        {
+          "id": 8,
+          "rule": "cow-for-reads",
+          "with_skill": "FAIL",
+          "with_skill_evidence": "No use of Cow<'_, T> anywhere in the code, and no mention of it",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No use of Cow<'_, T> anywhere in the code, and no mention of it"
+        },
+        {
+          "id": 9,
+          "rule": "interior-mutability",
+          "with_skill": "FAIL",
+          "with_skill_evidence": "No use of Cell/RefCell; still uses Arc<Mutex> for TreeNode without noting interior mutability alternatives",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No use of Cell/RefCell; still uses Arc<Mutex> without noting interior mutability alternatives"
+        },
+        {
+          "id": 10,
+          "rule": "weak-back-refs",
+          "with_skill": "PASS",
+          "with_skill_evidence": "parent: Option<Weak<Mutex<TreeNode>>> with comment 'Weak breaks the cycle'",
+          "without_skill": "PASS",
+          "without_skill_evidence": "parent: Option<Weak<Mutex<TreeNode>>> with comment 'Weak breaks the cycle'"
+        },
+        {
+          "id": 11,
+          "rule": "arena-allocators",
+          "with_skill": "FAIL",
+          "with_skill_evidence": "No mention of bumpalo or arena pattern as alternative to Arc<Mutex<TreeNode>>",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of bumpalo or arena pattern"
+        },
+        {
+          "id": 12,
+          "rule": "box-large-variants",
+          "with_skill": "PASS",
+          "with_skill_evidence": "left: Box<Expr>, right: Box<Expr> in BinaryOp variant; also Box<str> for op",
+          "without_skill": "PASS",
+          "without_skill_evidence": "left: Box<Expr>, right: Box<Expr> in BinaryOp; also Box<str> for op"
+        }
+      ]
+    },
+    {
+      "name": "Errors & Concurrency",
+      "assertions": [
+        {
+          "id": 13,
+          "rule": "thiserror-vs-anyhow",
+          "with_skill": "PASS",
+          "with_skill_evidence": "DbError uses #[derive(Debug, Error)] from thiserror; load_user returns anyhow::Result with Context",
+          "without_skill": "PASS",
+          "without_skill_evidence": "AppError uses #[derive(Debug, thiserror::Error)]; manual DbError for library. However anyhow is not used — thiserror used for both lib and app layers. Grading PASS since thiserror is used for structured errors (the key intent).",
+          "without_skill_note": "Borderline — no anyhow usage, but thiserror is correctly applied. The assertion says 'thiserror for lib, anyhow for application'. Without-skill uses thiserror for both. Changing to FAIL for strict grading."
+        },
+        {
+          "id": 14,
+          "rule": "context-errors",
+          "with_skill": "PASS",
+          "with_skill_evidence": ".context('failed to load user {id}'), .context('failed to read config.toml'), .context('failed to parse config.toml') on ? calls",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Uses .map_err() to wrap errors into AppError variants, but no .context() or .with_context() from anyhow"
+        },
+        {
+          "id": 15,
+          "rule": "no-unwrap-production",
+          "with_skill": "PASS",
+          "with_skill_evidence": "No .unwrap() calls; errors propagated with ? and .context()",
+          "without_skill": "PASS",
+          "without_skill_evidence": "No .unwrap() calls; tokio::sync::Mutex::lock is infallible, errors propagated with ? and .map_err()"
+        },
+        {
+          "id": 16,
+          "rule": "explicit-ignore",
+          "with_skill": "PASS",
+          "with_skill_evidence": "maybe_fail() now propagates with do_something_important()? instead of let _ =",
+          "without_skill": "PASS",
+          "without_skill_evidence": "maybe_fail() propagates with do_something_important()? instead of let _ ="
+        },
+        {
+          "id": 17,
+          "rule": "no-blocking-async",
+          "with_skill": "PASS",
+          "with_skill_evidence": "tokio::task::spawn_blocking(move || heavy_computation(&item)) offloads CPU work",
+          "without_skill": "PASS",
+          "without_skill_evidence": "tokio::task::spawn_blocking(move || heavy_computation(item)) offloads CPU work"
+        },
+        {
+          "id": 18,
+          "rule": "send-sync-awareness",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Switched to tokio::sync::Mutex with comment 'tokio::sync::Mutex instead of std::sync::Mutex — safe across .await'",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Switched to tokio::sync::Mutex with comment 'tokio::sync::Mutex is .await-safe'; mentioned !Send futures in summary"
+        },
+        {
+          "id": 19,
+          "rule": "minimize-guard-scope",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Guard scoped in block: let count = { let guard = results.lock().await; guard.len() }; then some_async_operation().await after guard dropped",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Guard scoped in block: let count = { let guard = results.lock().await; guard.len() }; guard dropped before .await"
+        },
+        {
+          "id": 20,
+          "rule": "channels-over-mutex",
+          "with_skill": "FAIL",
+          "with_skill_evidence": "Still uses Arc<Mutex<Vec>> for results collection; no channels (mpsc/broadcast) used",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Still uses Arc<Mutex<Vec>> for results collection; no channels used"
+        },
+        {
+          "id": 21,
+          "rule": "cancellation-safety",
+          "with_skill": "FAIL",
+          "with_skill_evidence": "No mention of cancellation safety or cleanup on drop",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of cancellation safety or cleanup on drop"
+        },
+        {
+          "id": 22,
+          "rule": "tracing-not-println",
+          "with_skill": "PASS",
+          "with_skill_evidence": "use tracing::info; and info!(count, 'batch processing complete') replaces println!",
+          "without_skill": "PASS",
+          "without_skill_evidence": "tracing::info!(count, 'batch processing complete') replaces println!"
+        }
+      ]
+    },
+    {
+      "name": "Performance",
+      "assertions": [
+        {
+          "id": 23,
+          "rule": "pre-allocate",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Vec::with_capacity in process_batch; HashMap with_capacity_and_hasher in build_index; collect() with size_hint for process_ids",
+          "without_skill": "PASS",
+          "without_skill_evidence": "HashMap::with_capacity(entries.len()) in build_index; collect() uses size_hint internally"
+        },
+        {
+          "id": 24,
+          "rule": "iterator-chains",
+          "with_skill": "PASS",
+          "with_skill_evidence": "ids.iter().map(|id| format!('id-{id}')).collect() replaces manual for loop",
+          "without_skill": "PASS",
+          "without_skill_evidence": "ids.iter().map(|id| format!('id-{}', id)).collect() replaces manual loop"
+        },
+        {
+          "id": 25,
+          "rule": "vec-over-linkedlist",
+          "with_skill": "PASS",
+          "with_skill_evidence": "EventQueue uses VecDeque<Event> replacing LinkedList; detailed explanation of cache locality",
+          "without_skill": "PASS",
+          "without_skill_evidence": "EventQueue uses VecDeque<Event> replacing LinkedList with cache locality explanation"
+        },
+        {
+          "id": 26,
+          "rule": "monomorphization-hot-paths",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Option A: fn run_pipeline<P: Processor>(processors: &[P], ...) with generics instead of dyn; also enum dispatch alternative",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Fix B shows enum dispatch to eliminate dynamic dispatch; mentions generics as alternative"
+        },
+        {
+          "id": 27,
+          "rule": "release-profile",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Recommends lto = 'fat' and codegen-units = 1 in [profile.release]",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Recommends lto = 'fat', codegen-units = 1, panic = 'abort' in [profile.release]"
+        },
+        {
+          "id": 28,
+          "rule": "fast-hashers",
+          "with_skill": "PASS",
+          "with_skill_evidence": "use rustc_hash::FxHashMap; recommends FxHashMap or ahash::AHashMap",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of ahash, fxhash, rustc_hash, or any alternative hasher"
+        }
+      ]
+    },
+    {
+      "name": "Safety & Modern",
+      "assertions": [
+        {
+          "id": 29,
+          "rule": "oncelock-lazylock",
+          "with_skill": "PASS",
+          "with_skill_evidence": "static GLOBAL_CONFIG: LazyLock<Mutex<Config>> = LazyLock::new(...) replacing lazy_static!",
+          "without_skill": "PASS",
+          "without_skill_evidence": "OnceLock used via static INSTANCE: OnceLock<Mutex<Config>> = OnceLock::new() replacing lazy_static!"
+        },
+        {
+          "id": 30,
+          "rule": "const-generics",
+          "with_skill": "PASS",
+          "with_skill_evidence": "struct Matrix<const ROWS: usize, const COLS: usize> with data: [[f64; COLS]; ROWS]",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "Matrix uses runtime rows/cols fields with flat Vec<f64>; no const generics"
+        },
+        {
+          "id": 31,
+          "rule": "let-chains",
+          "with_skill": "PASS",
+          "with_skill_evidence": "a.zip(b).map(|(x, y)| x + y) replaces nested match — uses combinators",
+          "without_skill": "PASS",
+          "without_skill_evidence": "a.zip(b).map(|(x, y)| x + y) replaces nested match — uses combinators"
+        },
+        {
+          "id": 32,
+          "rule": "asref-path",
+          "with_skill": "PASS",
+          "with_skill_evidence": "fn read_config(path: impl AsRef<Path>) accepts String, &str, PathBuf, Path",
+          "without_skill": "PASS",
+          "without_skill_evidence": "fn read_config(path: &Path) — changed from PathBuf to &Path. Not impl AsRef<Path> but still accepts borrowed path. Grading FAIL for strict interpretation since assertion says 'impl AsRef<Path>'.",
+          "without_skill_note": "Changed to &Path instead of impl AsRef<Path>. While better than PathBuf, it doesn't match the assertion requirement."
+        },
+        {
+          "id": 33,
+          "rule": "safety-comments",
+          "with_skill": "PASS",
+          "with_skill_evidence": "// SAFETY: comments on both unsafe blocks explaining invariants",
+          "without_skill": "PASS",
+          "without_skill_evidence": "// SAFETY: comments on both unsafe blocks explaining invariants"
+        },
+        {
+          "id": 34,
+          "rule": "nonnull-maybeuninit",
+          "with_skill": "PASS",
+          "with_skill_evidence": "Unsafe was minimal in the code (FFI wrappers only); no opportunity for NonNull/MaybeUninit. PASS per instructions.",
+          "without_skill": "PASS",
+          "without_skill_evidence": "Unsafe was minimal (FFI wrappers only); no opportunity for NonNull/MaybeUninit. PASS per instructions."
+        },
+        {
+          "id": 35,
+          "rule": "miri-test",
+          "with_skill": "FAIL",
+          "with_skill_evidence": "No mention of cargo miri test anywhere",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "No mention of cargo miri test anywhere"
+        },
+        {
+          "id": 36,
+          "rule": "safe-wrappers",
+          "with_skill": "PASS",
+          "with_skill_evidence": "mod sys { unsafe extern 'C' { ... } } separates FFI into sys module; init_library and process_data are safe public wrappers",
+          "without_skill": "FAIL",
+          "without_skill_evidence": "unsafe extern 'C' block is at top level, not in a separate sys module; functions are safe wrappers but no module separation"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "with_skill": {
+      "pass": 29,
+      "fail": 7,
+      "total": 36
+    },
+    "without_skill": {
+      "pass": 23,
+      "fail": 13,
+      "total": 36
+    },
+    "delta": "+6 (with_skill: 80.6% vs without_skill: 63.9%, +16.7pp improvement)",
+    "with_skill_only_passes": [
+      "parse-dont-validate",
+      "sealed-traits",
+      "thiserror-vs-anyhow (strict: anyhow for app layer)",
+      "context-errors",
+      "fast-hashers",
+      "const-generics",
+      "asref-path (impl AsRef<Path> vs &Path)",
+      "safe-wrappers (sys module separation)"
+    ],
+    "both_failed": [
+      "cow-for-reads",
+      "interior-mutability",
+      "arena-allocators",
+      "channels-over-mutex",
+      "cancellation-safety",
+      "miri-test"
+    ]
+  }
+}

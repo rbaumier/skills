@@ -1,0 +1,45 @@
+{
+  "skill": "data-types",
+  "iteration": 8,
+  "variant": "with_skill",
+  "overall_grade": "B",
+  "overall_score": 3.5,
+  "max_score": 5,
+  "criteria": {
+    "immutable-by-default": {
+      "pass": true,
+      "score": 1,
+      "max": 1,
+      "comment": "readonly on all interface properties, 'as const' on SHIPPING_TIERS, readonly arrays in CartItem[]. No mutation of cart or items anywhere. Clean."
+    },
+    "no-magic-numbers": {
+      "pass": true,
+      "score": 1,
+      "max": 1,
+      "comment": "All numeric literals (50, 20, 0.5, 0.3, 15, 8, 5, 1.0, 1.3, 2.5) are in named constants or config objects. The only literal '0' is used for empty-cart base case which is acceptable."
+    },
+    "strict-typing": {
+      "pass": true,
+      "score": 1,
+      "max": 1,
+      "comment": "No 'any' types. Proper interfaces for Cart, CartItem, ShippingResult. Function signatures are typed. Good."
+    },
+    "externalize-config": {
+      "pass": true,
+      "score": 1,
+      "max": 1,
+      "comment": "SHIPPING_TIERS, COUNTRY_MULTIPLIERS, DEFAULT_SHIPPING_FEE, DEFAULT_COUNTRY_MULTIPLIER, FREE_SHIPPING_COUPON all externalized as top-level constants. Business params can be changed without editing function bodies. Exported for external override. Good."
+    },
+    "bound-every-input": {
+      "pass": false,
+      "score": 0,
+      "max": 1,
+      "comment": "FAIL on 2 of 3 required validations. (1) weight <= 0 throws — PASS. (2) Unknown country: getCountryMultiplier silently returns DEFAULT_COUNTRY_MULTIPLIER (2.5) for unknown countries. Requirement explicitly states 'Unknown country must throw/error (NOT ?? defaultValue)'. This is exactly the pattern forbidden. FAIL. (3) Invalid coupon: an unrecognized couponCode (e.g. 'BOGUS') is silently ignored — no validation, no error. Requirement states 'Invalid coupon must throw/error'. FAIL."
+    }
+  },
+  "fatal_issues": [
+    "Unknown country silently falls back to DEFAULT_COUNTRY_MULTIPLIER instead of throwing — directly violates 'NOT ?? defaultValue' requirement",
+    "Invalid/unrecognized coupon codes are silently ignored instead of throwing an error"
+  ],
+  "notes": "Strong on immutability, typing, config externalization, and magic number extraction. The bound-every-input criterion was the weakest — only weight validation passes. The country and coupon validations use exactly the fallback-to-default pattern that the requirements explicitly forbid. This is a common mistake: treating 'be defensive' as 'use defaults' when the requirement is 'reject bad input loudly'."
+}

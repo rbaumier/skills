@@ -1,0 +1,27 @@
+{
+  "file": "result.md",
+  "assertions": {
+    "vertical-slices": {
+      "pass": true,
+      "evidence": "Section 5 (lines 47-57): explicitly recommends vertical feature slice with `orders/` folder containing `orders.schema.ts`, `orders.service.ts`, `orders.routes.ts`, `orders.errors.ts`. Calls out SRP violation of single-file approach."
+    },
+    "factory-di": {
+      "pass": true,
+      "evidence": "Section 4 (lines 36-41): identifies hard-imported `db` and `fetch` as globals, recommends factory-function DI pattern: `createOrderService({ db, emailer }) => { createOrder, getOrder }`. Specifies composition root wires concrete implementations and tests pass stubs."
+    },
+    "crosscutting-via-wrapping": {
+      "pass": false,
+      "evidence": "No recommendation for wrapping services for logging/tracing (e.g., `withTracing(service)`, `withLogging(service)`). Section 7 mentions 'Express async error middleware' and 'Result/Either types' but these are error handling, not cross-cutting concern wrapping. Section 3 mentions moving email to async but that is about decoupling side effects, not wrapping. The explicit `withTracing(service)` / decorator pattern is absent from the review."
+    },
+    "structured-api-errors": {
+      "pass": true,
+      "evidence": "Section 8 (lines 87-93): explicitly flags bare `{ message: \"...\" }` strings as a violation, recommends structured error format: `{ type: \"OUT_OF_STOCK\", code: \"ORDER_001\", status: 400, detail: \"...\" }` — has type, code, status, and detail fields."
+    },
+    "api-first": {
+      "pass": false,
+      "evidence": "Section 6 (lines 59-72) recommends Zod schemas for runtime input validation/parsing at the boundary, but does NOT recommend defining the API schema BEFORE writing handlers. There is no mention of OpenAPI, API-first design, contract-first development, or generating handlers from a schema. 'Parse, Don't Validate' is runtime validation, not API-first design."
+    }
+  },
+  "score": "3/5",
+  "notes": "Solid review that catches real bugs (TOCTOU, missing transactions) and covers DI, vertical slices, and structured errors well. Missing two key architectural recommendations: (1) cross-cutting concerns via service wrapping/decoration pattern, and (2) API-first/schema-first design where the contract is defined before implementation."
+}

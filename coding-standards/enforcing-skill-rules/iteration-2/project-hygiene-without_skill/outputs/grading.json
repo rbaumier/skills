@@ -1,0 +1,12 @@
+{
+  "eval_id": 9,
+  "eval_name": "project-hygiene",
+  "expectations": [
+    { "text": "tests-linting-ci-day-1", "passed": true, "evidence": "Section 1: 'Later never comes. Once feature pressure builds, nobody prioritizes retroactive tests.' Section 4: 'The cost of adding a linter grows with codebase size. The cost of adding it on day one is near zero.'" },
+    { "text": "constrain-first", "passed": true, "evidence": "Section 2: 'Validate strictly from the start... Clients will build against the permissive contract. Tightening validation later becomes a breaking change.'" },
+    { "text": "codebase-homogeneity", "passed": false, "evidence": "Section 3 says 'Acceptable, with caveats' rather than flagging it as wrong. States: 'This is a pragmatic reality, not a problem per se.' Does not enforce migrate-all-at-once." },
+    { "text": "structural-guardrails", "passed": true, "evidence": "Section 4: 'Add ESLint + Prettier... right now. It takes 10 minutes. Configure it once, enforce via pre-commit hook, never think about it again.'" },
+    { "text": "hard-cutover", "passed": false, "evidence": "Section 6 says 'Correct instinct, wrong if unbounded' — does not flag backward compat layers as wrong. Recommends versioning + deprecation policy, not hard cutover." },
+    { "text": "pin-versions", "passed": true, "evidence": "Section 5: 'Pin exact versions. Use a lockfile... Run npm outdated or Renovate/Dependabot on a schedule to upgrade deliberately.'" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "eval_id": 4,
+  "eval_name": "data-types",
+  "expectations": [
+    { "text": "immutable-by-default", "passed": true, "evidence": "No mutation of cart or items. Returns new ShippingResult: `return { itemCosts, totalShipping }`. All interfaces use `readonly`. Cart parameter typed as `Cart` with readonly fields." },
+    { "text": "no-magic-numbers", "passed": true, "evidence": "All magic numbers extracted: WEIGHT_TIERS array with minWeight/ratePerUnit/baseFee, DEFAULT_SHIPPING_COST=5, COUNTRY_MULTIPLIER map, DEFAULT_COUNTRY_MULTIPLIER=2.5, FREE_SHIPPING_COUPON." },
+    { "text": "strict-typing", "passed": true, "evidence": "`any` removed. Explicit interfaces: CartItem, Cart, ShippingResult, WeightTier, CountryCode type." },
+    { "text": "externalize-config", "passed": true, "evidence": "Shipping rates externalized as WEIGHT_TIERS config array and COUNTRY_MULTIPLIER record at module level, not inline in logic." },
+    { "text": "bound-every-input", "passed": false, "evidence": "No validation on weight (could be negative/NaN), no validation on country string, no validation on couponCode. Function accepts Cart and trusts it." }
+  ]
+}

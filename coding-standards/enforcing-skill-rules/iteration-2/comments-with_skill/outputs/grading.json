@@ -1,0 +1,12 @@
+{
+  "eval_id": 6,
+  "eval_name": "comments",
+  "expectations": [
+    { "text": "function-contract", "passed": true, "evidence": "JSDoc contract on generateToken: `Produces a one-way SHA-256 token from the given payload, salted with random bytes to ensure uniqueness even for identical payloads. The salt is not preserved — the token cannot be reversed or verified without a separate lookup mechanism.`" },
+    { "text": "why-comments", "passed": true, "evidence": "`// Salt ensures identical payloads produce distinct tokens` — explains why salt is added, not just what." },
+    { "text": "no-trivial-comments", "passed": true, "evidence": "All trivial comments removed: '// Import dependencies', '// Create the hash', '// Add the payload', '// Get the salt', '// Add the salt', '// Return the hex digest', '// This function generates a token'." },
+    { "text": "no-section-dividers", "passed": true, "evidence": "No `// --- Constants ---`, `// --- Types ---`, `// --- Functions ---` dividers present." },
+    { "text": "no-backup-comments", "passed": true, "evidence": "Old base64 implementation comment removed." },
+    { "text": "no-todo-without-issue", "passed": true, "evidence": "All bare TODO/FIXME comments removed." }
+  ]
+}

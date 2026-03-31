@@ -1,0 +1,12 @@
+{
+  "eval_id": 6,
+  "eval_name": "comments",
+  "expectations": [
+    { "text": "function-contract", "passed": true, "evidence": "JSDoc on generateToken: `Generates a salted SHA-256 token from the given payload. Note: the salt is not preserved, so the token cannot be verified later.`" },
+    { "text": "why-comments", "passed": false, "evidence": "No why-comment explaining the choice of sha256+salt vs base64 or why salt is used. The JSDoc describes what but not why." },
+    { "text": "no-trivial-comments", "passed": true, "evidence": "Trivial comments like '// Create the hash', '// Import dependencies' etc. all removed." },
+    { "text": "no-section-dividers", "passed": true, "evidence": "No section dividers present in output." },
+    { "text": "no-backup-comments", "passed": true, "evidence": "Old base64 implementation comment removed." },
+    { "text": "no-todo-without-issue", "passed": false, "evidence": "Bare TODOs and FIXME still present: `// TODO: add token verification`, `// TODO: add token refresh`, `// FIXME: salt should be stored somewhere so tokens can be verified`" }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "expectations": [
+    {
+      "text": "intent-over-implementation",
+      "passed": true,
+      "evidence": "setStatusToClosed renamed to closeAccount (business intent); proc renamed to closeAccount (meaningful name)"
+    },
+    {
+      "text": "symmetry",
+      "passed": true,
+      "evidence": "Verb pairs are consistent; no asymmetric verb usage detected"
+    },
+    {
+      "text": "boolean-prefix",
+      "passed": true,
+      "evidence": "isNotActive replaced with isActive (positive boolean), logic inverted with !isActive"
+    },
+    {
+      "text": "no-mental-mapping",
+      "passed": true,
+      "evidence": "All single-letter variables eliminated; abbreviated properties (ts, buf, uid) accessed via descriptive record properties (startTimestamp, endTimestamp, buffer, userId)"
+    },
+    {
+      "text": "explicit-units",
+      "passed": true,
+      "evidence": "ms renamed to elapsedMs; sz renamed to bufferSizeBytes"
+    },
+    {
+      "text": "no-acronyms",
+      "passed": true,
+      "evidence": "usr→user, acct→accountId, amt→amount, buf→buffer; no unused params remain"
+    },
+    {
+      "text": "immutable-by-default",
+      "passed": true,
+      "evidence": "Cart/items never mutated; readonly modifiers on all interfaces; new arrays created via .map() and .reduce()"
+    },
+    {
+      "text": "no-magic-numbers",
+      "passed": true,
+      "evidence": "All numeric literals are within named config constants (WEIGHT_TIERS, COUNTRY_MULTIPLIERS, MAX_ITEM_WEIGHT_KG) with descriptive property keys"
+    },
+    {
+      "text": "strict-typing",
+      "passed": true,
+      "evidence": "No any type used; explicit interfaces for Cart, CartItem, ShippedItem, ShippingResult; index signature uses unknown not any"
+    },
+    {
+      "text": "externalize-config",
+      "passed": true,
+      "evidence": "WEIGHT_TIERS, COUNTRY_MULTIPLIERS, FREE_SHIPPING_COUPONS, MAX_ITEM_WEIGHT_KG are all top-level exported config constants"
+    },
+    {
+      "text": "bound-every-input",
+      "passed": true,
+      "evidence": "Invalid weight throws (weight <= 0 || weight > MAX_ITEM_WEIGHT_KG); unknown country throws via getCountryMultiplier; unmatched coupon acceptably returns false"
+    }
+  ]
+}

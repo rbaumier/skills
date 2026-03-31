@@ -1,12 +1,20 @@
 {
-  "Planning": [
-    "superpowers:brainstorming",
-    "superpowers:writing-plans",
-    "superpowers:executing-plans",
-    "grill-me",
-    "plan",
-    "generate-visual-plan",
-    "plan-review"
+  "Backend - TypeScript": [
+    "database",
+    "drizzle-orm",
+    "better-auth-best-practices",
+    "better-result-adopt",
+    "security-defensive",
+    "language-typescript",
+    "coding-standards",
+    "zod"
+  ],
+  "Code Review": [
+    "superpowers:requesting-code-review",
+    "superpowers:receiving-code-review",
+    "code-review",
+    "dhh-review",
+    "coding-standards"
   ],
   "Dev Process": [
     "superpowers:dispatching-parallel-agents",
@@ -17,49 +25,6 @@
     "continue",
     "build-fix",
     "refactor-clean"
-  ],
-  "Review & Docs": [
-    "diff-review-ui",
-    "diff-review",
-    "plannotator-review",
-    "plannotator-annotate",
-    "project-recap",
-    "update-docs",
-    "fact-check"
-  ],
-  "Superpowers": [
-    "superpowers:brainstorming",
-    "superpowers:writing-plans",
-    "superpowers:executing-plans",
-    "superpowers:dispatching-parallel-agents",
-    "superpowers:subagent-driven-development",
-    "superpowers:using-git-worktrees",
-    "superpowers:finishing-a-development-branch",
-    "superpowers:using-superpowers",
-    "superpowers:test-driven-development",
-    "superpowers:systematic-debugging",
-    "superpowers:verification-before-completion",
-    "superpowers:requesting-code-review",
-    "superpowers:receiving-code-review",
-    "superpowers:writing-skills"
-  ],
-  "Testing": [
-    "superpowers:test-driven-development",
-    "superpowers:systematic-debugging",
-    "superpowers:verification-before-completion",
-    "testing",
-    "expect",
-    "dogfood",
-    "e2e",
-    "tdd",
-    "test-coverage"
-  ],
-  "Code Review": [
-    "superpowers:requesting-code-review",
-    "superpowers:receiving-code-review",
-    "code-review",
-    "dhh-review",
-    "coding-standards"
   ],
   "Frontend - React": [
     "frontend",
@@ -90,24 +55,77 @@
     "coding-standards",
     "zod"
   ],
-  "Backend - TypeScript": [
-    "database",
-    "drizzle-orm",
-    "better-auth-best-practices",
-    "better-result-adopt",
-    "security-defensive",
+  "Languages": [
     "language-typescript",
-    "coding-standards",
-    "zod"
+    "language-rust",
+    "language-swift"
+  ],
+  "Legal & Finance": [
+    "paperasse:comptable",
+    "paperasse:notaire",
+    "paperasse:syndic",
+    "paperasse:commissaire-aux-comptes",
+    "paperasse:controleur-fiscal"
+  ],
+  "Meta": [
+    "find-skills",
+    "superpowers:writing-skills",
+    "learn",
+    "update-codemaps",
+    "claude-hud:setup",
+    "claude-hud:configure"
+  ],
+  "Mobile": [
+    "react-native",
+    "language-swift",
+    "coding-standards"
+  ],
+  "Planning": [
+    "superpowers:brainstorming",
+    "superpowers:writing-plans",
+    "superpowers:executing-plans",
+    "grill-me",
+    "plan",
+    "generate-visual-plan",
+    "plan-review"
+  ],
+  "Review & Docs": [
+    "diff-review-ui",
+    "diff-review",
+    "project-recap",
+    "update-docs",
+    "fact-check"
   ],
   "Rust": [
     "language-rust",
     "coding-standards"
   ],
-  "Languages": [
-    "language-typescript",
-    "language-rust",
-    "language-swift"
+  "Superpowers": [
+    "superpowers:brainstorming",
+    "superpowers:writing-plans",
+    "superpowers:executing-plans",
+    "superpowers:dispatching-parallel-agents",
+    "superpowers:subagent-driven-development",
+    "superpowers:using-git-worktrees",
+    "superpowers:finishing-a-development-branch",
+    "superpowers:using-superpowers",
+    "superpowers:test-driven-development",
+    "superpowers:systematic-debugging",
+    "superpowers:verification-before-completion",
+    "superpowers:requesting-code-review",
+    "superpowers:receiving-code-review",
+    "superpowers:writing-skills"
+  ],
+  "Testing": [
+    "superpowers:test-driven-development",
+    "superpowers:systematic-debugging",
+    "superpowers:verification-before-completion",
+    "testing",
+    "expect",
+    "dogfood",
+    "e2e",
+    "tdd",
+    "test-coverage"
   ],
   "Writing": [
     "writing",
@@ -118,25 +136,5 @@
     "frontend-slides",
     "generate-slides",
     "generate-web-diagram"
-  ],
-  "Legal & Finance": [
-    "paperasse:comptable",
-    "paperasse:notaire",
-    "paperasse:syndic",
-    "paperasse:commissaire-aux-comptes",
-    "paperasse:controleur-fiscal"
-  ],
-  "Mobile": [
-    "react-native",
-    "language-swift",
-    "coding-standards"
-  ],
-  "Meta": [
-    "find-skills",
-    "superpowers:writing-skills",
-    "learn",
-    "update-codemaps",
-    "claude-hud:setup",
-    "claude-hud:configure"
   ]
 }

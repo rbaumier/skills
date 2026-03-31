@@ -1,0 +1,11 @@
+{
+  "eval_id": 4,
+  "eval_name": "data-types",
+  "expectations": [
+    { "text": "immutable-by-default", "passed": true, "evidence": "No mutation of cart or items. Returns new ShippingResult (line 91). All interfaces use `readonly` (CartItem, Cart, ItemShippingCost, ShippingResult). Uses `readonly CartItem[]` for arrays." },
+    { "text": "no-magic-numbers", "passed": true, "evidence": "All magic numbers extracted as named constants: WEIGHT_THRESHOLD_HEAVY_LB=50, WEIGHT_THRESHOLD_MEDIUM_LB=20, HEAVY_RATE_PER_LB=0.5, HEAVY_SURCHARGE=15, MEDIUM_RATE_PER_LB=0.3, MEDIUM_SURCHARGE=8, LIGHT_FLAT_RATE=5, COUNTRY_MULTIPLIERS record, DEFAULT_COUNTRY_MULTIPLIER=2.5, FREE_SHIPPING_COUPON (lines 12-28)." },
+    { "text": "strict-typing", "passed": true, "evidence": "`any` eliminated. Explicit types: Cart, CartItem, ShippingResult, ItemShippingCost, Country (lines 32-53)." },
+    { "text": "externalize-config", "passed": true, "evidence": "All shipping rates/thresholds externalized as module-level constants and COUNTRY_MULTIPLIERS record (lines 12-28), not inline in logic." },
+    { "text": "bound-every-input", "passed": false, "evidence": "Weight <= 0 check exists (line 59) but incomplete: no upper bound on weight, no NaN guard, no validation that cart.items is defined/non-empty, no validation that country is a string. couponCode only exact-matched, not validated." }
+  ]
+}

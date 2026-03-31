@@ -1,0 +1,12 @@
+{
+  "result": "PASS",
+  "criteria": {
+    "vertical-slices": "PASS",
+    "factory-di": "PASS",
+    "crosscutting-via-wrapping": "PASS",
+    "structured-api-errors": "PASS",
+    "dto-mapping": "PASS",
+    "api-first": "PASS"
+  },
+  "reason": "All criteria met. Recommends createOrderService factory DI. Names withTracing/withLogging wrapper pattern explicitly. Flags bare {message} and recommends {type, code, status, detail}. Flags order.rows[0] and recommends DTO. Recommends schema before handler."
+}

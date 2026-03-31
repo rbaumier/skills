@@ -1,0 +1,14 @@
+{
+  "eval_id": 3,
+  "eval_name": "functions",
+  "expectations": [
+    { "text": "max-30-lines", "passed": true, "evidence": "generateReport is ~27 lines. All other functions (filterOrders, sortOrders, aggregateOrders, formatCsv, etc.) are under 10 lines each." },
+    { "text": "pure-by-default", "passed": true, "evidence": "filterOrders, sortOrders, aggregateOrders, formatCsv, formatJson, formatText, appendChartData are all pure functions with no I/O." },
+    { "text": "srp", "passed": true, "evidence": "Separate functions for fetch (fetchUser, fetchOrders), calculate (aggregateOrders), format (formatCsv/Json/Text), cache/email in orchestrator boundary." },
+    { "text": "max-3-positional-args", "passed": true, "evidence": "12 args replaced with single `options: ReportOptions` object." },
+    { "text": "cqs", "passed": true, "evidence": "generateReport returns the report (query). Email sending is a conditional side effect at the boundary, separated from the pure computation." },
+    { "text": "composition-over-inheritance", "passed": true, "evidence": "No classes or inheritance. Pure function composition throughout: filter → sort → aggregate → format pipeline." },
+    { "text": "explicit-interface-contracts", "passed": true, "evidence": "Clear interfaces: Order, User, ReportFormat, SortField, ReportOptions, ReportAggregates all explicitly typed." },
+    { "text": "factory-function-di", "passed": false, "evidence": "db, cache, logger still imported at top: `import { db } from './db'; import { cache } from './cache'; import { logger } from './logger'`. Not injected." }
+  ]
+}

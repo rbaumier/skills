@@ -1,0 +1,11 @@
+{
+  "result": "FAIL",
+  "criteria": {
+    "immutable-by-default": "PASS",
+    "no-magic-numbers": "PASS",
+    "strict-typing": "PASS",
+    "externalize-config": "PASS",
+    "bound-every-input": "FAIL"
+  },
+  "reason": "Unknown country falls back to INTERNATIONAL_MULTIPLIER instead of throwing. The criteria explicitly requires unknown country to throw (not fallback)."
+}

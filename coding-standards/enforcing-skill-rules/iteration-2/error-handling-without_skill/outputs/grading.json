@@ -1,0 +1,10 @@
+{
+  "eval_id": 5,
+  "eval_name": "error-handling",
+  "expectations": [
+    { "text": "no-silent-failures", "passed": false, "evidence": "Preferences sync failure caught with `console.warn` only (line 50): `catch (error) { console.warn('Preferences sync failed...') }` — still a silent-ish failure, no structured error returned to caller." },
+    { "text": "result-type-for-expected-errors", "passed": false, "evidence": "Uses throw/catch pattern throughout. SyncError extends Error (thrown, not returned). No Result/discriminated union type." },
+    { "text": "preserve-stack-trace", "passed": true, "evidence": "SyncError class preserves cause: `public readonly cause: unknown` passed to constructor." },
+    { "text": "timeout-on-io", "passed": false, "evidence": "No timeout on fetch calls: `const response = await fetch(url)` with no AbortSignal. No timeout on db.query either." }
+  ]
+}

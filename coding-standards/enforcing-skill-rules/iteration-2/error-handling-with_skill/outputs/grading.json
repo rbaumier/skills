@@ -1,0 +1,10 @@
+{
+  "eval_id": 5,
+  "eval_name": "error-handling",
+  "expectations": [
+    { "text": "no-silent-failures", "passed": true, "evidence": "No empty catch blocks. No console.log-only catches. Every error path returns a typed Result with error details." },
+    { "text": "result-type-for-expected-errors", "passed": true, "evidence": "Full Result<T,E> type with discriminated SyncError union: FETCH_USER_FAILED, FETCH_PREFERENCES_FAILED, UPSERT_USER_FAILED, UPSERT_PREFERENCES_FAILED." },
+    { "text": "preserve-stack-trace", "passed": true, "evidence": "Original error preserved as `cause` in all error types. Upsert uses `new Error('...', { cause: { updateCause, insertCause } })`." },
+    { "text": "timeout-on-io", "passed": true, "evidence": "`signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)` on fetch calls with FETCH_TIMEOUT_MS = 5000." }
+  ]
+}

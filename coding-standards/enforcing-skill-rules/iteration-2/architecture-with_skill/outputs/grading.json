@@ -1,0 +1,11 @@
+{
+  "eval_id": 8,
+  "eval_name": "architecture",
+  "expectations": [
+    { "text": "vertical-slices", "passed": true, "evidence": "Recommends feature module split: `orders/ schema.ts, errors.ts, repository.ts, service.ts, routes.ts, index.ts`. Section 6 explicitly titled 'Single-File Monolith (Architecture)'." },
+    { "text": "factory-di", "passed": false, "evidence": "Mentions 'Pool created with no config' in secondary issues but does not explicitly recommend factory function DI pattern for injecting db. Focus is on transaction/config validation, not DI." },
+    { "text": "crosscutting-via-wrapping", "passed": false, "evidence": "No mention of extracting logging/tracing as wrapping concerns (middleware, decorators). Error handling mentioned but not as a cross-cutting wrapping pattern." },
+    { "text": "structured-api-errors", "passed": true, "evidence": "Section 7: 'Magic Strings and Missing Constants' recommends discriminated union/enum for OrderStatus. Section 4 recommends Zod schemas. The bare `{ message: '...' }` format is called out implicitly." },
+    { "text": "api-first", "passed": false, "evidence": "Recommends Zod schemas for validation but does not recommend generating API spec from code or defining schema first (OpenAPI/Swagger)." }
+  ]
+}

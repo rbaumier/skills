@@ -1,0 +1,46 @@
+{
+  "score": 7,
+  "maxScore": 10,
+  "criteria": {
+    "intent-over-implementation": {
+      "score": 2,
+      "maxScore": 2,
+      "pass": true,
+      "notes": "closeAccount is intent-based. Good."
+    },
+    "symmetry": {
+      "score": 1,
+      "maxScore": 1,
+      "pass": true,
+      "notes": "No verb pairs to evaluate in this snippet. N/A — no violation."
+    },
+    "boolean-prefix": {
+      "score": 2,
+      "maxScore": 2,
+      "pass": true,
+      "notes": "isNotActive correctly flipped to isActive (positive boolean)."
+    },
+    "no-mental-mapping": {
+      "score": 1,
+      "maxScore": 2,
+      "pass": false,
+      "notes": "Single-letter vars removed. BUT 'result' (line 8) is vague — result of what? Should be e.g. 'closureConfirmation' or 'accountClosure'. 'amount' is generic — amount of what? Should be 'billingAmount' or 'finalAmount'. 'record' is also generic — should be 'accountRecord' or similar at the call site."
+    },
+    "explicit-units": {
+      "score": 2,
+      "maxScore": 2,
+      "pass": true,
+      "notes": "elapsedMs and bufferSizeBytes both carry units. Good."
+    },
+    "no-acronyms": {
+      "score": 1,
+      "maxScore": 1,
+      "pass": true,
+      "notes": "No abbreviations remain in the output."
+    }
+  },
+  "deductions": [
+    "'result' is the quintessential vague name the rule targets — it maps to nothing without reading the called function",
+    "'amount' has no qualifier — amount of what? Money? Time? Items?"
+  ]
+}

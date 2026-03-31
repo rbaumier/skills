@@ -1,0 +1,46 @@
+{
+  "evals": [
+    {
+      "name": "opinionated-choices",
+      "prompt": "Refactor this TypeScript code to be cleaner and more idiomatic:\n\n```typescript\n// user-status.ts\nexport enum UserStatus {\n  Active = 'ACTIVE',\n  Inactive = 'INACTIVE',\n  Banned = 'BANNED'\n}\n\nexport default class UserService {\n  private status: any;\n\n  constructor(rawData: any) {\n    this.status = rawData.status as UserStatus;\n  }\n\n  async getUser(id: string): Promise<{ name: string; status: UserStatus }> {\n    const response = await fetch(`/api/users/${id}`);\n    const data = await response.json();\n    if (!data) throw new Error('User not found');\n    return data as { name: string; status: UserStatus };\n  }\n\n  interface Config {\n    timeout: number;\n    retries: number;\n  }\n\n  type ExtendedConfig = Config & { debug: boolean };\n\n  async connectToDb(config: ExtendedConfig): Promise<void> {\n    const conn = await openConnection(config);\n    try {\n      await conn.query('SELECT 1');\n    } finally {\n      await conn.close();\n    }\n  }\n}\n```",
+      "assertions": [
+        "no-enum",
+        "no-default-export",
+        "no-any-no-as",
+        "errors-as-values",
+        "type-over-interface",
+        "using-disposable"
+      ]
+    },
+    {
+      "name": "tool-choices",
+      "prompt": "Review this TypeScript project setup and suggest improvements:\n\n```typescript\n// env.ts\nconst API_URL = process.env.API_URL!;\nconst PORT = parseInt(process.env.PORT || '3000');\nconst SECRET = process.env.SECRET as string;\n\nexport { API_URL, PORT, SECRET };\n```\n\n```typescript\n// api-client.ts\nimport axios from 'axios';\n\ntype User = { id: string; name: string; email: string };\ntype UserId = string;\n\nasync function fetchUser(id: UserId): Promise<User> {\n  const { data } = await axios.get<User>(`/api/users/${id}`);\n  return data;\n}\n```\n\n```json\n// package.json (scripts section)\n{\n  \"scripts\": {\n    \"typecheck\": \"tsc --noEmit\",\n    \"build\": \"tsc\"\n  }\n}\n```\n\nThe project has an OpenAPI spec at `./openapi.yaml` that defines the `/api/users/{id}` endpoint. The `UserId` type should be distinguishable from regular strings at the type level.",
+      "assertions": [
+        "env-validation",
+        "tsgo-typecheck",
+        "openapi-fetch",
+        "zod-brand"
+      ]
+    },
+    {
+      "name": "style-and-conventions",
+      "prompt": "Refactor this TypeScript code to follow best practices:\n\n```typescript\n// UserProfileCard.ts\nimport { UserProfile } from './types';\n\n/**\n * Formats a user profile for display\n * @param profile - The user profile object\n * @param includeEmail - Whether to include email\n * @returns Formatted profile string\n */\nexport function formatProfile(profile: { name: string; email: string; age: number; role: 'admin' | 'user' }, includeEmail: boolean): string {\n  return `${profile.name} (${profile.age})${includeEmail ? ` - ${profile.email}` : ''}`;\n}\n\n/**\n * Parses raw API data into a user profile\n * @param data - Raw data from the API\n * @returns The parsed profile\n */\nexport function parseApiResponse(data: any): { name: string; email: string } {\n  return { name: data.name, email: data.email };\n}\n\nconst userIds = ['a1', 'b2', 'c3', 'a1', 'd4', 'b2', 'e5'];\nexport function isKnownUser(id: string): boolean {\n  return userIds.includes(id);\n}\n\nexport function loadConfig(): Record<string, unknown> {\n  const raw = fs.readFileSync('config.json', 'utf-8');\n  const parsed = JSON.parse(raw) as Record<string, unknown>;\n  return parsed;\n}\n```\n\nThe `isKnownUser` function is called thousands of times per request in a hot path.",
+      "assertions": [
+        "kebab-case-files",
+        "jsdoc-style",
+        "parse-at-boundaries",
+        "named-param-types",
+        "esm-only",
+        "set-over-array-includes",
+        "validate-json-parse"
+      ]
+    },
+    {
+      "name": "post-modification",
+      "prompt": "I've just refactored the `auth.ts` file to use `satisfies` instead of `as`. The file compiles. What should I do before committing?",
+      "assertions": [
+        "audit-after-modify"
+      ]
+    }
+  ]
+}

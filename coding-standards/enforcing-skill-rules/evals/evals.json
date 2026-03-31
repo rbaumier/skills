@@ -1,0 +1,126 @@
+{
+  "skill_name": "coding-standards",
+  "evals": [
+    {
+      "id": 1,
+      "name": "naming",
+      "prompt": "Refactor this code to improve naming:\n\n```typescript\nfunction proc(d, f, isNotActive) {\n  const ms = d.ts - d.ts2;\n  const sz = d.buf.length;\n  if (!isNotActive) return null;\n  const usr = getUsr(d.uid);\n  const res = setStatusToClosed(usr.acctId);\n  const amt = calcAmt(sz, ms);\n  return { r: res, a: amt, u: usr };\n}\n```",
+      "expected_output": "All naming rules applied",
+      "assertions": [
+        { "text": "intent-over-implementation", "description": "setStatusToClosed renamed to something intent-based like closeAccount" },
+        { "text": "symmetry", "description": "get/set or open/close pairs used consistently" },
+        { "text": "boolean-prefix", "description": "isNotActive replaced with positive boolean like isActive" },
+        { "text": "no-mental-mapping", "description": "Single-letter vars (d, f, ms, sz, usr, res, amt, r, a, u) replaced with full words" },
+        { "text": "explicit-units", "description": "ms renamed to durationMs or similar with unit suffix" },
+        { "text": "no-acronyms", "description": "Abbreviations like proc, usr, acct, amt, buf expanded" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "control-flow",
+      "prompt": "Refactor this function to simplify the control flow:\n\n```typescript\nasync function handleOrder(order, isUrgent) {\n  let result;\n  if (order.items.length > 0) {\n    if (order.customer) {\n      if (order.customer.verified) {\n        if (isUrgent) {\n          result = await processUrgent(order);\n        } else {\n          result = await processNormal(order);\n        }\n        if (result.ok) {\n          if (order.needsShipping) {\n            await ship(order);\n          }\n        }\n      } else {\n        result = { error: 'not verified' };\n      }\n    } else {\n      result = { error: 'no customer' };\n    }\n  } else {\n    result = { error: 'empty order' };\n  }\n  const inventory = await fetchInventory(order.warehouseId);\n  const pricing = await fetchPricing(order.region);\n  order.status = result?.ok ? 'completed' : 'failed';\n  return result;\n}\n```",
+      "expected_output": "All control flow rules applied",
+      "assertions": [
+        { "text": "fail-fast-guard-clauses", "description": "Error cases handled with early returns at the top" },
+        { "text": "max-3-indentation", "description": "No more than 3 levels of nesting" },
+        { "text": "switch-over-if-else", "description": "Pattern matching or map used where applicable instead of if/else" },
+        { "text": "no-boolean-flags", "description": "isUrgent flag replaced with two functions or options object" },
+        { "text": "declarative-over-imperative", "description": "Mutation of order.status replaced with immutable approach or return value" },
+        { "text": "parallelize-async", "description": "fetchInventory and fetchPricing run in parallel (Promise.all or similar)" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "functions",
+      "prompt": "Refactor this module to follow clean function architecture:\n\n```typescript\nimport { db } from './db';\nimport { cache } from './cache';\nimport { logger } from './logger';\n\nexport async function generateReport(userId, startDate, endDate, format, includeCharts, sendEmail, emailTo, compress, locale, timezone, filterInactive, sortBy) {\n  // Fetch\n  const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\n  const orders = await db.query('SELECT * FROM orders WHERE user_id = $1 AND date BETWEEN $2 AND $3', [userId, startDate, endDate]);\n  if (filterInactive) {\n    orders.rows = orders.rows.filter(o => o.active);\n  }\n  // Sort\n  if (sortBy === 'date') orders.rows.sort((a, b) => a.date - b.date);\n  else if (sortBy === 'amount') orders.rows.sort((a, b) => a.amount - b.amount);\n  // Calculate\n  let total = 0;\n  let count = 0;\n  for (const o of orders.rows) {\n    total += o.amount;\n    count++;\n  }\n  const avg = total / count;\n  // Format\n  let output;\n  if (format === 'csv') {\n    output = orders.rows.map(o => `${o.id},${o.amount},${o.date}`).join('\\n');\n  } else if (format === 'json') {\n    output = JSON.stringify({ user: user.rows[0], orders: orders.rows, total, avg });\n  } else {\n    output = `Report for ${user.rows[0].name}: ${count} orders, total ${total}, avg ${avg}`;\n  }\n  // Charts\n  if (includeCharts) {\n    const chartData = orders.rows.map(o => ({ x: o.date, y: o.amount }));\n    output += '\\n' + JSON.stringify(chartData);\n  }\n  // Compress\n  if (compress) output = await gzip(output);\n  // Email\n  if (sendEmail) await mailer.send(emailTo, 'Report', output);\n  // Cache\n  cache.set(`report:${userId}`, output);\n  logger.info(`Report generated for ${userId}`);\n  return output;\n}\n```",
+      "expected_output": "All function architecture rules applied",
+      "assertions": [
+        { "text": "max-30-lines", "description": "No single function exceeds 30 lines" },
+        { "text": "pure-by-default", "description": "Calculation/formatting logic extracted as pure functions (no I/O)" },
+        { "text": "srp", "description": "Fetch, calculate, format, email, cache separated into distinct functions" },
+        { "text": "max-3-positional-args", "description": "12 args replaced with options object" },
+        { "text": "cqs", "description": "Report generation (query) separated from email sending (command)" },
+        { "text": "composition-over-inheritance", "description": "No class hierarchy, uses function composition" },
+        { "text": "explicit-interface-contracts", "description": "Clear types/interfaces for inputs and outputs" },
+        { "text": "factory-function-di", "description": "Dependencies (db, cache, logger, mailer) injected, not hard-imported" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "data-types",
+      "prompt": "Refactor this code to fix data and type issues:\n\n```typescript\nfunction calculateShipping(cart: any) {\n  let cost = 0;\n  for (let i = 0; i < cart.items.length; i++) {\n    const item = cart.items[i];\n    if (item.weight > 50) {\n      cost += item.weight * 0.5 + 15;\n    } else if (item.weight > 20) {\n      cost += item.weight * 0.3 + 8;\n    } else {\n      cost += 5;\n    }\n    item.shippingCost = cost;\n  }\n  if (cart.country === 'US') {\n    cost = cost * 1.0;\n  } else if (cart.country === 'CA') {\n    cost = cost * 1.3;\n  } else {\n    cost = cost * 2.5;\n  }\n  if (cart.couponCode === 'FREESHIP') {\n    cost = 0;\n  }\n  cart.totalShipping = cost;\n  return cost;\n}\n```",
+      "expected_output": "All data/type rules applied",
+      "assertions": [
+        { "text": "immutable-by-default", "description": "No mutation of cart or item objects (item.shippingCost, cart.totalShipping)" },
+        { "text": "no-magic-numbers", "description": "50, 20, 0.5, 15, 0.3, 8, 5, 1.0, 1.3, 2.5 extracted as named constants" },
+        { "text": "strict-typing", "description": "any type on cart replaced with explicit type/interface" },
+        { "text": "externalize-config", "description": "Shipping rates/thresholds externalized as config, not inline" },
+        { "text": "bound-every-input", "description": "Input validation on weight, country, couponCode" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "error-handling",
+      "prompt": "Refactor the error handling in this code:\n\n```typescript\nasync function syncUserData(userId: string) {\n  try {\n    const user = await fetch(`https://api.example.com/users/${userId}`);\n    const data = await user.json();\n    try {\n      await db.query('UPDATE users SET name = $1 WHERE id = $2', [data.name, userId]);\n    } catch(e) {\n      // update failed, try insert\n      try {\n        await db.query('INSERT INTO users (id, name) VALUES ($1, $2)', [userId, data.name]);\n      } catch(e2) {\n        // ignore\n      }\n    }\n    try {\n      const prefs = await fetch(`https://api.example.com/users/${userId}/preferences`);\n      const prefsData = await prefs.json();\n      await db.query('UPDATE prefs SET data = $1 WHERE user_id = $2', [JSON.stringify(prefsData), userId]);\n    } catch(e) {\n      console.log('prefs sync failed');\n    }\n    return { success: true };\n  } catch(e) {\n    throw new Error('sync failed');\n  }\n}\n```",
+      "expected_output": "All error handling rules applied",
+      "assertions": [
+        { "text": "no-silent-failures", "description": "Empty catch blocks and console.log-only catches eliminated" },
+        { "text": "result-type-for-expected-errors", "description": "Expected errors returned as Result/discriminated union, not thrown" },
+        { "text": "preserve-stack-trace", "description": "Original error preserved as cause when wrapping" },
+        { "text": "timeout-on-io", "description": "Timeouts specified on fetch calls and db queries" }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "comments",
+      "prompt": "Fix the comments in this code — remove bad ones, add missing ones:\n\n```typescript\n// Import dependencies\nimport { createHash } from 'crypto';\n\n// --- Constants ---\nconst SALT_LENGTH = 32;\n\n// --- Types ---\ninterface TokenPayload {\n  userId: string;\n  expiresAt: number;\n}\n\n// --- Functions ---\n\n// This function generates a token\nexport function generateToken(payload: TokenPayload): string {\n  // Create the hash\n  const hash = createHash('sha256');\n  // Add the payload\n  hash.update(JSON.stringify(payload));\n  // Get the salt\n  const salt = randomBytes(SALT_LENGTH);\n  // Add the salt\n  hash.update(salt);\n  // Return the hex digest\n  return hash.digest('hex');\n  // Old implementation:\n  // return Buffer.from(JSON.stringify(payload)).toString('base64');\n}\n\n// TODO: add token verification\n// TODO: add token refresh\n// FIXME: salt should be stored somewhere\n```",
+      "expected_output": "All comment rules applied",
+      "assertions": [
+        { "text": "function-contract", "description": "Exported function has a contract comment explaining what it does and its security properties" },
+        { "text": "why-comments", "description": "Non-obvious decisions (like using sha256+salt vs base64) explained with why" },
+        { "text": "no-trivial-comments", "description": "Trivial comments removed (// Import dependencies, // Create the hash, etc.)" },
+        { "text": "no-section-dividers", "description": "Section dividers (// --- Constants ---, // --- Types ---) removed" },
+        { "text": "no-backup-comments", "description": "Commented-out old implementation removed" },
+        { "text": "no-todo-without-issue", "description": "Bare TODO/FIXME without tracking issues removed or flagged" }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "file-structure",
+      "prompt": "I have this project structure. Reorganize it and explain why:\n\n```\nsrc/\n  controllers/\n    userController.ts\n    orderController.ts\n    productController.ts\n  models/\n    User.ts\n    Order.ts\n    Product.ts\n  services/\n    userService.ts\n    orderService.ts\n    productService.ts\n  types/\n    userTypes.ts\n    orderTypes.ts\n    productTypes.ts\n  tests/\n    userController.test.ts\n    userService.test.ts\n    orderController.test.ts\n    orderService.test.ts\n  utils/\n    helpers.ts\n    common.ts\n    shared.ts\n  config.ts\n```\n\nAlso, here's the content of userService.ts — tell me what's wrong with the file layout:\n\n```typescript\nimport { Pool } from 'pg';\nimport { UserType, CreateUserInput, UpdateUserInput } from '../types/userTypes';\n\nconst pool = new Pool();\n\nfunction validateEmail(email: string): boolean {\n  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n}\n\nfunction hashPassword(pw: string): string {\n  return createHash('sha256').update(pw).digest('hex');\n}\n\nexport async function createUser(input: CreateUserInput): Promise<UserType> {\n  if (!validateEmail(input.email)) throw new Error('bad email');\n  const hashed = hashPassword(input.password);\n  const result = await pool.query('INSERT INTO users...');\n  return result.rows[0];\n}\n\nexport async function getUser(id: string): Promise<UserType> {\n  const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);\n  return result.rows[0];\n}\n\nexport async function updateUser(id: string, input: UpdateUserInput): Promise<UserType> {\n  // ... 80 lines of update logic\n}\n```",
+      "expected_output": "All file structure rules applied",
+      "assertions": [
+        { "text": "newspaper-metaphor", "description": "Recommends putting exports/public API at top, private helpers at bottom" },
+        { "text": "colocation", "description": "Recommends tests next to source files, not in separate tests/ directory" },
+        { "text": "group-by-feature", "description": "Recommends users/, orders/, products/ instead of controllers/, models/, services/" }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "architecture",
+      "prompt": "Review this mini e-commerce backend architecture and tell me what to change:\n\n```typescript\n// server.ts — single file app\nimport express from 'express';\nimport { Pool } from 'pg';\n\nconst app = express();\nconst db = new Pool();\n\napp.post('/api/orders', async (req, res) => {\n  const { userId, items } = req.body;\n  \n  // Validate\n  if (!userId || !items?.length) return res.status(400).json({ message: 'Invalid order' });\n  \n  // Check inventory\n  for (const item of items) {\n    const stock = await db.query('SELECT quantity FROM inventory WHERE product_id = $1', [item.productId]);\n    if (stock.rows[0].quantity < item.quantity) {\n      return res.status(400).json({ message: `Not enough stock for ${item.productId}` });\n    }\n  }\n  \n  // Create order\n  const order = await db.query('INSERT INTO orders (user_id, status) VALUES ($1, $2) RETURNING id', [userId, 'pending']);\n  \n  // Update inventory\n  for (const item of items) {\n    await db.query('UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2', [item.quantity, item.productId]);\n  }\n  \n  // Send confirmation email\n  await fetch('https://email-api.internal/send', {\n    method: 'POST',\n    body: JSON.stringify({ to: userId, template: 'order-confirmation', orderId: order.rows[0].id })\n  });\n  \n  res.json({ orderId: order.rows[0].id, status: 'pending' });\n});\n\napp.get('/api/orders/:id', async (req, res) => {\n  const order = await db.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);\n  if (!order.rows[0]) return res.status(404).json({ message: 'Not found' });\n  res.json(order.rows[0]);\n});\n\napp.listen(3000);\n```",
+      "expected_output": "All architecture rules applied",
+      "assertions": [
+        { "text": "vertical-slices", "description": "Recommends splitting into feature modules (orders/, inventory/)" },
+        { "text": "factory-di", "description": "Recommends injecting db via factory instead of hard-importing" },
+        { "text": "crosscutting-via-wrapping", "description": "Recommends extracting logging/tracing as wrapping concern" },
+        { "text": "structured-api-errors", "description": "Recommends structured error format (type, code, status, detail) instead of bare message strings" },
+        { "text": "api-first", "description": "Recommends generating API spec from code or defining schema first" }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "project-hygiene",
+      "prompt": "I'm starting a new TypeScript backend project. Here's my plan:\n\n1. Write all the features first, add tests later when we have time\n2. Use permissive input validation — we'll tighten it if we get abuse\n3. We currently use Express but some endpoints are being migrated to Fastify. Both frameworks coexist.\n4. No linter configured yet, we'll add one when the codebase is bigger\n5. Some devs use `latest` for npm packages to always stay up to date\n6. We'll add backward compatibility layers so old clients keep working as we evolve the API\n\nReview this plan and tell me what's wrong.",
+      "expected_output": "All project hygiene rules applied",
+      "assertions": [
+        { "text": "tests-linting-ci-day-1", "description": "Flags 'tests later' and 'linter later' — must be from day 1" },
+        { "text": "constrain-first", "description": "Flags permissive-first validation — should constrain first, relax later" },
+        { "text": "codebase-homogeneity", "description": "Flags Express/Fastify coexistence — migrate all-at-once or not at all" },
+        { "text": "structural-guardrails", "description": "Flags missing linter — structural guardrails over human discipline" },
+        { "text": "hard-cutover", "description": "Flags backward compatibility layers — hard cutover, no compat debt" },
+        { "text": "pin-versions", "description": "Flags 'latest' for npm packages — pin all versions" }
+      ]
+    }
+  ]
+}

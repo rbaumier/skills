@@ -1,0 +1,11 @@
+{
+  "eval_id": 4,
+  "eval_name": "data-types",
+  "expectations": [
+    { "text": "immutable-by-default", "passed": true, "evidence": "No mutation of cart or items. Returns new ShippingResult object. All interfaces use `readonly`." },
+    { "text": "no-magic-numbers", "passed": true, "evidence": "Constants extracted: WEIGHT_TIERS, DEFAULT_SHIPPING=5, COUNTRY_MULTIPLIERS, DEFAULT_COUNTRY_MULTIPLIER=2.5, FREE_SHIPPING_COUPONS." },
+    { "text": "strict-typing", "passed": true, "evidence": "`any` removed. Explicit interfaces: CartItem, Cart, ShippingResult." },
+    { "text": "externalize-config", "passed": true, "evidence": "Rates externalized as WEIGHT_TIERS and COUNTRY_MULTIPLIERS at module level." },
+    { "text": "bound-every-input", "passed": false, "evidence": "No input validation on weight, country, or couponCode. No guards for negative weight or empty items." }
+  ]
+}

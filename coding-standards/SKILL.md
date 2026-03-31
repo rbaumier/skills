@@ -17,7 +17,7 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 
 ## Control Flow
 
-- Guard clauses, early return, max 2 indent levels
+- Guard clauses, early return, max 3 indent levels
 - `switch`/object maps over `if/else` chains
 - **Split boolean flags into two named functions**: `sendUrgentNotification()` / `sendNormalNotification()` not `sendNotification(msg, isUrgent)`. **A ternary, if/else, or options object is NOT a fix** -- boolean still exists as param. Result: two independently callable functions with zero boolean params. Reviews: boolean controlling branch -> split
 - Return new data, don't mutate inputs

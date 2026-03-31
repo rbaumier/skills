@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "criteria": {
+    "newspaper-metaphor": "PASS",
+    "colocation": "PASS",
+    "group-by-feature": "PASS",
+    "max-300-lines": "PASS"
+  },
+  "reason": "All criteria met. Explicitly flags 450-line userService.ts as exceeding 300-line limit and recommends splitting into 3 focused services. Tests colocated. Features grouped by domain."
+}

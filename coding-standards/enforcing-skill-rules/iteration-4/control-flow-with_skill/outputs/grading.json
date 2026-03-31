@@ -1,0 +1,31 @@
+{
+  "file": "result.ts",
+  "assertions": {
+    "fail-fast-guard-clauses": {
+      "pass": true,
+      "evidence": "Lines 40-48: three guard clauses with early `return` for empty_order, no_customer, not_verified — no nesting, no else branches."
+    },
+    "max-2-indentation": {
+      "pass": true,
+      "evidence": "Deepest nesting is 1 level inside `handleOrderInternal` (e.g., lines 40-48 guard clauses, line 58 `if (result.ok && order.needsShipping)`). Never exceeds 2 levels."
+    },
+    "switch-over-if-else": {
+      "pass": true,
+      "evidence": "No if/else chains exist. Guard clauses use standalone `if` with early return. No multi-branch conditional that should be a switch/map."
+    },
+    "no-boolean-flags": {
+      "pass": true,
+      "evidence": "Lines 16-25: two separate named functions `handleUrgentOrder` and `handleNormalOrder` exist as public API. No boolean `isUrgent` parameter anywhere. Internal delegation to `handleOrderInternal` uses a function reference (`deps.processUrgent` vs `deps.processNormal`), not a boolean."
+    },
+    "declarative-over-imperative": {
+      "pass": true,
+      "evidence": "No mutation of `order` or any input object. `order.status` is never assigned. Results are returned as new objects (lines 41-48, 62)."
+    },
+    "parallelize-async": {
+      "pass": true,
+      "evidence": "Line 51: `Promise.all([process(order), deps.fetchInventory(order.warehouseId), deps.fetchPricing(order.region)])` — three independent async operations run in parallel."
+    }
+  },
+  "score": "6/6",
+  "notes": "Line 62 has a logic bug: failure branch always returns `error: \"not_verified\"` regardless of actual downstream failure reason. This is a correctness issue but does not violate the graded assertions."
+}

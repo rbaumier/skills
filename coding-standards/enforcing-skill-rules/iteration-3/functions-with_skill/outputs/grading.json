@@ -1,0 +1,14 @@
+{
+  "eval_id": 3,
+  "eval_name": "functions",
+  "expectations": [
+    { "text": "max-30-lines", "passed": false, "evidence": "generateReport spans lines 163-201 = 39 lines (including destructuring, comments, blanks). Exceeds 30-line limit." },
+    { "text": "pure-by-default", "passed": true, "evidence": "filterOrders, sortOrders, computeAggregates, appendChartData, and all formatters (lines 86-135) are pure functions with zero I/O." },
+    { "text": "srp", "passed": true, "evidence": "Fetch (fetchUser/fetchOrders), calculate (computeAggregates), format (formatters record), cache/email at boundary — each concern in its own function." },
+    { "text": "max-3-positional-args", "passed": true, "evidence": "12 original args replaced with single `options: ReportOptions` (line 163)." },
+    { "text": "cqs", "passed": true, "evidence": "generateReport returns the report string (query). Email sending is a conditional side effect at the boundary, separated from pure computation." },
+    { "text": "composition-over-inheritance", "passed": true, "evidence": "No classes or inheritance. Pure function pipeline: filter -> sort -> aggregate -> format. Factory function returns plain object." },
+    { "text": "explicit-interface-contracts", "passed": true, "evidence": "Explicit interfaces for all contracts: ReportOptions, ReportData, ReportFormat, SortField, Order, User, DbClient, CacheClient, Logger, Mailer, Compressor (lines 14-56)." },
+    { "text": "factory-function-di", "passed": true, "evidence": "`createReportService(deps: ReportDependencies)` on line 142 injects all I/O deps (db, cache, logger, mailer, gzip). Exported on line 206. No hard imports." }
+  ]
+}
