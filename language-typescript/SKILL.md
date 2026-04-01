@@ -53,7 +53,8 @@ async function getUser(id: string): Promise<Result<User, 'not-found' | 'parse-er
 ## Style
 
 - Files: kebab-case.ts
-- JSDoc: `@description` + `@example` (with formatted function call & return data) only — no `@param`/`@returns` (types are the docs)
+- JSDoc: plain block description + `@example` (with function call AND expected return `// => value`) — no `@description` tag, no `@param`/`@returns` (types are the docs)
+- File order: imports → types/interfaces → constants → functions. Exports at top, private helpers at bottom
 - Parse at boundaries (`unknown` in, typed out), trust inside
 - ESM only: `"type": "module"` in package.json. Never mix CJS imports (`require`) with ESM modules
 - Declare param/prop types as named types above the function, not inline objects
