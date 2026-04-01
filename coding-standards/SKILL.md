@@ -6,6 +6,7 @@ description: Enforce engineering standards — readability, robustness, maintain
 ## Philosophy
 
 Single source of truth. Make invalid states unrepresentable. Locality of behavior. Functional core, imperative shell. Parse don't validate. DRY. Idiomatic. Entropy is the enemy.
+- **Reuse before creating** -- before writing a new function, component, or module, search the codebase for existing code that does the same thing or something close. Extend or compose existing code rather than duplicating. Reviews: new code that duplicates existing functionality -> flag "reuse X instead"
 
 ## Naming
 
@@ -42,21 +43,35 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 ## Error Handling
 
 - Surface all failures -- every `catch` handles or propagates
-- Result/Either for expected errors, exceptions for unexpected
+- **Result for ALL errors, no exceptions** -- expected, unexpected, unrecoverable. Never `throw`. Error boundaries at the edge (middleware, main) convert Result errors to HTTP 500 / process exit / log + restart
 - Preserve original stack trace/cause when wrapping
 - Timeout on every I/O
 
+## Readability
+
+**Write code a low-IQ junior understands on the first pass.** Recipe style — clear steps, named ingredients, no magic.
+
+- **Intermediate variables for every compound expression** -- 2+ operations = extract to named variable. Reviews: compound inlined -> flag
+- **One blank line between logical blocks** -- group: setup, validation, transform, return
+- **No clever code** -- no nested ternaries, no multi-operation one-liners, no implicit coercion (`+[]`, `!!value`). 5-line inline block -> extract as named function
+
 ## Comments
 
-**Write:** function contracts, why-comments, domain knowledge
-**Skip:** trivial restating (`// increment i`), section dividers (`// --- Types ---`), commented-out code, `TODO`/`FIXME` without issue
-**Rules:** API docs from code; ADR for structural decisions
+**Comment generously. When in doubt, comment.** A 5-line comment explaining a subtle algorithm is better than no comment. You need a reason NOT to comment, not a reason to comment.
+
+- **JSDoc contract on every exported function** -- `@description` (what + why + edge cases) + `@example` (realistic call + return). Not optional
+- **Step-by-step for multi-stage logic** -- `// 1. Validate`, `// 2. Transform`, `// 3. Persist`. Reader understands the algorithm WITHOUT reading the code
+- **Why-comments on every non-obvious choice** -- why this approach, why not the obvious alternative, why this order
+- **Domain knowledge** -- business rules, regulatory constraints, external system quirks a new dev wouldn't know
+- **Gotcha warnings + links** -- `// WARNING: this API returns null on weekends` / `// See: https://github.com/org/repo/issues/123` for workarounds
+
+**Never write:** trivial restating (`// increment i`), commented-out code, `TODO`/`FIXME` without tracking issue. **Rules:** API docs from code; ADR for structural decisions
 
 ## File Structure
 
 - Newspaper metaphor -- high-level at top
 - Tests next to source. Group by feature not type
-- Max 300 lines per file
+- **Max 200 lines per file** -- if a file approaches this limit, split by responsibility. A file doing two things is two files. Reviews: file > 200 lines -> flag "split this file"
 
 ## Architecture
 

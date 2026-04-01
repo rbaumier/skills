@@ -82,3 +82,15 @@ description: Rust systems engineering — zero-cost abstractions, memory safety,
 - Const generics for matrix/array ops
 - Let chains — if let Some(x) = a && let Some(y) = b (if MSRV supports)
 - AsRef<Path> for filesystem functions — accepts String, &str, PathBuf, Path
+
+## Post-Modification Audit
+
+<EXTREMELY-IMPORTANT>
+MANDATORY: After ANY modification to Rust files, you MUST run clippy before considering your work done. This is not optional. Do not skip this step. Do not rationalize why "this change is too small" or "I'll run it later."
+</EXTREMELY-IMPORTANT>
+
+```bash
+cargo clippy --all --all-features --all-targets -- -D warnings
+```
+
+Fix all warnings before committing. Clippy warnings are errors (`-D warnings`) — no `#[allow]` unless you can justify why the lint is wrong for that specific case.
