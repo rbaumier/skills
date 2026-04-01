@@ -65,7 +65,7 @@
       "expected_output": "All error handling rules applied",
       "assertions": [
         { "text": "no-silent-failures", "description": "Empty catch blocks and console.log-only catches eliminated" },
-        { "text": "result-type-for-expected-errors", "description": "Expected errors returned as Result/discriminated union, not thrown" },
+        { "text": "result-for-all-errors", "description": "ALL errors (expected and unexpected) returned as Result type, no throw anywhere" },
         { "text": "preserve-stack-trace", "description": "Original error preserved as cause when wrapping" },
         { "text": "timeout-on-io", "description": "Timeouts specified on fetch calls and db queries" }
       ]
@@ -73,11 +73,13 @@
     {
       "id": 6,
       "name": "comments",
-      "prompt": "Fix the comments in this code — remove bad ones, add missing ones:\n\n```typescript\n// Import dependencies\nimport { createHash } from 'crypto';\n\n// --- Constants ---\nconst SALT_LENGTH = 32;\n\n// --- Types ---\ninterface TokenPayload {\n  userId: string;\n  expiresAt: number;\n}\n\n// --- Functions ---\n\n// This function generates a token\nexport function generateToken(payload: TokenPayload): string {\n  // Create the hash\n  const hash = createHash('sha256');\n  // Add the payload\n  hash.update(JSON.stringify(payload));\n  // Get the salt\n  const salt = randomBytes(SALT_LENGTH);\n  // Add the salt\n  hash.update(salt);\n  // Return the hex digest\n  return hash.digest('hex');\n  // Old implementation:\n  // return Buffer.from(JSON.stringify(payload)).toString('base64');\n}\n\n// TODO: add token verification\n// TODO: add token refresh\n// FIXME: salt should be stored somewhere\n```",
+      "prompt": "Fix the comments in this code — remove bad ones, add missing ones:\n\n```typescript\n// Import dependencies\nimport { createHash } from 'crypto';\nimport { db } from './db';\n\n// --- Constants ---\nconst SALT_LENGTH = 32;\nconst TOKEN_EXPIRY_MS = 3600000;\n\n// --- Types ---\ninterface TokenPayload {\n  userId: string;\n  scope: string[];\n}\n\n// --- Functions ---\n\n// This function generates and stores a token\nexport async function issueToken(payload: TokenPayload): Promise<string> {\n  // Validate\n  if (!payload.userId) throw new Error('missing userId');\n  // Create the hash\n  const hash = createHash('sha256');\n  // Add the payload\n  hash.update(JSON.stringify(payload));\n  // Get the salt\n  const salt = randomBytes(SALT_LENGTH);\n  // Add the salt\n  hash.update(salt);\n  // Get the token\n  const token = hash.digest('hex');\n  // Calculate expiry\n  const expiresAt = Date.now() + TOKEN_EXPIRY_MS;\n  // Store in database\n  await db.query('INSERT INTO tokens (token, user_id, scope, salt, expires_at) VALUES ($1, $2, $3, $4, $5)', [token, payload.userId, payload.scope.join(','), salt.toString('hex'), expiresAt]);\n  // Check if user has too many tokens\n  const existing = await db.query('SELECT count(*) FROM tokens WHERE user_id = $1 AND expires_at > $2', [payload.userId, Date.now()]);\n  if (existing.rows[0].count > 10) {\n    await db.query('DELETE FROM tokens WHERE user_id = $1 AND expires_at < $2', [payload.userId, Date.now()]);\n  }\n  // Return the token\n  return token;\n  // Old implementation:\n  // return Buffer.from(JSON.stringify(payload)).toString('base64');\n}\n\n// TODO: add token verification\n// TODO: add token refresh\n// FIXME: salt should be stored somewhere\n```",
       "expected_output": "All comment rules applied",
       "assertions": [
-        { "text": "function-contract", "description": "Exported function has a contract comment explaining what it does and its security properties" },
+        { "text": "function-contract", "description": "Exported function has JSDoc with @description and @example" },
         { "text": "why-comments", "description": "Non-obvious decisions (like using sha256+salt vs base64) explained with why" },
+        { "text": "step-by-step-numbered", "description": "Multi-stage logic has numbered step comments (// 1. ..., // 2. ...)" },
+        { "text": "gotcha-warning", "description": "WARNING or NOTE about salt not being persisted / token not verifiable" },
         { "text": "no-trivial-comments", "description": "Trivial comments removed (// Import dependencies, // Create the hash, etc.)" },
         { "text": "no-section-dividers", "description": "Section dividers (// --- Constants ---, // --- Types ---) removed" },
         { "text": "no-backup-comments", "description": "Commented-out old implementation removed" },

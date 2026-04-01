@@ -1,7 +1,8 @@
 {
   "plugins": ["typescript", "import", "unicorn", "jsdoc", "promise", "vue"],
   "jsPlugins": [
-    { "name": "sonarjs-js", "specifier": "__SONARJS_PATH__" }
+    { "name": "sonarjs-js", "specifier": "__SONARJS_PATH__" },
+    { "name": "jsdoc-js", "specifier": "__JSDOC_PATH__" }
   ],
   "overrides": [
     {
@@ -9,9 +10,9 @@
       "rules": {
         "import/no-default-export": "off",
         "unicorn/filename-case": "off",
-        "jsdoc/require-jsdoc": "off",
-        "jsdoc/require-description": "off",
-        "jsdoc/require-example": "off",
+        "jsdoc-js/require-jsdoc": "off",
+        "jsdoc-js/require-description": "off",
+        "jsdoc-js/require-example": "off",
         "no-magic-numbers": "off",
         "typescript/consistent-type-imports": "off"
       }
@@ -34,7 +35,7 @@
     "no-magic-numbers": ["error", { "ignore": [0, 1, -1], "ignoreArrayIndexes": true, "ignoreDefaultValues": true }],
     "prefer-const": "error",
     "no-var": "error",
-    "no-empty-catch-clause": "error",
+    "no-useless-catch": "error",
     "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "unicorn/no-array-for-each": "error",
     "unicorn/prefer-array-flat-map": "error",
@@ -50,9 +51,9 @@
     "promise/prefer-await-to-callbacks": "error",
     "promise/no-return-in-finally": "error",
     "promise/param-names": "error",
-    "jsdoc/require-jsdoc": "error",
-    "jsdoc/require-description": "error",
-    "jsdoc/require-example": "error",
+    "jsdoc-js/require-jsdoc": "error",
+    "jsdoc-js/require-description": "error",
+    "jsdoc-js/require-example": "error",
     "sonarjs-js/cognitive-complexity": ["error", 5],
     "sonarjs-js/no-identical-functions": "error",
     "sonarjs-js/no-empty-collection": "error",
