@@ -4,7 +4,10 @@ set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 usage() {
-  echo "Usage: ts-audit [--last-commit | --working-tree | --staged | --commit <sha> | --range <from> <to>] [path]"
+  echo "Usage: ts-audit [--fix] [--last-commit | --working-tree | --staged | --commit <sha> | --range <from> <to>] [path]"
+  echo ""
+  echo "Options:"
+  echo "  --fix            Auto-fix fixable rules"
   echo ""
   echo "Modes:"
   echo "  --last-commit    Lint files changed in the last commit"
@@ -21,9 +24,11 @@ TARGET=""
 COMMIT_SHA=""
 RANGE_FROM=""
 RANGE_TO=""
+FIX_FLAG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --fix) FIX_FLAG="--fix"; shift ;;
     --last-commit) MODE="last-commit"; shift ;;
     --commit) MODE="commit"; COMMIT_SHA="$2"; shift 2 ;;
     --range) MODE="range"; RANGE_FROM="$2"; RANGE_TO="$3"; shift 3 ;;
@@ -55,7 +60,7 @@ lint_files() {
     echo "No TS/JS/Vue files changed in $label."
     exit 0
   fi
-  echo "$files" | xargs $PKG_RUNNER oxlint@latest --vue-plugin --fix -c "$TMP_CONFIG"
+  echo "$files" | xargs $PKG_RUNNER oxlint@latest --vue-plugin $FIX_FLAG -c "$TMP_CONFIG"
 }
 
 case "$MODE" in
@@ -75,6 +80,6 @@ case "$MODE" in
     lint_files "$(get_files "--cached")" "staged files"
     ;;
   all)
-    $PKG_RUNNER oxlint@latest --vue-plugin --fix -c "$TMP_CONFIG" "${TARGET:-.}"
+    $PKG_RUNNER oxlint@latest --vue-plugin $FIX_FLAG -c "$TMP_CONFIG" "${TARGET:-.}"
     ;;
 esac
