@@ -55,7 +55,7 @@ lint_files() {
     echo "No TS/JS/Vue files changed in $label."
     exit 0
   fi
-  echo "$files" | xargs $PKG_RUNNER oxlint@latest --vue-plugin --fix -c "$TMP_CONFIG"
+  echo "$files" | xargs $PKG_RUNNER oxlint@latest --vue-plugin -c "$TMP_CONFIG"
 }
 
 case "$MODE" in
@@ -75,6 +75,6 @@ case "$MODE" in
     lint_files "$(get_files "--cached")" "staged files"
     ;;
   all)
-    $PKG_RUNNER oxlint@latest --vue-plugin --fix -c "$TMP_CONFIG" "${TARGET:-.}"
+    $PKG_RUNNER oxlint@latest --vue-plugin -c "$TMP_CONFIG" "${TARGET:-.}"
     ;;
 esac
