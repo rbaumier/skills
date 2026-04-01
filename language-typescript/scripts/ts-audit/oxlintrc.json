@@ -36,6 +36,7 @@
     "prefer-const": "error",
     "no-var": "error",
     "no-useless-catch": "error",
+    "curly": "error",
     "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "unicorn/no-array-for-each": "error",
     "unicorn/prefer-array-flat-map": "error",
