@@ -59,7 +59,7 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 
 **Comment generously. When in doubt, comment.** A 5-line comment explaining a subtle algorithm is better than no comment. You need a reason NOT to comment, not a reason to comment.
 
-- **JSDoc contract on every exported function** -- plain block description (what + why + edge cases) + `@example` with call AND expected return (`// => value`). Not optional
+- **JSDoc on every export** -- plain block description on functions, types, constants when not self-evident. `@example` with call AND return (`// => value`) only on functions that return something. Not optional for functions
 - **Step-by-step for multi-stage logic** -- `// 1. Validate`, `// 2. Transform`, `// 3. Persist`. Reader understands the algorithm WITHOUT reading the code
 - **Why-comments on every non-obvious choice** -- why this approach, why not the obvious alternative, why this order
 - **Domain knowledge** -- business rules, regulatory constraints, external system quirks a new dev wouldn't know

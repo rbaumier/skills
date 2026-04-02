@@ -12,7 +12,6 @@
         "unicorn/filename-case": "off",
         "jsdoc-js/require-jsdoc": "off",
         "jsdoc-js/require-description": "off",
-        "jsdoc-js/require-example": "off",
         "no-magic-numbers": "off",
         "typescript/consistent-type-imports": "off"
       }
@@ -54,7 +53,7 @@
     "promise/param-names": "error",
     "jsdoc-js/require-jsdoc": "error",
     "jsdoc-js/require-description": "error",
-    "jsdoc-js/require-example": "error",
+    "jsdoc-js/require-example": "off",
     "sonarjs-js/cognitive-complexity": ["error", 5],
     "sonarjs-js/no-identical-functions": "error",
     "sonarjs-js/no-empty-collection": "error",
