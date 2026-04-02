@@ -127,6 +127,23 @@
           "id": "zero-manual-isErr",
           "rule": "Never manually propagate with if(isErr)",
           "check": "Zero instances of if(result.isErr()) { return Result.err(...) } in the output"
+        },
+        {
+          "id": "return-result-directly",
+          "rule": "If single Result check needed, return result directly not re-wrap",
+          "check": "Any remaining isErr check uses 'return result' not 'return Result.err(result.error)'"
+        }
+      ]
+    },
+    {
+      "id": "no-rewrap-single-result",
+      "prompt": "Improve this function that uses better-result:\n\n```typescript\nasync function getUsername(userId: string): Promise<Result<string, UserError>> {\n  const user = await fetchUser(userId);\n  if (user.isErr()) {\n    return Result.err(user.error);\n  }\n  return Result.ok(user.value.name);\n}\n```\n\nAssume fetchUser already returns Promise<Result<User, UserError>>.",
+      "trap_description": "Single Result check with redundant re-wrap — should return result directly",
+      "assertions": [
+        {
+          "id": "no-rewrap",
+          "rule": "Return result directly, don't re-wrap with Result.err(result.error)",
+          "check": "Uses 'return user' not 'return Result.err(user.error)' when propagating the error"
         }
       ]
     }

@@ -152,7 +152,7 @@ See [references/tagged-errors.md](references/tagged-errors.md) for TaggedError p
 ## Rules
 
 - **2+ Results = use Result.gen with yield\*** -- never manually propagate. Use `yield*` for automatic short-circuit, like Rust's `?`
-- **If single Result check needed, return the Result directly** -- `if (result.isErr()) return result` not `if (result.isErr()) return Result.err(result.error)`. The Result is already an err, don't re-wrap it
+- **Single Result transform = `.map()` / `.andThen()`** -- `fetchUser(id).map(u => u.name)` not `Result.gen` for one Result. Reserve `Result.gen` for 2+ Results. If you must check manually, `return result` not `return Result.err(result.error)` — don't re-wrap
 
 ## Common Pitfalls
 
