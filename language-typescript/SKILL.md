@@ -19,6 +19,7 @@ These override Claude's defaults — the reason this skill exists.
 | Errors are values | `better-result` Result type | **Never `throw` for expected failures.** `throw` is NOT a fix — return `{ ok, error }`. Null = normal absence; typed error = problem |
 | Types by default | `interface` only for extension/perf | See compiler-performance.md |
 | `using`/`await using` | Over try/finally (TS 5.2+) | Deterministic resource cleanup |
+| No barrel files | Import from source directly | `index.ts` with only re-exports = indirection, circular dep risk, slower bundling |
 
 ### Errors as values — before/after
 
