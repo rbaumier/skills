@@ -149,8 +149,13 @@ See [references/tagged-errors.md](references/tagged-errors.md) for TaggedError p
 7. **Update callers**: Propagate Result handling up call stack
 8. **Test**: Verify error paths with .match or type narrowing
 
+## Rules
+
+- **2+ Results = use Result.gen with yield\*** -- never manually propagate with `if (result.isErr()) { return Result.err(result.error); }`. Use `yield*` for automatic short-circuit, like Rust's `?`
+
 ## Common Pitfalls
 
+- **Manual propagation**: `if (r.isErr()) return Result.err(r.error)` repeated = use Result.gen instead
 - **Over-wrapping**: Don't wrap every function. Start at boundaries, propagate inward.
 - **Losing error info**: Always include cause/context in TaggedError constructors.
 - **Mixing paradigms**: Once a module returns Result, callers should too (or explicitly .unwrap).
