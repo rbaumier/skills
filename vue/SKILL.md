@@ -25,8 +25,10 @@ description: Vue 3 Composition API, `<script setup>`, TypeScript, reactivity, co
 
 ### Component Splitting
 - CRUD features: split into container + input/form + list/item + footer/actions
-- Keep entry/root/route views thin (composition surfaces only)
+- **Views are composition surfaces only** -- zero raw HTML/CSS in page-level views. Every visual pattern = a component. If you're writing `<div class="section__title">` in a view, extract it
+- **Repeated pattern (2+) = component** -- same HTML structure appearing twice = extract immediately, not later. Reviews: repeated HTML block -> flag "extract component"
 - Extract state/side effects into composables (useXxx())
+- **Formatting/calculation logic in utils, not in views or components** -- `Intl.DateTimeFormat`, `Math.ceil`, data transforms belong in `utils/`, imported by both composables and components
 - Create component map before implementation (responsibilities + props/emits)
 - Feature folder layout: components/<feature>/, composables/use<Feature>.ts
 
