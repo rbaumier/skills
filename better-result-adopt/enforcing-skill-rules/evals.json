@@ -107,6 +107,28 @@
           "check": "Output should mention checking for opensrc/ or reference source code"
         }
       ]
+    },
+    {
+      "id": "gen-over-manual-propagation",
+      "prompt": "Migrate this function to use better-result. Assume fetchUser, fetchAccount, validateTransfer, debitAccount, creditAccount, and createReceipt already return Result types.\n\n```typescript\nasync function transfer(fromId: string, toId: string, amount: number): Promise<Result<Receipt, TransferError>> {\n  const user = await fetchUser(fromId);\n  if (user.isErr()) {\n    return Result.err(user.error);\n  }\n\n  const account = await fetchAccount(user.value.accountId);\n  if (account.isErr()) {\n    return Result.err(account.error);\n  }\n\n  const validation = validateTransfer({ amount, fromId, toId });\n  if (validation.isErr()) {\n    return Result.err(validation.error);\n  }\n\n  const debit = await debitAccount(account.value.id, amount);\n  if (debit.isErr()) {\n    return Result.err(debit.error);\n  }\n\n  const credit = await creditAccount(toId, amount);\n  if (credit.isErr()) {\n    return Result.err(credit.error);\n  }\n\n  const receipt = await createReceipt(fromId, toId, amount);\n  if (receipt.isErr()) {\n    return Result.err(receipt.error);\n  }\n\n  return Result.ok(receipt.value);\n}\n```",
+      "trap_description": "Function has 6 manual if(isErr) propagations — must be replaced by Result.gen with yield*",
+      "assertions": [
+        {
+          "id": "uses-result-gen",
+          "rule": "2+ Results = use Result.gen with yield*",
+          "check": "Output uses Result.gen(async function*() { ... }) as the main pattern"
+        },
+        {
+          "id": "uses-yield-star",
+          "rule": "yield* for automatic short-circuit propagation",
+          "check": "Each Result-returning call uses yield* (with Result.await for async) instead of manual check"
+        },
+        {
+          "id": "zero-manual-isErr",
+          "rule": "Never manually propagate with if(isErr)",
+          "check": "Zero instances of if(result.isErr()) { return Result.err(...) } in the output"
+        }
+      ]
     }
   ]
 }
