@@ -187,6 +187,31 @@
           "check": "Questions or justifies use of Suspense, KeepAlive, Teleport based on actual need"
         }
       ]
+    },
+    {
+      "id": "component-splitting-views",
+      "name": "Component Splitting — Views & Utils",
+      "prompt": "Refactor this Vue page component to follow best practices:\n\n```vue\n<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\nimport { useRoute } from 'vue-router'\n\nconst route = useRoute()\nconst orders = ref<Order[]>([])\nconst loading = ref(true)\n\nconst dateFmt = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })\nfunction fmtDate(val: string): string {\n  return dateFmt.format(new Date(val))\n}\nfunction fmtCurrency(val: number): string {\n  return new Intl.NumberFormat('en', { style: 'currency', currency: 'EUR' }).format(val)\n}\n\nonMounted(async () => {\n  orders.value = await fetchOrders(route.params.userId as string)\n  loading.value = false\n})\n</script>\n\n<template>\n  <div class=\"page\">\n    <div class=\"page__header\">\n      <h1 class=\"page__title\">Orders</h1>\n      <span class=\"page__count\">{{ orders.length }} orders</span>\n    </div>\n\n    <div v-for=\"order in orders\" :key=\"order.id\" class=\"order-card\">\n      <div class=\"order-card__header\">\n        <span class=\"order-card__id\">#{{ order.id }}</span>\n        <span class=\"order-card__date\">{{ fmtDate(order.createdAt) }}</span>\n      </div>\n      <div class=\"order-card__body\">\n        <div class=\"order-card__row\">\n          <span class=\"order-card__label\">Status</span>\n          <span class=\"order-card__value\" :class=\"`order-card__value--${order.status}`\">{{ order.status }}</span>\n        </div>\n        <div class=\"order-card__row\">\n          <span class=\"order-card__label\">Total</span>\n          <span class=\"order-card__value\">{{ fmtCurrency(order.total) }}</span>\n        </div>\n        <div class=\"order-card__row\">\n          <span class=\"order-card__label\">Items</span>\n          <span class=\"order-card__value\">{{ order.items.length }}</span>\n        </div>\n      </div>\n    </div>\n  </div>\n</template>\n\n<style scoped>\n.page { padding: 1.5rem; }\n.page__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }\n.page__title { font-size: 1.5rem; font-weight: 600; }\n.page__count { color: var(--color-text-secondary); }\n.order-card { border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }\n.order-card__header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }\n.order-card__id { font-weight: 600; }\n.order-card__date { color: var(--color-text-secondary); font-size: 0.875rem; }\n.order-card__row { display: flex; justify-content: space-between; padding: 0.25rem 0; }\n.order-card__label { color: var(--color-text-secondary); }\n.order-card__value--pending { color: var(--color-warning); }\n.order-card__value--completed { color: var(--color-success); }\n</style>\n```",
+      "assertions": [
+        {
+          "id": "views-zero-html-css",
+          "rule": "Views are composition surfaces only — zero raw HTML/CSS in page-level views",
+          "trap": "Page has 30+ lines of raw HTML with BEM classes and 12 CSS rules inline",
+          "check": "Output extracts visual patterns into components (OrderCard, PageHeader, or similar) — view template becomes component composition"
+        },
+        {
+          "id": "repeated-pattern-extract",
+          "rule": "Repeated pattern (2+) = component — extract immediately",
+          "trap": "order-card__row pattern repeated 3 times with identical structure (label + value)",
+          "check": "Output extracts the repeated row pattern into a dedicated component (e.g. OrderRow, KeyValueRow, CardContentLine)"
+        },
+        {
+          "id": "formatting-in-utils",
+          "rule": "Formatting/calculation logic in utils, not in views or components",
+          "trap": "Intl.DateTimeFormat and Intl.NumberFormat created inline in the page component",
+          "check": "Output moves fmtDate and fmtCurrency to a utils/ file (e.g. utils/format.ts) and imports them"
+        }
+      ]
     }
   ]
 }
