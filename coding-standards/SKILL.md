@@ -57,15 +57,17 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 
 ## Comments
 
-**Comment generously. When in doubt, comment.** A 5-line comment explaining a subtle algorithm is better than no comment. You need a reason NOT to comment, not a reason to comment.
+**Every comment must answer a question the code alone cannot answer.** "What does this line do" is never that question — the code answers it. The right questions: why does this exist, what breaks without it, what does the next caller see, who consumes this.
 
-- **JSDoc on every export** -- plain block description on functions, types, constants when not self-evident. `@example` with call AND return (`// => value`) only on functions that return something. Not optional for functions
-- **Step-by-step in plain language, not function-name paraphrases** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Paraphrasing the function name is NOT a comment
-- **Explain every domain/technical term on first use** -- if a comment says "materiality threshold", "basis points", "dangling posting", "phantom entry", explain what it means in this context. A reader who doesn't know the domain must understand every comment
-- **Why-comments on every non-obvious choice** -- why this approach, why not the obvious alternative, why this order
-- **Gotcha warnings + links** -- `// WARNING: this API returns null on weekends` / `// See: https://github.com/org/repo/issues/123` for workarounds
+- **JSDoc on every export** -- plain block description on functions, types, constants when not self-evident. `@example` with call AND return (`// => value`) only on functions that return something
+- **Say WHY, not WHAT** -- `// Apply corrections` = restates code (BAD). `// Apply corrections — without this, the frontend shows stale failure badges` = explains consequence (GOOD). Every comment must add information the code doesn't already convey
+- **Step-by-step in plain language** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Paraphrasing the function name is NOT a comment
+- **Explain every domain term on first use** -- "materiality threshold", "basis points", "dangling posting" — define in context for a non-expert
+- **Justify inaction** -- when code deliberately does nothing (empty branch, early return), explain why inaction is correct. `// Nothing to fix — ledger already balances` not just `if (empty) return`
+- **State the effect on the next caller** -- when mutating shared/persistent state, explain what the next invocation will see. `// Advance cursor so the next tick only processes newer deliveries`
+- **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...` for workarounds
 
-**Never write:** trivial restating (`// increment i`), commented-out code, `TODO`/`FIXME` without tracking issue. **Rules:** API docs from code; ADR for structural decisions
+**Never write:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue. **Rules:** API docs from code; ADR for structural decisions
 
 ## File Structure
 
