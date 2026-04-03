@@ -5,8 +5,8 @@ description: Enforce engineering standards — readability, robustness, maintain
 
 ## Philosophy
 
-Single source of truth. Make invalid states unrepresentable. Locality of behavior. Functional core, imperative shell. Parse don't validate. DRY. Idiomatic. Entropy is the enemy.
-- **Reuse before creating** -- before writing a new function, component, or module, search the codebase for existing code that does the same thing or something close. Extend or compose existing code rather than duplicating. Reviews: new code that duplicates existing functionality -> flag "reuse X instead"
+Make invalid states unrepresentable. Functional core, imperative shell. Parse, don't validate. DRY.
+- **Reuse before creating** -- search the codebase for existing equivalents before writing new code. Reviews: new code that duplicates existing functionality -> flag "reuse X instead"
 
 ## Naming
 
@@ -26,7 +26,7 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 
 ## Functions
 
-- **Inject deps via factory: `createService(deps)`** -- pass all I/O (db, cache, email) as args. Composition root = only place knowing concretions. Most impactful architectural rule
+- **Inject deps via factory: `createService(deps)`** -- pass all I/O (db, cache, email) as args. Composition root = only place knowing concretions
 - Max 30 lines. Pure by default. SRP
 - Max 3 positional args; options object for 4+
 - CQS -- command OR query. Composition over inheritance
@@ -38,7 +38,7 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 - Extract literals to named constants
 - Strict typing everywhere
 - Externalize config -- rates, thresholds, multipliers in config objects, not inline. Business params changeable without editing function bodies
-- **Bound every input -- reject, always reject** -- every external param validated and **rejected** if invalid. `weight` must be `> 0 && < MAX_WEIGHT` or throw. `country` must be in allowed set or throw. **NEVER `?? defaultValue`, `?? 0`, `|| fallback` for invalid inputs** -- silent-failure bugs. Only correct response: **throw or return Result error**. Reviews: `?? value` or `|| default` on external input -> flag as bug, replace with throw/guard
+- **Bound every input -- reject, always reject** -- every external param validated and **rejected** if invalid. `weight` must be `> 0 && < MAX_WEIGHT` or return Result error. **NEVER `?? defaultValue`, `?? 0`, `|| fallback` for invalid inputs** -- silent-failure bugs. Only correct response: **return Result error**. Reviews: `?? value` or `|| default` on external input -> flag as bug
 
 ## Error Handling
 
@@ -49,7 +49,7 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 
 ## Readability
 
-**Write code a low-IQ junior understands on the first pass.** Recipe style — clear steps, named ingredients, no magic.
+**Write code any newcomer understands on first read.** Recipe style — clear steps, named ingredients, no magic.
 
 - **Intermediate variables for every compound expression** -- 2+ operations = extract to named variable. Reviews: compound inlined -> flag
 - **One blank line between logical blocks** -- group: setup, validation, transform, return
@@ -59,19 +59,17 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 
 **Every comment must answer a question the code alone cannot answer.** "What does this line do" is never that question — the code answers it. The right questions: why does this exist, what breaks without it, what does the next caller see, who consumes this.
 
-- **JSDoc on every export** -- plain block description on functions, types, constants when not self-evident. `@example` with call AND return (`// => value`) only on functions that return something
-- **Say WHY, not WHAT** -- `// Apply corrections` = restates code (BAD). `// Apply corrections — without this, the frontend shows stale failure badges` = explains consequence (GOOD). Every comment must add information the code doesn't already convey
-- **Step-by-step in plain language** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Paraphrasing the function name is NOT a comment
-- **Explain every domain term on first use** -- "materiality threshold", "basis points", "dangling posting" — define in context for a non-expert
-- **Justify inaction** -- when code deliberately does nothing (empty branch, early return), explain why inaction is correct. `// Nothing to fix — ledger already balances` not just `if (empty) return`
-- **State the effect on the next caller** -- when mutating shared/persistent state, explain what the next invocation will see. `// Advance cursor so the next tick only processes newer deliveries`
-- **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...` for workarounds
+- **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`). Types/constants: JSDoc when not self-evident
+- **Say WHY, not WHAT** -- `// Apply corrections` = restates code (BAD). `// Apply corrections — without this, the frontend shows stale failure badges` (GOOD). Paraphrasing code is not a comment
+- **Plain language, define domain terms** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Every domain term explained on first use for a non-expert
+- **Justify inaction + state next-caller effect** -- empty branches: explain why nothing is correct. Shared state mutation: explain what the next invocation sees
+- **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
 
-**Never write:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue. **Rules:** API docs from code; ADR for structural decisions
+**Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue
 
 ## File Structure
 
-- Newspaper metaphor -- high-level at top
+- Exports/public API at top, private helpers at bottom
 - Tests next to source. Group by feature not type
 - **Max 200 lines per file** -- if a file approaches this limit, split by responsibility. A file doing two things is two files. Reviews: file > 200 lines -> flag "split this file"
 
