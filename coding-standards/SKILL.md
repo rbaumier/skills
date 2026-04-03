@@ -3,6 +3,18 @@ name: coding-standards
 description: Enforce engineering standards — readability, robustness, maintainability, type safety. ALWAYS use when writing, reviewing, or refactoring code. Use for architecture decisions, system design, component boundaries, tooling choices, and documentation conventions.
 ---
 
+## Comments — first-class citizen
+
+**Comments are as important as the code.** Write the comment first, then the code that implements it. Every comment must answer a question the code alone cannot answer. "What does this line do" is never that question.
+
+- **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`). Types/constants: JSDoc when not self-evident
+- **Say WHY, not WHAT** -- `// Apply corrections` = restates code (BAD). `// Apply corrections — without this, the frontend shows stale failure badges` (GOOD). Paraphrasing code is not a comment
+- **Plain language, define domain terms** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Every domain term explained on first use for a non-expert
+- **Justify inaction + state next-caller effect** -- empty branches: explain why nothing is correct. Shared state mutation: explain what the next invocation sees
+- **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
+
+**Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue
+
 ## Philosophy
 
 Make invalid states unrepresentable. Functional core, imperative shell. Parse, don't validate. DRY.
@@ -54,18 +66,6 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **Intermediate variables for every compound expression** -- 2+ operations = extract to named variable. Reviews: compound inlined -> flag
 - **One blank line between logical blocks** -- group: setup, validation, transform, return
 - **No clever code** -- no nested ternaries, no multi-operation one-liners, no implicit coercion (`+[]`, `!!value`). 5-line inline block -> extract as named function
-
-## Comments
-
-**Every comment must answer a question the code alone cannot answer.** "What does this line do" is never that question — the code answers it. The right questions: why does this exist, what breaks without it, what does the next caller see, who consumes this.
-
-- **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`). Types/constants: JSDoc when not self-evident
-- **Say WHY, not WHAT** -- `// Apply corrections` = restates code (BAD). `// Apply corrections — without this, the frontend shows stale failure badges` (GOOD). Paraphrasing code is not a comment
-- **Plain language, define domain terms** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Every domain term explained on first use for a non-expert
-- **Justify inaction + state next-caller effect** -- empty branches: explain why nothing is correct. Shared state mutation: explain what the next invocation sees
-- **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
-
-**Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue
 
 ## File Structure
 
