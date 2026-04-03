@@ -5,12 +5,13 @@ description: Enforce engineering standards — readability, robustness, maintain
 
 ## Comments — first-class citizen
 
-**Comments are as important as the code.** Write the comment first, then the code that implements it. Every comment must answer a question the code alone cannot answer. "What does this line do" is never that question.
+**Write comments like a senior explaining the code to a junior sitting next to them.** Conversational, concrete, patient. The code shows WHAT happens — comments tell the story the code can't: why this exists, what breaks without it, what would go wrong if you changed it.
 
-- **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`). Types/constants: JSDoc when not self-evident
-- **Say WHY, not WHAT** -- `// Apply corrections` = restates code (BAD). `// Apply corrections — without this, the frontend shows stale failure badges` (GOOD). Paraphrasing code is not a comment
-- **Plain language, define domain terms** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Every domain term explained on first use for a non-expert
-- **Justify inaction + state next-caller effect** -- empty branches: explain why nothing is correct. Shared state mutation: explain what the next invocation sees
+- **Tell consequences, not mechanics** -- `// Apply corrections` (BAD — restates code). `// Apply corrections — without this, the frontend shows stale failure badges on healthy endpoints` (GOOD — tells what breaks). Ask yourself: "what goes wrong if someone deletes this line?"
+- **Use the reader's voice** -- `// Read the cursor — "where did I stop last time?"`. Conversational. Quotes. Rhetorical questions. Like pair programming, not a technical manual
+- **Define every domain term like the reader has never seen it** -- `// Find postings that have no matching entry ("dangling postings")`. Not the reverse. Plain language first, jargon in parentheses
+- **Explain inaction and next-caller effects** -- `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`. `// Advance cursor so the next tick skips these rows`
+- **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`)
 - **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
 
 **Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue
