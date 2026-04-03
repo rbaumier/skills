@@ -14,6 +14,8 @@ description: Enforce engineering standards — readability, robustness, maintain
 - **State transitions: narrate the journey** -- `// Was warned but failure rate dropped below threshold — the endpoint recovered`. Past tense for what happened, present for the conclusion
 - **Inaction must be justified** -- every empty branch, no-op, early return: `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`
 - **Chain cause → effect across calls** -- `// Advance cursor so the next tick skips these rows`. `// Called by the validator crate via #[validate(schema(...))]`
+- **Explain limits, invariants, and boundaries** -- caps: why + what happens to leftovers (`// LIMIT avoids long queries — remaining rows picked up next tick`). Invariants: state + enforcement (`// singleton row, CHECK on PK`). Transaction boundaries: what's in TX vs post-commit (`// emails sent after commit`)
+- **Return values: what the caller must do** -- `// Returns max_completed_at — caller should pass to advance_cursor after committing`
 - **Module-level orientation** -- every module starts with "What it does" (1 sentence) + "How it works" (numbered overview)
 - **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`)
 - **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
