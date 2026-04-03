@@ -123,6 +123,16 @@
         { "text": "hard-cutover", "description": "Flags backward compatibility layers — hard cutover, no compat debt" },
         { "text": "pin-versions", "description": "Flags 'latest' for npm packages — pin all versions" }
       ]
+    },
+    {
+      "id": 10,
+      "name": "comment-quality",
+      "prompt": "Implement the `reconcileLedger` function. Here are the types and available query functions:\n\n```typescript\ninterface ReconciliationConfig {\n  gapToleranceDays: number;\n  materialityThreshold: number;\n  toleranceBps: number;\n}\n\ntype ReportStatus = 'clean' | 'corrected' | 'flagged';\n\ninterface ReconciliationReport {\n  status: ReportStatus;\n  adjustments: Correction[];\n  variance?: VarianceResult;\n}\n\n// Available query functions:\n// queries.findDanglingPostings(db, orgId, cutoff) - finds postings with no matching entry\n// queries.detectPhantomEntries(db, orgId, cutoff) - finds entries with no backing posting\n// queries.applyCorrections(db, orgId, corrections) - applies correction batch to ledger\n// queries.flagForManualReview(db, orgId, applied) - queues for human review\n\n// Available pure functions:\n// computeCutoff(gapToleranceDays) - returns Date\n// deriveCorrectionBatch(dangling, phantoms, materialityThreshold) - builds corrections\n// computeVariance(applied, toleranceBps) - returns { exceedsThreshold: boolean, ... }\n```\n\nThe function should:\n1. Compute a cutoff date from config\n2. Find dangling postings and phantom entries\n3. Derive corrections (skip if none needed, return 'clean')\n4. Apply corrections and compute variance\n5. If variance exceeds threshold, flag for manual review and return 'flagged'\n6. Otherwise return 'corrected'\n\nOutput ONLY the implementation. Do not write files.",
+      "expected_output": "Comments explain terms in plain language, not just paraphrase function names",
+      "assertions": [
+        { "text": "plain-language-steps", "description": "Step comments explain what happens in non-expert words, not just paraphrase the function name. '// Read watermark' is a FAIL. '// Read the cursor — where did we stop last time?' is a PASS" },
+        { "text": "explain-domain-terms", "description": "ALL domain/technical terms explained on first use: dangling postings, phantom entries, materiality threshold, tolerance bps (basis points), variance. If any term is used in a comment without being defined for a non-expert, it's a FAIL" }
+      ]
     }
   ]
 }
