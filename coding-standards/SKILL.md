@@ -60,8 +60,8 @@ Single source of truth. Make invalid states unrepresentable. Locality of behavio
 **Comment generously. When in doubt, comment.** A 5-line comment explaining a subtle algorithm is better than no comment. You need a reason NOT to comment, not a reason to comment.
 
 - **JSDoc on every export** -- plain block description on functions, types, constants when not self-evident. `@example` with call AND return (`// => value`) only on functions that return something. Not optional for functions
-- **Step-by-step for multi-stage logic in plain language** -- `// 1. Read the cursor — "where did I stop last time?"` not `// 1. Read watermark`. Every step must explain what it does in words a non-expert understands. Paraphrasing the function name is NOT a comment
-- **Explain every domain/technical term on first use** -- if a comment says "watermark", "delta", "suspect", "bucket", explain what it means in this context. `// Find suspects` -> `// Find subscriptions that might be unhealthy`
+- **Step-by-step in plain language, not function-name paraphrases** -- `// 1. Find postings that have no matching entry` not `// 1. Find dangling postings`. Paraphrasing the function name is NOT a comment
+- **Explain every domain/technical term on first use** -- if a comment says "materiality threshold", "basis points", "dangling posting", "phantom entry", explain what it means in this context. A reader who doesn't know the domain must understand every comment
 - **Why-comments on every non-obvious choice** -- why this approach, why not the obvious alternative, why this order
 - **Gotcha warnings + links** -- `// WARNING: this API returns null on weekends` / `// See: https://github.com/org/repo/issues/123` for workarounds
 
