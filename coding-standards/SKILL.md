@@ -5,12 +5,16 @@ description: Enforce engineering standards — readability, robustness, maintain
 
 ## Comments — first-class citizen
 
-**Write comments like a senior explaining the code to a junior sitting next to them.** Conversational, concrete, patient. The code shows WHAT happens — comments tell the story the code can't: why this exists, what breaks without it, what would go wrong if you changed it.
+**Write comments like a senior explaining the code to a junior sitting next to them.** Conversational, concrete, patient. The code shows WHAT — comments tell WHY, what breaks without it, and how things connect.
 
-- **Tell consequences, not mechanics** -- `// Apply corrections` (BAD — restates code). `// Apply corrections — without this, the frontend shows stale failure badges on healthy endpoints` (GOOD — tells what breaks). Ask yourself: "what goes wrong if someone deletes this line?"
-- **Use the reader's voice** -- `// Read the cursor — "where did I stop last time?"`. Conversational. Quotes. Rhetorical questions. Like pair programming, not a technical manual
-- **Define every domain term like the reader has never seen it** -- `// Find postings that have no matching entry ("dangling postings")`. Not the reverse. Plain language first, jargon in parentheses
-- **Explain inaction and next-caller effects** -- `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`. `// Advance cursor so the next tick skips these rows`
+- **Every comment answers "what goes wrong if I delete this?"** -- `// Apply corrections` (BAD). `// Apply corrections — without this, the frontend shows stale failure badges on healthy endpoints` (GOOD). If you can't name a consequence, the comment is a paraphrase
+- **Conversational, not mechanical** -- `// Read the cursor — "where did I stop last time?"`. Use the reader's inner voice. Quotes, rhetorical questions, like pair programming
+- **Every project/technical term gets a full explanation on first use** -- what it is, what it does, why it exists, how it connects to the rest. `// Advance the cursor (a singleton row that bookmarks the last processed delivery — the next tick reads it to know where to resume)`. Not just `// Advance the cursor`. Plain language first, jargon in parentheses: `// Find postings that have no matching entry ("dangling postings")`
+- **Structs/types: describe the role, not the fields** -- `// All the data the state machine needs to decide whether to warn, disable, or resolve` not `// Contains failure_percent, last_status, and retry config`
+- **State transitions: narrate the journey** -- `// Was warned but failure rate dropped below threshold — the endpoint recovered`. Past tense for what happened, present for the conclusion
+- **Inaction must be justified** -- every empty branch, no-op, early return: `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`
+- **Chain cause → effect across calls** -- `// Advance cursor so the next tick skips these rows`. `// Called by the validator crate via #[validate(schema(...))]`
+- **Module-level orientation** -- every module starts with "What it does" (1 sentence) + "How it works" (numbered overview)
 - **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`)
 - **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
 
