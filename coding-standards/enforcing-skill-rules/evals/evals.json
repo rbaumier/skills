@@ -131,7 +131,19 @@
       "expected_output": "Comments explain terms in plain language, not just paraphrase function names",
       "assertions": [
         { "text": "plain-language-steps", "description": "Step comments explain what happens in non-expert words, not just paraphrase the function name. '// Read watermark' is a FAIL. '// Read the cursor — where did we stop last time?' is a PASS" },
-        { "text": "explain-domain-terms", "description": "ALL domain/technical terms explained on first use: dangling postings, phantom entries, materiality threshold, tolerance bps (basis points), variance. If any term is used in a comment without being defined for a non-expert, it's a FAIL" }
+        { "text": "explain-domain-terms", "description": "ALL domain/technical terms explained on first use: dangling postings, phantom entries, materiality threshold, tolerance bps (basis points), variance. If any term is used in a comment without being defined for a non-expert, it's a FAIL" },
+        { "text": "why-not-what", "description": "Comments answer WHY (why this code exists, what breaks without it) not WHAT (what the next line does). '// Apply corrections to the ledger' = FAIL (restates code). '// Apply corrections — without this, the frontend shows stale failure badges' = PASS" },
+        { "text": "no-op-justified", "description": "When code deliberately does nothing (empty branch, early return for clean state), the comment explains why inaction is correct. 'if corrections empty return clean' without explanation = FAIL. 'Nothing to fix — ledger is already balanced' = PASS" },
+        { "text": "next-caller-contract", "description": "When code mutates shared/persistent state, the comment explains the effect on the next invocation. 'Advance cursor' = FAIL. 'Advance cursor so the next tick only looks at newer deliveries' = PASS" }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "comment-next-caller",
+      "prompt": "Implement this function:\n\n```typescript\n// Available:\n// queries.readCursor(db) -> Promise<Date> — reads the last-processed timestamp\n// queries.fetchNewEvents(db, since: Date, limit: number) -> Promise<Event[]>\n// queries.processEvents(db, events: Event[]) -> Promise<ProcessResult>\n// queries.advanceCursor(db, newTimestamp: Date) -> Promise<void>\n\nasync function tick(db: Database, config: { batchSize: number }): Promise<TickResult> {\n  // 1. Read cursor (last processed timestamp)\n  // 2. Fetch events newer than cursor (limited to batchSize)\n  // 3. Process them\n  // 4. If any processed, advance cursor to latest event timestamp\n  // 5. Return result with count processed\n}\n```\n\nOutput ONLY the implementation. Do not write files.",
+      "expected_output": "advanceCursor comment explains effect on next tick",
+      "assertions": [
+        { "text": "next-caller-contract-targeted", "description": "The comment on advanceCursor explains what the next call to tick() will see — e.g. 'so the next tick starts from here' or 'next invocation skips these events'. Just 'advance the cursor' = FAIL" }
       ]
     }
   ]
