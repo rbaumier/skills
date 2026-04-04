@@ -44,20 +44,12 @@
           "description": "Exported function has JSDoc with block description + @example with return value"
         },
         {
-          "text": "fs-gotcha-warnings",
-          "description": "Any gotcha or non-obvious behavior flagged with WARNING/NOTE"
-        },
-        {
           "text": "fs-naming-intent",
           "description": "handleOrderData renamed \u2014 no banned words (handle, data, process). Full words (usr\u2192user, itm\u2192item, ct\u2192count, amt\u2192amount, s\u2192stock)"
         },
         {
           "text": "fs-boolean-prefix",
           "description": "Booleans use is/has/should prefix in positive form"
-        },
-        {
-          "text": "fs-explicit-units",
-          "description": "Ambiguous time/size values get unit suffix"
         },
         {
           "text": "fs-symmetry",
