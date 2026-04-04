@@ -1,45 +1,28 @@
 {
+  "skill_name": "language-typescript",
   "evals": [
     {
-      "name": "opinionated-choices",
-      "prompt": "Refactor this TypeScript code to be cleaner and more idiomatic:\n\n```typescript\n// user-status.ts\nexport enum UserStatus {\n  Active = 'ACTIVE',\n  Inactive = 'INACTIVE',\n  Banned = 'BANNED'\n}\n\nexport default class UserService {\n  private status: any;\n\n  constructor(rawData: any) {\n    this.status = rawData.status as UserStatus;\n  }\n\n  async getUser(id: string): Promise<{ name: string; status: UserStatus }> {\n    const response = await fetch(`/api/users/${id}`);\n    const data = await response.json();\n    if (!data) throw new Error('User not found');\n    return data as { name: string; status: UserStatus };\n  }\n\n  interface Config {\n    timeout: number;\n    retries: number;\n  }\n\n  type ExtendedConfig = Config & { debug: boolean };\n\n  async connectToDb(config: ExtendedConfig): Promise<void> {\n    const conn = await openConnection(config);\n    try {\n      await conn.query('SELECT 1');\n    } finally {\n      await conn.close();\n    }\n  }\n}\n```",
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Refactor this TypeScript module. Fix everything wrong with it:\n\n```typescript\n// index.ts (barrel)\nexport { UserService } from './user-service';\nexport { UserType } from './types';\n\n// types.ts\nexport enum Status {\n  Active = 'active',\n  Inactive = 'inactive',\n}\n\nexport interface UserType {\n  id: string;\n  name: string;\n  status: Status;\n}\n\n// user-service.ts\nimport { UserType, Status } from './index';\nconst config = require('./config.json');\n\nexport default class UserService {\n  async getUser(id: string): Promise<UserType> {\n    const res = await fetch(`/api/users/${id}`);\n    if (!res.ok) throw new Error('User not found');\n    const data = JSON.parse(await res.text()) as UserType;\n    return data;\n  }\n\n  async updateUser(id: string, updates: { name?: string, status?: Status }): Promise<void> {\n    const env = process.env.API_URL;\n    const res = await fetch(`${env}/api/users/${id}`, {\n      method: 'PUT',\n      body: JSON.stringify(updates),\n    });\n    if (!res.ok) throw new Error('Update failed');\n  }\n\n  processUsers(users: any[]): any {\n    return users.filter(u => u.status === Status.Active).map(u => ({\n      ...u,\n      displayName: u.name.toUpperCase(),\n    }));\n  }\n\n  async cleanup(connection: DatabaseConnection): Promise<void> {\n    try {\n      await connection.beginTransaction();\n      await connection.query('DELETE FROM temp_users');\n      await connection.commit();\n    } catch (e) {\n      await connection.rollback();\n    } finally {\n      connection.release();\n    }\n  }\n}\n```\n\nOutput ONLY the refactored code (all files). Do not write files to disk.",
+      "expected_output": "Full refactoring applying all language-typescript rules",
       "assertions": [
-        "no-enum",
-        "no-default-export",
-        "no-any-no-as",
-        "errors-as-values",
-        "type-over-interface",
-        "using-disposable"
-      ]
-    },
-    {
-      "name": "tool-choices",
-      "prompt": "Review this TypeScript project setup and suggest improvements:\n\n```typescript\n// env.ts\nconst API_URL = process.env.API_URL!;\nconst PORT = parseInt(process.env.PORT || '3000');\nconst SECRET = process.env.SECRET as string;\n\nexport { API_URL, PORT, SECRET };\n```\n\n```typescript\n// api-client.ts\nimport axios from 'axios';\n\ntype User = { id: string; name: string; email: string };\ntype UserId = string;\n\nasync function fetchUser(id: UserId): Promise<User> {\n  const { data } = await axios.get<User>(`/api/users/${id}`);\n  return data;\n}\n```\n\n```json\n// package.json (scripts section)\n{\n  \"scripts\": {\n    \"typecheck\": \"tsc --noEmit\",\n    \"build\": \"tsc\"\n  }\n}\n```\n\nThe project has an OpenAPI spec at `./openapi.yaml` that defines the `/api/users/{id}` endpoint. The `UserId` type should be distinguishable from regular strings at the type level.",
-      "assertions": [
-        "env-validation",
-        "tsgo-typecheck",
-        "openapi-fetch",
-        "zod-brand"
-      ]
-    },
-    {
-      "name": "style-and-conventions",
-      "prompt": "Refactor this TypeScript code to follow best practices:\n\n```typescript\n// UserProfileCard.ts\nimport { UserProfile } from './types';\n\n/**\n * Formats a user profile for display\n * @param profile - The user profile object\n * @param includeEmail - Whether to include email\n * @returns Formatted profile string\n */\nexport function formatProfile(profile: { name: string; email: string; age: number; role: 'admin' | 'user' }, includeEmail: boolean): string {\n  return `${profile.name} (${profile.age})${includeEmail ? ` - ${profile.email}` : ''}`;\n}\n\n/**\n * Parses raw API data into a user profile\n * @param data - Raw data from the API\n * @returns The parsed profile\n */\nexport function parseApiResponse(data: any): { name: string; email: string } {\n  return { name: data.name, email: data.email };\n}\n\nconst userIds = ['a1', 'b2', 'c3', 'a1', 'd4', 'b2', 'e5'];\nexport function isKnownUser(id: string): boolean {\n  return userIds.includes(id);\n}\n\nexport function loadConfig(): Record<string, unknown> {\n  const raw = fs.readFileSync('config.json', 'utf-8');\n  const parsed = JSON.parse(raw) as Record<string, unknown>;\n  return parsed;\n}\n```\n\nThe `isKnownUser` function is called thousands of times per request in a hot path.",
-      "assertions": [
-        "kebab-case-files",
-        "jsdoc-style",
-        "parse-at-boundaries",
-        "named-param-types",
-        "esm-only",
-        "set-over-array-includes",
-        "validate-json-parse"
-      ]
-    },
-    {
-      "name": "post-modification",
-      "prompt": "I've just refactored the `auth.ts` file to use `satisfies` instead of `as`. The file compiles. What should I do before committing?",
-      "assertions": [
-        "audit-after-modify"
+        { "text": "no-enum", "description": "Status enum replaced with `as const` + `typeof` pattern" },
+        { "text": "no-default-export", "description": "default export replaced with named export" },
+        { "text": "no-any", "description": "any[] and any return type replaced with proper types (unknown + type guards, or explicit interfaces)" },
+        { "text": "errors-as-values", "description": "throw replaced with Result return type for expected failures (getUser, updateUser)" },
+        { "text": "type-not-interface", "description": "Uses `type` by default, `interface` only if extending" },
+        { "text": "using-for-cleanup", "description": "cleanup function uses `using`/`await using` instead of try/finally for resource management" },
+        { "text": "no-barrel", "description": "index.ts barrel file eliminated — imports go directly to source files" },
+        { "text": "kebab-case-files", "description": "Files named in kebab-case (user-service.ts not UserService.ts)" },
+        { "text": "jsdoc-with-example", "description": "Exported functions have JSDoc with plain description + @example with return value" },
+        { "text": "file-order", "description": "File follows: imports → types → constants → functions" },
+        { "text": "parse-at-boundary", "description": "JSON.parse output validated with type guard or schema, not cast with `as`" },
+        { "text": "esm-only", "description": "require() replaced with ESM import" },
+        { "text": "named-param-types", "description": "Inline object type `{ name?: string, status?: Status }` extracted to named type" },
+        { "text": "set-over-array", "description": "If filtering by status set, uses Set.has() (or N/A if not applicable)" },
+        { "text": "validate-json-parse", "description": "JSON.parse validated with type guard or Zod, never cast with `as`" },
+        { "text": "no-as-cast", "description": "Zero `as` casts (except as const)" }
       ]
     }
   ]

@@ -1,63 +1,28 @@
 {
+  "skill_name": "language-rust",
   "evals": [
     {
-      "name": "types-and-ownership",
-      "prompt": "Refactor this Rust code to be more idiomatic and safe:\n\n```rust\nuse std::collections::HashMap;\nuse std::sync::{Arc, Mutex};\n\n// A user email type\nfn send_email(email: &String, body: &String) {\n    println!(\"Sending to {}: {}\", email, body);\n}\n\n// Config builder\nstruct Config {\n    host: String,\n    port: u16,\n    debug: bool,\n}\n\nimpl Config {\n    fn new() -> Config {\n        Config { host: String::new(), port: 0, debug: false }\n    }\n    fn set_host(&mut self, host: String) {\n        self.host = host;\n    }\n    fn set_port(&mut self, port: u16) {\n        self.port = port;\n    }\n}\n\n// Connection state machine\nenum ConnState {\n    Disconnected,\n    Connected,\n    Authenticated,\n}\n\nstruct Connection {\n    state: ConnState,\n    token: Option<String>,\n}\n\nimpl Connection {\n    fn authenticate(&mut self, token: String) {\n        // Can be called in any state - bug!\n        self.state = ConnState::Authenticated;\n        self.token = Some(token);\n    }\n}\n\n// Tree node with parent back-reference\nstruct TreeNode {\n    value: i32,\n    children: Vec<Arc<Mutex<TreeNode>>>,\n    parent: Option<Arc<Mutex<TreeNode>>>,  // reference cycle!\n}\n\n// Small coordinate type\n#[derive(Debug)]\nstruct Point {\n    x: f64,\n    y: f64,\n}\n\nfn distance(p1: &Point, p2: &Point) -> f64 {\n    ((p1.x - p2.x).powi(2) + (p1.y - p2.y).powi(2)).sqrt()\n}\n\n// Large enum\nenum Expr {\n    Literal(i64),\n    BinaryOp { op: String, left: Expr, right: Expr },  // recursive, huge\n    Block(Vec<Expr>),\n}\n\n// Trait that external crates can implement\npub trait Plugin {\n    fn name(&self) -> &str;\n    fn execute(&self);\n}\n```",
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Refactor this Rust code. Fix everything wrong with it:\n\n```rust\nuse std::sync::{Arc, Mutex};\nuse lazy_static::lazy_static;\nuse std::collections::HashMap;\n\nlazy_static! {\n    static ref CONFIG: HashMap<String, String> = load_config();\n}\n\n#[derive(Debug)]\npub enum NodeKind {\n    Leaf(String),\n    Branch(Vec<Arc<Mutex<Node>>>),\n    Metadata(HashMap<String, String>),  // often empty but same size as Branch\n}\n\n#[derive(Debug)]\npub struct Node {\n    pub kind: NodeKind,\n    pub parent: Option<Arc<Mutex<Node>>>,\n    pub cache: Mutex<Option<String>>,\n}\n\npub fn normalize_name(name: &String) -> String {\n    if name.contains('-') {\n        name.replace('-', \"_\")\n    } else {\n        name.to_owned()\n    }\n}\n\npub async fn fetch_and_process(urls: Vec<String>) -> Vec<String> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    for url in &urls {\n        let res = reqwest::get(url).await.unwrap();\n        let body = res.text().await.unwrap();\n        results.lock().unwrap().push(body);\n    }\n    let guard = results.lock().unwrap();\n    guard.clone()\n}\n\npub fn process_items(items: &Vec<Item>) -> Vec<ProcessedItem> {\n    let mut result = Vec::new();\n    for item in items {\n        result.push(ProcessedItem {\n            name: item.name.clone(),\n            value: item.value * 2,\n        });\n    }\n    result\n}\n\nunsafe fn read_raw_buffer(ptr: *const u8, len: usize) -> Vec<u8> {\n    std::slice::from_raw_parts(ptr, len).to_vec()\n}\n\npub fn lookup(map: &HashMap<String, i32>, key: &str) -> i32 {\n    *map.get(key).unwrap()\n}\n```\n\nOutput ONLY the refactored code. Do not write files to disk.",
+      "expected_output": "Full refactoring applying all language-rust rules",
       "assertions": [
-        "parse-dont-validate",
-        "typestate-pattern",
-        "accept-slices",
-        "impl-trait",
-        "builder-pattern",
-        "sealed-traits",
-        "copy-small-types",
-        "cow-for-reads",
-        "interior-mutability",
-        "weak-back-refs",
-        "arena-allocators",
-        "box-large-variants"
-      ]
-    },
-    {
-      "name": "errors-and-concurrency",
-      "prompt": "Refactor this Rust application code for better error handling and async patterns:\n\n```rust\nuse std::sync::{Arc, Mutex};\nuse tokio::fs;\n\n// Library error type\n#[derive(Debug)]\nenum DbError {\n    Connection(String),\n    Query(String),\n    NotFound,\n}\n\nimpl std::fmt::Display for DbError {\n    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {\n        match self {\n            DbError::Connection(s) => write!(f, \"connection: {}\", s),\n            DbError::Query(s) => write!(f, \"query: {}\", s),\n            DbError::NotFound => write!(f, \"not found\"),\n        }\n    }\n}\n\nimpl std::error::Error for DbError {}\n\n// Application that uses the library\nasync fn load_user(db: &Database, id: u64) -> Result<User, Box<dyn std::error::Error>> {\n    let user = db.query_user(id)?;  // no context about what we were doing\n    let config = fs::read_to_string(\"config.toml\").await?;\n    let settings = parse_config(&config)?;\n    Ok(user)\n}\n\nasync fn process_batch(items: Vec<Item>) -> Result<(), Box<dyn std::error::Error>> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    \n    for item in &items {\n        let results = results.clone();\n        let computed = heavy_computation(item);  // blocking CPU work in async!\n        results.lock().unwrap().push(computed);  // unwrap in production!\n    }\n\n    let guard = results.lock().unwrap();\n    // Do something with guard\n    some_async_operation().await;  // holding MutexGuard across .await!\n    println!(\"Processed {} items\", guard.len());  // println in async code\n    \n    Ok(())\n}\n\nfn maybe_fail() -> Result<(), DbError> {\n    let _ = do_something_important();  // silently ignoring Result\n    Ok(())\n}\n```",
-      "assertions": [
-        "thiserror-vs-anyhow",
-        "context-errors",
-        "no-unwrap-production",
-        "explicit-ignore",
-        "no-blocking-async",
-        "send-sync-awareness",
-        "minimize-guard-scope",
-        "channels-over-mutex",
-        "cancellation-safety",
-        "tracing-not-println"
-      ]
-    },
-    {
-      "name": "performance",
-      "prompt": "Review this Rust code for performance issues and suggest improvements:\n\n```rust\nuse std::collections::{HashMap, LinkedList};\n\nfn process_ids(ids: &[u64]) -> Vec<String> {\n    let mut results = Vec::new();\n    for id in ids {\n        results.push(format!(\"id-{}\", id));\n    }\n    results\n}\n\nfn build_index(entries: &[(String, u64)]) -> HashMap<String, u64> {\n    let mut map = HashMap::new();\n    for (key, val) in entries {\n        map.insert(key.clone(), *val);\n    }\n    map\n}\n\nstruct EventQueue {\n    events: LinkedList<Event>,\n}\n\nimpl EventQueue {\n    fn push(&mut self, event: Event) {\n        self.events.push_back(event);\n    }\n    fn pop(&mut self) -> Option<Event> {\n        self.events.pop_front()\n    }\n}\n\ntrait Processor {\n    fn process(&self, data: &[u8]) -> Vec<u8>;\n}\n\n// Hot path — called millions of times\nfn run_pipeline(processors: &[Box<dyn Processor>], data: &[u8]) -> Vec<u8> {\n    let mut result = data.to_vec();\n    for p in processors {\n        result = p.process(&result);\n    }\n    result\n}\n\n// Cargo.toml\n// [profile.release]\n// opt-level = 3\n```\n\nThe `process_ids` function is called with slices of 10,000+ elements. The `build_index` function processes datasets of 100k+ entries. The `run_pipeline` is the hot inner loop. The `EventQueue` handles a FIFO queue of events.",
-      "assertions": [
-        "pre-allocate",
-        "iterator-chains",
-        "vec-over-linkedlist",
-        "monomorphization-hot-paths",
-        "release-profile",
-        "fast-hashers"
-      ]
-    },
-    {
-      "name": "safety-and-modern",
-      "prompt": "Refactor this Rust code to use modern idioms and fix unsafe issues:\n\n```rust\nuse lazy_static::lazy_static;\nuse std::sync::Mutex;\nuse std::path::PathBuf;\n\nlazy_static! {\n    static ref GLOBAL_CONFIG: Mutex<Config> = Mutex::new(Config::default());\n}\n\nstruct Config {\n    name: String,\n    values: Vec<i32>,\n}\n\nimpl Default for Config {\n    fn default() -> Self {\n        Config { name: String::new(), values: Vec::new() }\n    }\n}\n\n// Fixed-size matrix\nstruct Matrix {\n    data: Vec<Vec<f64>>,\n    rows: usize,\n    cols: usize,\n}\n\nimpl Matrix {\n    fn new(rows: usize, cols: usize) -> Self {\n        Matrix {\n            data: vec![vec![0.0; cols]; rows],\n            rows,\n            cols,\n        }\n    }\n}\n\n// Filesystem helper\nfn read_config(path: PathBuf) -> std::io::Result<String> {\n    std::fs::read_to_string(path)\n}\n\nfn process_optional(a: Option<i32>, b: Option<i32>) -> Option<i32> {\n    match a {\n        Some(x) => match b {\n            Some(y) => Some(x + y),\n            None => None,\n        },\n        None => None,\n    }\n}\n\n// FFI bindings\nextern \"C\" {\n    fn external_init(ptr: *mut u8, len: usize) -> i32;\n    fn external_process(ptr: *const u8, len: usize) -> i32;\n}\n\npub fn init_library(data: &mut [u8]) -> Result<(), String> {\n    unsafe {\n        let ret = external_init(data.as_mut_ptr(), data.len());\n        if ret != 0 {\n            return Err(format!(\"init failed: {}\", ret));\n        }\n    }\n    Ok(())\n}\n\npub fn process_data(data: &[u8]) -> Result<(), String> {\n    unsafe {\n        let ret = external_process(data.as_ptr(), data.len());\n        if ret != 0 {\n            return Err(format!(\"process failed: {}\", ret));\n        }\n    }\n    Ok(())\n}\n```",
-      "assertions": [
-        "oncelock-lazylock",
-        "const-generics",
-        "let-chains",
-        "asref-path",
-        "safety-comments",
-        "nonnull-maybeuninit",
-        "miri-test",
-        "safe-wrappers"
+        { "text": "newtype-parse", "description": "Uses newtypes or parse-don't-validate where appropriate" },
+        { "text": "accept-str-not-string", "description": "&str instead of &String, &[T] instead of &Vec<T>" },
+        { "text": "cow-for-normalize", "description": "normalize_name returns Cow<'_, str> not String (sometimes-modify pattern)" },
+        { "text": "no-mutex-single-thread", "description": "Node.cache uses Cell/RefCell not Mutex (single-threaded interior mutability)" },
+        { "text": "arena-not-arc-mutex", "description": "Node tree uses arena/indices not Arc<Mutex<Node>>. Parent is Weak or index, not Arc" },
+        { "text": "box-large-variant", "description": "Large enum variant (Branch or Metadata) boxed to keep enum size small" },
+        { "text": "thiserror-or-anyhow", "description": "Errors use thiserror/anyhow, not bare unwrap" },
+        { "text": "context-on-errors", "description": ".context() or .with_context() used to explain why" },
+        { "text": "no-unwrap-production", "description": "Zero unwrap()/expect() — uses ? or unwrap_or_else" },
+        { "text": "no-block-async", "description": "CPU work in fetch_and_process offloaded or uses proper async patterns" },
+        { "text": "channels-not-arc-mutex", "description": "Results collected via channels (mpsc) not Arc<Mutex<Vec>>" },
+        { "text": "pre-allocate", "description": "Vec::with_capacity used when size known" },
+        { "text": "iterator-chains", "description": "process_items uses iterator chain (map/collect) not manual push loop" },
+        { "text": "unsafe-safety-comment", "description": "unsafe block has // SAFETY: comment justifying invariants" },
+        { "text": "oncelock-not-lazy-static", "description": "OnceLock/LazyLock used instead of lazy_static" },
+        { "text": "fast-hasher", "description": "HashMap with integer keys uses ahash/fxhash suggestion or note" }
       ]
     }
   ]
