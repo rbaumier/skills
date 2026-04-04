@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all motion design issues:\n\n```tsx\nimport React, { useState, useEffect } from 'react';\nimport { motion, AnimatePresence } from 'framer-motion';\n\nfunction Dashboard() {\n  const [showPanel, setShowPanel] = useState(false);\n  const [activeTab, setActiveTab] = useState('home');\n  const [notifications, setNotifications] = useState([]);\n\n  return (\n    <div>\n      {showPanel && (\n        <div className=\"sidebar\" style={{ width: 300 }}>\n          <h2>Settings</h2>\n        </div>\n      )}\n\n      {activeTab === 'home' ? <HomeContent /> : <SettingsContent />}\n\n      <div className=\"grid\">\n        {items.map((item, i) => (\n          <motion.div\n            key={item.id}\n            initial={{ opacity: 0, scale: 0 }}\n            animate={{ opacity: 1, scale: 1 }}\n            transition={{ duration: 1.5, ease: 'linear', delay: i * 0.2 }}\n          >\n            <Card item={item} />\n          </motion.div>\n        ))}\n      </div>\n\n      <motion.div\n        className=\"tooltip\"\n        initial={{ opacity: 0, y: 10 }}\n        animate={{ opacity: 1, y: 0 }}\n        transition={{ duration: 0.5, delay: 0.3 }}\n      >\n        Help text\n      </motion.div>\n\n      <button\n        onClick={() => setShowPanel(!showPanel)}\n        style={{ transition: 'all 0.5s ease' }}\n      >\n        Toggle\n      </button>\n\n      {isLoading ? <Spinner /> : <DataTable data={data} />}\n\n      {notifications.map(n => (\n        <motion.div\n          key={n.id}\n          animate={{ width: 300, height: 'auto' }}\n          transition={{ duration: 0.3 }}\n          style={{ willChange: 'width, height, transform, opacity' }}\n        >\n          {n.message}\n        </motion.div>\n      ))}\n\n      <motion.div\n        animate={{ rotate: 360 }}\n        transition={{ repeat: Infinity, duration: 2 }}\n        className=\"decorative-spinner\"\n      />\n\n      <button\n        onKeyDown={(e) => {\n          if (e.key === 'k') {\n            // Animates the search modal open\n            setSearchOpen(true);\n          }\n        }}\n      >\n        Search (Cmd+K)\n      </button>\n    </div>\n  );\n}\n```\n\nSaaS dashboard. Output fixed code + list every issue.",
+      "prompt": "Fix all motion design issues:\n\n```tsx\nimport React, { useState, useEffect } from 'react';\nimport { motion, AnimatePresence } from 'framer-motion';\n\nfunction Dashboard() {\n  const [showPanel, setShowPanel] = useState(false);\n  const [activeTab, setActiveTab] = useState('home');\n  const [notifications, setNotifications] = useState([]);\n  const [expandedFaq, setExpandedFaq] = useState(null);\n  const [menuOpen, setMenuOpen] = useState(false);\n\n  return (\n    <div>\n      {showPanel && (\n        <div className=\"sidebar\" style={{ width: 300 }}>\n          <h2>Settings</h2>\n        </div>\n      )}\n\n      {activeTab === 'home' ? <HomeContent /> : <SettingsContent />}\n\n      <div className=\"grid\">\n        {items.map((item, i) => (\n          <motion.div\n            key={item.id}\n            initial={{ opacity: 0, scale: 0 }}\n            animate={{ opacity: 1, scale: 1 }}\n            transition={{ duration: 1.5, ease: 'linear', delay: i * 0.2 }}\n          >\n            <Card item={item} />\n          </motion.div>\n        ))}\n      </div>\n\n      <motion.div\n        className=\"tooltip\"\n        initial={{ opacity: 0, y: 10 }}\n        animate={{ opacity: 1, y: 0 }}\n        transition={{ duration: 0.5, delay: 0.3 }}\n      >\n        Help text\n      </motion.div>\n\n      <button\n        onClick={() => setShowPanel(!showPanel)}\n        style={{ transition: 'all 0.5s ease' }}\n      >\n        Toggle\n      </button>\n\n      {isLoading ? <Spinner /> : <DataTable data={data} />}\n\n      {notifications.map(n => (\n        <motion.div\n          key={n.id}\n          animate={{ width: 300, height: 'auto' }}\n          transition={{ duration: 0.3 }}\n          style={{ willChange: 'width, height, transform, opacity' }}\n        >\n          {n.message}\n        </motion.div>\n      ))}\n\n      <motion.div\n        animate={{ rotate: 360 }}\n        transition={{ repeat: Infinity, duration: 2 }}\n        className=\"decorative-spinner\"\n      />\n\n      <button\n        onKeyDown={(e) => {\n          if (e.key === 'k') {\n            setSearchOpen(true);\n          }\n        }}\n      >\n        Search (Cmd+K)\n      </button>\n\n      {/* --- Trap: exit animation same prominence as enter --- */}\n      <AnimatePresence>\n        {menuOpen && (\n          <motion.div\n            className=\"dropdown-menu\"\n            initial={{ opacity: 0, y: -12, filter: 'blur(4px)' }}\n            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}\n            exit={{ opacity: 0, y: -12, filter: 'blur(4px)' }}\n            transition={{ duration: 0.3 }}\n          >\n            <MenuItem label=\"Profile\" />\n            <MenuItem label=\"Logout\" />\n          </motion.div>\n        )}\n      </AnimatePresence>\n\n      {/* --- Trap: default CSS ease instead of custom Bezier --- */}\n      <motion.div\n        className=\"slide-in-banner\"\n        initial={{ opacity: 0, x: -20 }}\n        animate={{ opacity: 1, x: 0 }}\n        transition={{ duration: 0.3, ease: 'ease' }}\n      >\n        New feature available!\n      </motion.div>\n\n      {/* --- Trap: sidebar reveal animates width instead of clip-path --- */}\n      <motion.nav\n        className=\"mobile-nav\"\n        animate={{ width: menuOpen ? 280 : 0 }}\n        transition={{ duration: 0.3 }}\n      >\n        <NavLinks />\n      </motion.nav>\n\n      {/* --- Trap: vestibular trigger — excessive zoom on scroll --- */}\n      <motion.section\n        className=\"hero\"\n        style={{ scale: scrollY }}\n        whileInView={{ scale: [0.5, 1.3] }}\n        transition={{ duration: 1.5 }}\n      >\n        <h1>Welcome</h1>\n      </motion.section>\n\n      {/* --- Trap: non-interruptible keyframe animation for interactive element --- */}\n      <motion.div\n        className=\"sliding-drawer\"\n        animate={showPanel ? 'open' : 'closed'}\n        variants={{\n          open: { x: 0 },\n          closed: { x: -300 },\n        }}\n        transition={{ duration: 0.5, ease: 'easeInOut' }}\n        style={{ animation: 'slideIn 0.5s forwards' }}\n      >\n        <DrawerContent />\n      </motion.div>\n\n      {/* --- Trap: border on card where background varies --- */}\n      <div\n        className=\"feature-card\"\n        style={{\n          border: '1px solid #e2e8f0',\n          background: 'var(--card-bg)',\n        }}\n      >\n        <h3>Feature</h3>\n        <p>Description text</p>\n      </div>\n\n      {/* --- Trap: expandable FAQ — display toggle, no height animation --- */}\n      <div className=\"faq-section\">\n        {faqs.map(faq => (\n          <div key={faq.id}>\n            <button onClick={() => setExpandedFaq(faq.id)}>\n              {faq.question}\n            </button>\n            {expandedFaq === faq.id && (\n              <div className=\"faq-answer\">\n                {faq.answer}\n              </div>\n            )}\n          </div>\n        ))}\n      </div>\n\n      {/* --- Trap: CSS keyframe for hover instead of transition --- */}\n      <style>{`\n        .action-btn:hover {\n          animation: hoverPulse 0.3s forwards;\n        }\n        @keyframes hoverPulse {\n          0% { transform: scale(1); }\n          50% { transform: scale(1.05); }\n          100% { transform: scale(1.02); }\n        }\n      `}</style>\n      <button className=\"action-btn\">Take Action</button>\n    </div>\n  );\n}\n```\n\nSaaS dashboard. Output fixed code + list every issue.",
       "expected_output": "Full motion design review applying all ui-animations rules",
       "assertions": [
         {
@@ -96,6 +96,46 @@
           "id": "tooltip-first-delayed",
           "trap": "Tooltip always has same 300ms delay",
           "description": "Tooltips: first delayed + animated, subsequent instant"
+        },
+        {
+          "id": "exit-subtler-than-enter",
+          "trap": "Exit animation mirrors enter with same translateY(-12) — should be subtler (smaller translateY, e.g. -4 to -6)",
+          "description": "Exit animations subtler than enters (smaller translateY, same blur/opacity)"
+        },
+        {
+          "id": "custom-bezier-not-default-ease",
+          "trap": "ease: 'ease' (default CSS easing) on slide-in-banner instead of custom Bézier curve",
+          "description": "Custom Bézier curves instead of built-in easing keywords (Emil's rule)"
+        },
+        {
+          "id": "clip-path-for-reveals",
+          "trap": "Mobile nav animates width (layout property) instead of using clip-path for reveal",
+          "description": "Clip-path used for reveals instead of width/height animation"
+        },
+        {
+          "id": "no-vestibular-triggers",
+          "trap": "Hero section scales from 0.5 to 1.3 on scroll — excessive zoom is a vestibular trigger",
+          "description": "No vestibular triggers (excessive zoom, spin, parallax)"
+        },
+        {
+          "id": "animations-interruptible",
+          "trap": "Sliding drawer uses CSS keyframe animation (slideIn) which cannot be interrupted mid-animation",
+          "description": "Animations are interruptible (can change mid-animation)"
+        },
+        {
+          "id": "shadows-not-borders",
+          "trap": "Feature card uses border: 1px solid on variable background instead of box-shadow",
+          "description": "Shadows instead of borders where background varies"
+        },
+        {
+          "id": "expandable-animate-height",
+          "trap": "FAQ answer appears/disappears instantly via conditional render — no height animation",
+          "description": "Expandable sections animate height, not just show/hide"
+        },
+        {
+          "id": "css-transitions-not-keyframes-for-interruptible",
+          "trap": "Hover effect uses @keyframes animation instead of CSS transition — not interruptible",
+          "description": "CSS transitions (not keyframes) for interruptible animations (Emil's rule)"
         }
       ]
     }

@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\n// app/dashboard/page.tsx\nimport { cookies } from 'next/headers';\nimport { DashboardClient } from './dashboard-client';\n\nexport default async function DashboardPage() {\n  const session = cookies().get('session');\n  const user = await fetchUser(session?.value);\n  const orders = await fetchOrders(user.id);\n  const analytics = await fetchAnalytics(user.id);\n\n  return <DashboardClient user={user} orders={orders} analytics={analytics} />;\n}\n\nasync function fetchUser(sessionId: string) {\n  return db.user.find(sessionId);\n}\n\nasync function fetchAnalytics(userId: string) {\n  return db.analytics.find(userId);\n}\n\n// dashboard-client.tsx\n'use client';\nimport React, { useState, useEffect, useMemo, useCallback } from 'react';\n\nexport function DashboardClient({ user, orders, analytics }) {\n  const [selectedTab, setSelectedTab] = useState('orders');\n  const [loading, setLoading] = useState(false);\n  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });\n\n  useEffect(() => {\n    // runs like componentDidMount\n    initDashboard();\n  }, []);\n\n  useEffect(() => {\n    const handler = (e) => setMousePos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('mousemove', handler);\n    return () => window.removeEventListener('mousemove', handler);\n  }, []);\n\n  const [totalRevenue, setTotalRevenue] = useState(0);\n  useEffect(() => {\n    setTotalRevenue(orders.reduce((sum, o) => sum + o.total, 0));\n  }, [orders]);\n\n  const tabLabel = useMemo(() => selectedTab.toUpperCase(), [selectedTab]);\n\n  useEffect(() => {\n    trackPageView(user);\n  }, [user]);\n\n  const handleExport = async () => {\n    setLoading(true);\n    try {\n      const data = await exportDashboard(user.id);\n      download(data);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n\n  const categories = ['electronics', 'clothing', 'food'];\n  const enrichedOrders = orders.map(order => ({\n    ...order,\n    category: categories.find(c => c === order.categoryId),\n  }));\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\n  const uniqueTags = orders\n    .flatMap(o => o.tags)\n    .filter((v, i, a) => a.indexOf(v) === i);\n\n  const activeHighValue = orders\n    .filter(o => o.status === 'active')\n    .map(o => o.total)\n    .filter(t => t > 100)\n    .reduce((sum, t) => sum + t, 0);\n\n  return (\n    <div>\n      <h1>{tabLabel}</h1>\n      {loading && <Spinner />}\n      <button onClick={handleExport}>Export</button>\n      {orders.map((order, i) => (\n        <div key={i}>\n          {order.isAdmin && <AdminPanel />}\n          <span>{order.name}</span>\n        </div>\n      ))}\n    </div>\n  );\n}\n\nimport HeavyModal from './heavy-modal';\n\nexport function ModalTrigger() {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Open</button>\n      {open && <HeavyModal />}\n    </>\n  );\n}\n```\n\nOutput fixed code + list every issue.",
+      "prompt": "Fix all issues:\n\n```tsx\n// app/dashboard/page.tsx\nimport { cookies } from 'next/headers';\nimport { DashboardClient } from './dashboard-client';\n\nexport default async function DashboardPage() {\n  const session = cookies().get('session');\n  const user = await fetchUser(session?.value);\n  const orders = await fetchOrders(user.id);\n  const analytics = await fetchAnalytics(user.id);\n\n  return <DashboardClient user={user} orders={orders} analytics={analytics} />;\n}\n\nasync function fetchUser(sessionId: string) {\n  return db.user.find(sessionId);\n}\n\nasync function fetchAnalytics(userId: string) {\n  return db.analytics.find(userId);\n}\n\n// dashboard-client.tsx\n'use client';\nimport React, { useState, useEffect, useMemo, useCallback } from 'react';\nimport { formatDate, parseQuery, debounce } from '@/utils';\nimport { Chart } from '@/components';\n\nexport function DashboardClient({ user, orders, analytics }) {\n  const [selectedTab, setSelectedTab] = useState('orders');\n  const [loading, setLoading] = useState(false);\n  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });\n\n  useEffect(() => {\n    // runs like componentDidMount\n    initDashboard();\n  }, []);\n\n  useEffect(() => {\n    const handler = (e) => setMousePos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('mousemove', handler);\n    return () => window.removeEventListener('mousemove', handler);\n  }, []);\n\n  const [totalRevenue, setTotalRevenue] = useState(0);\n  useEffect(() => {\n    setTotalRevenue(orders.reduce((sum, o) => sum + o.total, 0));\n  }, [orders]);\n\n  const tabLabel = useMemo(() => selectedTab.toUpperCase(), [selectedTab]);\n\n  useEffect(() => {\n    trackPageView(user);\n  }, [user]);\n\n  const handleExport = async () => {\n    setLoading(true);\n    try {\n      const data = await exportDashboard(user.id);\n      download(data);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n\n  const categories = ['electronics', 'clothing', 'food'];\n  const enrichedOrders = orders.map(order => ({\n    ...order,\n    category: categories.find(c => c === order.categoryId),\n  }));\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\n  const uniqueTags = orders\n    .flatMap(o => o.tags)\n    .filter((v, i, a) => a.indexOf(v) === i);\n\n  const activeHighValue = orders\n    .filter(o => o.status === 'active')\n    .map(o => o.total)\n    .filter(t => t > 100)\n    .reduce((sum, t) => sum + t, 0);\n\n  // Toggle handler updates count directly instead of functional setState\n  const [count, setCount] = useState(0);\n  const increment = useCallback(() => setCount(count + 1), [count]);\n\n  // Interaction logic in effect instead of event handler\n  const [searchQuery, setSearchQuery] = useState('');\n  useEffect(() => {\n    if (searchQuery) {\n      fetch(`/api/search?q=${searchQuery}`).then(r => r.json()).then(setResults);\n    }\n  }, [searchQuery]);\n\n  // Non-primitive default prop recreated every render\n  const OrderList = ({ filters = { status: 'active', sort: 'date' } }) => {\n    return <div>{JSON.stringify(filters)}</div>;\n  };\n\n  // Subscribing to full store object instead of derived boolean\n  const store = useStore(state => state);\n  const isAdmin = store.role === 'admin';\n\n  // Expensive subtree not memoized\n  const renderChart = () => {\n    return <Chart data={analytics.timeSeries} config={analytics.chartConfig} />;\n  };\n\n  // Callback in effect dep recreated every render\n  const onMessage = useCallback((msg) => {\n    console.log(user.name, msg);\n  }, [user.name]);\n  useEffect(() => {\n    socket.on('message', onMessage);\n    return () => socket.off('message', onMessage);\n  }, [onMessage]);\n\n  // Reading localStorage on every render\n  const theme = localStorage.getItem('theme') || 'light';\n  const lang = sessionStorage.getItem('lang') || 'en';\n\n  // Static JSX recreated every render inside component\n  const footer = (\n    <footer>\n      <p>© 2024 Dashboard Inc. All rights reserved.</p>\n      <a href=\"/privacy\">Privacy Policy</a>\n    </footer>\n  );\n\n  // Mutating array with sort instead of toSorted\n  const sortedOrders = [...orders].sort((a, b) => a.date - b.date);\n  const reversedOrders = [...orders].reverse();\n\n  return (\n    <div>\n      <h1>{tabLabel}</h1>\n      {loading && <Spinner />}\n      <button onClick={handleExport}>Export</button>\n      {orders.map((order, i) => (\n        <div key={i}>\n          {order.isAdmin && <AdminPanel />}\n          <span>{order.name}</span>\n        </div>\n      ))}\n      {renderChart()}\n      {footer}\n    </div>\n  );\n}\n\nimport HeavyModal from './heavy-modal';\n\nexport function ModalTrigger() {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Open</button>\n      {open && <HeavyModal />}\n    </>\n  );\n}\n\n// app/products/page.tsx — no Suspense boundaries, no streaming\nexport default async function ProductsPage() {\n  const products = await fetchProducts();\n  const reviews = await fetchReviews();\n  return (\n    <div>\n      <ProductList products={products} />\n      <ReviewSection reviews={reviews} />\n    </div>\n  );\n}\n\n// app/layout.tsx — third-party script loaded eagerly\nimport Script from 'next/script';\n\nexport default function RootLayout({ children }) {\n  return (\n    <html>\n      <head>\n        <Script src=\"https://analytics.example.com/tracker.js\" />\n      </head>\n      <body>{children}</body>\n    </html>\n  );\n}\n\n// app/feed/page.tsx — client component fetches same data multiple times\n'use client';\nimport { useEffect, useState } from 'react';\n\nexport function FeedPage() {\n  const [posts, setPosts] = useState([]);\n  const [trending, setTrending] = useState([]);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(setPosts);\n  }, []);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(data => {\n      setTrending(data.filter(p => p.trending));\n    });\n  }, []);\n\n  return (\n    <div>\n      <PostList posts={posts} />\n      <TrendingSidebar posts={trending} />\n    </div>\n  );\n}\n```\n\nOutput fixed code + list every issue.",
       "expected_output": "Full review fixing all react skill rules",
       "assertions": [
         {
@@ -101,6 +101,71 @@
           "id": "content-visibility",
           "trap": "Long list of orders rendered without virtualization hint",
           "description": "content-visibility: auto for long off-screen lists"
+        },
+        {
+          "id": "barrel-import",
+          "trap": "import { formatDate, parseQuery, debounce } from '@/utils' and import { Chart } from '@/components' — barrel file imports",
+          "description": "Import directly from modules, avoid barrel files"
+        },
+        {
+          "id": "functional-setState",
+          "trap": "setCount(count + 1) with count in useCallback deps — stale closure",
+          "description": "Use functional setState (setCount(c => c + 1)) for stable callbacks"
+        },
+        {
+          "id": "interaction-in-handler",
+          "trap": "useEffect fires fetch on searchQuery change instead of event handler",
+          "description": "Put interaction logic in event handlers, not effects"
+        },
+        {
+          "id": "hoist-default-props",
+          "trap": "Default prop { status: 'active', sort: 'date' } object recreated every render",
+          "description": "Hoist default non-primitive props outside render"
+        },
+        {
+          "id": "subscribe-derived-boolean",
+          "trap": "useStore(state => state) subscribes to full store, only uses role",
+          "description": "Subscribe to derived booleans (useStore(s => s.role === 'admin')), not full objects"
+        },
+        {
+          "id": "memoize-expensive-subtree",
+          "trap": "renderChart() inlined — expensive Chart subtree re-renders on every parent render",
+          "description": "Extract expensive subtrees into memoized components (React.memo)"
+        },
+        {
+          "id": "useLatest-ref-pattern",
+          "trap": "onMessage callback in effect dep causes re-subscribe on every user.name change",
+          "description": "useLatest/ref pattern for stable callback references — store in ref to avoid effect re-runs"
+        },
+        {
+          "id": "cache-storage-reads",
+          "trap": "localStorage.getItem/sessionStorage.getItem called on every render",
+          "description": "Cache localStorage/sessionStorage reads — read once into state or ref"
+        },
+        {
+          "id": "hoist-static-jsx",
+          "trap": "Static footer JSX recreated every render inside component",
+          "description": "Hoist static JSX outside component functions"
+        },
+        {
+          "id": "immutable-array-transforms",
+          "trap": "[...orders].sort() and [...orders].reverse() instead of toSorted()/toReversed()",
+          "description": "Use toSorted()/toReversed() for immutable array transforms"
+        },
+        {
+          "id": "suspense-streaming",
+          "trap": "ProductsPage awaits all data before rendering — no Suspense boundaries",
+          "description": "Use Suspense boundaries to stream progressively"
+        },
+        {
+          "id": "defer-third-party-script",
+          "trap": "Script tag without strategy prop loads eagerly, blocks rendering",
+          "description": "Defer third-party scripts with strategy=\"lazyOnload\""
+        },
+        {
+          "id": "swr-client-dedup",
+          "trap": "FeedPage fetches /api/posts twice in separate useEffects",
+          "description": "Use SWR for client request deduplication"
         }
       ]
     }

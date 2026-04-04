@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\n'use client';\n\nimport React, { useState, useEffect, forwardRef } from 'react';\nimport { useQuery } from '@tanstack/react-query';\nimport { fetchProducts } from '../index'; // barrel import\n\nimport { Product } from '@/types/product';\n\nexport default function ProductPage() {\n  const [products, setProducts] = useState<Product[]>([]);\n  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);\n  const [search, setSearch] = useState('');\n  const [isLoading, setIsLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n  const store = useStore(); // full store destructure\n\n  useEffect(() => {\n    fetchProducts()\n      .then(data => {\n        setProducts(data);\n        setIsLoading(false);\n      })\n      .catch(err => {\n        setError(err.message);\n        setIsLoading(false);\n      });\n  }, []);\n\n  // Derived state in effect\n  useEffect(() => {\n    setFilteredProducts(\n      products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))\n    );\n  }, [products, search]);\n\n  if (isLoading) return <Spinner />;\n  if (error) return <div>Error: {error}</div>;\n\n  return (\n    <div>\n      <input\n        value={search}\n        onChange={e => setSearch(e.target.value)}\n        style={{ padding: '8px', color: '#333', backgroundColor: '#f5f5f5' }}\n      />\n      <div>\n        {filteredProducts.map((product, index) => (\n          <ProductCard\n            key={index}\n            isPrimary={product.featured}\n            isGhost={!product.active}\n            isCompact={false}\n            product={product}\n            onAddToCart={() => {}}\n          />\n        ))}\n      </div>\n      {products.length === 0 && null}\n    </div>\n  );\n}\n\nfunction ProductCard({\n  product,\n  isPrimary,\n  isGhost,\n  isCompact,\n  onAddToCart,\n}: {\n  product: Product;\n  isPrimary: boolean;\n  isGhost: boolean;\n  isCompact: boolean;\n  onAddToCart: () => void;\n}) {\n  return (\n    <div\n      className={isPrimary ? 'primary' : isGhost ? 'ghost' : 'default'}\n      onClick={onAddToCart}\n    >\n      <h3>{product.name}</h3>\n      <p>${product.price}</p>\n    </div>\n  );\n}\n\nconst FancyInput = forwardRef<HTMLInputElement, { label: string }>(\n  ({ label }, ref) => (\n    <label>\n      {label}\n      <input ref={ref} />\n    </label>\n  )\n);\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```tsx\n'use client';\n\nimport React, { useState, useEffect, forwardRef } from 'react';\nimport { useQuery } from '@tanstack/react-query';\nimport { fetchProducts } from '../index'; // barrel import\nimport ProductChart from './ProductChart'; // heavy 200KB charting component, static import\n\nimport { Product } from '@/types/product';\n\nexport default function ProductPage() {\n  const [products, setProducts] = useState<Product[]>([]);\n  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);\n  const [search, setSearch] = useState('');\n  const [isLoading, setIsLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n  const [isModalOpen, setIsModalOpen] = useState(false);\n  const store = useStore(); // full store destructure\n\n  useEffect(() => {\n    fetchProducts()\n      .then(data => {\n        setProducts(data);\n        setIsLoading(false);\n      })\n      .catch(err => {\n        setError(err.message);\n        setIsLoading(false);\n      });\n  }, []);\n\n  // Derived state in effect\n  useEffect(() => {\n    setFilteredProducts(\n      products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))\n    );\n  }, [products, search]);\n\n  if (isLoading) return <Spinner />;\n  if (error) return <div>Error: {error}</div>;\n\n  return (\n    <div>\n      <input\n        value={search}\n        onChange={e => setSearch(e.target.value)}\n        style={{ padding: '8px', color: '#333', backgroundColor: '#f5f5f5' }}\n      />\n      <ProductChart data={products} />\n      <div>\n        {filteredProducts.map((product, index) => (\n          <ProductCard\n            key={index}\n            isPrimary={product.featured}\n            isGhost={!product.active}\n            isCompact={false}\n            product={product}\n            onAddToCart={() => {}}\n            renderHeader={() => <h3>{product.name}</h3>}\n          />\n        ))}\n      </div>\n      {products.length === 0 && null}\n\n      <AddProductForm />\n\n      {isModalOpen && (\n        <div className=\"modal-overlay\" onClick={() => setIsModalOpen(false)}>\n          <div className=\"modal-content\" onClick={e => e.stopPropagation()}>\n            <button onClick={() => setIsModalOpen(false)}>Close</button>\n            <ProductDetails product={products[0]} />\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}\n\n// --- Sibling components sharing state via prop drilling ---\n\nfunction ProductSidebar({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {\n  return <nav>{/* sidebar items, receives selectedId via props drilled from parent */}</nav>;\n}\n\nfunction ProductDetail({ selectedId }: { selectedId: string }) {\n  return <section>{/* detail view, receives same selectedId drilled from parent */}</section>;\n}\n\n// --- Card with renderX prop + boolean modes ---\n\nfunction ProductCard({\n  product,\n  isPrimary,\n  isGhost,\n  isCompact,\n  onAddToCart,\n  renderHeader,\n}: {\n  product: Product;\n  isPrimary: boolean;\n  isGhost: boolean;\n  isCompact: boolean;\n  onAddToCart: () => void;\n  renderHeader: () => React.ReactNode;\n}) {\n  return (\n    <div\n      className={isPrimary ? 'primary' : isGhost ? 'ghost' : 'default'}\n      onClick={onAddToCart}\n    >\n      {renderHeader()}\n      <p>${product.price}</p>\n    </div>\n  );\n}\n\n// --- Form without disabled button / loading state ---\n\nfunction AddProductForm() {\n  const [name, setName] = useState('');\n\n  async function handleSubmit(e: React.FormEvent) {\n    e.preventDefault();\n    if (!name) {\n      alert('Name is required'); // alert for validation error\n      return;\n    }\n    await fetch('/api/products', {\n      method: 'POST',\n      body: JSON.stringify({ name }),\n    });\n  }\n\n  return (\n    <form onSubmit={handleSubmit}>\n      <input value={name} onChange={e => setName(e.target.value)} />\n      <button type=\"submit\">Add Product</button>\n    </form>\n  );\n}\n\n// --- RSC data loader passing full object across boundary ---\n\nasync function ProductLoader() {\n  const res = await fetch('https://api.example.com/products');\n  const products: Product[] = await res.json();\n  // passes entire Product objects (with internal fields) to client component\n  return <ProductPage products={products} />;\n}\n\nconst FancyInput = forwardRef<HTMLInputElement, { label: string }>(\n  ({ label }, ref) => (\n    <label>\n      {label}\n      <input ref={ref} />\n    </label>\n  )\n);\n\n// --- Styles with no prefers-reduced-motion and low contrast ---\n\nconst styles = `\n  .modal-overlay {\n    animation: fadeIn 0.3s ease-in;\n    transform: translateY(-10px);\n  }\n  @keyframes fadeIn {\n    from { opacity: 0; transform: scale(0.95); }\n    to { opacity: 1; transform: scale(1); }\n  }\n  .low-contrast-hint {\n    color: #aaa;\n    background: #fff;\n  }\n`;\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all frontend rules",
       "assertions": [
         {
@@ -81,6 +81,66 @@
           "id": "accessibility",
           "trap": "div onClick without keyboard nav/role/aria",
           "description": "Semantic HTML, ARIA labels, keyboard navigation"
+        },
+        {
+          "id": "fetch-cache-default",
+          "trap": "Server-side fetch() without cache: 'no-store' or revalidate in ProductLoader",
+          "description": "Next.js fetch() caches by default in prod; add { cache: 'no-store' } or revalidate"
+        },
+        {
+          "id": "compound-components",
+          "trap": "ProductSidebar and ProductDetail receive selectedId via prop drilling from parent",
+          "description": "Compound components (Context+Provider) for sibling shared state, never prop-drill"
+        },
+        {
+          "id": "children-over-renderX",
+          "trap": "renderHeader prop on ProductCard instead of children",
+          "description": "Children over renderX props; render props only when passing data back"
+        },
+        {
+          "id": "error-boundary-retry",
+          "trap": "No ErrorBoundary wrapping the component tree",
+          "description": "Error Boundaries with retry for resilient UI"
+        },
+        {
+          "id": "minimize-rsc-serialization",
+          "trap": "ProductLoader passes entire Product[] objects to client component instead of only needed fields",
+          "description": "Minimize RSC boundary serialization, pass only needed fields"
+        },
+        {
+          "id": "error-hierarchy",
+          "trap": "alert() for form validation instead of inline field error",
+          "description": "Error hierarchy: inline (field) > toast (recoverable) > banner > full screen"
+        },
+        {
+          "id": "disable-button-loading",
+          "trap": "Submit button not disabled during async submission, no loading indicator",
+          "description": "Disable buttons + loading indicator during async submission"
+        },
+        {
+          "id": "virtualize-long-list",
+          "trap": "Rendering all filteredProducts without virtualization (potentially >50 items)",
+          "description": "Virtualize >50 items with @tanstack/react-virtual"
+        },
+        {
+          "id": "next-dynamic-heavy",
+          "trap": "Static import of heavy ProductChart component (200KB charting lib)",
+          "description": "next/dynamic for heavy components, lazy load charts/modals"
+        },
+        {
+          "id": "focus-trap-modal",
+          "trap": "Modal has no focus trap and does not restore focus to trigger on close",
+          "description": "Focus trap modals, restore focus to trigger on close"
+        },
+        {
+          "id": "wcag-contrast",
+          "trap": ".low-contrast-hint has #aaa on #fff — fails WCAG 2.1 AA contrast ratio",
+          "description": "WCAG 2.1 AA contrast ratios must be met"
+        },
+        {
+          "id": "prefers-reduced-motion",
+          "trap": "CSS animation with transform/scale and no @media (prefers-reduced-motion) override",
+          "description": "prefers-reduced-motion: disable transforms, opacity only"
         }
       ]
     }

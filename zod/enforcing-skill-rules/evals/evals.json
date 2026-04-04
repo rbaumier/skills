@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```typescript\nimport { z } from 'zod';\n\nconst userSchema = z.object({\n  id: z.any(),\n  name: z.string(),\n  email: z.string().optional(),\n  age: z.string(),\n  role: z.string(),\n  preferences: z.object({\n    theme: z.string(),\n    locale: z.string(),\n  }),\n});\n\ninterface User {\n  id: any;\n  name: string;\n  email?: string;\n  age: string;\n  role: string;\n  preferences: { theme: string; locale: string };\n}\n\nconst updateUserSchema = z.object({\n  name: z.string().optional(),\n  email: z.string().optional(),\n  age: z.string().optional(),\n});\n\nconst apiResponseSchema = z.object({\n  data: userSchema,\n  meta: z.object({ page: z.number() }),\n});\n\nasync function handleForm(formData: FormData) {\n  const raw = Object.fromEntries(formData);\n  try {\n    const data = userSchema.parse(raw);\n    return { success: true, data };\n  } catch (e: any) {\n    return { success: false, error: e.message };\n  }\n}\n\nfunction processApiResponse(json: string) {\n  const parsed = JSON.parse(json);\n  return parsed as ApiResponse;\n}\n\nconst categorySchema: z.ZodType<any> = z.object({\n  name: z.string(),\n  children: z.array(categorySchema),\n});\n\nfunction ProductCard({ product }: { product: unknown }) {\n  const schema = z.object({\n    name: z.string(),\n    price: z.number(),\n  });\n  const validated = schema.parse(product);\n  return <div>{validated.name}</div>;\n}\n\nconst passwordSchema = z.string().refine((val) => {\n  if (val.length < 8) throw new Error('Too short');\n  if (!/[A-Z]/.test(val)) throw new Error('Need uppercase');\n  return true;\n});\n\nconst eventSchema = z.union([\n  z.object({ type: z.literal('click'), x: z.number(), y: z.number() }),\n  z.object({ type: z.literal('keypress'), key: z.string() }),\n]);\n\nconst userId = z.string().uuid();\nconst orderId = z.string().uuid();\n\nfunction getOrder(uid: z.infer<typeof userId>, oid: z.infer<typeof orderId>) {\n}\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```typescript\nimport { z } from 'zod';\n\nconst userSchema = z.object({\n  id: z.any(),\n  name: z.string(),\n  email: z.string().optional(),\n  age: z.string(),\n  role: z.string(),\n  preferences: z.object({\n    theme: z.string(),\n    locale: z.string(),\n  }),\n});\n\ninterface User {\n  id: any;\n  name: string;\n  email?: string;\n  age: string;\n  role: string;\n  preferences: { theme: string; locale: string };\n}\n\nconst updateUserSchema = z.object({\n  name: z.string().optional(),\n  email: z.string().optional(),\n  age: z.string().optional(),\n});\n\nconst apiResponseSchema = z.object({\n  data: userSchema,\n  meta: z.object({ page: z.number() }),\n});\n\nasync function handleForm(formData: FormData) {\n  const raw = Object.fromEntries(formData);\n  try {\n    const data = userSchema.parse(raw);\n    return { success: true, data };\n  } catch (e: any) {\n    return { success: false, error: e.message };\n  }\n}\n\nfunction processApiResponse(json: string) {\n  const parsed = JSON.parse(json);\n  return parsed as ApiResponse;\n}\n\nconst categorySchema: z.ZodType<any> = z.object({\n  name: z.string(),\n  children: z.array(categorySchema),\n});\n\nfunction ProductCard({ product }: { product: unknown }) {\n  const schema = z.object({\n    name: z.string(),\n    price: z.number(),\n  });\n  const validated = schema.parse(product);\n  return <div>{validated.name}</div>;\n}\n\nconst passwordSchema = z.string().refine((val) => {\n  if (val.length < 8) throw new Error('Too short');\n  if (!/[A-Z]/.test(val)) throw new Error('Need uppercase');\n  return true;\n});\n\nconst eventSchema = z.union([\n  z.object({ type: z.literal('click'), x: z.number(), y: z.number() }),\n  z.object({ type: z.literal('keypress'), key: z.string() }),\n]);\n\nconst userId = z.string().uuid();\nconst orderId = z.string().uuid();\n\nfunction getOrder(uid: z.infer<typeof userId>, oid: z.infer<typeof orderId>) {\n}\n\n// --- Async validation without parseAsync ---\nconst usernameSchema = z.string().refine(async (val) => {\n  const exists = await checkUsernameExists(val);\n  return !exists;\n}, 'Username taken');\n\nfunction validateUsername(input: string) {\n  return usernameSchema.parse(input);  // sync parse with async refine!\n}\n\n// --- Duplicated schema variant instead of pick/omit ---\nconst userProfileSchema = z.object({\n  name: z.string(),\n  email: z.string().email(),\n  avatar: z.string().url(),\n  bio: z.string(),\n});\n\nconst userCardSchema = z.object({\n  name: z.string(),\n  avatar: z.string().url(),\n});\n\n// --- Multi-stage validation without pipe ---\nconst rawInput = z.string();\nfunction parseAndValidateDate(input: string) {\n  const str = rawInput.parse(input);\n  const date = new Date(str);\n  if (isNaN(date.getTime())) throw new Error('Invalid date');\n  return date;\n}\n\n// --- Missing default/catch ---\nconst settingsSchema = z.object({\n  theme: z.enum(['light', 'dark']),      // no default — crashes if missing\n  pageSize: z.number(),                   // no default — crashes if missing\n  experimentalFeatures: z.boolean(),      // no catch — crashes on bad data\n});\n\n// --- Transform without z.input distinction ---\nconst dateFieldSchema = z.string().transform((val) => new Date(val));\ntype DateField = z.infer<typeof dateFieldSchema>; // Date — but what's the INPUT type?\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all zod rules",
       "assertions": [
         {
@@ -91,6 +91,31 @@
           "id": "export-schema-and-type",
           "trap": "Type exported but not consistently with schema",
           "description": "Export schemas AND inferred types together"
+        },
+        {
+          "id": "parseAsync-async-refine",
+          "trap": "sync .parse() used on schema with async refine (usernameSchema)",
+          "description": "parseAsync() for schemas with async refinements"
+        },
+        {
+          "id": "pick-omit-variants",
+          "trap": "userCardSchema duplicates fields from userProfileSchema instead of .pick()",
+          "description": "pick()/omit() for schema variants instead of duplication"
+        },
+        {
+          "id": "pipe-multi-stage",
+          "trap": "Manual multi-stage parsing (parse string then new Date) instead of .pipe()",
+          "description": "pipe() for multi-stage validation chains"
+        },
+        {
+          "id": "default-catch",
+          "trap": "settingsSchema fields crash on missing/bad data — no default() or catch()",
+          "description": "default() for defaults; catch() for fault-tolerant parsing"
+        },
+        {
+          "id": "z-input-vs-infer",
+          "trap": "dateFieldSchema transform: only z.infer used, z.input type not distinguished",
+          "description": "Distinguish z.input (pre-transform) from z.infer (post-transform) for schemas with transforms"
         }
       ]
     }
