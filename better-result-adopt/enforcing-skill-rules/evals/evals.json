@@ -1,0 +1,65 @@
+{
+  "skill_name": "better-result-adopt",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Migrate this module to use better-result. Fix everything wrong with it:\n\n```typescript\nfunction add(a: number, b: number): number { return a + b; }\n\nfunction validateEmail(email: string): boolean {\n  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n}\n\nasync function createUser(name: string, email: string): Promise<User> {\n  if (!validateEmail(email)) throw new Error('Invalid email');\n  const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);\n  if (existing.rows[0]) throw new Error('Email taken');\n  try {\n    const result = await db.query('INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *', [name, email]);\n    return result.rows[0];\n  } catch (e) {\n    throw new Error('DB insert failed');\n  }\n}\n\nasync function getUserProfile(userId: string): Promise<{ user: User; orders: Order[] }> {\n  const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\n  if (!user.rows[0]) throw new Error('User not found');\n  const orders = await db.query('SELECT * FROM orders WHERE user_id = $1', [userId]);\n  return { user: user.rows[0], orders: orders.rows };\n}\n\nasync function processCheckout(userId: string, cartId: string): Promise<Receipt> {\n  const user = await getUserProfile(userId);\n  const cart = await loadCart(cartId);\n  if (!cart) throw new Error('Cart not found');\n  const validated = validateCart(cart);\n  if (!validated.ok) throw new Error(validated.error);\n  try {\n    const payment = await chargePayment(cart.total);\n    const order = await createOrder(user.user, cart, payment);\n    return createReceipt(order);\n  } catch (e) {\n    if (e instanceof PaymentError) return { error: 'payment_failed' } as any;\n    throw e;\n  }\n}\n\n// Controller\nasync function handleCreateUser(req, res) {\n  try {\n    const user = await createUser(req.body.name, req.body.email);\n    res.json(user);\n  } catch (e) {\n    if (e.message === 'Invalid email') res.status(400).json({ error: e.message });\n    else if (e.message === 'Email taken') res.status(409).json({ error: e.message });\n    else res.status(500).json({ error: 'Internal error' });\n  }\n}\n```\n\nAssume getUserProfile, loadCart, validateCart, chargePayment, createOrder, createReceipt will return Result after migration. The `add` and `validateEmail` functions are pure utilities.\n\nOutput ONLY the migrated code. Do not write files.",
+      "expected_output": "Full migration applying all better-result-adopt rules",
+      "assertions": [
+        {
+          "text": "try-catch-to-result-try",
+          "description": "DB insert try/catch in createUser uses Result.tryPromise, not try/catch"
+        },
+        {
+          "text": "async-to-tryPromise",
+          "description": "Async operations that can fail wrapped with Result.tryPromise"
+        },
+        {
+          "text": "null-to-result",
+          "description": "Null checks (user.rows[0], cart) return Result.err, not throw"
+        },
+        {
+          "text": "tagged-errors",
+          "description": "Domain errors use TaggedError classes (ValidationError, NotFoundError, etc.) not plain Error"
+        },
+        {
+          "text": "preserve-error-info",
+          "description": "Original error preserved as cause in TaggedError (especially the DB insert catch)"
+        },
+        {
+          "text": "result-return-types",
+          "description": "Return types changed to Result<T, E> or Promise<Result<T, E>>"
+        },
+        {
+          "text": "gen-over-manual",
+          "description": "processCheckout (3+ sequential Results) uses Result.gen with yield*, not manual if(isErr)"
+        },
+        {
+          "text": "yield-star",
+          "description": "Each Result-returning call in processCheckout uses yield* (with Result.await for async)"
+        },
+        {
+          "text": "no-over-wrapping",
+          "description": "add() and validateEmail() are NOT wrapped in Result \u2014 they are pure functions that never fail"
+        },
+        {
+          "text": "no-mixed-paradigms",
+          "description": "handleCreateUser uses .match() or Result pattern, not try/catch around Result-returning functions"
+        },
+        {
+          "text": "no-rewrap",
+          "description": "No instance of `return Result.err(result.error)` \u2014 returns the result directly if propagating"
+        },
+        {
+          "text": "no-catch-panic",
+          "description": "Does not catch all exceptions broadly \u2014 PaymentError catch is explicit, unexpected errors are not swallowed"
+        },
+        {
+          "text": "start-at-boundaries",
+          "description": "Migration starts at I/O boundaries (db.query, chargePayment), not at pure utilities"
+        }
+      ]
+    }
+  ]
+}

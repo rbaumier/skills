@@ -1,0 +1,93 @@
+{
+  "skill_name": "testing",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\n// user-service.test.ts\nimport { describe, it, expect, afterEach, vi } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nimport { UserService } from './user-service';\nimport { EmailService } from './email-service';\nimport { Database } from './database';\n\nconst mockDb = vi.fn();\nvi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));\n\nlet sharedUser: any;\n\ndescribe('UserService', () => {\n  afterEach(() => {\n    cleanup();\n  });\n\n  it('test1', async () => {\n    mockDb.mockResolvedValue({ id: 1, name: 'Alice' });\n    const service = new UserService(new Database(), new EmailService());\n    const user = await service.getUser(1);\n    sharedUser = user;\n    expect(user).toEqual({ id: 1, name: 'Alice' });\n  });\n\n  it('test2', async () => {\n      expect(sharedUser.name).toBe('Alice');\n    const updated = await service.updateName(sharedUser.id, 'Bob');\n    expect(updated).toBeTruthy();\n  });\n\n  it('test3', async () => {\n    const users = [{ id: 1 }, { id: 2 }, { id: 3 }];\n    const service = new UserService(new Database(), new EmailService());\n    const result = await service.processUsers(users);\n    expect(result).toMatchSnapshot();\n  });\n});\n\n// checkout.e2e.ts (Playwright)\nimport { test, expect } from '@playwright/test';\n\ntest('complete checkout flow', async ({ page }) => {\n  await page.goto('/products');\n  await page.click('.product-card:first-child .add-to-cart');\n  await page.waitForTimeout(2000);\n  await page.click('.cart-icon');\n  \n  // Fill shipping\n  await page.fill('#name', 'John Doe');\n  await page.fill('#address', '123 Main St');\n  await page.fill('#card-number', '4242424242424242');\n  await page.click('#submit-order');\n  await page.waitForTimeout(3000);\n  \n  // Verify with Stripe (real API)\n  const response = await page.request.get('https://api.stripe.com/v1/charges');\n  expect(response.ok()).toBeTruthy();\n  \n  const confirmation = await page.$('.confirmation-message');\n  expect(confirmation).not.toBeNull();\n});\n\ntest('cancel order', async ({ page }) => {\n  // Reuses state from previous test\n  await page.click('.cancel-order');\n  await page.waitForTimeout(1000);\n  expect(await page.$('.cancelled-badge')).not.toBeNull();\n});\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all testing rules",
+      "assertions": [
+        {
+          "id": "no-rtl-cleanup",
+          "trap": "Manual cleanup() import in Vitest",
+          "description": "No manual cleanup() in Vitest — automatic. Keep only vi.restoreAllMocks()"
+        },
+        {
+          "id": "vi-hoisted",
+          "trap": "mockDb declared before vi.mock but used in factory scope",
+          "description": "Use vi.hoisted() for variables inside vi.mock() factory"
+        },
+        {
+          "id": "no-test-deps",
+          "trap": "test2 depends on sharedUser from test1",
+          "description": "No test-to-test dependencies; explicit setup per test"
+        },
+        {
+          "id": "descriptive-names",
+          "trap": "test1, test2, test3 as test names",
+          "description": "Descriptive names with scenario + expected outcome"
+        },
+        {
+          "id": "no-snapshot",
+          "trap": "toMatchSnapshot() instead of specific assertions",
+          "description": "Assert specific values, not snapshots (maintenance trap)"
+        },
+        {
+          "id": "specific-matchers",
+          "trap": "toBeTruthy() instead of specific matcher",
+          "description": "Specific matchers over generic equality/truthiness"
+        },
+        {
+          "id": "mock-boundaries-only",
+          "trap": "EmailService (internal collaborator) mocked",
+          "description": "Mock at boundaries only (network, DB), never internal collaborators"
+        },
+        {
+          "id": "factories-not-fixtures",
+          "trap": "Hardcoded test data objects",
+          "description": "Factory functions for test data, not fixtures"
+        },
+        {
+          "id": "locator-click",
+          "trap": "page.click(selector) deprecated API",
+          "description": "page.locator(selector).click() not page.click()"
+        },
+        {
+          "id": "no-waitForTimeout",
+          "trap": "waitForTimeout(2000/3000/1000) everywhere",
+          "description": "Zero sleep: wait for network/UI state, never waitForTimeout"
+        },
+        {
+          "id": "role-selectors",
+          "trap": "CSS class selectors (.product-card, #name)",
+          "description": "User-centric selectors: getByRole, getByLabel, not CSS classes"
+        },
+        {
+          "id": "mock-external-services",
+          "trap": "Real Stripe API call in test",
+          "description": "Mock third-party services with page.route() interception"
+        },
+        {
+          "id": "page-object-model",
+          "trap": "Raw selectors/actions inline in tests",
+          "description": "Page Object Model for reusable test abstractions"
+        },
+        {
+          "id": "independent-e2e",
+          "trap": "cancel order test depends on checkout test state",
+          "description": "Independent tests with fresh context, no shared state"
+        },
+        {
+          "id": "web-first-assertions",
+          "trap": "page.$() + toBeNull() instead of web-first expect",
+          "description": "Web-first assertions: expect(locator).toBeVisible() with auto-retry"
+        },
+        {
+          "id": "api-seeding",
+          "trap": "UI-driven precondition setup in checkout",
+          "description": "API seeding for preconditions, don't drive UI to create test data"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "skill_name": "frontend",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\n'use client';\n\nimport React, { useState, useEffect, forwardRef } from 'react';\nimport { useQuery } from '@tanstack/react-query';\nimport { fetchProducts } from '../index'; // barrel import\n\nimport { Product } from '@/types/product';\n\nexport default function ProductPage() {\n  const [products, setProducts] = useState<Product[]>([]);\n  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);\n  const [search, setSearch] = useState('');\n  const [isLoading, setIsLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n  const store = useStore(); // full store destructure\n\n  useEffect(() => {\n    fetchProducts()\n      .then(data => {\n        setProducts(data);\n        setIsLoading(false);\n      })\n      .catch(err => {\n        setError(err.message);\n        setIsLoading(false);\n      });\n  }, []);\n\n  // Derived state in effect\n  useEffect(() => {\n    setFilteredProducts(\n      products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))\n    );\n  }, [products, search]);\n\n  if (isLoading) return <Spinner />;\n  if (error) return <div>Error: {error}</div>;\n\n  return (\n    <div>\n      <input\n        value={search}\n        onChange={e => setSearch(e.target.value)}\n        style={{ padding: '8px', color: '#333', backgroundColor: '#f5f5f5' }}\n      />\n      <div>\n        {filteredProducts.map((product, index) => (\n          <ProductCard\n            key={index}\n            isPrimary={product.featured}\n            isGhost={!product.active}\n            isCompact={false}\n            product={product}\n            onAddToCart={() => {}}\n          />\n        ))}\n      </div>\n      {products.length === 0 && null}\n    </div>\n  );\n}\n\nfunction ProductCard({\n  product,\n  isPrimary,\n  isGhost,\n  isCompact,\n  onAddToCart,\n}: {\n  product: Product;\n  isPrimary: boolean;\n  isGhost: boolean;\n  isCompact: boolean;\n  onAddToCart: () => void;\n}) {\n  return (\n    <div\n      className={isPrimary ? 'primary' : isGhost ? 'ghost' : 'default'}\n      onClick={onAddToCart}\n    >\n      <h3>{product.name}</h3>\n      <p>${product.price}</p>\n    </div>\n  );\n}\n\nconst FancyInput = forwardRef<HTMLInputElement, { label: string }>(\n  ({ label }, ref) => (\n    <label>\n      {label}\n      <input ref={ref} />\n    </label>\n  )\n);\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all frontend rules",
+      "assertions": [
+        {
+          "id": "use-client-minimal",
+          "trap": "'use client' on whole page that could be server component",
+          "description": "'use client' only for hooks/event handlers, not entire pages"
+        },
+        {
+          "id": "no-derived-state-effect",
+          "trap": "useEffect to sync filteredProducts from products+search",
+          "description": "Derive state during render, not in useEffect"
+        },
+        {
+          "id": "stable-key",
+          "trap": "key={index} on dynamic product list",
+          "description": "Stable IDs for keys, never array index on dynamic lists"
+        },
+        {
+          "id": "composition-not-booleans",
+          "trap": "isPrimary/isGhost/isCompact boolean props",
+          "description": "Variant prop with defined values, not boolean mode props"
+        },
+        {
+          "id": "no-barrel-import",
+          "trap": "Import from '../index' barrel file",
+          "description": "Direct imports, no barrel files"
+        },
+        {
+          "id": "colocated-types",
+          "trap": "Types in global @/types/ instead of with feature",
+          "description": "Types colocated with feature, not global types/ dump"
+        },
+        {
+          "id": "no-forwardRef",
+          "trap": "forwardRef pattern (deprecated in React 19)",
+          "description": "React 19: ref is regular prop, no forwardRef"
+        },
+        {
+          "id": "suspense-not-isLoading",
+          "trap": "if (isLoading) return <Spinner/> pattern",
+          "description": "Suspense-first with useSuspenseQuery, not isLoading early returns"
+        },
+        {
+          "id": "design-tokens",
+          "trap": "Hardcoded colors/padding in inline styles",
+          "description": "Design tokens, never hardcoded colors/spacing"
+        },
+        {
+          "id": "zustand-selector",
+          "trap": "useStore() full destructure",
+          "description": "useStore(s => s.field) selector, never destructure full store"
+        },
+        {
+          "id": "empty-state",
+          "trap": "products.length === 0 renders null",
+          "description": "Every list needs an empty state"
+        },
+        {
+          "id": "debounce-search",
+          "trap": "No debounce on search input onChange",
+          "description": "Debounce search 300-500ms"
+        },
+        {
+          "id": "no-inline-fetch",
+          "trap": "Inline fetch in useEffect instead of isolated api layer",
+          "description": "No inline fetch; isolate in feature api/ layer"
+        },
+        {
+          "id": "file-order",
+          "trap": "Types, hooks, render mixed up in component",
+          "description": "File order: types -> hooks -> useMemo -> useCallback -> render -> export"
+        },
+        {
+          "id": "accessibility",
+          "trap": "div onClick without keyboard nav/role/aria",
+          "description": "Semantic HTML, ARIA labels, keyboard navigation"
+        }
+      ]
+    }
+  ]
+}

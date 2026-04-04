@@ -1,0 +1,78 @@
+{
+  "skill_name": "drizzle-orm",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\n// drizzle.config.ts\nimport type { Config } from 'drizzle-kit';\n\nconst config: Config = {\n  schema: './src/schema.ts',\n  out: './drizzle',\n  dialect: 'postgresql',\n};\nexport default config;\n\n// schema.ts\nimport { pgTable, uuid, varchar, timestamp, real, text, serial, integer, json } from 'drizzle-orm/pg-core';\nimport { InferSelectModel } from 'drizzle-orm';\n\nexport const products = pgTable('products', {\n  id: serial('id').primaryKey(),\n  name: varchar('name', { length: 255 }),\n  price: real('price'),\n  metadata: json('metadata'),\n  createdAt: timestamp('createdAt').defaultNow(),\n});\n\nexport type Product = InferSelectModel<typeof products>;\n\nexport const categories = pgTable('categories', {\n  id: serial('id').primaryKey(),\n  name: varchar('name', { length: 100 }),\n});\n\n// Many-to-many via JSON array, no junction table\nexport const orders = pgTable('orders', {\n  id: serial('id').primaryKey(),\n  productId: integer('product_id').references(() => products.id),\n  userId: integer('user_id'),\n  quantity: integer('quantity'),\n  createdAt: timestamp('createdAt').defaultNow(),\n});\n\n// queries.ts\nimport { db } from './db';\nimport { products, orders } from './schema';\nimport { eq, sql } from 'drizzle-orm';\n\nexport async function getProductWithOrders(productId: number) {\n  const product = await db.select().from(products).where(eq(products.id, productId));\n  const productOrders = await db\n    .select()\n    .from(orders)\n    .where(eq(orders.productId, productId));\n  return { product: product[0], orders: productOrders };\n}\n\nexport async function getAllProducts() {\n  return await db.select().from(products);\n}\n\nexport async function getProductsByPage(page: number) {\n  return await db.select().from(products).limit(20).offset(page * 20);\n}\n\nexport async function transferStock(fromId: number, toId: number, qty: number) {\n  await db.update(products).set({ price: sql`price - ${qty}` }).where(eq(products.id, fromId));\n  await db.update(products).set({ price: sql`price + ${qty}` }).where(eq(products.id, toId));\n}\n\nexport async function searchProducts(userInput: string) {\n  return await db.execute(`SELECT * FROM products WHERE name LIKE '%${userInput}%'`);\n}\n\n// serverless handler\nexport async function handler(event: any) {\n  const db = drizzle(new Pool({ connectionString: process.env.DB_URL }));\n  const products = await db.select().from(products);\n  return { body: JSON.stringify(products) };\n}\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all drizzle-orm rules",
+      "assertions": [
+        {
+          "id": "json-typed",
+          "trap": "json('metadata') without .$type<T>()",
+          "description": "json column uses .$type<T>() for typed JSON"
+        },
+        {
+          "id": "infer-select",
+          "trap": "InferSelectModel<typeof products> instead of $inferSelect",
+          "description": "Uses typeof products.$inferSelect not InferSelectModel"
+        },
+        {
+          "id": "camel-snake-mapping",
+          "trap": "createdAt column maps to 'createdAt' not 'created_at'",
+          "description": "camelCase TS props map to snake_case DB columns"
+        },
+        {
+          "id": "fk-indexes",
+          "trap": "productId and userId FK columns have no indexes",
+          "description": "Indexes defined on FK columns"
+        },
+        {
+          "id": "junction-table",
+          "trap": "Many-to-many via JSON array instead of junction table",
+          "description": "Junction table with composite primaryKey for many-to-many"
+        },
+        {
+          "id": "relational-queries",
+          "trap": "Manual join via two separate queries",
+          "description": "db.query.X.findMany({ with: {} }) for relational queries"
+        },
+        {
+          "id": "cursor-pagination",
+          "trap": "OFFSET-based pagination",
+          "description": "Cursor pagination with gt(id, lastSeenId)"
+        },
+        {
+          "id": "transaction",
+          "trap": "Two updates without transaction wrapper",
+          "description": "db.transaction() wraps multi-step data modifications"
+        },
+        {
+          "id": "satisfies-config",
+          "trap": "const config: Config = instead of satisfies Config",
+          "description": "} satisfies Config not const config: Config ="
+        },
+        {
+          "id": "select-columns",
+          "trap": "select() without specific columns on large tables",
+          "description": "select({ id, name }) with specific columns"
+        },
+        {
+          "id": "paginate-production",
+          "trap": "getAllProducts fetches all rows",
+          "description": "Production queries always paginated, never fetch all"
+        },
+        {
+          "id": "serverless-pool",
+          "trap": "New Pool() created inside handler, no max:1",
+          "description": "Serverless: cache db outside handler, pool max: 1"
+        },
+        {
+          "id": "sql-no-concat",
+          "trap": "String interpolation in raw SQL query (SQL injection)",
+          "description": "sql template tag for raw SQL, never string concatenation"
+        }
+      ]
+    }
+  ]
+}

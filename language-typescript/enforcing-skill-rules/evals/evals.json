@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Refactor this TypeScript module. Fix everything wrong with it:\n\n```typescript\n// index.ts (barrel)\nexport { UserService } from './user-service';\nexport { UserType } from './types';\n\n// types.ts\nexport enum Status {\n  Active = 'active',\n  Inactive = 'inactive',\n}\n\nexport interface UserType {\n  id: string;\n  name: string;\n  status: Status;\n}\n\n// user-service.ts\nimport { UserType, Status } from './index';\nconst config = require('./config.json');\n\nexport default class UserService {\n  async getUser(id: string): Promise<UserType> {\n    const res = await fetch(`/api/users/${id}`);\n    if (!res.ok) throw new Error('User not found');\n    const data = JSON.parse(await res.text()) as UserType;\n    return data;\n  }\n\n  async updateUser(id: string, updates: { name?: string, status?: Status }): Promise<void> {\n    const env = process.env.API_URL;\n    const res = await fetch(`${env}/api/users/${id}`, {\n      method: 'PUT',\n      body: JSON.stringify(updates),\n    });\n    if (!res.ok) throw new Error('Update failed');\n  }\n\n  processUsers(users: any[]): any {\n    return users.filter(u => u.status === Status.Active).map(u => ({\n      ...u,\n      displayName: u.name.toUpperCase(),\n    }));\n  }\n\n  async cleanup(connection: DatabaseConnection): Promise<void> {\n    try {\n      await connection.beginTransaction();\n      await connection.query('DELETE FROM temp_users');\n      await connection.commit();\n    } catch (e) {\n      await connection.rollback();\n    } finally {\n      connection.release();\n    }\n  }\n}\n```\n\nOutput ONLY the refactored code (all files). Do not write files to disk.",
+      "prompt": "Refactor this TypeScript module. Fix everything wrong with it:\n\n```typescript\n// index.ts (barrel)\nexport { UserService } from './user-service';\nexport { UserType } from './types';\n\n// types.ts\nimport { Status } from './status';\n\nexport enum Status {\n  Active = 'active',\n  Inactive = 'inactive',\n}\n\nexport interface UserType {\n  id: string;\n  name: string;\n  status: Status;\n}\n\n// user-service.ts\nimport { UserType, Status } from './index';\nimport { DatabaseConnection } from './db';\nconst config = require('./config.json');\n\n/**\n * @description Service for managing users\n * @param {string} id - The user ID\n * @returns {Promise<UserType>} The user object\n */\nexport default class UserService {\n  async getUser(id: string): Promise<UserType> {\n    const res = await fetch(`/api/users/${id}`);\n    if (!res.ok) throw new Error('User not found');\n    const data = JSON.parse(await res.text()) as UserType;\n    return data;\n  }\n\n  async updateUser(id: string, updates: { name?: string, status?: Status }): Promise<void> {\n    const env = process.env.API_URL;\n    const res = await fetch(`${env}/api/users/${id}`, {\n      method: 'PUT',\n      body: JSON.stringify(updates),\n    });\n    if (!res.ok) throw new Error('Update failed');\n  }\n\n  processUsers(users: any[]): any {\n    return users.filter(u => u.status === Status.Active).map(u => ({\n      ...u,\n      displayName: u.name.toUpperCase(),\n    }));\n  }\n\n  async cleanup(connection: DatabaseConnection): Promise<void> {\n    try {\n      await connection.beginTransaction();\n      await connection.query('DELETE FROM temp_users');\n      await connection.commit();\n    } catch (e) {\n      await connection.rollback();\n    } finally {\n      connection.release();\n    }\n  }\n}\n```\n\nOutput ONLY the refactored code (all files). Do not write files to disk.",
       "expected_output": "Full refactoring applying all language-typescript rules",
       "assertions": [
         {
@@ -62,6 +62,16 @@
         {
           "text": "no-as-cast",
           "description": "Zero `as` casts (except as const)"
+        },
+        {
+          "text": "import-type",
+          "trap": "DatabaseConnection imported with value import but only used as type",
+          "description": "`import type` used for type-only imports (DatabaseConnection)"
+        },
+        {
+          "text": "no-description-param-returns",
+          "trap": "JSDoc uses @description, @param, @returns tags",
+          "description": "JSDoc uses plain block description + @example only — no @description/@param/@returns tags"
         }
       ]
     }

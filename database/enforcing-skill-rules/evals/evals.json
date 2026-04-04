@@ -1,0 +1,198 @@
+{
+  "skill_name": "database",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```sql\nTRUNCATE TABLE audit_logs;\n\nCREATE TABLE organizations (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  name VARCHAR(100) NOT NULL,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n\nCREATE TABLE users (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  org_id UUID REFERENCES organizations(id),\n  full_name VARCHAR(255) NOT NULL,\n  email VARCHAR(255) UNIQUE,\n  password_hash TEXT,\n  api_key TEXT,\n  is_deleted BOOLEAN DEFAULT false,\n  preferences TEXT,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n\nCREATE TABLE projects (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  org_id UUID REFERENCES organizations(id),\n  name VARCHAR(255),\n  budget FLOAT,\n  status TEXT,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n\nCREATE TABLE tasks (\n  id SERIAL PRIMARY KEY,\n  project_id UUID REFERENCES projects(id),\n  assignee_id UUID REFERENCES users(id),\n  title TEXT,\n  description TEXT,\n  price_estimate FLOAT,\n  status TEXT,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n\nSELECT * FROM tasks WHERE project_id = $1 AND status = 'active' ORDER BY created_at DESC;\n\nSELECT * FROM tasks WHERE description LIKE '%deploy%';\n\nSELECT * FROM tasks WHERE assignee_id = $1 ORDER BY created_at DESC LIMIT 20 OFFSET 200;\n\nSELECT * FROM tasks WHERE created_at > NOW() - INTERVAL '1 hour';\n```\n\nThe app runs 5 instances each with connection pool of 20.\n\n```sql\nALTER TABLE users RENAME COLUMN name TO full_name;\n\nALTER TABLE users ALTER COLUMN email SET NOT NULL;\n\nCREATE INDEX idx_tasks_project ON tasks(project_id);\n\nALTER TABLE tasks SET (autovacuum_enabled = false);\n```\n\n```typescript\n// schema.ts (drizzle-kit output, as-is)\nimport { pgTable, uuid, varchar, timestamp, real, text, boolean, serial } from 'drizzle-orm/pg-core';\n\nexport const tasks = pgTable('tasks', {\n  id: serial('id').primaryKey(),\n  projectId: uuid('project_id').references(() => projects.id),\n  title: text('title'),\n  priceEstimate: real('price_estimate'),\n  status: text('status'),\n  createdAt: timestamp('created_at').defaultNow(),\n});\n\n```\n\n```typescript\n// task-repository.ts\nexport class TaskRepository {\n  async findById(id: string) {\n    const task = await db.select().from(tasks).where(eq(tasks.id, id));\n    if (!task.length) throw new Error('Task not found');\n    return task[0];\n  }\n\n  async createWithComment(taskData: any, commentText: string) {\n    return await db.transaction(async (tx) => {\n      const [task] = await tx.insert(tasks).values(taskData).returning();\n      const [comment] = await tx.insert(comments).values({\n        taskId: task.id,\n        text: commentText,\n      }).returning();\n      return { task, comment };\n    });\n  }\n\n  async search(userInput: string) {\n    return await db.execute(`SELECT * FROM tasks WHERE title LIKE '%${userInput}%'`);\n  }\n}\n```\n\n```typescript\n// db.ts\nconst client = new Pool({ connectionString: process.env.DATABASE_URL });\nexport const db = drizzle(client, { schema });\n```\n\nApp connects as postgres superuser. No RLS.\n\nOutput fixed code + list every issue.",
+      "expected_output": "Full review fixing all database skill rules",
+      "assertions": [
+        {
+          "id": "uuidv7",
+          "trap": "gen_random_uuid() used everywhere (UUIDv4)",
+          "description": "UUIDv7 recommended over random UUIDv4 for primary keys"
+        },
+        {
+          "id": "fk-indexes",
+          "trap": "FK columns (org_id, project_id, assignee_id) have no explicit indexes",
+          "description": "All FK columns get explicit indexes"
+        },
+        {
+          "id": "text-not-varchar",
+          "trap": "VARCHAR(100), VARCHAR(255) used for strings",
+          "description": "TEXT used instead of VARCHAR"
+        },
+        {
+          "id": "timestamptz",
+          "trap": "TIMESTAMP used everywhere instead of TIMESTAMPTZ",
+          "description": "TIMESTAMPTZ used instead of bare TIMESTAMP"
+        },
+        {
+          "id": "numeric-not-float",
+          "trap": "FLOAT used for budget and price_estimate",
+          "description": "NUMERIC used for money, not FLOAT"
+        },
+        {
+          "id": "jsonb",
+          "trap": "preferences stored as TEXT instead of JSONB",
+          "description": "Semi-structured data uses JSONB"
+        },
+        {
+          "id": "soft-delete",
+          "trap": "is_deleted BOOLEAN used for soft delete",
+          "description": "Soft delete uses deleted_at TIMESTAMPTZ, not boolean is_deleted"
+        },
+        {
+          "id": "check-constraints",
+          "trap": "No CHECK constraints on price, status, etc.",
+          "description": "CHECK constraints added (price > 0, status IN (...))"
+        },
+        {
+          "id": "no-select-star",
+          "trap": "SELECT * in all queries",
+          "description": "Explicit column lists instead of SELECT *"
+        },
+        {
+          "id": "covering-index",
+          "trap": "No INCLUDE clauses on indexes",
+          "description": "Covering indexes with INCLUDE for index-only scans"
+        },
+        {
+          "id": "partial-index",
+          "trap": "No partial index for status='active' queries",
+          "description": "Partial index WHERE status = 'active'"
+        },
+        {
+          "id": "brin-time-series",
+          "trap": "No BRIN index for created_at queries",
+          "description": "BRIN index recommended for time-series created_at"
+        },
+        {
+          "id": "cursor-pagination",
+          "trap": "OFFSET 200 LIMIT 20 pagination",
+          "description": "Cursor/keyset pagination instead of OFFSET/LIMIT"
+        },
+        {
+          "id": "tsvector-gin",
+          "trap": "LIKE '%deploy%' for text search",
+          "description": "TSVECTOR + GIN index instead of LIKE '%term%'"
+        },
+        {
+          "id": "expand-contract",
+          "trap": "Direct ALTER TABLE RENAME for column rename",
+          "description": "Expand-and-contract pattern for breaking column rename"
+        },
+        {
+          "id": "lock-timeout",
+          "trap": "No lock_timeout on DDL migration",
+          "description": "SET lock_timeout on DDL migrations"
+        },
+        {
+          "id": "concurrent-index",
+          "trap": "CREATE INDEX without CONCURRENTLY",
+          "description": "CREATE INDEX CONCURRENTLY to avoid table lock"
+        },
+        {
+          "id": "not-valid-validate",
+          "trap": "ALTER COLUMN SET NOT NULL directly",
+          "description": "ADD CONSTRAINT NOT VALID then VALIDATE separately"
+        },
+        {
+          "id": "no-disable-autovacuum",
+          "trap": "autovacuum_enabled = false",
+          "description": "Tune autovacuum, never disable it"
+        },
+        {
+          "id": "now-clock-timestamp",
+          "trap": "NOW() - INTERVAL in query (may be in transaction)",
+          "description": "Warns about NOW() in transactions, recommends clock_timestamp()"
+        },
+        {
+          "id": "pool-math-pgbouncer",
+          "trap": "5 instances x 20 pool = 100 connections",
+          "description": "Calculates pool math, recommends PgBouncer"
+        },
+        {
+          "id": "truncate-vs-delete",
+          "trap": "TRUNCATE TABLE audit_logs during traffic",
+          "description": "DELETE FROM instead of TRUNCATE during live traffic"
+        },
+        {
+          "id": "least-privilege",
+          "trap": "App connects as postgres superuser",
+          "description": "App should never use superuser, grant specific permissions"
+        },
+        {
+          "id": "rls",
+          "trap": "No RLS policies defined",
+          "description": "RLS on every table for multi-tenant isolation"
+        },
+        {
+          "id": "parameterized-queries",
+          "trap": "String concatenation: LIKE '%${userInput}%' (SQL injection)",
+          "description": "Parameterized queries only, flags SQL injection"
+        },
+        {
+          "id": "password-secrets",
+          "trap": "api_key stored as plain text",
+          "description": "Never store API keys/secrets in plain text"
+        },
+        {
+          "id": "drizzle-uuidv7",
+          "trap": "serial PK, no uuidv7 defaultFn",
+          "description": "UUIDv7 with .$defaultFn(() => uuidv7()) on PKs"
+        },
+        {
+          "id": "drizzle-timezone",
+          "trap": "bare timestamp('created_at').defaultNow()",
+          "description": "Timestamps use { withTimezone: true }"
+        },
+        {
+          "id": "drizzle-constraints",
+          "trap": "No check/index in third pgTable argument",
+          "description": "Constraints in pgTable third argument"
+        },
+        {
+          "id": "drizzle-infer-type",
+          "trap": "No type export from schema",
+          "description": "Export InferSelectModel<typeof table> for row types"
+        },
+        {
+          "id": "drizzle-cli-review",
+          "trap": "Generated by drizzle-kit, using as-is",
+          "description": "CLI output is starting point, must review for timezone/constraints/indexes"
+        },
+        {
+          "id": "errors-as-values",
+          "trap": "throw new Error('Task not found')",
+          "description": "Return errors as values, never throw"
+        },
+        {
+          "id": "domain-error-classes",
+          "trap": "Generic Error('Task not found')",
+          "description": "Domain-specific error classes (TaskNotFoundError)"
+        },
+        {
+          "id": "transaction-error-union",
+          "trap": "Transaction has no typed error return",
+          "description": "Transaction returns union of all step errors"
+        },
+        {
+          "id": "exhaustive-match",
+          "trap": "No error-to-HTTP mapping",
+          "description": "Exhaustive matchError() maps every error to HTTP status"
+        },
+        {
+          "id": "derive-repo-type",
+          "trap": "Class export instead of factory with ReturnType",
+          "description": "Factory pattern with ReturnType<typeof createXRepository>"
+        },
+        {
+          "id": "otel-logger",
+          "trap": "db.ts has no OTel logger",
+          "description": "OtelDrizzleLogger passed at Drizzle client creation"
+        }
+      ]
+    }
+  ]
+}

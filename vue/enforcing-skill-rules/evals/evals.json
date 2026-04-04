@@ -1,0 +1,30 @@
+{
+  "skill_name": "vue",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Refactor this Vue component. Fix everything wrong with it:\n\n```vue\n<template>\n  <div>\n    <div class=\"page__header\">\n      <h1 class=\"page__title\">Products</h1>\n      <span>{{ products.length }} items</span>\n    </div>\n\n    <div v-for=\"product in products\" :key=\"product\">\n      <div class=\"product-card\">\n        <div class=\"product-card__name\">{{ product.name }}</div>\n        <div class=\"product-card__price\">${{ product.price * (1 + taxRate) }}</div>\n        <div class=\"product-card__stock\">\n          <span v-if=\"product.stock > 0\">In stock</span>\n          <span v-if=\"product.stock <= 0\">Out of stock</span>\n        </div>\n        <div class=\"product-card__row\"><span>Category</span><span>{{ product.category }}</span></div>\n        <div class=\"product-card__row\"><span>Weight</span><span>{{ product.weight }}kg</span></div>\n        <div class=\"product-card__row\"><span>Rating</span><span>{{ product.rating }}/5</span></div>\n        <button @click=\"addToCart(product)\" v-if=\"product.stock > 0\">Add to Cart</button>\n      </div>\n    </div>\n\n    <div v-html=\"userBio\"></div>\n\n    <div class=\"cart-summary\">\n      <h2>Cart ({{ cart.length }})</h2>\n      <div v-for=\"item in cart\">\n        <span>{{ item.name }} x{{ item.qty }}</span>\n        <span>{{ item.qty * item.price }}</span>\n      </div>\n      <div>Total: ${{ cart.reduce((sum, i) => sum + i.qty * i.price, 0) }}</div>\n    </div>\n  </div>\n</template>\n\n<script>\nimport { inject } from 'vue';\n\nexport default {\n  data() {\n    return {\n      products: [],\n      cart: reactive([]),\n      taxRate: 0.1,\n      userBio: '',\n    };\n  },\n  created() {\n    this.fetchProducts();\n  },\n  methods: {\n    async fetchProducts() {\n      const res = await fetch('/api/products');\n      this.products = await res.json();\n    },\n    addToCart(product) {\n      const existing = this.cart.find(i => i.id === product.id);\n      if (existing) {\n        existing.qty++;\n      } else {\n        this.cart.push({ ...product, qty: 1 });\n      }\n      this.$emit('cart-updated', this.cart);\n    },\n    removeFromCart(productId) {\n      const idx = this.cart.findIndex(i => i.id === productId);\n      if (idx > -1) this.cart.splice(idx, 1);\n    },\n  },\n  provide() {\n    return { cart: this.cart };\n  },\n};\n</script>\n\n<style scoped>\n.page__header { display: flex; justify-content: space-between; margin-bottom: 1rem; }\n.page__title { font-size: 1.5rem; }\n.product-card { border: 1px solid #ccc; padding: 1rem; margin: 0.5rem 0; }\n.product-card__row { display: flex; justify-content: space-between; padding: 0.25rem 0; }\n.cart-summary { margin-top: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }\n</style>\n```\n\nOutput ONLY the refactored code (all files if splitting into components). Do not write files to disk.",
+      "expected_output": "Full refactoring following all Vue skill rules",
+      "assertions": [
+        { "text": "composition-api", "description": "Uses <script setup lang='ts'>, not Options API" },
+        { "text": "computed-not-template", "description": "Total and taxed price computed via computed(), not inline in template" },
+        { "text": "no-destructure-reactive", "description": "No destructuring of reactive objects" },
+        { "text": "typed-props-emits", "description": "Uses defineProps<{}> and defineEmits<{}> with TypeScript generics" },
+        { "text": "script-template-style-order", "description": "SFC order is <script> then <template> then <style>" },
+        { "text": "no-unsanitized-vhtml", "description": "v-html either removed or uses DOMPurify" },
+        { "text": "stable-key", "description": "v-for uses :key with stable identifier (product.id), not the object itself" },
+        { "text": "v-if-v-else", "description": "Opposite v-if conditions replaced with v-if/v-else pair" },
+        { "text": "declarative-template", "description": "Complex expressions (reduce, tax calc) moved from template to script" },
+        { "text": "views-zero-html", "description": "Page-level view uses components (ProductCard, CartSummary, etc.), not raw HTML/CSS" },
+        { "text": "repeated-pattern-extracted", "description": "product-card__row repeated 3x extracted into a component" },
+        { "text": "composable-extracted", "description": "Cart state and side effects extracted into a composable (useCart or similar)" },
+        { "text": "formatting-in-utils", "description": "Price formatting logic in utils, not inline in template/component" },
+        { "text": "props-down-events-up", "description": "Data flows via props, updates via emits — not provide/inject for parent-child" },
+        { "text": "provide-inject-deep-only", "description": "provide/inject NOT used for parent-child — only for deep tree if needed" },
+        { "text": "v-model-form-only", "description": "v-model only used for true two-way form controls, not general state" },
+        { "text": "no-unjustified-features", "description": "No unnecessary Suspense, KeepAlive, or v-memo added without justification" }
+      ]
+    }
+  ]
+}

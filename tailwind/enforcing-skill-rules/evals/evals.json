@@ -1,0 +1,118 @@
+{
+  "skill_name": "tailwind",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\n// tailwind.config.ts\nimport type { Config } from 'tailwindcss';\n\nconst config: Config = {\n  content: ['./src/**/*.{ts,tsx}', './node_modules/@acme/ui/**/*.js'],\n  theme: {\n    extend: {\n      colors: {\n        primary: '#3b82f6',\n        secondary: '#10b981',\n      },\n    },\n  },\n};\nexport default config;\n\n// card.tsx\nimport React, { forwardRef } from 'react';\n\ntype CardProps = {\n  variant: 'primary' | 'ghost';\n  children: React.ReactNode;\n};\n\nexport const Card = forwardRef<HTMLDivElement, CardProps>(({ variant, children }, ref) => {\n  const baseClasses = 'rounded-lg p-5 mb-7';\n  const variantClass = variant === 'primary'\n    ? 'bg-[#3b82f6] text-white'\n    : 'bg-opacity-50 bg-gray-100';\n\n  return (\n    <div ref={ref} className={`${baseClasses} ${variantClass}`}>\n      {children}\n    </div>\n  );\n});\n\n// dialog.tsx\nexport function Dialog({ open, onClose, children }) {\n  if (!open) return null;\n  return (\n    <div className=\"fixed inset-0 z-999 flex items-center justify-center\" onClick={onClose}>\n      <div className=\"bg-white rounded-xl p-6 w-[480px] transition-all\" onClick={e => e.stopPropagation()}>\n        {children}\n      </div>\n    </div>\n  );\n}\n\n// button.tsx\nexport function Button({ label, color, size }) {\n  return (\n    <button\n      className={`bg-${color}-500 hover:bg-${color}-600 text-white\n        ${size === 'sm' ? 'px-2 py-1 text-[12px]' : 'px-4 py-2 text-[16px]'}\n        rounded transition-all`}\n    >\n      {label}\n    </button>\n  );\n}\n\n// hero.tsx\nexport function Hero() {\n  return (\n    <section className=\"py-20 px-8 bg-white\">\n      <h1 className=\"text-4xl font-bold text-[#1a1a1a]\">Welcome</h1>\n      <p className=\"mt-4 text-gray-600\">Subtitle here</p>\n      <button className=\"mt-8 bg-blue-500 text-white px-6 py-3 rounded\">\n        Get Started\n      </button>\n    </section>\n  );\n}\n\n// card.css\n.card {\n  @apply rounded-lg p-4 bg-white shadow-md hover:shadow-lg;\n  @apply text-gray-800 border border-gray-200;\n}\n\n// app.css\n@tailwind base;\n@tailwind components;\n@tailwind utilities;\n```\n\nTailwind v4. Output fixed code only.",
+      "expected_output": "Full refactoring applying all tailwind rules",
+      "assertions": [
+        {
+          "id": "cn-merge",
+          "trap": "Template literal string concatenation for classes",
+          "description": "cn() (twMerge + clsx) for conditional/merged classes"
+        },
+        {
+          "id": "cva-variants",
+          "trap": "Manual ternary for variant classes",
+          "description": "cva() for component variants, not manual conditionals"
+        },
+        {
+          "id": "no-apply-components",
+          "trap": "@apply in card.css component styles",
+          "description": "@apply only for base/typography, not component styles"
+        },
+        {
+          "id": "spacing-scale",
+          "trap": "p-5, mb-7 odd spacing values",
+          "description": "Spacing scale increments of 4 (4,6,8,12,16,24)"
+        },
+        {
+          "id": "tailwind-sizes",
+          "trap": "text-[12px], text-[16px] arbitrary pixel values",
+          "description": "Tailwind size classes (text-sm, text-base) not arbitrary px"
+        },
+        {
+          "id": "no-dynamic-classes",
+          "trap": "bg-${color}-500 dynamic class construction",
+          "description": "Never concatenate dynamic classes; use full string maps"
+        },
+        {
+          "id": "oklch-tokens",
+          "trap": "Hex colors #3b82f6 in config and components",
+          "description": "OKLCH format for design token colors in @theme"
+        },
+        {
+          "id": "v4-theme-css",
+          "trap": "tailwind.config.ts instead of @theme in CSS",
+          "description": "v4: @theme {} in CSS replaces tailwind.config.ts"
+        },
+        {
+          "id": "v4-import",
+          "trap": "@tailwind base/components/utilities directives",
+          "description": "v4: @import 'tailwindcss' replaces @tailwind directives"
+        },
+        {
+          "id": "no-content-node-modules",
+          "trap": "node_modules in content array",
+          "description": "v4: auto content detection, never include node_modules"
+        },
+        {
+          "id": "bg-opacity-slash",
+          "trap": "bg-opacity-50 old syntax",
+          "description": "v4: bg-black/50 not bg-opacity-50"
+        },
+        {
+          "id": "focus-ring",
+          "trap": "No focus styles on interactive elements",
+          "description": "focus:ring-2 focus:ring-offset-2 on all interactive elements"
+        },
+        {
+          "id": "touch-targets",
+          "trap": "Small button without min touch target",
+          "description": "44x44px minimum touch targets on mobile"
+        },
+        {
+          "id": "sr-only-icons",
+          "trap": "Button with label prop but no aria consideration",
+          "description": "sr-only for screen-reader text; icon buttons need aria-label"
+        },
+        {
+          "id": "motion-reduce",
+          "trap": "transition-all without motion-reduce variant",
+          "description": "motion-reduce:transition-none for animations"
+        },
+        {
+          "id": "gpu-properties",
+          "trap": "transition-all animates width/height",
+          "description": "Only GPU properties (transform, opacity); avoid transition-all"
+        },
+        {
+          "id": "no-forwardRef",
+          "trap": "forwardRef pattern in Card component",
+          "description": "React 19: ref is regular prop, no forwardRef"
+        },
+        {
+          "id": "compound-dialog",
+          "trap": "Dialog as single component, not compound",
+          "description": "Compound component pattern (Dialog.Trigger, Dialog.Content)"
+        },
+        {
+          "id": "z-index-systematic",
+          "trap": "z-999 arbitrary z-index",
+          "description": "Systematic z-index scale (10,20,40,50)"
+        },
+        {
+          "id": "dark-mode-tokens",
+          "trap": "No dark mode support",
+          "description": "Dark mode with .dark { --color-*: value } overrides"
+        },
+        {
+          "id": "mobile-first",
+          "trap": "No responsive variants, fixed width w-[480px]",
+          "description": "Mobile-first responsive: base=mobile, add sm:/md:/lg:"
+        }
+      ]
+    }
+  ]
+}

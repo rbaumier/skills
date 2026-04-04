@@ -1,0 +1,113 @@
+{
+  "skill_name": "security-defensive",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all security issues:\n\n```typescript\nimport express from 'express';\nimport { exec } from 'child_process';\nimport fs from 'fs';\nimport jwt from 'jsonwebtoken';\nimport cors from 'cors';\n\nconst app = express();\nconst SECRET = 'my-jwt-secret-key-2024';\n\napp.use(cors({ origin: '*', credentials: true }));\napp.use(express.json());\n\napp.post('/login', async (req, res) => {\n  const { email, password } = req.body;\n  const user = await db.query(`SELECT * FROM users WHERE email = '${email}' AND password = '${password}'`);\n  if (!user) return res.status(401).json({ error: 'Invalid' });\n\n  const token = jwt.sign({ userId: user.id, role: user.role }, SECRET, { algorithm: 'HS256' });\n  res.json({ token });\n});\n\napp.get('/files/:name', (req, res) => {\n  const filePath = `./uploads/${req.params.name}`;\n  res.sendFile(filePath);\n});\n\napp.post('/admin/run', (req, res) => {\n  const { command } = req.body;\n  exec(command, (err, stdout) => {\n    res.json({ output: stdout });\n  });\n});\n\napp.get('/profile/:id', async (req, res) => {\n  const user = await db.findUser(req.params.id);\n  res.send(`<html><body><h1>${user.name}</h1><div>${user.bio}</div></body></html>`);\n});\n\napp.get('/redirect', (req, res) => {\n  res.redirect(req.query.url as string);\n});\n\napp.post('/upload', (req, res) => {\n  const file = req.body.file;\n  fs.writeFileSync(`./uploads/${file.name}`, file.data);\n  res.json({ path: `/files/${file.name}` });\n});\n\napp.post('/api/action', (req, res) => {\n  console.log('User action:', req.body);\n  res.json({ ok: true });\n});\n\napp.post('/account/delete', async (req, res) => {\n  const token = localStorage.getItem('token'); // client-side reference mistake\n  const decoded = jwt.verify(req.headers.authorization, SECRET);\n  await db.deleteUser(decoded.userId);\n  res.json({ deleted: true });\n});\n\napp.listen(3000);\n```\n\nOutput fixed code + list every vulnerability.",
+      "expected_output": "Full security review identifying all OWASP vulnerabilities",
+      "assertions": [
+        {
+          "id": "parameterized-queries",
+          "trap": "SQL string concatenation with user input in login",
+          "description": "Parameterized queries, never string concatenation"
+        },
+        {
+          "id": "allowlist-schema",
+          "trap": "No input validation on any endpoint",
+          "description": "Schema allowlist validation on all inputs"
+        },
+        {
+          "id": "command-injection",
+          "trap": "exec(command) with user input",
+          "description": "Array args for commands, never shell=True/exec with user input"
+        },
+        {
+          "id": "path-traversal",
+          "trap": "File path built from user input without realpath check",
+          "description": "realpath() + prefix check for file paths"
+        },
+        {
+          "id": "no-eval-deserialize",
+          "trap": "exec() essentially evaluates untrusted input",
+          "description": "Never eval/execute untrusted data"
+        },
+        {
+          "id": "upload-validation",
+          "trap": "No file upload validation (size, MIME, extension)",
+          "description": "Validate uploads: size, MIME type, extension allowlist"
+        },
+        {
+          "id": "xss-innerhtml",
+          "trap": "User bio rendered directly in HTML template",
+          "description": "No innerHTML with user input, use textContent or sanitize"
+        },
+        {
+          "id": "sanitize-urls",
+          "trap": "Open redirect: res.redirect(req.query.url) without protocol check",
+          "description": "Validate URL protocol is http/https before redirect"
+        },
+        {
+          "id": "csp-headers",
+          "trap": "No CSP or security headers",
+          "description": "Nonce/hash CSP, security headers (helmet)"
+        },
+        {
+          "id": "jwt-httponly",
+          "trap": "JWT returned in response body (implies localStorage storage)",
+          "description": "JWTs in httpOnly Secure SameSite=Strict cookies"
+        },
+        {
+          "id": "jwt-algorithm",
+          "trap": "HS256 used (ok for internal but no RS256 mention for public)",
+          "description": "RS256 for public APIs, HS256 internal only"
+        },
+        {
+          "id": "bcrypt-passwords",
+          "trap": "Plain text password comparison in login query",
+          "description": "bcrypt(12+) or Argon2id for password hashing"
+        },
+        {
+          "id": "authz-check",
+          "trap": "No authorization check on /admin/run or /account/delete",
+          "description": "Authorization check before every operation"
+        },
+        {
+          "id": "no-hardcoded-secrets",
+          "trap": "SECRET hardcoded in source",
+          "description": "Never hardcode secrets, use env vars or vault"
+        },
+        {
+          "id": "csrf-protection",
+          "trap": "State-changing POST without CSRF token",
+          "description": "CSRF tokens on state-changing requests"
+        },
+        {
+          "id": "no-wildcard-cors",
+          "trap": "CORS origin: '*' with credentials: true",
+          "description": "No wildcard CORS with credentials"
+        },
+        {
+          "id": "rate-limiting",
+          "trap": "No rate limiting on any endpoint",
+          "description": "Rate limit all endpoints"
+        },
+        {
+          "id": "no-log-secrets",
+          "trap": "console.log('User action:', req.body) may log sensitive data",
+          "description": "Never log passwords/tokens/PII"
+        },
+        {
+          "id": "structured-audit-logs",
+          "trap": "console.log for action logging instead of structured audit",
+          "description": "Structured audit logs with timestamp, user_id, action, resource, result, IP"
+        },
+        {
+          "id": "ssrf-allowlist",
+          "trap": "Open redirect could be used for SSRF",
+          "description": "Allowlist URLs for SSRF prevention"
+        }
+      ]
+    }
+  ]
+}

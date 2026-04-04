@@ -1,0 +1,98 @@
+{
+  "skill_name": "zod",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\nimport { z } from 'zod';\n\nconst userSchema = z.object({\n  id: z.any(),\n  name: z.string(),\n  email: z.string().optional(),\n  age: z.string(),\n  role: z.string(),\n  preferences: z.object({\n    theme: z.string(),\n    locale: z.string(),\n  }),\n});\n\ninterface User {\n  id: any;\n  name: string;\n  email?: string;\n  age: string;\n  role: string;\n  preferences: { theme: string; locale: string };\n}\n\nconst updateUserSchema = z.object({\n  name: z.string().optional(),\n  email: z.string().optional(),\n  age: z.string().optional(),\n});\n\nconst apiResponseSchema = z.object({\n  data: userSchema,\n  meta: z.object({ page: z.number() }),\n});\n\nasync function handleForm(formData: FormData) {\n  const raw = Object.fromEntries(formData);\n  try {\n    const data = userSchema.parse(raw);\n    return { success: true, data };\n  } catch (e: any) {\n    return { success: false, error: e.message };\n  }\n}\n\nfunction processApiResponse(json: string) {\n  const parsed = JSON.parse(json);\n  return parsed as ApiResponse;\n}\n\nconst categorySchema: z.ZodType<any> = z.object({\n  name: z.string(),\n  children: z.array(categorySchema),\n});\n\nfunction ProductCard({ product }: { product: unknown }) {\n  const schema = z.object({\n    name: z.string(),\n    price: z.number(),\n  });\n  const validated = schema.parse(product);\n  return <div>{validated.name}</div>;\n}\n\nconst passwordSchema = z.string().refine((val) => {\n  if (val.length < 8) throw new Error('Too short');\n  if (!/[A-Z]/.test(val)) throw new Error('Need uppercase');\n  return true;\n});\n\nconst eventSchema = z.union([\n  z.object({ type: z.literal('click'), x: z.number(), y: z.number() }),\n  z.object({ type: z.literal('keypress'), key: z.string() }),\n]);\n\nconst userId = z.string().uuid();\nconst orderId = z.string().uuid();\n\nfunction getOrder(uid: z.infer<typeof userId>, oid: z.infer<typeof orderId>) {\n}\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all zod rules",
+      "assertions": [
+        {
+          "id": "no-any-unknown",
+          "trap": "z.any() for id field",
+          "description": "z.unknown() not z.any()"
+        },
+        {
+          "id": "string-validations",
+          "trap": "z.string() without .email()/.min()/.url() where applicable",
+          "description": "String validations applied at definition (email, min length)"
+        },
+        {
+          "id": "enum-fixed-values",
+          "trap": "role as z.string() instead of z.enum",
+          "description": "z.enum for fixed value sets (role)"
+        },
+        {
+          "id": "coercion-form",
+          "trap": "age is z.string() from form instead of z.coerce.number()",
+          "description": "z.coerce for form/query data conversion"
+        },
+        {
+          "id": "safeParse",
+          "trap": "parse() with try/catch instead of safeParse()",
+          "description": "safeParse() for user input, not parse() with try/catch"
+        },
+        {
+          "id": "handle-all-issues",
+          "trap": "Only first error message returned (e.message)",
+          "description": "Handle all issues not just first; use flatten() for forms"
+        },
+        {
+          "id": "validate-boundaries",
+          "trap": "JSON.parse output trusted without validation",
+          "description": "Validate at boundaries, never trust JSON.parse output"
+        },
+        {
+          "id": "infer-not-manual",
+          "trap": "Manual interface User instead of z.infer",
+          "description": "z.infer<typeof schema> not manual type definitions"
+        },
+        {
+          "id": "brand-domain-ids",
+          "trap": "userId and orderId both z.string().uuid() — swappable",
+          "description": ".brand() for domain IDs to prevent mixing"
+        },
+        {
+          "id": "strict-unknown-keys",
+          "trap": "No strict() mode on schemas receiving external data",
+          "description": "strict() for external data to reject unknown keys"
+        },
+        {
+          "id": "partial-updates",
+          "trap": "updateUserSchema duplicated instead of derived",
+          "description": "partial() to derive update schemas from base"
+        },
+        {
+          "id": "discriminated-union",
+          "trap": "z.union instead of z.discriminatedUnion for tagged types",
+          "description": "z.discriminatedUnion for types with discriminant field"
+        },
+        {
+          "id": "lazy-recursive",
+          "trap": "Direct self-reference in categorySchema",
+          "description": "z.lazy() for recursive schemas"
+        },
+        {
+          "id": "refine-no-throw",
+          "trap": "refine callback throws instead of returning false",
+          "description": "Return false in refine, never throw"
+        },
+        {
+          "id": "superRefine-multiple",
+          "trap": "Multiple validation checks crammed into single refine",
+          "description": "superRefine() for multiple validation issues"
+        },
+        {
+          "id": "cache-schema",
+          "trap": "Schema created inside component on every render",
+          "description": "Cache schema instances outside hot paths"
+        },
+        {
+          "id": "export-schema-and-type",
+          "trap": "Type exported but not consistently with schema",
+          "description": "Export schemas AND inferred types together"
+        }
+      ]
+    }
+  ]
+}

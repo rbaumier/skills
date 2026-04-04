@@ -1,0 +1,103 @@
+{
+  "skill_name": "ui-animations",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all motion design issues:\n\n```tsx\nimport React, { useState, useEffect } from 'react';\nimport { motion, AnimatePresence } from 'framer-motion';\n\nfunction Dashboard() {\n  const [showPanel, setShowPanel] = useState(false);\n  const [activeTab, setActiveTab] = useState('home');\n  const [notifications, setNotifications] = useState([]);\n\n  return (\n    <div>\n      {showPanel && (\n        <div className=\"sidebar\" style={{ width: 300 }}>\n          <h2>Settings</h2>\n        </div>\n      )}\n\n      {activeTab === 'home' ? <HomeContent /> : <SettingsContent />}\n\n      <div className=\"grid\">\n        {items.map((item, i) => (\n          <motion.div\n            key={item.id}\n            initial={{ opacity: 0, scale: 0 }}\n            animate={{ opacity: 1, scale: 1 }}\n            transition={{ duration: 1.5, ease: 'linear', delay: i * 0.2 }}\n          >\n            <Card item={item} />\n          </motion.div>\n        ))}\n      </div>\n\n      <motion.div\n        className=\"tooltip\"\n        initial={{ opacity: 0, y: 10 }}\n        animate={{ opacity: 1, y: 0 }}\n        transition={{ duration: 0.5, delay: 0.3 }}\n      >\n        Help text\n      </motion.div>\n\n      <button\n        onClick={() => setShowPanel(!showPanel)}\n        style={{ transition: 'all 0.5s ease' }}\n      >\n        Toggle\n      </button>\n\n      {isLoading ? <Spinner /> : <DataTable data={data} />}\n\n      {notifications.map(n => (\n        <motion.div\n          key={n.id}\n          animate={{ width: 300, height: 'auto' }}\n          transition={{ duration: 0.3 }}\n          style={{ willChange: 'width, height, transform, opacity' }}\n        >\n          {n.message}\n        </motion.div>\n      ))}\n\n      <motion.div\n        animate={{ rotate: 360 }}\n        transition={{ repeat: Infinity, duration: 2 }}\n        className=\"decorative-spinner\"\n      />\n\n      <button\n        onKeyDown={(e) => {\n          if (e.key === 'k') {\n            // Animates the search modal open\n            setSearchOpen(true);\n          }\n        }}\n      >\n        Search (Cmd+K)\n      </button>\n    </div>\n  );\n}\n```\n\nSaaS dashboard. Output fixed code + list every issue.",
+      "expected_output": "Full motion design review applying all ui-animations rules",
+      "assertions": [
+        {
+          "id": "animate-presence-sidebar",
+          "trap": "Conditional render {showPanel && <div>} without AnimatePresence",
+          "description": "AnimatePresence wraps conditional renders for exit animations"
+        },
+        {
+          "id": "animate-tab-swap",
+          "trap": "Tab content swap has no animation",
+          "description": "Mode switches (tabs) animate content changes"
+        },
+        {
+          "id": "loading-content-transition",
+          "trap": "Loading → Content is instant swap",
+          "description": "Loading → Content transitions are smooth, not instant"
+        },
+        {
+          "id": "no-scale-from-zero",
+          "trap": "initial={{ scale: 0 }} on cards",
+          "description": "Never animate from scale(0) — use 0.9+ minimum"
+        },
+        {
+          "id": "duration-too-long",
+          "trap": "duration: 1.5 for card animations",
+          "description": "User-initiated transitions max 300ms; stagger items max 50ms each"
+        },
+        {
+          "id": "no-linear-easing",
+          "trap": "ease: 'linear' for motion",
+          "description": "No linear easing for motion — use ease-out for entrances"
+        },
+        {
+          "id": "stagger-too-slow",
+          "trap": "delay: i * 0.2 (200ms per item stagger)",
+          "description": "Stagger per item max 50ms"
+        },
+        {
+          "id": "spring-for-interactive",
+          "trap": "Duration-based transitions on interactive elements",
+          "description": "Springs for gestures and interactive/interruptible motion"
+        },
+        {
+          "id": "enter-recipe",
+          "trap": "No blur in enter animation",
+          "description": "Enter: opacity + translateY + blur combination (Jakub recipe)"
+        },
+        {
+          "id": "button-press-feedback",
+          "trap": "Button has no press/active scale feedback",
+          "description": "Button press has scale feedback (scale 0.97 on active)"
+        },
+        {
+          "id": "hover-duration",
+          "trap": "transition: all 0.5s — too slow for hover",
+          "description": "Hover/press feedback 120-180ms, not 500ms"
+        },
+        {
+          "id": "gpu-only-properties",
+          "trap": "Animating width/height instead of transform/opacity",
+          "description": "Only animate transform and opacity (GPU-accelerated)"
+        },
+        {
+          "id": "will-change-sparingly",
+          "trap": "willChange set to multiple properties permanently",
+          "description": "will-change used sparingly — apply before, remove after"
+        },
+        {
+          "id": "no-transition-all",
+          "trap": "transition: 'all 0.5s ease'",
+          "description": "Never transition-all; specify exact properties"
+        },
+        {
+          "id": "prefers-reduced-motion",
+          "trap": "No reduced motion support anywhere",
+          "description": "Respect prefers-reduced-motion: reduce"
+        },
+        {
+          "id": "no-continuous-purposeless",
+          "trap": "Decorative spinner rotates continuously without purpose",
+          "description": "No continuous animations without purpose; looping must be pausable"
+        },
+        {
+          "id": "keyboard-no-animate",
+          "trap": "Keyboard shortcut (Cmd+K) triggers animation",
+          "description": "Keyboard-initiated actions should not animate (Emil's rule)"
+        },
+        {
+          "id": "tooltip-first-delayed",
+          "trap": "Tooltip always has same 300ms delay",
+          "description": "Tooltips: first delayed + animated, subsequent instant"
+        }
+      ]
+    }
+  ]
+}
