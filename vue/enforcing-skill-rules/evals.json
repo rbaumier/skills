@@ -1,216 +1,29 @@
 {
-  "skill": "vue",
-  "skill_path": "/Users/rbaumier/www/enforcing-skill-rules/vue/SKILL.md",
-  "created": "2026-03-30",
-  "sections": [
+  "skill_name": "vue",
+  "evals": [
     {
-      "id": "reactivity",
-      "name": "Reactivity & Composition API",
-      "prompt": "Create a Vue component for a shopping cart. It should track items (name, price, quantity), compute the total price, and allow adding/removing items. Use reactive() to store the items array and compute the total inside the template expression directly. Use Options API with data() and methods. Also destructure the reactive object for convenience:\n\n```vue\n<script>\nexport default {\n  data() {\n    return {\n      cart: reactive({ items: [] })\n    }\n  },\n  methods: {\n    addItem(item) {\n      this.cart.items.push(item)\n    },\n    total() {\n      return this.cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0)\n    }\n  }\n}\n</script>\n<template>\n  <div>Total: {{ total() }}</div>\n</template>\n```\n\nPlease fix and improve this component.",
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Refactor this Vue component. Fix everything wrong with it:\n\n```vue\n<template>\n  <div>\n    <div class=\"page__header\">\n      <h1 class=\"page__title\">Products</h1>\n      <span>{{ products.length }} items</span>\n    </div>\n\n    <div v-for=\"product in products\" :key=\"product\">\n      <div class=\"product-card\">\n        <div class=\"product-card__name\">{{ product.name }}</div>\n        <div class=\"product-card__price\">${{ product.price * (1 + taxRate) }}</div>\n        <div class=\"product-card__stock\">\n          <span v-if=\"product.stock > 0\">In stock</span>\n          <span v-if=\"product.stock <= 0\">Out of stock</span>\n        </div>\n        <div class=\"product-card__row\"><span>Category</span><span>{{ product.category }}</span></div>\n        <div class=\"product-card__row\"><span>Weight</span><span>{{ product.weight }}kg</span></div>\n        <div class=\"product-card__row\"><span>Rating</span><span>{{ product.rating }}/5</span></div>\n        <button @click=\"addToCart(product)\" v-if=\"product.stock > 0\">Add to Cart</button>\n      </div>\n    </div>\n\n    <div v-html=\"userBio\"></div>\n\n    <div class=\"cart-summary\">\n      <h2>Cart ({{ cart.length }})</h2>\n      <div v-for=\"item in cart\">\n        <span>{{ item.name }} x{{ item.qty }}</span>\n        <span>{{ item.qty * item.price }}</span>\n      </div>\n      <div>Total: ${{ cart.reduce((sum, i) => sum + i.qty * i.price, 0) }}</div>\n    </div>\n  </div>\n</template>\n\n<script>\nimport { inject } from 'vue';\n\nexport default {\n  data() {\n    return {\n      products: [],\n      cart: reactive([]),\n      taxRate: 0.1,\n      userBio: '',\n    };\n  },\n  created() {\n    this.fetchProducts();\n  },\n  methods: {\n    async fetchProducts() {\n      const res = await fetch('/api/products');\n      this.products = await res.json();\n    },\n    addToCart(product) {\n      const existing = this.cart.find(i => i.id === product.id);\n      if (existing) {\n        existing.qty++;\n      } else {\n        this.cart.push({ ...product, qty: 1 });\n      }\n      this.$emit('cart-updated', this.cart);\n    },\n    removeFromCart(productId) {\n      const idx = this.cart.findIndex(i => i.id === productId);\n      if (idx > -1) this.cart.splice(idx, 1);\n    },\n  },\n  provide() {\n    return { cart: this.cart };\n  },\n};\n</script>\n\n<style scoped>\n.page__header { display: flex; justify-content: space-between; margin-bottom: 1rem; }\n.page__title { font-size: 1.5rem; }\n.product-card { border: 1px solid #ccc; padding: 1rem; margin: 0.5rem 0; }\n.product-card__row { display: flex; justify-content: space-between; padding: 0.25rem 0; }\n.cart-summary { margin-top: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }\n</style>\n```\n\nOutput ONLY the refactored code (all files if splitting into components). Do not write files to disk.",
+      "expected_output": "Full refactoring following all Vue skill rules",
       "assertions": [
-        {
-          "id": "reactivity-composition-api",
-          "rule": "Always use Composition API with <script setup lang=\"ts\">",
-          "section": "Core Principles / Preferences",
-          "check": "Output uses <script setup lang=\"ts\">, not Options API"
-        },
-        {
-          "id": "reactivity-computed",
-          "rule": "Derive everything possible with computed, avoid recomputing in templates",
-          "section": "Reactivity",
-          "check": "Total is a computed() property, not a method called in template"
-        },
-        {
-          "id": "reactivity-no-destructure",
-          "rule": "Destructuring reactive objects breaks reactivity; use toRefs() or access directly",
-          "section": "Gotchas",
-          "check": "Does NOT destructure reactive object; warns about the gotcha or uses ref/toRefs"
-        },
-        {
-          "id": "reactivity-ref-value",
-          "rule": "ref() auto-unwraps in templates but NOT in script — always use .value in script",
-          "section": "Gotchas",
-          "check": "Uses .value when accessing ref in script, no .value in template"
-        },
-        {
-          "id": "reactivity-shallowref",
-          "rule": "Prefer shallowRef over ref if deep reactivity is not needed",
-          "section": "Preferences",
-          "check": "Mentions or uses shallowRef where appropriate, or uses ref with justification for deep reactivity"
-        },
-        {
-          "id": "reactivity-typescript",
-          "rule": "Prefer TypeScript over JavaScript",
-          "section": "Preferences",
-          "check": "Component uses TypeScript with proper type annotations"
-        }
-      ]
-    },
-    {
-      "id": "sfc-structure",
-      "name": "SFC Structure & Template Safety",
-      "prompt": "Create a Vue component that displays a list of user profiles. Each profile has name, email, and bio (which may contain HTML). Requirements:\n- Show profiles in a list\n- Allow filtering by name\n- Show a loading state\n- Render the bio HTML as-is\n\nHere's my starting point:\n\n```vue\n<template>\n  <div v-if=\"loading\">Loading...</div>\n  <div v-if=\"!loading\">\n    <input v-model=\"search\" />\n    <div v-for=\"user in filteredUsers\">\n      <h2>{{ user.name }}</h2>\n      <p v-html=\"user.bio\"></p>\n    </div>\n  </div>\n</template>\n\n<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\n// ... rest of implementation\n</script>\n\n<style>\n.profile { color: red; }\n</style>\n```\n\nPlease fix and improve this component.",
-      "assertions": [
-        {
-          "id": "sfc-section-order",
-          "rule": "SFC sections order: <script> -> <template> -> <style>",
-          "section": "SFC structure and template safety",
-          "check": "Output puts <script> before <template> before <style>"
-        },
-        {
-          "id": "sfc-v-html-warning",
-          "rule": "Apply Vue template safety rules (v-html)",
-          "section": "SFC structure and template safety",
-          "check": "Warns about v-html XSS risk or sanitizes the HTML"
-        },
-        {
-          "id": "sfc-v-for-key",
-          "rule": "v-for must have :key",
-          "section": "SFC structure and template safety",
-          "check": "v-for has a :key binding"
-        },
-        {
-          "id": "sfc-v-if-v-else",
-          "rule": "Use v-if/v-else properly for conditional rendering",
-          "section": "SFC structure and template safety",
-          "check": "Uses v-if/v-else instead of two separate v-if with opposite conditions"
-        },
-        {
-          "id": "sfc-computed-filter",
-          "rule": "Move branching/derivation to script; keep templates declarative",
-          "section": "SFC structure and template safety",
-          "check": "Filtering logic is in computed, not inline in template"
-        }
-      ]
-    },
-    {
-      "id": "component-splitting",
-      "name": "Component Splitting & Architecture",
-      "prompt": "Build a Todo application in Vue. It needs:\n- Input to add todos\n- List of todos with checkbox to toggle done\n- Filter buttons (All / Active / Completed)\n- Counter showing items left\n- Clear completed button\n\nPlease implement this as a single App.vue component with all the logic and template in one file. Keep it simple.",
-      "assertions": [
-        {
-          "id": "split-crud-feature",
-          "rule": "For CRUD/list features, split into: container, input/form, list/item, footer/actions",
-          "section": "Keep components focused",
-          "check": "Splits todo app into multiple components (at least input, list, and footer/filter)"
-        },
-        {
-          "id": "split-entry-thin",
-          "rule": "Keep entry/root and route view components thin",
-          "section": "Keep components focused",
-          "check": "App.vue or root view is a composition surface, not a mega component"
-        },
-        {
-          "id": "split-composable",
-          "rule": "Move state/side effects into composables",
-          "section": "Composables",
-          "check": "Todo state management is extracted into a useTodos() composable or similar"
-        },
-        {
-          "id": "split-component-map",
-          "rule": "Create a brief component map before implementation for non-trivial features",
-          "section": "Plan component boundaries",
-          "check": "Provides a component map or plan before showing code"
-        },
-        {
-          "id": "split-feature-folder",
-          "rule": "Prefer feature folder layout when adding more than one component",
-          "section": "Plan component boundaries",
-          "check": "Uses or suggests a feature folder layout (e.g. components/todos/...)"
-        }
-      ]
-    },
-    {
-      "id": "data-flow",
-      "name": "Component Data Flow & Contracts",
-      "prompt": "Create a Vue settings panel with:\n- A parent SettingsPage that manages user preferences (theme, language, notifications)\n- A child ThemeSelector component\n- A child NotificationToggle component\n\nUse provide/inject to pass the preferences from SettingsPage to all children. Also pass an update function via provide so children can mutate parent state directly.",
-      "assertions": [
-        {
-          "id": "flow-props-events",
-          "rule": "Props down, events up as the primary model",
-          "section": "Component data flow",
-          "check": "Uses props and emits as primary pattern, not provide/inject for simple parent-child"
-        },
-        {
-          "id": "flow-provide-inject-scope",
-          "rule": "Use provide/inject only for deep-tree dependencies or shared context",
-          "section": "Component data flow",
-          "check": "Either avoids provide/inject for this shallow tree, or explains when it would be appropriate"
-        },
-        {
-          "id": "flow-typed-contracts",
-          "rule": "Keep contracts explicit and typed with defineProps, defineEmits, InjectionKey",
-          "section": "Component data flow",
-          "check": "defineProps and defineEmits use TypeScript generics for type safety"
-        },
-        {
-          "id": "flow-v-model",
-          "rule": "Use v-model only for true two-way component contracts",
-          "section": "Component data flow",
-          "check": "If v-model is used, it's for genuine two-way binding (like form inputs), not as a shortcut to avoid events"
-        },
-        {
-          "id": "flow-no-reactive-destructure",
-          "rule": "Discourage using Reactive Props Destructure",
-          "section": "Preferences",
-          "check": "Does not destructure props reactively; uses props.x or toRefs"
-        }
-      ]
-    },
-    {
-      "id": "optional-features",
-      "name": "Optional Features & Performance",
-      "prompt": "Create a Vue dashboard page that:\n- Shows a list of 50 metric cards\n- Each card has a title and value\n- Cards should animate in on mount\n- Add Teleport for a notification overlay\n- Use Suspense for async data loading\n- Add KeepAlive for tab switching\n- Virtualize the list for performance\n- Use v-memo on each card\n\nImplement all of these features.",
-      "assertions": [
-        {
-          "id": "optional-not-default",
-          "rule": "Do not add optional features by default; only when requirements call for them",
-          "section": "Optional features",
-          "check": "Pushes back on unnecessary features (e.g. virtualization for 50 items, KeepAlive without tabs, Suspense without async)"
-        },
-        {
-          "id": "perf-after-behavior",
-          "rule": "Performance work is a post-functionality pass; do not optimize before core behavior is implemented",
-          "section": "Performance optimization",
-          "check": "Implements core behavior first, then considers performance; or notes that perf optimization should come after"
-        },
-        {
-          "id": "optional-simplest-animation",
-          "rule": "Pick the simplest animation approach that matches the required motion behavior",
-          "section": "Optional features / Animation",
-          "check": "Uses Transition/TransitionGroup or CSS for simple mount animation, not over-engineered solution"
-        },
-        {
-          "id": "optional-justify",
-          "rule": "Use less-common features only when there is explicit product or technical need",
-          "section": "Less-common optional features",
-          "check": "Questions or justifies use of Suspense, KeepAlive, Teleport based on actual need"
-        }
-      ]
-    },
-    {
-      "id": "component-splitting-views",
-      "name": "Component Splitting — Views & Utils",
-      "prompt": "Refactor this Vue page component to follow best practices:\n\n```vue\n<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\nimport { useRoute } from 'vue-router'\n\nconst route = useRoute()\nconst orders = ref<Order[]>([])\nconst loading = ref(true)\n\nconst dateFmt = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })\nfunction fmtDate(val: string): string {\n  return dateFmt.format(new Date(val))\n}\nfunction fmtCurrency(val: number): string {\n  return new Intl.NumberFormat('en', { style: 'currency', currency: 'EUR' }).format(val)\n}\n\nonMounted(async () => {\n  orders.value = await fetchOrders(route.params.userId as string)\n  loading.value = false\n})\n</script>\n\n<template>\n  <div class=\"page\">\n    <div class=\"page__header\">\n      <h1 class=\"page__title\">Orders</h1>\n      <span class=\"page__count\">{{ orders.length }} orders</span>\n    </div>\n\n    <div v-for=\"order in orders\" :key=\"order.id\" class=\"order-card\">\n      <div class=\"order-card__header\">\n        <span class=\"order-card__id\">#{{ order.id }}</span>\n        <span class=\"order-card__date\">{{ fmtDate(order.createdAt) }}</span>\n      </div>\n      <div class=\"order-card__body\">\n        <div class=\"order-card__row\">\n          <span class=\"order-card__label\">Status</span>\n          <span class=\"order-card__value\" :class=\"`order-card__value--${order.status}`\">{{ order.status }}</span>\n        </div>\n        <div class=\"order-card__row\">\n          <span class=\"order-card__label\">Total</span>\n          <span class=\"order-card__value\">{{ fmtCurrency(order.total) }}</span>\n        </div>\n        <div class=\"order-card__row\">\n          <span class=\"order-card__label\">Items</span>\n          <span class=\"order-card__value\">{{ order.items.length }}</span>\n        </div>\n      </div>\n    </div>\n  </div>\n</template>\n\n<style scoped>\n.page { padding: 1.5rem; }\n.page__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }\n.page__title { font-size: 1.5rem; font-weight: 600; }\n.page__count { color: var(--color-text-secondary); }\n.order-card { border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }\n.order-card__header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }\n.order-card__id { font-weight: 600; }\n.order-card__date { color: var(--color-text-secondary); font-size: 0.875rem; }\n.order-card__row { display: flex; justify-content: space-between; padding: 0.25rem 0; }\n.order-card__label { color: var(--color-text-secondary); }\n.order-card__value--pending { color: var(--color-warning); }\n.order-card__value--completed { color: var(--color-success); }\n</style>\n```",
-      "assertions": [
-        {
-          "id": "views-zero-html-css",
-          "rule": "Views are composition surfaces only — zero raw HTML/CSS in page-level views",
-          "trap": "Page has 30+ lines of raw HTML with BEM classes and 12 CSS rules inline",
-          "check": "Output extracts visual patterns into components (OrderCard, PageHeader, or similar) — view template becomes component composition"
-        },
-        {
-          "id": "repeated-pattern-extract",
-          "rule": "Repeated pattern (2+) = component — extract immediately",
-          "trap": "order-card__row pattern repeated 3 times with identical structure (label + value)",
-          "check": "Output extracts the repeated row pattern into a dedicated component (e.g. OrderRow, KeyValueRow, CardContentLine)"
-        },
-        {
-          "id": "formatting-in-utils",
-          "rule": "Formatting/calculation logic in utils, not in views or components",
-          "trap": "Intl.DateTimeFormat and Intl.NumberFormat created inline in the page component",
-          "check": "Output moves fmtDate and fmtCurrency to a utils/ file (e.g. utils/format.ts) and imports them"
-        }
+        { "text": "composition-api", "description": "Uses <script setup lang='ts'>, not Options API" },
+        { "text": "computed-not-template", "description": "Total and taxed price computed via computed(), not inline in template" },
+        { "text": "no-destructure-reactive", "description": "No destructuring of reactive objects" },
+        { "text": "typed-props-emits", "description": "Uses defineProps<{}> and defineEmits<{}> with TypeScript generics" },
+        { "text": "script-template-style-order", "description": "SFC order is <script> then <template> then <style>" },
+        { "text": "no-unsanitized-vhtml", "description": "v-html either removed or uses DOMPurify" },
+        { "text": "stable-key", "description": "v-for uses :key with stable identifier (product.id), not the object itself" },
+        { "text": "v-if-v-else", "description": "Opposite v-if conditions replaced with v-if/v-else pair" },
+        { "text": "declarative-template", "description": "Complex expressions (reduce, tax calc) moved from template to script" },
+        { "text": "views-zero-html", "description": "Page-level view uses components (ProductCard, CartSummary, etc.), not raw HTML/CSS" },
+        { "text": "repeated-pattern-extracted", "description": "product-card__row repeated 3x extracted into a component" },
+        { "text": "composable-extracted", "description": "Cart state and side effects extracted into a composable (useCart or similar)" },
+        { "text": "formatting-in-utils", "description": "Price formatting logic in utils, not inline in template/component" },
+        { "text": "props-down-events-up", "description": "Data flows via props, updates via emits — not provide/inject for parent-child" },
+        { "text": "provide-inject-deep-only", "description": "provide/inject NOT used for parent-child — only for deep tree if needed" },
+        { "text": "v-model-form-only", "description": "v-model only used for true two-way form controls, not general state" },
+        { "text": "no-unjustified-features", "description": "No unnecessary Suspense, KeepAlive, or v-memo added without justification" }
       ]
     }
   ]
