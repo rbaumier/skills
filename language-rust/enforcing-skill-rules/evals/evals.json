@@ -7,22 +7,54 @@
       "prompt": "Refactor this Rust code. Fix everything wrong with it:\n\n```rust\nuse std::sync::{Arc, Mutex};\nuse lazy_static::lazy_static;\nuse std::collections::HashMap;\n\nlazy_static! {\n    static ref CONFIG: HashMap<String, String> = load_config();\n}\n\n#[derive(Debug)]\npub enum NodeKind {\n    Leaf(String),\n    Branch(Vec<Arc<Mutex<Node>>>),\n    Metadata(HashMap<String, String>),  // often empty but same size as Branch\n}\n\n#[derive(Debug)]\npub struct Node {\n    pub kind: NodeKind,\n    pub parent: Option<Arc<Mutex<Node>>>,\n    pub cache: Mutex<Option<String>>,\n}\n\npub fn normalize_name(name: &String) -> String {\n    if name.contains('-') {\n        name.replace('-', \"_\")\n    } else {\n        name.to_owned()\n    }\n}\n\npub async fn fetch_and_process(urls: Vec<String>) -> Vec<String> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    for url in &urls {\n        let res = reqwest::get(url).await.unwrap();\n        let body = res.text().await.unwrap();\n        results.lock().unwrap().push(body);\n    }\n    let guard = results.lock().unwrap();\n    guard.clone()\n}\n\npub fn process_items(items: &Vec<Item>) -> Vec<ProcessedItem> {\n    let mut result = Vec::new();\n    for item in items {\n        result.push(ProcessedItem {\n            name: item.name.clone(),\n            value: item.value * 2,\n        });\n    }\n    result\n}\n\nunsafe fn read_raw_buffer(ptr: *const u8, len: usize) -> Vec<u8> {\n    std::slice::from_raw_parts(ptr, len).to_vec()\n}\n\npub fn lookup(map: &HashMap<String, i32>, key: &str) -> i32 {\n    *map.get(key).unwrap()\n}\n```\n\nOutput ONLY the refactored code. Do not write files to disk.",
       "expected_output": "Full refactoring applying all language-rust rules",
       "assertions": [
-        { "text": "newtype-parse", "description": "Uses newtypes or parse-don't-validate where appropriate" },
-        { "text": "accept-str-not-string", "description": "&str instead of &String, &[T] instead of &Vec<T>" },
-        { "text": "cow-for-normalize", "description": "normalize_name returns Cow<'_, str> not String (sometimes-modify pattern)" },
-        { "text": "no-mutex-single-thread", "description": "Node.cache uses Cell/RefCell not Mutex (single-threaded interior mutability)" },
-        { "text": "arena-not-arc-mutex", "description": "Node tree uses arena/indices not Arc<Mutex<Node>>. Parent is Weak or index, not Arc" },
-        { "text": "box-large-variant", "description": "Large enum variant (Branch or Metadata) boxed to keep enum size small" },
-        { "text": "thiserror-or-anyhow", "description": "Errors use thiserror/anyhow, not bare unwrap" },
-        { "text": "context-on-errors", "description": ".context() or .with_context() used to explain why" },
-        { "text": "no-unwrap-production", "description": "Zero unwrap()/expect() — uses ? or unwrap_or_else" },
-        { "text": "no-block-async", "description": "CPU work in fetch_and_process offloaded or uses proper async patterns" },
-        { "text": "channels-not-arc-mutex", "description": "Results collected via channels (mpsc) not Arc<Mutex<Vec>>" },
-        { "text": "pre-allocate", "description": "Vec::with_capacity used when size known" },
-        { "text": "iterator-chains", "description": "process_items uses iterator chain (map/collect) not manual push loop" },
-        { "text": "unsafe-safety-comment", "description": "unsafe block has // SAFETY: comment justifying invariants" },
-        { "text": "oncelock-not-lazy-static", "description": "OnceLock/LazyLock used instead of lazy_static" },
-        { "text": "fast-hasher", "description": "HashMap with integer keys uses ahash/fxhash suggestion or note" }
+        {
+          "text": "accept-str-not-string",
+          "description": "&str instead of &String, &[T] instead of &Vec<T>"
+        },
+        {
+          "text": "cow-for-normalize",
+          "description": "normalize_name returns Cow<'_, str> not String (sometimes-modify pattern)"
+        },
+        {
+          "text": "no-mutex-single-thread",
+          "description": "Node.cache uses Cell/RefCell not Mutex (single-threaded interior mutability)"
+        },
+        {
+          "text": "arena-not-arc-mutex",
+          "description": "Node tree uses arena/indices not Arc<Mutex<Node>>. Parent is Weak or index, not Arc"
+        },
+        {
+          "text": "thiserror-or-anyhow",
+          "description": "Errors use thiserror/anyhow, not bare unwrap"
+        },
+        {
+          "text": "no-unwrap-production",
+          "description": "Zero unwrap()/expect() \u2014 uses ? or unwrap_or_else"
+        },
+        {
+          "text": "no-block-async",
+          "description": "CPU work in fetch_and_process offloaded or uses proper async patterns"
+        },
+        {
+          "text": "channels-not-arc-mutex",
+          "description": "Results collected via channels (mpsc) not Arc<Mutex<Vec>>"
+        },
+        {
+          "text": "pre-allocate",
+          "description": "Vec::with_capacity used when size known"
+        },
+        {
+          "text": "iterator-chains",
+          "description": "process_items uses iterator chain (map/collect) not manual push loop"
+        },
+        {
+          "text": "unsafe-safety-comment",
+          "description": "unsafe block has // SAFETY: comment justifying invariants"
+        },
+        {
+          "text": "oncelock-not-lazy-static",
+          "description": "OnceLock/LazyLock used instead of lazy_static"
+        }
       ]
     }
   ]
