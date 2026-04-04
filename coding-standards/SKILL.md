@@ -46,7 +46,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 ## Functions
 
 - **Inject deps via factory: `createService(deps)`** -- pass all I/O (db, cache, email) as args. Composition root = only place knowing concretions
-- Max 30 lines. Pure by default. SRP
+- **Max 30 lines per function — extract a named helper at line 30.** Pure by default. SRP
 - Max 3 positional args; options object for 4+
 - CQS -- command OR query. Composition over inheritance
 - Focused modules -- no `common`/`shared` grab-bags
@@ -62,7 +62,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 ## Error Handling
 
 - Surface all failures -- every `catch` handles or propagates
-- **Result for ALL errors, no exceptions** -- expected, unexpected, unrecoverable. Never `throw`. Error boundaries at the edge (middleware, main) convert Result errors to HTTP 500 / process exit / log + restart
+- **Result for ALL errors, no exceptions** -- never `throw`, not in public functions, not in private helpers, not anywhere. `if (!user) throw new Error('not found')` → `if (!user) return err({ type: 'NOT_FOUND' })`. Every function returns `Result<T, E>`. Error boundaries at the edge (middleware, main) convert Result errors to HTTP 500 / process exit / log + restart
 - Preserve original stack trace/cause when wrapping
 - Timeout on every I/O
 
