@@ -145,6 +145,34 @@
       "assertions": [
         { "text": "next-caller-contract-targeted", "description": "The comment on advanceCursor explains what the next call to tick() will see — e.g. 'so the next tick starts from here' or 'next invocation skips these events'. Just 'advance the cursor' = FAIL" }
       ]
+    },
+    {
+      "id": 12,
+      "name": "full-sweep",
+      "prompt": "Implement a webhook health monitor module. Here are the available queries and types:\n\n```typescript\ninterface HealthConfig {\n  checkIntervalMs: number;\n  failureThresholdPercent: number;\n  disableThresholdPercent: number;\n  bucketDurationSecs: number;\n  bucketMaxMessages: number;\n  cooldownMs: number;\n  maxDeltaRows: number;\n}\n\ntype HealthStatus = 'healthy' | 'warning' | 'disabled' | 'resolved';\n\ninterface SubscriptionHealth {\n  subscriptionId: string;\n  failurePercent: number;\n  lastStatus: HealthStatus | null;\n  lastStatusAt: Date | null;\n  targetUrl: string;\n}\n\n// Available queries (all return Promise):\n// queries.readCursor(db) -> Date\n// queries.ingestDeltas(db, cursor, maxRows) -> DeltaRow[]\n// queries.upsertBuckets(db, deltas) -> void\n// queries.closeFullBuckets(db, config) -> number\n// queries.findSuspects(db, config) -> string[]\n// queries.computeFailureRates(db, suspectIds, config) -> SubscriptionHealth[]\n// queries.advanceCursor(db, timestamp) -> void\n// queries.resetHealthySubscriptions(db, suspectIds) -> number\n// queries.insertHealthEvent(db, subId, status) -> void\n// queries.disableSubscription(db, subId) -> Date | null\n// mailer.sendWarning(sub) -> void\n// mailer.sendDisabled(sub) -> void\n// mailer.sendRecovered(sub) -> void\n```\n\nImplement these two functions:\n\n1. `evaluateHealth(db, config)` — the main pipeline: read cursor, ingest deltas, bucket them, close full buckets, find suspects, compute failure rates, advance cursor, reset healthy subs. Returns the list of suspects with their health data.\n\n2. `processSubscription(db, config, sub: SubscriptionHealth)` — a state machine that decides what to do with one suspect subscription based on its current failurePercent and lastStatus. Rules:\n   - disabled → do nothing (user must re-enable)\n   - resolved + within cooldown → do nothing (avoid email spam)\n   - warning + same failure range → do nothing (already warned)\n   - warning + recovered → insert resolved event + send recovery email\n   - warning + worse → disable + send disabled email\n   - no previous + above disable threshold → warn + disable (both)\n   - no previous + above warning threshold → warn\n   - below threshold → do nothing (healthy)\n\nOutput ONLY the implementation. Do not write files.",
+      "expected_output": "Full implementation covering all coding-standards rules",
+      "assertions": [
+        { "text": "fs-module-orientation", "description": "Module starts with a doc comment explaining what the module does (1 sentence) + how it works (numbered overview)" },
+        { "text": "fs-consequence-comments", "description": "Comments explain consequences/why, not just what. e.g. 'reset healthy subs so the frontend...' not just 'reset healthy subs'" },
+        { "text": "fs-term-explanations", "description": "Domain terms (cursor, delta, bucket, suspect, cooldown) explained on first use with what/why/how" },
+        { "text": "fs-conversational-tone", "description": "Comments use conversational tone — quotes, rhetorical questions, pair-programming voice" },
+        { "text": "fs-inaction-justified", "description": "Every no-op/empty branch in the state machine has a comment explaining WHY doing nothing is correct" },
+        { "text": "fs-next-caller-effect", "description": "advanceCursor and resetHealthy comments explain what the next tick will see" },
+        { "text": "fs-struct-role", "description": "SubscriptionHealth or similar types documented by role (what decision they enable) not by listing fields" },
+        { "text": "fs-limits-explained", "description": "maxDeltaRows cap explained: why it exists + what happens to leftovers" },
+        { "text": "fs-return-value-intent", "description": "Return values documented with what the caller should do with them" },
+        { "text": "fs-naming-intent", "description": "No banned words (process, handle, data). Function names express intent" },
+        { "text": "fs-no-boolean-flags", "description": "No boolean parameters controlling branches" },
+        { "text": "fs-guard-clauses", "description": "Error cases handled with early returns, max 3 indent levels" },
+        { "text": "fs-result-not-throw", "description": "Errors returned as Result, no throw" },
+        { "text": "fs-intermediate-vars", "description": "Compound expressions extracted to named intermediate variables" },
+        { "text": "fs-factory-di", "description": "Dependencies (db, queries, mailer) injected, not imported as globals" },
+        { "text": "fs-immutable", "description": "No mutation of input arguments" },
+        { "text": "fs-jsdoc-with-example", "description": "Exported functions have JSDoc with block description + @example with return value" },
+        { "text": "fs-state-narration", "description": "State machine branches narrate the journey: 'Was warned but failure dropped — endpoint recovered'" },
+        { "text": "fs-tx-boundaries", "description": "Comments distinguish what happens in transaction vs post-commit (e.g. emails after commit)" },
+        { "text": "fs-promise-all", "description": "Independent async operations run in parallel where applicable" }
+      ]
     }
   ]
 }
