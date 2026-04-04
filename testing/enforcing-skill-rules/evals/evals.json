@@ -103,6 +103,34 @@
           "description": "Capture video/traces/screenshots on failure only (trace: 'retain-on-failure')"
         }
       ]
+    },
+    {
+      "id": 2,
+      "name": "tdd-workflow-review",
+      "prompt": "Review this TDD approach and list all issues:\n\nI'm building a shopping cart. Here's my plan:\n1. Write ALL tests first (addItem, removeItem, updateQuantity, calculateTotal, applyDiscount, checkout) — all 6 at once\n2. Then implement all methods\n3. calculateTotal test is failing due to rounding, so I'll refactor the implementation now\n4. Once all tests pass, ship it\n\nHere's my test file so far (all tests written, all RED):\n\n```typescript\ndescribe('ShoppingCart', () => {\n  it('addItem adds product', () => { /* RED */ });\n  it('removeItem removes product', () => { /* RED */ });\n  it('updateQuantity changes count', () => { /* RED */ });\n  it('calculateTotal sums prices', () => { /* RED */ });\n  it('applyDiscount reduces total', () => { /* RED */ });\n  it('checkout creates order', () => { /* RED */ });\n});\n```\n\nIs this the right approach?\n\nOutput your review listing every issue.",
+      "expected_output": "Review identifying all TDD workflow violations",
+      "assertions": [
+        {
+          "id": "vertical-slices",
+          "trap": "All 6 tests written at once (horizontal slicing)",
+          "description": "Vertical slices: one test → one impl → repeat, not batch"
+        },
+        {
+          "id": "tracer-bullet",
+          "trap": "All tests first then all implementation",
+          "description": "Tracer bullet: one thin slice end-to-end first"
+        },
+        {
+          "id": "never-refactor-red",
+          "trap": "Refactoring calculateTotal while tests are failing",
+          "description": "Never refactor during RED — only when GREEN"
+        },
+        {
+          "id": "minimal-code",
+          "trap": "Plan to implement all methods at once",
+          "description": "Write only enough code to pass the current test"
+        }
+      ]
     }
   ]
 }
