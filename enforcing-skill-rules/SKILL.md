@@ -19,8 +19,21 @@ Measure skill effectiveness per-rule, fix what fails, re-measure. Every rule get
 ## The Loop
 
 ```
-extract assertions → write trap prompts → run baseline → grade → root-cause failures → fix wording → re-measure failed sections → repeat
+classify skill → extract assertions → write trap prompts → run baseline → grade → root-cause failures → fix wording → re-measure → repeat
 ```
+
+## Step 0: Classify the Skill
+
+Before writing evals, answer one question: **"Would a senior dev with 5 years in this domain already follow >70% of these rules?"**
+
+| Classification | Signal | Eval strategy |
+|---|---|---|
+| **Cat A — Unique philosophy** | Opinionated patterns the model wouldn't follow naturally (specific commenting style, custom error paradigm, proprietary architecture) | Standard "fix all issues" with Level 1 traps works. The skill's unique patterns ARE the discriminating factor. |
+| **Cat B — Standard best practices** | Well-known patterns any senior dev knows (OWASP, React perf, Rust idioms) | "Fix all issues" won't discriminate — model already knows these. Use Level 2 traps or accept low delta. |
+
+**Why this matters**: coding-standards (Cat A) achieved +50% delta. security-defensive, react, ui-ux, language-rust (Cat B) achieved 0% delta even with subtle traps — Sonnet already knows standard best practices. Classifying first avoids wasted benchmark cycles.
+
+**Cat B skills are not useless.** Their value is in variance reduction (consistent 100% vs occasional 95%), review/audit mode, and cross-project consistency — not capturable in single-prompt refactoring evals. Document this in benchmarks rather than endlessly rewriting traps.
 
 ## Step 1: Extract Assertions
 
@@ -76,6 +89,26 @@ Save to `{skill}/enforcing-skill-rules/evals/evals.json`. ONE full-sweep eval pe
 
 If a trap doesn't naturally exercise a rule, the trap is bad — enrich the code until it does. Every rule in the SKILL.md MUST have a corresponding assertion. Audit coverage before validating.
 
+### Trap Difficulty Levels
+
+**Level 1 — Obvious violations** (sufficient for Cat A skills):
+Code written by a junior. Any model fixes these without the skill.
+
+**Level 2 — Subtle violations** (required for Cat B skills):
+Code written by a competent intermediate dev — correct patterns applied slightly wrong. The code WORKS and LOOKS reasonable. Only someone who read the skill catches the issue.
+
+| Level 1 (too easy) | Level 2 (discriminating) |
+|---|---|
+| `exec(command)` | `bcrypt(10)` instead of `bcrypt(12+)` |
+| `SELECT * ... '${id}'` | HS256 on public API (HS256 is fine internally) |
+| `useMemo(() => "string")` | `React.memo()` on cheap component with stable props |
+| `Arc<Mutex<Vec>>` | `HashMap<u64, _>` instead of `FxHashMap` |
+| `user-scalable=no` | 3 font weights instead of max 2 |
+
+**The litmus test**: run the trap WITHOUT the skill. If the model passes >90%, your traps are Level 1 — rewrite with Level 2.
+
+**Level 2 design principle**: the code should look like it passed code review by a good developer. Violations are things a SENIOR specialist catches, not things any developer spots.
+
 ## Step 3: Run Baseline
 
 **First: "Does the model already know this?" baseline** — run the trap prompt WITHOUT the skill loaded. This separates rules the model already follows (non-discriminating) from rules the skill actually teaches (discriminating). Rules where the model passes without the skill can be compressed aggressively later — the skill isn't adding value there.
@@ -118,10 +151,29 @@ Grade each assertion as **PASS/FAIL** (binary, no partial, no scales). Require e
 Build summary table, then **root-cause each failure**:
 
 **Key metrics:**
-- **Non-discriminating**: both pass → model already does this, can compress later
-- **Discriminating**: with-skill passes, without fails → skill is teaching this
+- **Non-discriminating**: both pass → model already does this, compress later
+- **Discriminating**: with-skill passes, without fails → skill teaches this
 - **Failed with-skill**: rule wording too weak → needs fix
+- **Regression**: without passes, with-skill FAILS → skill misleads the model, investigate immediately
 - **Opus-FAIL but Sonnet-self-reported-PASS**: the most important signal — superficial fix or aspirational description
+
+**After grading, tag each assertion** in evals.json:
+
+```json
+{ "id": "rule-name", "trap": "...", "description": "...", "category": "behavior", "discriminating": true }
+```
+
+`"discriminating": false` → compress to single line in SKILL.md. `"discriminating": true` → keep full detail, examples, workaround bans. This tag persists across iterations.
+
+### When Delta is 0% or Negative
+
+If without-skill scores ≥90% on Level 2 traps, stop rewriting evals. The skill's value is not capturable in single-prompt refactoring. Instead:
+
+1. **Run 3 without-skill runs** (not 1) to check variance. 100%/95%/100% without vs 100%/100%/100% with = variance reduction value.
+2. **Document in benchmark**: `"Delta: 0% — non-discriminating for refactoring. Value: consistency and review mode."`
+3. **If delta is negative**: the skill actively misleads the model. Find which rules cause regression, soften or remove them.
+
+Do NOT keep rewriting evals hoping for a delta. If Level 2 traps show 0% after one rewrite, accept it and move on.
 
 ## Step 5: Fix Failed Assertions
 
@@ -172,10 +224,13 @@ Commit skill + benchmarks together.
 
 Before deploying any skill modification, verify all of these. Benchmark must show 100% pass rate on target model.
 
+- [ ] Skill classified as Cat A or Cat B — eval difficulty matches classification
 - [ ] Every SKILL.md rule has a corresponding assertion in evals.json — audit coverage by diffing rule count vs assertion count
-- [ ] Description triggers correctly — test with 5 prompts that SHOULD activate the skill and 5 that SHOULD NOT. Common failure: description too broad (triggers on unrelated tasks) or too narrow (misses valid use cases)
+- [ ] Description triggers correctly — test with 5 prompts that SHOULD activate the skill and 5 that SHOULD NOT
 - [ ] Benchmark shows 100% pass rate on target model (Sonnet for Sonnet skills, etc.)
-- [ ] No regression on previously-passing assertions — compare current iteration vs previous
+- [ ] Delta is positive or documented as non-discriminating — if 0%, benchmark explains the skill's consistency/review value
+- [ ] No regression — with-skill never scores LOWER than without on any assertion
+- [ ] `discriminating` field set on all assertions after first benchmark
 - [ ] Compression didn't break discriminating rules — re-run hardest sections after any word reduction
 
 ## Red Flags
@@ -193,7 +248,7 @@ Before deploying any skill modification, verify all of these. Benchmark must sho
 
 ## Key Learnings
 
-From measured experiments (16 skills, 402 assertions, Opus cross-grading):
+From measured experiments (21 skills, ~650 assertions, Opus cross-grading, 5 full benchmarks):
 
 - Abstract rules ("prefer X over Y") get ignored. Review checklists ("if you see X, flag it") work
 - Position matters — rule #1 in a section gets followed more than rule #5
@@ -207,3 +262,9 @@ From measured experiments (16 skills, 402 assertions, Opus cross-grading):
 - **Aspirational FAIL pattern**: "icon buttons *would* get aria-label" — no code = no pass. Most common Opus-caught failure mode
 - **Coverage audit before validating**: compare every SKILL.md rule against assertions. Missing rules = missing trap code. ~30% of rules were untested before systematic audit
 - **Non-testable rules exist**: process rules ("design in grayscale first"), multi-file rules ("feature folders"), runtime rules ("cargo miri test") cannot be tested in a single-component refactoring prompt. Accept the gap or create dedicated eval shapes
+- **Classify before writing evals**: "Unique philosophy" skills (Cat A) show +20-50% delta with standard traps. "Standard best practices" skills (Cat B) show ~0% delta even with Level 2 traps — Sonnet already knows OWASP, React perf, Rust idioms. Classifying first saves wasted benchmark cycles
+- **Level 2 traps are necessary but not sufficient**: "Code that looks correct" traps showed 0% delta for security-defensive and language-rust. The model's baseline knowledge is extremely strong for well-documented domains
+- **Regression is real**: with-skill scored LOWER than without on 2/5 benchmarked skills (security-defensive -4%, language-rust -4%). Skills can mislead the model by over-emphasizing one pattern at the expense of another
+- **Delta does not equal value**: a skill with 0% refactoring delta may still reduce variance (consistent 100% vs occasional 95%) and enforce consistency across a project. Document this distinction in benchmarks
+- **Style and philosophy rules discriminate most**: coding-standards achieved +50% because it teaches HOW to comment, not WHAT code to write. Rules that override the model's defaults discriminate more than correctness rules the model already follows
+- **3 runs minimum for statistical confidence**: single runs mislead — the without-skill run might get lucky. Always run 3+ to measure the delta reliably
