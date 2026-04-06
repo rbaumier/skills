@@ -50,8 +50,6 @@ The research doc is passed as a file path to the implementer and spec reviewer â
 
 **Context isolation:** After research completes and `docs/research/<feature>.md` is committed, issue `/clear` before dispatching any implementer. Pass only the research doc path â€” do NOT carry the research agent's conversation forward.
 
-**Task dependency ordering:** when tasks have soft dependencies (Task 3 uses types defined in Task 1), execute in dependency order even though they could technically run independently. Mark dependencies in the TodoWrite: `[Task 3] (depends: Task 1)`. If no dependencies exist, note "independent" explicitly so the orchestrator knows parallelization is safe for future reference.
-
 ## When to Use
 
 ```dot
@@ -167,13 +165,6 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 **TIMEOUT:** If an implementer has been running >15 minutes without completing, check progress. If stuck in a loop (repeated test failures, circular debugging): (1) kill the agent, (2) extract what it learned, (3) re-dispatch with a narrower scope or more context. Stuck agents waste tokens without progress.
 
 **Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
-
-**Implementer timeout handling:** if an implementer subagent has been running for >15 minutes without completing, check its progress. If stuck in a loop (repeated test failures, circular debugging), intervene:
-1. Read the subagent's current state
-2. Provide additional context or hints
-3. If fundamentally stuck, kill and re-dispatch with a more capable model or split the task
-
-Never let a stuck implementer consume the full session budget.
 
 ## Prompt Templates
 

@@ -1,6 +1,6 @@
 ---
 name: better-auth-best-practices
-description: Skill for integrating Better Auth - the comprehensive TypeScript authentication framework.
+description: Use when integrating Better Auth for authentication, session management, OAuth providers, or multi-tenant auth in TypeScript projects.
 ---
 
 # Better Auth Integration Guide

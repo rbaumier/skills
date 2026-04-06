@@ -21,14 +21,6 @@ description: Vue 3 Composition API, `<script setup>`, TypeScript, reactivity, co
 - Prefer shallowRef when deep reactivity unneeded
 - Prefer TypeScript with typed interfaces
 
-Reactive proxy identity hazard: `reactive()` returns a Proxy — comparing reactive objects with `===` always returns false even for the same source. Use `toRaw()` to compare identity, or stick to `ref()` which wraps primitives directly.
-
-Reactivity same-tick batching: watchers only fire once per tick — multiple synchronous mutations to the same ref trigger the watcher only once with the final value. If you need to observe intermediate values, use `nextTick()` between mutations or `watchEffect` with `flush: 'sync'` (use sparingly — sync watchers bypass Vue's optimization).
-
-markRaw() for non-reactive instances: third-party class instances (Axios, Chart.js, map instances) break when wrapped in reactive(). Use `markRaw()` to opt them out of reactivity, or store them in `shallowRef()`. WHY: Vue's proxy traps interfere with internal getters/setters of library objects.
-
-refs in collections: refs inside arrays, Maps, or Sets are NOT auto-unwrapped. `const list = reactive([ref(1)]); list[0]` gives the Ref object, not the value. Use `.value` explicitly or prefer storing plain values in reactive collections.
-
 ### SFC Structure
 - Section order: `<script>` -> `<template>` -> `<style>`
 - No v-html without sanitization (XSS); use DOMPurify if needed
@@ -47,18 +39,12 @@ refs in collections: refs inside arrays, Maps, or Sets are NOT auto-unwrapped. `
 - Create component map before implementation (responsibilities + props/emits)
 - Feature folder layout: components/<feature>/, composables/use<Feature>.ts
 
-Composable structure order: follow a consistent internal order — (1) dependencies/imports, (2) primary state (ref/reactive), (3) state metadata (loading/error), (4) computed, (5) methods, (6) lifecycle hooks, (7) return. WHY: predictable structure makes composables scannable and reviewable.
-
-VueUse before custom composables: before writing a custom composable, check if VueUse (@vueuse/core) already provides it. Covers 200+ utilities: useLocalStorage, useDebounceFn, useIntersectionObserver, useClipboard, etc. Prefer VueUse composables over custom code for maintainability.
-
 ### Data Flow
 - Props down, events up as primary model
 - provide/inject ONLY for deep-tree dependencies, not parent-child
 - Typed contracts: defineProps, defineEmits, InjectionKey
 - v-model only for true two-way contracts (form controls)
 - URL state for ephemeral filters: filters, sort order, pagination, search queries belong in the URL (query params or path), not in component state or Pinia. Users can share/bookmark filtered views, browser back/forward works, state survives refresh
-
-URL state for ephemeral filters: filters, sort order, pagination, and search queries belong in the URL (query params or path), not in component state or Pinia. WHY: users can share/bookmark filtered views, browser back/forward works, and state survives refresh.
 
 ### Problem Playbooks
 
@@ -80,10 +66,6 @@ URL state for ephemeral filters: filters, sort order, pagination, and search que
 - `storeToRefs(store)` to destructure state/getters reactively. Plain destructure loses reactivity. Actions can be destructured directly (they are plain functions)
 - Setup stores: always return ALL state from setup stores -- state not returned is invisible to DevTools, SSR hydration, and `$reset()`. Use `return { count, name, increment }` not just `return { increment }`
 
-Vue 3 reactivity debugging hooks: use `onRenderTracked` and `onRenderTriggered` in dev to trace unexpected re-renders. Pass `{ onTrack, onTrigger }` options to `computed()` and `watch()` to debug specific reactive dependencies. Remove in production.
-
-Pinia setup store: always return ALL state from setup stores — state not returned is invisible to DevTools, SSR hydration, and `$reset()`. Use `return { count, name, increment }` not just `return { increment }`.
-
 ### Optional Features
 - Don't add features by default; audit and reject unjustified ones
 - Performance optimization is a post-functionality pass
@@ -95,8 +77,6 @@ Pinia setup store: always return ALL state from setup stores — state not retur
 - Template ref unwrapping is top-level only: nested refs in template expressions render as [object Object]. `{{ state.nested.refValue }}` won't unwrap if `state` is reactive and `refValue` is nested >1 level deep. Unwrap in script via computed or `.value`
 - No reactive props destructure
 - TransitionGroup with CSS for simple list animations
-
-Template ref unwrapping is top-level only: nested refs in template expressions render as [object Object]. `{{ state.nested.refValue }}` won't unwrap if `state` is reactive and `refValue` is a ref nested more than one level deep. Unwrap in script via computed or access `.value` explicitly.
 
 ## Quick Reference
 

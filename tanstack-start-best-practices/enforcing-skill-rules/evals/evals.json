@@ -4,43 +4,50 @@
     {
       "id": 1,
       "name": "new-patterns-sweep",
-      "prompt": "Fix all issues in this TanStack Start app:\n\n```tsx\n// 1. Manual URLSearchParams instead of validateSearch\nimport { createFileRoute } from \"@tanstack/react-router\";\nexport const Route = createFileRoute(\"/posts\")({\n  component: PostList,\n});\nfunction PostList() {\n  const params = new URLSearchParams(window.location.search);\n  const page = parseInt(params.get(\"page\") || \"1\");\n  return <div>Page {page}</div>;\n}\n\n// 2. Links without preload strategy\nimport { Link } from \"@tanstack/react-router\";\nexport function Nav() {\n  return (\n    <nav>\n      <Link to=\"/\">Home</Link>\n      <Link to=\"/posts\">Posts</Link>\n      <Link to=\"/admin/logs\">Audit</Link>\n    </nav>\n  );\n}\n\n// 3. Custom scroll restoration\n// No scroll restoration config at all\n\n// 4. Form without server-side validation\nimport { useForm } from \"@tanstack/react-form\";\nexport function CreatePost() {\n  const form = useForm({\n    defaultValues: { title: \"\", body: \"\" },\n    onSubmit: ({ value }) => createPost(value),\n  });\n  return <form>...</form>;\n}\n\n// 5. Loader prefetch without staleTime coordination\nexport const Route = createFileRoute(\"/posts\")({\n  loader: async () => {\n    const posts = await queryClient.prefetchQuery({\n      queryKey: [\"posts\"],\n      queryFn: fetchPosts,\n    });\n    return { posts };\n  },\n});\n\n// 6. Suspense instead of pendingComponent\nimport { Suspense } from \"react\";\nexport function PostPage() {\n  return (\n    <Suspense fallback={<Spinner />}>\n      <PostContent />\n    </Suspense>\n  );\n}\n\n// 7. Raw Response.json() instead of createAPIFileRoute\nexport const Route = createFileRoute(\"/api/health\")({\n  loader: async () => {\n    return Response.json({ ok: true });\n  },\n});\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues in this TanStack Start app:\n\n```tsx\nimport { createFileRoute } from \"@tanstack/react-router\";\nexport const Route = createFileRoute(\"/posts\")({\n  component: PostList,\n});\nfunction PostList() {\n  const params = new URLSearchParams(window.location.search);\n  const page = parseInt(params.get(\"page\") || \"1\");\n  return <div>Page {page}</div>;\n}\n\nimport { Link } from \"@tanstack/react-router\";\nexport function Nav() {\n  return (\n    <nav>\n      <Link to=\"/\">Home</Link>\n      <Link to=\"/posts\">Posts</Link>\n      <Link to=\"/admin/logs\">Audit</Link>\n    </nav>\n  );\n}\n\n\nimport { useForm } from \"@tanstack/react-form\";\nexport function CreatePost() {\n  const form = useForm({\n    defaultValues: { title: \"\", body: \"\" },\n    onSubmit: ({ value }) => createPost(value),\n  });\n  return <form>...</form>;\n}\n\nexport const Route = createFileRoute(\"/posts\")({\n  loader: async () => {\n    const posts = await queryClient.prefetchQuery({\n      queryKey: [\"posts\"],\n      queryFn: fetchPosts,\n    });\n    return { posts };\n  },\n});\n\nimport { Suspense } from \"react\";\nexport function PostPage() {\n  return (\n    <Suspense fallback={<Spinner />}>\n      <PostContent />\n    </Suspense>\n  );\n}\n\nexport const Route = createFileRoute(\"/api/health\")({\n  loader: async () => {\n    return Response.json({ ok: true });\n  },\n});\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all new TanStack Start rules",
       "assertions": [
         {
           "id": "validateSearch-typed",
           "trap": "Manual URLSearchParams parsing",
-          "description": "validateSearch with Zod schema for typed search params per route"
+          "description": "validateSearch with Zod schema for typed search params per route",
+          "category": "behavior"
         },
         {
           "id": "link-preload-strategies",
           "trap": "Links without preload prop",
-          "description": "Link preload: intent (default), render (above-fold), false (rare links)"
+          "description": "Link preload: intent (default), render (above-fold), false (rare links)",
+          "category": "behavior"
         },
         {
           "id": "scroll-restoration",
           "trap": "No scroll restoration config",
-          "description": "Configure scrollRestoration with getKey for search-param routes"
+          "description": "Configure scrollRestoration with getKey for search-param routes",
+          "category": "behavior"
         },
         {
           "id": "server-form-validation",
           "trap": "Form without server-side validation",
-          "description": "createServerValidate() from @tanstack/start for server-side form validation"
+          "description": "createServerValidate() from @tanstack/start for server-side form validation",
+          "category": "security"
         },
         {
           "id": "staleTime-loader-coordination",
           "trap": "prefetchQuery without staleTime matching navigation time",
-          "description": "Coordinate staleTime between loader and query (>= navigation time)"
+          "description": "Coordinate staleTime between loader and query (>= navigation time)",
+          "category": "behavior"
         },
         {
           "id": "pendingComponent-not-suspense",
           "trap": "Suspense boundary at route level instead of pendingComponent",
-          "description": "pendingComponent for route-level loading -- Suspense only for sub-route streaming"
+          "description": "pendingComponent for route-level loading -- Suspense only for sub-route streaming",
+          "category": "architecture"
         },
         {
           "id": "createAPIFileRoute",
           "trap": "Raw Response.json in loader instead of API route",
-          "description": "createAPIFileRoute for typed API route definitions with HTTP method exports"
+          "description": "createAPIFileRoute for typed API route definitions with HTTP method exports",
+          "category": "architecture"
         }
       ]
     }

@@ -26,8 +26,6 @@ The browser renders in 4 stages: Style > Layout > Paint > Composite. Animate ONL
 
 **Layout thrashing & FLIP**: reading DOM measurements (`getBoundingClientRect`, `offsetHeight`) then writing styles in the same frame forces synchronous layout recalculation. Fix: batch all reads, then batch all writes. For position animations, use FLIP (First, Last, Invert, Play): measure start position, apply final state, calculate delta, animate the inversion back to zero.
 
-**Animation performance rendering pipeline** -- the browser renders in 4 stages: Style > Layout > Paint > Composite. Animate ONLY composite properties (`transform`, `opacity`, `filter`) to skip Layout and Paint entirely, running on the GPU compositor thread. Never animate: `width`, `height`, `top`, `left`, `margin`, `padding`, `border` (trigger Layout). Avoid: `color`, `background`, `box-shadow`, `border-radius` (trigger Paint). Use `will-change` sparingly -- it allocates GPU memory. Remove after animation completes.
-
 ## Timing Duration Guidelines
 
 | Interaction type | Duration | Notes |
@@ -223,18 +221,3 @@ function AnimatedComponent() {
 ```
 
 **Rule of thumb**: always animate to the final state, just skip the motion. The user should see the same end result, just without the movement.
-
-
-**AutoAnimate for simple list animations** -- for basic add/remove/reorder list animations, use AutoAnimate (3.28KB) instead of Framer Motion (34KB). One line: `useAutoAnimate(parentRef)`. It detects DOM mutations and animates them automatically. Reserve Framer Motion for complex choreography, gestures, and scroll effects where AutoAnimate's automatic approach isn't enough.
-
-**Lottie for designer-created animations** -- when animations come from After Effects (designer handoff), use Lottie (lottie-web or dotLottie) to play JSON-exported animations. Lottie renders vector animations at any resolution with small file sizes. Use for: loading indicators, onboarding flows, empty states, success celebrations, brand animations. Do NOT use for interactive animations that respond to user input (use Framer Motion/GSAP instead).
-
-**Timing duration guidelines by interaction type** -- micro-feedback (hovers, button press): 100-150ms. Small transitions (toggles, dropdowns): 200-300ms. Medium transitions (modals, panels): 300-500ms. Complex choreography (page transitions, multi-step): 500ms+. Mobile: add 50-100ms to account for touch feedback delay. Never exceed 1000ms for any single animation -- users perceive it as broken.
-
-**Purposeful motion principles** -- motion should communicate, not decorate. Four purposes: 1) Feedback (confirm action occurred), 2) Orientation (show where elements come from/go to), 3) Focus (direct attention to changes), 4) Continuity (maintain context during transitions). Test: 'Remove this animation -- does the user lose information?' If yes, it's functional. If no, it's decorative and should be cut or minimized.
-
-**View Transitions API for page/state transitions** -- `document.startViewTransition()` creates browser-native snapshot-based transitions between DOM states. Assign `view-transition-name` to elements that should animate between states. Browser handles the cross-fade, position interpolation, and cleanup. Works for SPAs (same-document) and MPAs (cross-document with `@view-transition` rule). Zero bundle cost.
-
-**CSS scroll-driven animations (animation-timeline)** -- native CSS API that links keyframe progress to scroll position or element visibility. No JS needed. `animation-timeline: scroll()` for scroll progress, `animation-timeline: view()` for element visibility. Replaces IntersectionObserver + JS for many reveal-on-scroll effects. Progressive enhancement: falls back to static state in unsupported browsers.
-
-**Layout thrashing detection and FLIP technique** -- layout thrashing: reading DOM measurements (`getBoundingClientRect`, `offsetHeight`) then writing styles in the same frame forces synchronous layout recalculation. Fix: batch all reads, then batch all writes. For position animations, use FLIP (First, Last, Invert, Play): measure start position, apply final state, calculate delta, animate the inversion back to zero. FLIP makes any layout animation run at compositor speed.

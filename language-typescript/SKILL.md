@@ -76,9 +76,7 @@ Beyond `strict: true`, enable these flags — they catch real bugs `strict` miss
 
 ## Post-Modification Audit
 
-<EXTREMELY-IMPORTANT>
-MANDATORY: After ANY modification to TypeScript/JavaScript files, you MUST run the audit before considering your work done. This is not optional. Do not skip this step. Do not rationalize why "this change is too small" or "I'll run it later."
-</EXTREMELY-IMPORTANT>
+**MANDATORY: After ANY modification to TypeScript/JavaScript files, run the audit before considering your work done.** No exceptions -- not for "small changes," not for "I'll run it later."
 
 ```bash
 ~/.claude/skills/language-typescript/scripts/ts-audit/ts-audit --working-tree

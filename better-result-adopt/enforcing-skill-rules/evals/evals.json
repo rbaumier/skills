@@ -8,56 +8,82 @@
       "expected_output": "Full migration applying all better-result-adopt rules",
       "assertions": [
         {
-          "text": "try-catch-to-result-try",
-          "description": "DB insert try/catch in createUser uses Result.tryPromise, not try/catch"
+          "id": "try-catch-to-result-try",
+          "trap": "createUser DB insert wrapped in try/catch that rethrows new Error('DB insert failed')",
+          "description": "DB insert try/catch in createUser uses Result.tryPromise, not try/catch",
+          "category": "behavior"
         },
         {
-          "text": "async-to-tryPromise",
-          "description": "Async operations that can fail wrapped with Result.tryPromise"
+          "id": "async-to-tryPromise",
+          "trap": "db.query calls return raw Promise<User> that can reject",
+          "description": "Async operations that can fail wrapped with Result.tryPromise",
+          "category": "behavior"
         },
         {
-          "text": "null-to-result",
-          "description": "Null checks (user.rows[0], cart) return Result.err, not throw"
+          "id": "null-to-result",
+          "trap": "user.rows[0] and cart null checks throw new Error instead of returning Result.err",
+          "description": "Null checks (user.rows[0], cart) return Result.err, not throw",
+          "category": "behavior"
         },
         {
-          "text": "tagged-errors",
-          "description": "Domain errors use TaggedError classes (ValidationError, NotFoundError, etc.) not plain Error"
+          "id": "tagged-errors",
+          "trap": "throw new Error('Invalid email'), throw new Error('Email taken'), throw new Error('User not found') use plain Error",
+          "description": "Domain errors use TaggedError classes (ValidationError, NotFoundError, etc.) not plain Error",
+          "category": "format"
         },
         {
-          "text": "preserve-error-info",
-          "description": "Original error preserved as cause in TaggedError (especially the DB insert catch)"
+          "id": "preserve-error-info",
+          "trap": "catch (e) { throw new Error('DB insert failed') } discards the original error e",
+          "description": "Original error preserved as cause in TaggedError (especially the DB insert catch)",
+          "category": "gotcha"
         },
         {
-          "text": "result-return-types",
-          "description": "Return types changed to Result<T, E> or Promise<Result<T, E>>"
+          "id": "result-return-types",
+          "trap": "createUser returns Promise<User>, getUserProfile returns Promise<{ user; orders }>, processCheckout returns Promise<Receipt>",
+          "description": "Return types changed to Result<T, E> or Promise<Result<T, E>>",
+          "category": "format"
         },
         {
-          "text": "gen-over-manual",
-          "description": "processCheckout (3+ sequential Results) uses Result.gen with yield*, not manual if(isErr)"
+          "id": "gen-over-manual",
+          "trap": "processCheckout chains 5 sequential Result-producing calls (getUserProfile, loadCart, validateCart, chargePayment, createOrder)",
+          "description": "processCheckout (3+ sequential Results) uses Result.gen with yield*, not manual if(isErr)",
+          "category": "behavior"
         },
         {
-          "text": "yield-star",
-          "description": "Each Result-returning call in processCheckout uses yield* (with Result.await for async)"
+          "id": "yield-star",
+          "trap": "processCheckout sequential async calls: getUserProfile, loadCart, chargePayment, createOrder each need yield*",
+          "description": "Each Result-returning call in processCheckout uses yield* (with Result.await for async)",
+          "category": "behavior"
         },
         {
-          "text": "no-over-wrapping",
-          "description": "add() and validateEmail() are NOT wrapped in Result \u2014 they are pure functions that never fail"
+          "id": "no-over-wrapping",
+          "trap": "add(a, b) returns a+b and validateEmail returns boolean — pure functions that never fail",
+          "description": "add() and validateEmail() are NOT wrapped in Result — they are pure functions that never fail",
+          "category": "gotcha"
         },
         {
-          "text": "no-mixed-paradigms",
-          "description": "handleCreateUser uses .match() or Result pattern, not try/catch around Result-returning functions"
+          "id": "no-mixed-paradigms",
+          "trap": "handleCreateUser uses try/catch around createUser and matches e.message strings for control flow",
+          "description": "handleCreateUser uses .match() or Result pattern, not try/catch around Result-returning functions",
+          "category": "architecture"
         },
         {
-          "text": "no-rewrap",
-          "description": "No instance of `return Result.err(result.error)` \u2014 returns the result directly if propagating"
+          "id": "no-rewrap",
+          "trap": "processCheckout manually checks results and could rewrap errors with return Result.err(result.error)",
+          "description": "No instance of `return Result.err(result.error)` — returns the result directly if propagating",
+          "category": "gotcha"
         },
         {
-          "text": "no-catch-panic",
-          "description": "Does not catch all exceptions broadly \u2014 PaymentError catch is explicit, unexpected errors are not swallowed"
+          "id": "no-catch-panic",
+          "trap": "processCheckout catch (e) swallows all exceptions: PaymentError handled, but unknown errors re-thrown blindly",
+          "description": "Does not catch all exceptions broadly — PaymentError catch is explicit, unexpected errors are not swallowed",
+          "category": "security"
         },
         {
-          "text": "start-at-boundaries",
-          "description": "Migration starts at I/O boundaries (db.query, chargePayment), not at pure utilities"
+          "id": "start-at-boundaries",
+          "trap": "add() and validateEmail() are pure utils; db.query and chargePayment are I/O boundaries",
+          "description": "Migration starts at I/O boundaries (db.query, chargePayment), not at pure utilities",
+          "category": "architecture"
         }
       ]
     }

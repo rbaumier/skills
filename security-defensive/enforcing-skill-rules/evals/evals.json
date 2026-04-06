@@ -10,150 +10,178 @@
         {
           "id": "parameterized-queries",
           "trap": "SQL string concatenation with user input in login",
-          "description": "Parameterized queries, never string concatenation"
+          "description": "Parameterized queries, never string concatenation",
+          "category": "security"
         },
         {
           "id": "allowlist-schema",
           "trap": "No input validation on any endpoint",
-          "description": "Schema allowlist validation on all inputs"
+          "description": "Schema allowlist validation on all inputs",
+          "category": "security"
         },
         {
           "id": "command-injection",
           "trap": "exec(command) with user input",
-          "description": "Array args for commands, never shell=True/exec with user input"
+          "description": "Array args for commands, never shell=True/exec with user input",
+          "category": "security"
         },
         {
           "id": "path-traversal",
           "trap": "File path built from user input without realpath check",
-          "description": "realpath() + prefix check for file paths"
+          "description": "realpath() + prefix check for file paths",
+          "category": "security"
         },
         {
           "id": "no-eval-deserialize",
           "trap": "exec() essentially evaluates untrusted input",
-          "description": "Never eval/execute untrusted data"
+          "description": "Never eval/execute untrusted data",
+          "category": "security"
         },
         {
           "id": "upload-validation",
           "trap": "No file upload validation (size, MIME, extension)",
-          "description": "Validate uploads: size, MIME type, extension allowlist"
+          "description": "Validate uploads: size, MIME type, extension allowlist",
+          "category": "security"
         },
         {
           "id": "xss-innerhtml",
           "trap": "User bio rendered directly in HTML template",
-          "description": "No innerHTML with user input, use textContent or sanitize"
+          "description": "No innerHTML with user input, use textContent or sanitize",
+          "category": "security"
         },
         {
           "id": "sanitize-urls",
           "trap": "Open redirect: res.redirect(req.query.url) without protocol check",
-          "description": "Validate URL protocol is http/https before redirect"
+          "description": "Validate URL protocol is http/https before redirect",
+          "category": "security"
         },
         {
           "id": "csp-headers",
           "trap": "No CSP or security headers",
-          "description": "Nonce/hash CSP, security headers (helmet)"
+          "description": "Nonce/hash CSP, security headers (helmet)",
+          "category": "security"
         },
         {
           "id": "jwt-httponly",
           "trap": "JWT returned in response body (implies localStorage storage)",
-          "description": "JWTs in httpOnly Secure SameSite=Strict cookies"
+          "description": "JWTs in httpOnly Secure SameSite=Strict cookies",
+          "category": "security"
         },
         {
           "id": "jwt-algorithm",
           "trap": "HS256 used (ok for internal but no RS256 mention for public)",
-          "description": "RS256 for public APIs, HS256 internal only"
+          "description": "RS256 for public APIs, HS256 internal only",
+          "category": "security"
         },
         {
           "id": "bcrypt-passwords",
           "trap": "Plain text password comparison in login query",
-          "description": "bcrypt(12+) or Argon2id for password hashing"
+          "description": "bcrypt(12+) or Argon2id for password hashing",
+          "category": "security"
         },
         {
           "id": "authz-check",
           "trap": "No authorization check on /admin/run or /account/delete",
-          "description": "Authorization check before every operation"
+          "description": "Authorization check before every operation",
+          "category": "security"
         },
         {
           "id": "no-hardcoded-secrets",
           "trap": "SECRET hardcoded in source",
-          "description": "Never hardcode secrets, use env vars or vault"
+          "description": "Never hardcode secrets, use env vars or vault",
+          "category": "security"
         },
         {
           "id": "csrf-protection",
           "trap": "State-changing POST without CSRF token",
-          "description": "CSRF tokens on state-changing requests"
+          "description": "CSRF tokens on state-changing requests",
+          "category": "security"
         },
         {
           "id": "no-wildcard-cors",
           "trap": "CORS origin: '*' with credentials: true",
-          "description": "No wildcard CORS with credentials"
+          "description": "No wildcard CORS with credentials",
+          "category": "security"
         },
         {
           "id": "rate-limiting",
           "trap": "No rate limiting on any endpoint",
-          "description": "Rate limit all endpoints"
+          "description": "Rate limit all endpoints",
+          "category": "security"
         },
         {
           "id": "no-log-secrets",
           "trap": "console.log('User action:', req.body) may log sensitive data",
-          "description": "Never log passwords/tokens/PII"
+          "description": "Never log passwords/tokens/PII",
+          "category": "security"
         },
         {
           "id": "structured-audit-logs",
           "trap": "console.log for action logging instead of structured audit",
-          "description": "Structured audit logs with timestamp, user_id, action, resource, result, IP"
+          "description": "Structured audit logs with timestamp, user_id, action, resource, result, IP",
+          "category": "security"
         },
         {
           "id": "ssrf-allowlist",
           "trap": "Open redirect could be used for SSRF",
-          "description": "Allowlist URLs for SSRF prevention"
+          "description": "Allowlist URLs for SSRF prevention",
+          "category": "security"
         }
       ]
     },
     {
       "id": 2,
       "name": "new-patterns-sweep",
-      "prompt": "Fix all issues:\n\n```typescript\n// 1. Prototype pollution via object merge\nfunction merge(target: any, source: any) {\n  for (const key in source) {\n    target[key] = source[key];\n  }\n  return target;\n}\nconst config = merge({}, JSON.parse(userInput));\n\n// 2. Mass assignment \u2014 spreading req.body into DB update\napp.put(\"/users/:id\", async (req, res) => {\n  await db.users.update({ where: { id: req.params.id }, data: req.body });\n  res.json({ ok: true });\n});\n\n// 3. ReDoS-vulnerable regex\nconst emailRegex = /^([a-zA-Z0-9]+)*@[a-zA-Z0-9]+\\.[a-zA-Z]+$/;\nif (emailRegex.test(userEmail)) { /* ... */ }\n\n// 4. Open redirect\napp.get(\"/redirect\", (req, res) => {\n  const url = req.query.url as string;\n  res.redirect(url);\n});\n\n// 5. Error leaks stack trace\napp.use((err, req, res, next) => {\n  res.status(500).json({\n    error: err.message,\n    stack: err.stack,\n    query: req.query,\n  });\n});\n\n// 6. OAuth without state parameter\napp.get(\"/auth/callback\", async (req, res) => {\n  const { code } = req.query;\n  const token = await exchangeCode(code as string);\n  res.cookie(\"token\", token);\n  res.redirect(\"/dashboard\");\n});\n\n// 7. IDOR \u2014 no ownership check\napp.get(\"/invoices/:id\", async (req, res) => {\n  const invoice = await db.invoices.findUnique({ where: { id: req.params.id } });\n  res.json(invoice);\n});\n\n// 8. Only npm audit for supply chain security\n// package.json: { \"scripts\": { \"security\": \"npm audit\" } }\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```typescript\n// 1. Prototype pollution via object merge\nfunction merge(target: any, source: any) {\n  for (const key in source) {\n    target[key] = source[key];\n  }\n  return target;\n}\nconst config = merge({}, JSON.parse(userInput));\n\n// 2. Mass assignment — spreading req.body into DB update\napp.put(\"/users/:id\", async (req, res) => {\n  await db.users.update({ where: { id: req.params.id }, data: req.body });\n  res.json({ ok: true });\n});\n\n// 3. ReDoS-vulnerable regex\nconst emailRegex = /^([a-zA-Z0-9]+)*@[a-zA-Z0-9]+\\.[a-zA-Z]+$/;\nif (emailRegex.test(userEmail)) { /* ... */ }\n\n// 4. Open redirect\napp.get(\"/redirect\", (req, res) => {\n  const url = req.query.url as string;\n  res.redirect(url);\n});\n\n// 5. Error leaks stack trace\napp.use((err, req, res, next) => {\n  res.status(500).json({\n    error: err.message,\n    stack: err.stack,\n    query: req.query,\n  });\n});\n\n// 6. OAuth without state parameter\napp.get(\"/auth/callback\", async (req, res) => {\n  const { code } = req.query;\n  const token = await exchangeCode(code as string);\n  res.cookie(\"token\", token);\n  res.redirect(\"/dashboard\");\n});\n\n// 7. IDOR — no ownership check\napp.get(\"/invoices/:id\", async (req, res) => {\n  const invoice = await db.invoices.findUnique({ where: { id: req.params.id } });\n  res.json(invoice);\n});\n\n// 8. Only npm audit for supply chain security\n// package.json: { \"scripts\": { \"security\": \"npm audit\" } }\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all new security rules",
       "assertions": [
         {
           "id": "prototype-pollution",
           "trap": "Naive object merge iterating all keys including __proto__",
-          "description": "Freeze prototypes or use Object.create(null) to prevent prototype pollution"
+          "description": "Freeze prototypes or use Object.create(null) to prevent prototype pollution",
+          "category": "security"
         },
         {
           "id": "mass-assignment",
           "trap": "Spreading req.body directly into DB update",
-          "description": "Allowlist fields explicitly -- never spread req.body into DB operations"
+          "description": "Allowlist fields explicitly -- never spread req.body into DB operations",
+          "category": "security"
         },
         {
           "id": "redos-prevention",
           "trap": "Catastrophic backtracking regex for email",
-          "description": "Avoid nested quantifiers in regex -- use RE2 or linear-time alternatives"
+          "description": "Avoid nested quantifiers in regex -- use RE2 or linear-time alternatives",
+          "category": "security"
         },
         {
           "id": "open-redirect",
           "trap": "Redirect to unvalidated user-supplied URL",
-          "description": "Allowlist redirect targets or validate same-origin before redirect"
+          "description": "Allowlist redirect targets or validate same-origin before redirect",
+          "category": "security"
         },
         {
           "id": "error-stack-leak",
           "trap": "Stack trace and query params in error response",
-          "description": "Generic error to client, structured log server-side -- never leak stack/query"
+          "description": "Generic error to client, structured log server-side -- never leak stack/query",
+          "category": "security"
         },
         {
           "id": "oauth-state-param",
           "trap": "OAuth callback without state parameter validation",
-          "description": "Validate state parameter in OAuth callback to prevent CSRF"
+          "description": "Validate state parameter in OAuth callback to prevent CSRF",
+          "category": "security"
         },
         {
           "id": "idor-ownership",
           "trap": "Invoice endpoint without ownership check",
-          "description": "IDOR: verify resource ownership (userId === session.userId) before returning"
+          "description": "IDOR: verify resource ownership (userId === session.userId) before returning",
+          "category": "security"
         },
         {
           "id": "supply-chain-beyond-audit",
           "trap": "Only npm audit for security",
-          "description": "Supply chain: lockfile-lint, Socket.dev, or Snyk beyond npm audit"
+          "description": "Supply chain: lockfile-lint, Socket.dev, or Snyk beyond npm audit",
+          "category": "security"
         }
       ]
     }

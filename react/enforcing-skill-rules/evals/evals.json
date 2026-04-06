@@ -4,211 +4,250 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\n// app/dashboard/page.tsx\nimport { cookies } from 'next/headers';\nimport { DashboardClient } from './dashboard-client';\n\nexport default async function DashboardPage() {\n  const session = cookies().get('session');\n  const user = await fetchUser(session?.value);\n  const orders = await fetchOrders(user.id);\n  const analytics = await fetchAnalytics(user.id);\n\n  return <DashboardClient user={user} orders={orders} analytics={analytics} />;\n}\n\nasync function fetchUser(sessionId: string) {\n  return db.user.find(sessionId);\n}\n\nasync function fetchAnalytics(userId: string) {\n  return db.analytics.find(userId);\n}\n\n// dashboard-client.tsx\n'use client';\nimport React, { useState, useEffect, useMemo, useCallback } from 'react';\nimport { formatDate, parseQuery, debounce } from '@/utils';\nimport { Chart } from '@/components';\n\nexport function DashboardClient({ user, orders, analytics }) {\n  const [selectedTab, setSelectedTab] = useState('orders');\n  const [loading, setLoading] = useState(false);\n  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });\n\n  useEffect(() => {\n    // runs like componentDidMount\n    initDashboard();\n  }, []);\n\n  useEffect(() => {\n    const handler = (e) => setMousePos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('mousemove', handler);\n    return () => window.removeEventListener('mousemove', handler);\n  }, []);\n\n  const [totalRevenue, setTotalRevenue] = useState(0);\n  useEffect(() => {\n    setTotalRevenue(orders.reduce((sum, o) => sum + o.total, 0));\n  }, [orders]);\n\n  const tabLabel = useMemo(() => selectedTab.toUpperCase(), [selectedTab]);\n\n  useEffect(() => {\n    trackPageView(user);\n  }, [user]);\n\n  const handleExport = async () => {\n    setLoading(true);\n    try {\n      const data = await exportDashboard(user.id);\n      download(data);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n\n  const categories = ['electronics', 'clothing', 'food'];\n  const enrichedOrders = orders.map(order => ({\n    ...order,\n    category: categories.find(c => c === order.categoryId),\n  }));\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\n  const uniqueTags = orders\n    .flatMap(o => o.tags)\n    .filter((v, i, a) => a.indexOf(v) === i);\n\n  const activeHighValue = orders\n    .filter(o => o.status === 'active')\n    .map(o => o.total)\n    .filter(t => t > 100)\n    .reduce((sum, t) => sum + t, 0);\n\n  // Toggle handler updates count directly instead of functional setState\n  const [count, setCount] = useState(0);\n  const increment = useCallback(() => setCount(count + 1), [count]);\n\n  // Interaction logic in effect instead of event handler\n  const [searchQuery, setSearchQuery] = useState('');\n  useEffect(() => {\n    if (searchQuery) {\n      fetch(`/api/search?q=${searchQuery}`).then(r => r.json()).then(setResults);\n    }\n  }, [searchQuery]);\n\n  // Non-primitive default prop recreated every render\n  const OrderList = ({ filters = { status: 'active', sort: 'date' } }) => {\n    return <div>{JSON.stringify(filters)}</div>;\n  };\n\n  // Subscribing to full store object instead of derived boolean\n  const store = useStore(state => state);\n  const isAdmin = store.role === 'admin';\n\n  // Expensive subtree not memoized\n  const renderChart = () => {\n    return <Chart data={analytics.timeSeries} config={analytics.chartConfig} />;\n  };\n\n  // Callback in effect dep recreated every render\n  const onMessage = useCallback((msg) => {\n    console.log(user.name, msg);\n  }, [user.name]);\n  useEffect(() => {\n    socket.on('message', onMessage);\n    return () => socket.off('message', onMessage);\n  }, [onMessage]);\n\n  // Reading localStorage on every render\n  const theme = localStorage.getItem('theme') || 'light';\n  const lang = sessionStorage.getItem('lang') || 'en';\n\n  // Static JSX recreated every render inside component\n  const footer = (\n    <footer>\n      <p>\u00a9 2024 Dashboard Inc. All rights reserved.</p>\n      <a href=\"/privacy\">Privacy Policy</a>\n    </footer>\n  );\n\n  // Mutating array with sort instead of toSorted\n  const sortedOrders = [...orders].sort((a, b) => a.date - b.date);\n  const reversedOrders = [...orders].reverse();\n\n  return (\n    <div>\n      <h1>{tabLabel}</h1>\n      {loading && <Spinner />}\n      <button onClick={handleExport}>Export</button>\n      {orders.map((order, i) => (\n        <div key={i}>\n          {order.isAdmin && <AdminPanel />}\n          <span>{order.name}</span>\n        </div>\n      ))}\n      {renderChart()}\n      {footer}\n    </div>\n  );\n}\n\nimport HeavyModal from './heavy-modal';\n\nexport function ModalTrigger() {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Open</button>\n      {open && <HeavyModal />}\n    </>\n  );\n}\n\n// app/products/page.tsx \u2014 no Suspense boundaries, no streaming\nexport default async function ProductsPage() {\n  const products = await fetchProducts();\n  const reviews = await fetchReviews();\n  return (\n    <div>\n      <ProductList products={products} />\n      <ReviewSection reviews={reviews} />\n    </div>\n  );\n}\n\n// app/layout.tsx \u2014 third-party script loaded eagerly\nimport Script from 'next/script';\n\nexport default function RootLayout({ children }) {\n  return (\n    <html>\n      <head>\n        <Script src=\"https://analytics.example.com/tracker.js\" />\n      </head>\n      <body>{children}</body>\n    </html>\n  );\n}\n\n// app/feed/page.tsx \u2014 client component fetches same data multiple times\n'use client';\nimport { useEffect, useState } from 'react';\n\nexport function FeedPage() {\n  const [posts, setPosts] = useState([]);\n  const [trending, setTrending] = useState([]);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(setPosts);\n  }, []);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(data => {\n      setTrending(data.filter(p => p.trending));\n    });\n  }, []);\n\n  return (\n    <div>\n      <PostList posts={posts} />\n      <TrendingSidebar posts={trending} />\n    </div>\n  );\n}\n```\n\nOutput fixed code + list every issue.",
+      "prompt": "Fix all issues:\n\n```tsx\n// app/dashboard/page.tsx\nimport { cookies } from 'next/headers';\nimport { DashboardClient } from './dashboard-client';\n\nexport default async function DashboardPage() {\n  const session = cookies().get('session');\n  const user = await fetchUser(session?.value);\n  const orders = await fetchOrders(user.id);\n  const analytics = await fetchAnalytics(user.id);\n\n  return <DashboardClient user={user} orders={orders} analytics={analytics} />;\n}\n\nasync function fetchUser(sessionId: string) {\n  return db.user.find(sessionId);\n}\n\nasync function fetchAnalytics(userId: string) {\n  return db.analytics.find(userId);\n}\n\n// dashboard-client.tsx\n'use client';\nimport React, { useState, useEffect, useMemo, useCallback } from 'react';\nimport { formatDate, parseQuery, debounce } from '@/utils';\nimport { Chart } from '@/components';\n\nexport function DashboardClient({ user, orders, analytics }) {\n  const [selectedTab, setSelectedTab] = useState('orders');\n  const [loading, setLoading] = useState(false);\n  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });\n\n  useEffect(() => {\n    // runs like componentDidMount\n    initDashboard();\n  }, []);\n\n  useEffect(() => {\n    const handler = (e) => setMousePos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('mousemove', handler);\n    return () => window.removeEventListener('mousemove', handler);\n  }, []);\n\n  const [totalRevenue, setTotalRevenue] = useState(0);\n  useEffect(() => {\n    setTotalRevenue(orders.reduce((sum, o) => sum + o.total, 0));\n  }, [orders]);\n\n  const tabLabel = useMemo(() => selectedTab.toUpperCase(), [selectedTab]);\n\n  useEffect(() => {\n    trackPageView(user);\n  }, [user]);\n\n  const handleExport = async () => {\n    setLoading(true);\n    try {\n      const data = await exportDashboard(user.id);\n      download(data);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n\n  const categories = ['electronics', 'clothing', 'food'];\n  const enrichedOrders = orders.map(order => ({\n    ...order,\n    category: categories.find(c => c === order.categoryId),\n  }));\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\n  const uniqueTags = orders\n    .flatMap(o => o.tags)\n    .filter((v, i, a) => a.indexOf(v) === i);\n\n  const activeHighValue = orders\n    .filter(o => o.status === 'active')\n    .map(o => o.total)\n    .filter(t => t > 100)\n    .reduce((sum, t) => sum + t, 0);\n\n  // Toggle handler updates count directly instead of functional setState\n  const [count, setCount] = useState(0);\n  const increment = useCallback(() => setCount(count + 1), [count]);\n\n  // Interaction logic in effect instead of event handler\n  const [searchQuery, setSearchQuery] = useState('');\n  useEffect(() => {\n    if (searchQuery) {\n      fetch(`/api/search?q=${searchQuery}`).then(r => r.json()).then(setResults);\n    }\n  }, [searchQuery]);\n\n  // Non-primitive default prop recreated every render\n  const OrderList = ({ filters = { status: 'active', sort: 'date' } }) => {\n    return <div>{JSON.stringify(filters)}</div>;\n  };\n\n  // Subscribing to full store object instead of derived boolean\n  const store = useStore(state => state);\n  const isAdmin = store.role === 'admin';\n\n  // Expensive subtree not memoized\n  const renderChart = () => {\n    return <Chart data={analytics.timeSeries} config={analytics.chartConfig} />;\n  };\n\n  // Callback in effect dep recreated every render\n  const onMessage = useCallback((msg) => {\n    console.log(user.name, msg);\n  }, [user.name]);\n  useEffect(() => {\n    socket.on('message', onMessage);\n    return () => socket.off('message', onMessage);\n  }, [onMessage]);\n\n  // Reading localStorage on every render\n  const theme = localStorage.getItem('theme') || 'light';\n  const lang = sessionStorage.getItem('lang') || 'en';\n\n  // Static JSX recreated every render inside component\n  const footer = (\n    <footer>\n      <p>© 2024 Dashboard Inc. All rights reserved.</p>\n      <a href=\"/privacy\">Privacy Policy</a>\n    </footer>\n  );\n\n  // Mutating array with sort instead of toSorted\n  const sortedOrders = [...orders].sort((a, b) => a.date - b.date);\n  const reversedOrders = [...orders].reverse();\n\n  return (\n    <div>\n      <h1>{tabLabel}</h1>\n      {loading && <Spinner />}\n      <button onClick={handleExport}>Export</button>\n      {orders.map((order, i) => (\n        <div key={i}>\n          {order.isAdmin && <AdminPanel />}\n          <span>{order.name}</span>\n        </div>\n      ))}\n      {renderChart()}\n      {footer}\n    </div>\n  );\n}\n\nimport HeavyModal from './heavy-modal';\n\nexport function ModalTrigger() {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Open</button>\n      {open && <HeavyModal />}\n    </>\n  );\n}\n\n// app/products/page.tsx — no Suspense boundaries, no streaming\nexport default async function ProductsPage() {\n  const products = await fetchProducts();\n  const reviews = await fetchReviews();\n  return (\n    <div>\n      <ProductList products={products} />\n      <ReviewSection reviews={reviews} />\n    </div>\n  );\n}\n\n// app/layout.tsx — third-party script loaded eagerly\nimport Script from 'next/script';\n\nexport default function RootLayout({ children }) {\n  return (\n    <html>\n      <head>\n        <Script src=\"https://analytics.example.com/tracker.js\" />\n      </head>\n      <body>{children}</body>\n    </html>\n  );\n}\n\n// app/feed/page.tsx — client component fetches same data multiple times\n'use client';\nimport { useEffect, useState } from 'react';\n\nexport function FeedPage() {\n  const [posts, setPosts] = useState([]);\n  const [trending, setTrending] = useState([]);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(setPosts);\n  }, []);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(data => {\n      setTrending(data.filter(p => p.trending));\n    });\n  }, []);\n\n  return (\n    <div>\n      <PostList posts={posts} />\n      <TrendingSidebar posts={trending} />\n    </div>\n  );\n}\n```\n\nOutput fixed code + list every issue.",
       "expected_output": "Full review fixing all react skill rules",
       "assertions": [
         {
           "id": "parallel-fetches",
           "trap": "Sequential await fetchUser/fetchOrders/fetchAnalytics",
-          "description": "Parallelize independent fetches with Promise.all / start-early-await-late"
+          "description": "Parallelize independent fetches with Promise.all / start-early-await-late",
+          "category": "behavior"
         },
         {
           "id": "react-cache",
           "trap": "fetchUser/fetchAnalytics not wrapped in React.cache()",
-          "description": "React.cache() for per-request deduplication in server components"
+          "description": "React.cache() for per-request deduplication in server components",
+          "category": "behavior"
         },
         {
           "id": "cookies-blast-radius",
           "trap": "cookies() in page makes route dynamic",
-          "description": "Flag cookies()/headers() in layouts \u2014 explain dynamic blast radius"
+          "description": "Flag cookies()/headers() in layouts — explain dynamic blast radius",
+          "category": "gotcha"
         },
         {
           "id": "no-derived-effect",
           "trap": "useEffect to compute totalRevenue from orders",
-          "description": "Derive state during render, never in effects"
+          "description": "Derive state during render, never in effects",
+          "category": "behavior"
         },
         {
           "id": "no-premature-memo",
           "trap": "useMemo for simple toUpperCase()",
-          "description": "Don't useMemo simple primitive expressions"
+          "description": "Don't useMemo simple primitive expressions",
+          "category": "behavior"
         },
         {
           "id": "primitive-deps",
           "trap": "useEffect depends on user object, not user.id",
-          "description": "Primitive values as effect dependencies, not objects"
+          "description": "Primitive values as effect dependencies, not objects",
+          "category": "gotcha"
         },
         {
           "id": "usestate-initializer",
           "trap": "useState(window.innerWidth) crashes SSR",
-          "description": "useState(() => fn) initializer for SSR-unsafe/expensive defaults"
+          "description": "useState(() => fn) initializer for SSR-unsafe/expensive defaults",
+          "category": "gotcha"
         },
         {
           "id": "useTransition",
           "trap": "Manual loading/setLoading boolean for async",
-          "description": "useTransition for non-urgent state updates instead of manual loading booleans"
+          "description": "useTransition for non-urgent state updates instead of manual loading booleans",
+          "category": "behavior"
         },
         {
           "id": "ref-for-mouse",
           "trap": "useState for high-frequency mouse position",
-          "description": "useRef for transient high-frequency values (mouse position)"
+          "description": "useRef for transient high-frequency values (mouse position)",
+          "category": "behavior"
         },
         {
           "id": "map-lookup",
-          "trap": "categories.find() inside orders.map() \u2014 O(n*m)",
-          "description": "Build Map/index for repeated collection lookups"
+          "trap": "categories.find() inside orders.map() — O(n*m)",
+          "description": "Build Map/index for repeated collection lookups",
+          "category": "behavior"
         },
         {
           "id": "set-dedup",
           "trap": ".filter((v,i,a) => a.indexOf(v) === i) deduplication",
-          "description": "[...new Set(arr)] for deduplication"
+          "description": "[...new Set(arr)] for deduplication",
+          "category": "behavior"
         },
         {
           "id": "single-loop",
           "trap": "Chained .filter().map().filter().reduce() on orders",
-          "description": "Combine chained filter/map/reduce into single loop for large arrays"
+          "description": "Combine chained filter/map/reduce into single loop for large arrays",
+          "category": "behavior"
         },
         {
           "id": "hoist-regex",
           "trap": "Regex created inside component",
-          "description": "Hoist RegExp creation outside component functions"
+          "description": "Hoist RegExp creation outside component functions",
+          "category": "behavior"
         },
         {
           "id": "ternary-conditional",
           "trap": "{order.isAdmin && <AdminPanel />}",
-          "description": "Ternary operator for conditional rendering, not &&"
+          "description": "Ternary operator for conditional rendering, not &&",
+          "category": "format"
         },
         {
           "id": "dynamic-import",
           "trap": "HeavyModal imported eagerly",
-          "description": "next/dynamic or React.lazy for heavy/rarely-used components"
+          "description": "next/dynamic or React.lazy for heavy/rarely-used components",
+          "category": "architecture"
         },
         {
           "id": "preload-hover",
           "trap": "No preload on modal trigger hover",
-          "description": "Preload lazy-loaded components on hover/focus"
+          "description": "Preload lazy-loaded components on hover/focus",
+          "category": "behavior"
         },
         {
           "id": "minimize-rsc-serialization",
           "trap": "All data passed from server to single client component",
-          "description": "Minimize data passed from server to client; avoid duplicate serialization"
+          "description": "Minimize data passed from server to client; avoid duplicate serialization",
+          "category": "architecture"
         },
         {
           "id": "useEffect-not-cdm",
           "trap": "Comment says 'runs like componentDidMount'",
-          "description": "useEffect with [] is NOT componentDidMount \u2014 runs after paint"
+          "description": "useEffect with [] is NOT componentDidMount — runs after paint",
+          "category": "gotcha"
         },
         {
           "id": "content-visibility",
           "trap": "Long list of orders rendered without virtualization hint",
-          "description": "content-visibility: auto for long off-screen lists"
+          "description": "content-visibility: auto for long off-screen lists",
+          "category": "behavior"
         },
         {
           "id": "barrel-import",
-          "trap": "import { formatDate, parseQuery, debounce } from '@/utils' and import { Chart } from '@/components' \u2014 barrel file imports",
-          "description": "Import directly from modules, avoid barrel files"
+          "trap": "import { formatDate, parseQuery, debounce } from '@/utils' and import { Chart } from '@/components' — barrel file imports",
+          "description": "Import directly from modules, avoid barrel files",
+          "category": "architecture"
         },
         {
           "id": "functional-setState",
-          "trap": "setCount(count + 1) with count in useCallback deps \u2014 stale closure",
-          "description": "Use functional setState (setCount(c => c + 1)) for stable callbacks"
+          "trap": "setCount(count + 1) with count in useCallback deps — stale closure",
+          "description": "Use functional setState (setCount(c => c + 1)) for stable callbacks",
+          "category": "gotcha"
         },
         {
           "id": "interaction-in-handler",
           "trap": "useEffect fires fetch on searchQuery change instead of event handler",
-          "description": "Put interaction logic in event handlers, not effects"
+          "description": "Put interaction logic in event handlers, not effects",
+          "category": "behavior"
         },
         {
           "id": "hoist-default-props",
           "trap": "Default prop { status: 'active', sort: 'date' } object recreated every render",
-          "description": "Hoist default non-primitive props outside render"
+          "description": "Hoist default non-primitive props outside render",
+          "category": "gotcha"
         },
         {
           "id": "subscribe-derived-boolean",
           "trap": "useStore(state => state) subscribes to full store, only uses role",
-          "description": "Subscribe to derived booleans (useStore(s => s.role === 'admin')), not full objects"
+          "description": "Subscribe to derived booleans (useStore(s => s.role === 'admin')), not full objects",
+          "category": "behavior"
         },
         {
           "id": "memoize-expensive-subtree",
-          "trap": "renderChart() inlined \u2014 expensive Chart subtree re-renders on every parent render",
-          "description": "Extract expensive subtrees into memoized components (React.memo)"
+          "trap": "renderChart() inlined — expensive Chart subtree re-renders on every parent render",
+          "description": "Extract expensive subtrees into memoized components (React.memo)",
+          "category": "behavior"
         },
         {
           "id": "useLatest-ref-pattern",
           "trap": "onMessage callback in effect dep causes re-subscribe on every user.name change",
-          "description": "useLatest/ref pattern for stable callback references \u2014 store in ref to avoid effect re-runs"
+          "description": "useLatest/ref pattern for stable callback references — store in ref to avoid effect re-runs",
+          "category": "behavior"
         },
         {
           "id": "cache-storage-reads",
           "trap": "localStorage.getItem/sessionStorage.getItem called on every render",
-          "description": "Cache localStorage/sessionStorage reads \u2014 read once into state or ref"
+          "description": "Cache localStorage/sessionStorage reads — read once into state or ref",
+          "category": "behavior"
         },
         {
           "id": "hoist-static-jsx",
           "trap": "Static footer JSX recreated every render inside component",
-          "description": "Hoist static JSX outside component functions"
+          "description": "Hoist static JSX outside component functions",
+          "category": "behavior"
         },
         {
           "id": "immutable-array-transforms",
           "trap": "[...orders].sort() and [...orders].reverse() instead of toSorted()/toReversed()",
-          "description": "Use toSorted()/toReversed() for immutable array transforms"
+          "description": "Use toSorted()/toReversed() for immutable array transforms",
+          "category": "format"
         },
         {
           "id": "suspense-streaming",
-          "trap": "ProductsPage awaits all data before rendering \u2014 no Suspense boundaries",
-          "description": "Use Suspense boundaries to stream progressively"
+          "trap": "ProductsPage awaits all data before rendering — no Suspense boundaries",
+          "description": "Use Suspense boundaries to stream progressively",
+          "category": "behavior"
         },
         {
           "id": "defer-third-party-script",
           "trap": "Script tag without strategy prop loads eagerly, blocks rendering",
-          "description": "Defer third-party scripts with strategy=\"lazyOnload\""
+          "description": "Defer third-party scripts with strategy=\"lazyOnload\"",
+          "category": "behavior"
         },
         {
           "id": "swr-client-dedup",
           "trap": "FeedPage fetches /api/posts twice in separate useEffects",
-          "description": "Use SWR for client request deduplication"
+          "description": "Use SWR for client request deduplication",
+          "category": "behavior"
         }
       ]
     },
     {
       "id": 2,
       "name": "new-patterns-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\n// 1. useSearchParams without Suspense boundary\nimport { useSearchParams } from \"next/navigation\";\n\nexport default function Page() {\n  const [params] = useSearchParams();\n  return <div>Filter: {params.get(\"q\")}</div>;\n}\n\n// 2. Client-side form with useState instead of useActionState\n\"use client\";\nimport { useState } from \"react\";\n\nexport function ContactForm() {\n  const [pending, setPending] = useState(false);\n  const [error, setError] = useState(\"\");\n  \n  async function handleSubmit(e: React.FormEvent) {\n    e.preventDefault();\n    setPending(true);\n    try {\n      await submitContact(new FormData(e.target as HTMLFormElement));\n    } catch (err) {\n      setError(\"Failed\");\n    } finally {\n      setPending(false);\n    }\n  }\n  \n  return <form onSubmit={handleSubmit}>...</form>;\n}\n\n// 3. No error boundary in app\nexport function App() {\n  return (\n    <div>\n      <Header />\n      <UserProfile userId={123} />\n      <Footer />\n    </div>\n  );\n}\n\n// 4. Heavy useDeferredValue misuse \u2014 filtering inline\n\"use client\";\nimport { useState } from \"react\";\n\nexport function ProductList({ products }: { products: Product[] }) {\n  const [query, setQuery] = useState(\"\");\n  const filtered = products.filter(p => p.name.includes(query));\n  return (\n    <div>\n      <input value={query} onChange={e => setQuery(e.target.value)} />\n      {filtered.map(p => <ProductCard key={p.id} product={p} />)}\n    </div>\n  );\n}\n\n// 5. Using key={index} on a reorderable list and resetting with conditional\nexport function EditableList({ items }: { items: Item[] }) {\n  const [editingId, setEditingId] = useState<string | null>(null);\n  return (\n    <div>\n      {items.map((item, index) => (\n        <div key={index}>\n          {editingId === item.id ? (\n            <EditForm item={item} onDone={() => setEditingId(null)} />\n          ) : (\n            <ItemDisplay item={item} />\n          )}\n        </div>\n      ))}\n    </div>\n  );\n}\n\n// 6. Server action without input validation\n\"use server\";\nexport async function updateProfile(formData: FormData) {\n  const name = formData.get(\"name\") as string;\n  const email = formData.get(\"email\") as string;\n  await db.users.update({ name, email });\n}\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```tsx\nimport { useSearchParams } from \"next/navigation\";\n\nexport default function Page() {\n  const [params] = useSearchParams();\n  return <div>Filter: {params.get(\"q\")}</div>;\n}\n\n\"use client\";\nimport { useState } from \"react\";\n\nexport function ContactForm() {\n  const [pending, setPending] = useState(false);\n  const [error, setError] = useState(\"\");\n  \n  async function handleSubmit(e: React.FormEvent) {\n    e.preventDefault();\n    setPending(true);\n    try {\n      await submitContact(new FormData(e.target as HTMLFormElement));\n    } catch (err) {\n      setError(\"Failed\");\n    } finally {\n      setPending(false);\n    }\n  }\n  \n  return <form onSubmit={handleSubmit}>...</form>;\n}\n\nexport function App() {\n  return (\n    <div>\n      <Header />\n      <UserProfile userId={123} />\n      <Footer />\n    </div>\n  );\n}\n\n\"use client\";\nimport { useState } from \"react\";\n\nexport function ProductList({ products }: { products: Product[] }) {\n  const [query, setQuery] = useState(\"\");\n  const filtered = products.filter(p => p.name.includes(query));\n  return (\n    <div>\n      <input value={query} onChange={e => setQuery(e.target.value)} />\n      {filtered.map(p => <ProductCard key={p.id} product={p} />)}\n    </div>\n  );\n}\n\nexport function EditableList({ items }: { items: Item[] }) {\n  const [editingId, setEditingId] = useState<string | null>(null);\n  return (\n    <div>\n      {items.map((item, index) => (\n        <div key={index}>\n          {editingId === item.id ? (\n            <EditForm item={item} onDone={() => setEditingId(null)} />\n          ) : (\n            <ItemDisplay item={item} />\n          )}\n        </div>\n      ))}\n    </div>\n  );\n}\n\n\"use server\";\nexport async function updateProfile(formData: FormData) {\n  const name = formData.get(\"name\") as string;\n  const email = formData.get(\"email\") as string;\n  await db.users.update({ name, email });\n}\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all new React rules",
       "assertions": [
         {
           "id": "useSearchParams-suspense",
           "trap": "useSearchParams without Suspense boundary",
-          "description": "Wrap useSearchParams in Suspense to prevent whole-page bailout to CSR"
+          "description": "Wrap useSearchParams in Suspense to prevent whole-page bailout to CSR",
+          "category": "gotcha"
         },
         {
           "id": "useActionState",
           "trap": "useState for form pending/error instead of useActionState",
-          "description": "useActionState (React 19) over manual useState for form submissions"
+          "description": "useActionState (React 19) over manual useState for form submissions",
+          "category": "behavior"
         },
         {
           "id": "error-boundary-required",
           "trap": "No error boundary wrapping async components",
-          "description": "Error boundaries are required, not optional -- wrap async components"
+          "description": "Error boundaries are required, not optional -- wrap async components",
+          "category": "behavior"
         },
         {
           "id": "useDeferredValue-filtering",
           "trap": "Expensive inline filter without useDeferredValue",
-          "description": "useDeferredValue for expensive filtering to keep input responsive"
+          "description": "useDeferredValue for expensive filtering to keep input responsive",
+          "category": "behavior"
         },
         {
           "id": "key-prop-reorderable",
           "trap": "key={index} on a reorderable list",
-          "description": "Stable keys on reorderable lists -- index keys cause state bugs on reorder"
+          "description": "Stable keys on reorderable lists -- index keys cause state bugs on reorder",
+          "category": "gotcha"
         },
         {
           "id": "key-reset-pattern",
           "trap": "Conditional rendering to toggle edit mode instead of key reset",
-          "description": "key prop for state reset instead of conditional component swap"
+          "description": "key prop for state reset instead of conditional component swap",
+          "category": "behavior"
         },
         {
           "id": "server-action-validation",
           "trap": "Server action trusts FormData without validation",
-          "description": "Validate server action inputs with Zod -- FormData is user-controlled"
+          "description": "Validate server action inputs with Zod -- FormData is user-controlled",
+          "category": "security"
         }
       ]
     }

@@ -7,19 +7,25 @@ description: Enforce engineering standards — readability, robustness, maintain
 
 **Write comments like a senior explaining the code to a junior sitting next to them.** Conversational, concrete, patient. The code shows WHAT — comments tell WHY, what breaks without it, and how things connect.
 
+### Why & consequences
 - **Every comment answers "what goes wrong if I delete this?"** -- `// Apply corrections` (BAD). `// Apply corrections — without this, the frontend shows stale failure badges on healthy endpoints` (GOOD). If you can't name a consequence, the comment is a paraphrase
-- **Conversational, not mechanical** -- `// Read the cursor — "where did I stop last time?"`. Use the reader's inner voice. Quotes, rhetorical questions, like pair programming
+- **Chain cause → effect across calls** -- `// Advance cursor so the next tick skips these rows`. `// Called by the validator crate via #[validate(schema(...))]`
+- **Inaction must be justified** -- every empty branch, no-op, early return: `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`
+
+### Explaining concepts & domain
 - **Every project/technical term gets a full explanation on first use** -- what it is, what it does, why it exists, how it connects to the rest. `// Advance the cursor (a singleton row that bookmarks the last processed delivery — the next tick reads it to know where to resume)`. Not just `// Advance the cursor`. Plain language first, jargon in parentheses: `// Find postings that have no matching entry ("dangling postings")`
 - **Structs/types: describe the role, not the fields** -- `// All the data the state machine needs to decide whether to warn, disable, or resolve` not `// Contains failure_percent, last_status, and retry config`
 - **State transitions: narrate the journey** -- `// Was warned but failure rate dropped below threshold — the endpoint recovered`. Past tense for what happened, present for the conclusion
-- **Inaction must be justified** -- every empty branch, no-op, early return: `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`
-- **Chain cause → effect across calls** -- `// Advance cursor so the next tick skips these rows`. `// Called by the validator crate via #[validate(schema(...))]`
 - **Explain limits, invariants, and boundaries** -- caps: why + what happens to leftovers (`// LIMIT avoids long queries — remaining rows picked up next tick`). Invariants: state + enforcement (`// singleton row, CHECK on PK`). Transaction boundaries: what's in TX vs post-commit (`// emails sent after commit`)
-- **Return values: what the caller must do** -- `// Returns max_completed_at — caller should pass to advance_cursor after committing`
+
+### Structure & conventions
 - **Module-level orientation** -- every module starts with "What it does" (1 sentence) + "How it works" (numbered overview)
 - **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`)
+- **Return values: what the caller must do** -- `// Returns max_completed_at — caller should pass to advance_cursor after committing`
 - **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
 
+### Tone & style
+- **Conversational, not mechanical** -- `// Read the cursor — "where did I stop last time?"`. Use the reader's inner voice. Quotes, rhetorical questions, like pair programming
 - **Concrete over abstract in comments** -- specific numbers, names, thresholds. `// Retry 3 times with 500ms backoff` not `// Retry with backoff`. `// Rate limited to 100 req/s per API contract` not `// Rate limited`. If there's a number, name it
 - **Comments are sentences** -- capitalize, punctuate. A comment is prose, not a label. `// The cache expires after 30 minutes to avoid stale pricing data.` not `// cache expiry 30m`
 - **Emphatic word at end** -- the most important part of the comment goes last, where the eye lands. `// Skip validation — already checked by the middleware upstream` (the WHY lands last). Not `// Already checked upstream, so skip validation`

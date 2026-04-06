@@ -68,12 +68,6 @@ description: "Core Web Vitals, bundle/image optimization, caching, profiling. Tr
 - Ban em-dash overuse in UI copy: max 1 per paragraph, replace with commas/parentheses/periods
 - PWA offline-first for repeat-visit performance: service worker with cache-first for static assets, network-first for API, stale-while-revalidate for semi-dynamic content. Repeat-visit LCP drops to near-zero for cached resources
 
-**PWA offline-first as performance strategy** -- a service worker with cache-first for static assets eliminates network latency for repeat visits. Minimum: 1) Register service worker, 2) Precache app shell + critical assets during install, 3) Cache-first for static (CSS/JS/images), network-first for API, 4) Stale-while-revalidate for semi-dynamic content. Repeat-visit LCP drops to near-zero for cached resources.
-
-**Font performance optimization** -- fonts are a top LCP blocker. Rules: 1) `font-display: swap` on all @font-face (prevents invisible text), 2) `size-adjust` to match fallback metrics and prevent CLS on font swap, 3) Preload the primary font: `<link rel='preload' as='font' type='font/woff2' crossorigin>`, 4) Subset fonts to used characters (pyftsubset or glyphhanger), 5) Self-host over Google Fonts to eliminate the extra DNS+connection. Target: 0 CLS from font loading.
-
-**Responsive images deep-dive** -- beyond `srcset` basics: 1) Use width descriptors (`w`) not pixel descriptors (`x`) for content images, 2) `sizes` attribute MUST match your CSS layout breakpoints (`sizes='(max-width: 768px) 100vw, 50vw'`), 3) Use `<picture>` for art direction (different crop at different sizes), 4) AVIF saves 70% over JPEG, WebP saves 50% -- serve both via `<picture>` with JPEG fallback, 5) `aspect-ratio` CSS property prevents CLS without explicit width/height on responsive images.
-
 ## Optimization Workflow
 
 Every performance fix follows this loop. Do not skip steps.
@@ -153,8 +147,6 @@ What is slow?
 - Verify HTTP/2+ in DevTools Network tab (Protocol column)
 - Read the network waterfall: green bar = waiting (TTFB), blue bar = downloading. Look for sequential chains (resource B waits for A = critical path), idle gaps (nothing loading = missed preload), third-party scripts blocking first-party (defer them)
 
-**Network waterfall reading** -- teach how to read Chrome DevTools waterfall: 1) Green bar = waiting (TTFB), 2) Blue bar = downloading, 3) Look for sequential chains (resource B waits for A to finish = critical path), 4) Look for idle gaps (nothing loading = missed preload opportunity), 5) Third-party scripts blocking first-party = defer them. The waterfall reveals the actual critical rendering path, not what you think it is.
-
 ### Phase 4: Accessibility Performance
 - Lazy-loaded images MUST keep alt attributes
 - Skeleton loaders need `aria-busy="true"` and `aria-label`
@@ -167,10 +159,6 @@ What is slow?
 - Unthrottled scroll listeners without passive:true = INP killer
 - Hydration performance (SSR/SSG): measure hydration time in DevTools (look for 'Hydrate' in flame chart). Use selective/partial hydration (React Server Components, Astro islands, Qwik resumability). Defer hydration of below-fold interactive components. Never hydrate static content. Target: hydration < 500ms on mobile
 - Bundle analysis: run `npx webpack-bundle-analyzer stats.json` (webpack) or `npx vite-bundle-visualizer` (Vite). Look for duplicate dependencies, oversized chunks (>100KB), unnecessary polyfills, unused locale data. Set CI budget: fail build if any chunk exceeds threshold
-
-**Hydration performance for SSR/SSG apps** -- hydration is the #1 INP killer in SSR apps. Rules: 1) Measure hydration time in DevTools Performance tab (look for 'Hydrate' or 'hydrateRoot' in flame chart), 2) Use selective/partial hydration (React Server Components, Astro islands, Qwik resumability), 3) Defer hydration of below-fold interactive components, 4) Never hydrate static content -- if it doesn't need interactivity, keep it as server HTML. Target: hydration < 500ms on mobile.
-
-**Bundle analysis tooling in audit workflow** -- add to Phase 5: run `npx webpack-bundle-analyzer stats.json` (webpack) or `npx vite-bundle-visualizer` (Vite) to visualize what's in the bundle. Look for: duplicate dependencies (same lib in multiple chunks), oversized single chunks (> 100KB), unnecessary polyfills, locale data for unused languages. Set CI budget: fail build if any chunk exceeds threshold.
 
 ## Audit Report Template
 

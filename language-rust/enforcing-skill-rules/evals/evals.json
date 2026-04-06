@@ -4,116 +4,152 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Refactor this Rust code. Fix everything wrong with it:\n\n```rust\nuse std::sync::{Arc, Mutex};\nuse lazy_static::lazy_static;\nuse std::collections::HashMap;\nuse std::collections::LinkedList;\nuse std::path::PathBuf;\n\nlazy_static! {\n    static ref CONFIG: HashMap<String, String> = load_config();\n}\n\n// --- Domain types ---\n\npub fn send_email(to: String) {\n    // accepts raw String — no validation that it's actually an email\n    mailer.send(&to);\n}\n\npub fn register_user(email: String, age: u8) {\n    // email is just a String — can pass any garbage\n    db.insert(email, age);\n}\n\n// --- Tree / AST types ---\n\n#[derive(Debug)]\npub enum NodeKind {\n    Leaf(String),\n    Branch(Vec<Arc<Mutex<Node>>>),\n    Metadata(HashMap<String, String>),  // often empty but same size as Branch\n}\n\n#[derive(Debug)]\npub struct Node {\n    pub kind: NodeKind,\n    pub parent: Option<Arc<Mutex<Node>>>,\n    pub cache: Mutex<Option<String>>,\n}\n\n// --- Builder ---\n\npub struct ServerConfig {\n    pub host: String,\n    pub port: u16,\n}\n\npub struct ServerConfigBuilder {\n    host: Option<String>,\n    port: Option<u16>,\n}\n\nimpl ServerConfigBuilder {\n    pub fn new() -> Self {\n        Self { host: None, port: None }\n    }\n    pub fn host(mut self, h: String) -> Self {\n        self.host = Some(h);\n        self\n    }\n    pub fn port(mut self, p: u16) -> Self {\n        self.port = Some(p);\n        self\n    }\n    pub fn build(self) -> Self {\n        // BUG: returns Self instead of Result<ServerConfig, _>\n        self\n    }\n}\n\n// --- Public trait (unsealed) ---\n\npub trait Plugin {\n    fn name(&self) -> &str;\n    fn execute(&self, input: &[u8]) -> Vec<u8>;\n}\n\n// --- Hot-path processing with dyn Trait ---\n\npub fn process_batch(processors: &[Box<dyn Processor>], data: &[f64]) -> Vec<f64> {\n    let mut out = Vec::new();\n    for val in data {\n        for p in processors {\n            out.push(p.apply(*val));\n        }\n    }\n    out\n}\n\npub trait Processor {\n    fn apply(&self, val: f64) -> f64;\n}\n\n// --- File I/O ---\n\npub fn read_file(path: String) -> String {\n    println!(\"debug: reading file {}\", path);\n    std::fs::read_to_string(path).unwrap()\n}\n\n// --- Error context ---\n\npub fn load_config(path: &Path) -> Result<Config> {\n    let content = std::fs::read_to_string(path)\n        .context(\"read_to_string failed\")?;  // says WHAT failed, not WHY\n    let config: Config = serde_json::from_str(&content)\n        .context(\"deserialization failed\")?;  // says WHAT failed, not WHY\n    Ok(config)\n}\n\n// --- Small copy type passed by reference ---\n\n#[derive(Debug, Clone)]\npub struct Point {\n    pub x: f64,\n    pub y: f64,\n}\n\npub fn distance(a: &Point, b: &Point) -> f64 {\n    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt()\n}\n\n// --- Async mutex scope ---\n\npub async fn update_and_notify(state: &Mutex<AppState>, notifier: &Notifier) {\n    let guard = state.lock().unwrap();\n    let value = guard.current_value;\n    guard.counter += 1;\n    // guard is still held across .await\n    notifier.send(value).await;\n}\n\n// --- Collection choices ---\n\npub fn build_queue() -> LinkedList<Task> {\n    let mut list = LinkedList::new();\n    for i in 0..100 {\n        list.push_back(Task::new(i));\n    }\n    list\n}\n\npub fn count_ids(ids: &[u64]) -> HashMap<u64, usize> {\n    let mut map = HashMap::new();  // default SipHash for integer keys\n    for &id in ids {\n        *map.entry(id).or_insert(0) += 1;\n    }\n    map\n}\n\n// --- Original functions ---\n\npub fn normalize_name(name: &String) -> String {\n    if name.contains('-') {\n        name.replace('-', \"_\")\n    } else {\n        name.to_owned()\n    }\n}\n\npub async fn fetch_and_process(urls: Vec<String>) -> Vec<String> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    for url in &urls {\n        let res = reqwest::get(url).await.unwrap();\n        let body = res.text().await.unwrap();\n        println!(\"fetched {} bytes from {}\", body.len(), url);\n        results.lock().unwrap().push(body);\n    }\n    let guard = results.lock().unwrap();\n    guard.clone()\n}\n\npub fn process_items(items: &Vec<Item>) -> Vec<ProcessedItem> {\n    let mut result = Vec::new();\n    for item in items {\n        result.push(ProcessedItem {\n            name: item.name.clone(),\n            value: item.value * 2,\n        });\n    }\n    result\n}\n\nunsafe fn read_raw_buffer(ptr: *const u8, len: usize) -> Vec<u8> {\n    std::slice::from_raw_parts(ptr, len).to_vec()\n}\n\npub fn lookup(map: &HashMap<String, i32>, key: &str) -> i32 {\n    *map.get(key).unwrap()\n}\n```\n\nOutput ONLY the refactored code. Do not write files to disk.",
+      "prompt": "Refactor this Rust code. Fix everything wrong with it:\n\n```rust\nuse std::sync::{Arc, Mutex};\nuse lazy_static::lazy_static;\nuse std::collections::HashMap;\nuse std::collections::LinkedList;\nuse std::path::PathBuf;\n\nlazy_static! {\n    static ref CONFIG: HashMap<String, String> = load_config();\n}\n\n// --- Domain types ---\n\npub fn send_email(to: String) {\n    mailer.send(&to);\n}\n\npub fn register_user(email: String, age: u8) {\n    db.insert(email, age);\n}\n\n// --- Tree / AST types ---\n\n#[derive(Debug)]\npub enum NodeKind {\n    Leaf(String),\n    Branch(Vec<Arc<Mutex<Node>>>),\n    Metadata(HashMap<String, String>),\n}\n\n#[derive(Debug)]\npub struct Node {\n    pub kind: NodeKind,\n    pub parent: Option<Arc<Mutex<Node>>>,\n    pub cache: Mutex<Option<String>>,\n}\n\n// --- Builder ---\n\npub struct ServerConfig {\n    pub host: String,\n    pub port: u16,\n}\n\npub struct ServerConfigBuilder {\n    host: Option<String>,\n    port: Option<u16>,\n}\n\nimpl ServerConfigBuilder {\n    pub fn new() -> Self {\n        Self { host: None, port: None }\n    }\n    pub fn host(mut self, h: String) -> Self {\n        self.host = Some(h);\n        self\n    }\n    pub fn port(mut self, p: u16) -> Self {\n        self.port = Some(p);\n        self\n    }\n    pub fn build(self) -> Self {\n        self\n    }\n}\n\n// --- Public trait (unsealed) ---\n\npub trait Plugin {\n    fn name(&self) -> &str;\n    fn execute(&self, input: &[u8]) -> Vec<u8>;\n}\n\n// --- Hot-path processing with dyn Trait ---\n\npub fn process_batch(processors: &[Box<dyn Processor>], data: &[f64]) -> Vec<f64> {\n    let mut out = Vec::new();\n    for val in data {\n        for p in processors {\n            out.push(p.apply(*val));\n        }\n    }\n    out\n}\n\npub trait Processor {\n    fn apply(&self, val: f64) -> f64;\n}\n\n// --- File I/O ---\n\npub fn read_file(path: String) -> String {\n    println!(\"debug: reading file {}\", path);\n    std::fs::read_to_string(path).unwrap()\n}\n\n// --- Error context ---\n\npub fn load_config(path: &Path) -> Result<Config> {\n    let content = std::fs::read_to_string(path)\n        .context(\"read_to_string failed\")?;\n    let config: Config = serde_json::from_str(&content)\n        .context(\"deserialization failed\")?;\n    Ok(config)\n}\n\n// --- Small copy type passed by reference ---\n\n#[derive(Debug, Clone)]\npub struct Point {\n    pub x: f64,\n    pub y: f64,\n}\n\npub fn distance(a: &Point, b: &Point) -> f64 {\n    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt()\n}\n\n// --- Async mutex scope ---\n\npub async fn update_and_notify(state: &Mutex<AppState>, notifier: &Notifier) {\n    let guard = state.lock().unwrap();\n    let value = guard.current_value;\n    guard.counter += 1;\n    notifier.send(value).await;\n}\n\n// --- Collection choices ---\n\npub fn build_queue() -> LinkedList<Task> {\n    let mut list = LinkedList::new();\n    for i in 0..100 {\n        list.push_back(Task::new(i));\n    }\n    list\n}\n\npub fn count_ids(ids: &[u64]) -> HashMap<u64, usize> {\n    let mut map = HashMap::new();\n    for &id in ids {\n        *map.entry(id).or_insert(0) += 1;\n    }\n    map\n}\n\n// --- Original functions ---\n\npub fn normalize_name(name: &String) -> String {\n    if name.contains('-') {\n        name.replace('-', \"_\")\n    } else {\n        name.to_owned()\n    }\n}\n\npub async fn fetch_and_process(urls: Vec<String>) -> Vec<String> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    for url in &urls {\n        let res = reqwest::get(url).await.unwrap();\n        let body = res.text().await.unwrap();\n        println!(\"fetched {} bytes from {}\", body.len(), url);\n        results.lock().unwrap().push(body);\n    }\n    let guard = results.lock().unwrap();\n    guard.clone()\n}\n\npub fn process_items(items: &Vec<Item>) -> Vec<ProcessedItem> {\n    let mut result = Vec::new();\n    for item in items {\n        result.push(ProcessedItem {\n            name: item.name.clone(),\n            value: item.value * 2,\n        });\n    }\n    result\n}\n\nunsafe fn read_raw_buffer(ptr: *const u8, len: usize) -> Vec<u8> {\n    std::slice::from_raw_parts(ptr, len).to_vec()\n}\n\npub fn lookup(map: &HashMap<String, i32>, key: &str) -> i32 {\n    *map.get(key).unwrap()\n}\n```\n\nOutput ONLY the refactored code. Do not write files to disk.",
       "expected_output": "Full refactoring applying all language-rust rules",
       "assertions": [
         {
-          "text": "accept-str-not-string",
-          "description": "&str instead of &String, &[T] instead of &Vec<T>"
+          "id": "accept-str-not-string",
+          "trap": "normalize_name takes &String, process_items takes &Vec<Item> — should accept &str / &[Item]",
+          "description": "&str instead of &String, &[T] instead of &Vec<T>",
+          "category": "behavior"
         },
         {
-          "text": "cow-for-normalize",
-          "description": "normalize_name returns Cow<'_, str> not String (sometimes-modify pattern)"
+          "id": "cow-for-normalize",
+          "trap": "normalize_name conditionally clones or returns owned — classic Cow pattern wasted",
+          "description": "normalize_name returns Cow<'_, str> not String (sometimes-modify pattern)",
+          "category": "behavior"
         },
         {
-          "text": "no-mutex-single-thread",
-          "description": "Node.cache uses Cell/RefCell not Mutex (single-threaded interior mutability)"
+          "id": "no-mutex-single-thread",
+          "trap": "Node.cache uses Mutex<Option<String>> for single-threaded interior mutability",
+          "description": "Node.cache uses Cell/RefCell not Mutex (single-threaded interior mutability)",
+          "category": "gotcha"
         },
         {
-          "text": "arena-not-arc-mutex",
-          "description": "Node tree uses arena/indices not Arc<Mutex<Node>>. Parent is Weak or index, not Arc"
+          "id": "arena-not-arc-mutex",
+          "trap": "NodeKind::Branch uses Vec<Arc<Mutex<Node>>> and parent uses Option<Arc<Mutex<Node>>> for tree structure",
+          "description": "Node tree uses arena/indices not Arc<Mutex<Node>>. Parent is Weak or index, not Arc",
+          "category": "architecture"
         },
         {
-          "text": "thiserror-or-anyhow",
-          "description": "Errors use thiserror/anyhow, not bare unwrap"
+          "id": "thiserror-or-anyhow",
+          "trap": "read_file and lookup use bare .unwrap() with no typed error handling",
+          "description": "Errors use thiserror/anyhow, not bare unwrap",
+          "category": "behavior"
         },
         {
-          "text": "no-unwrap-production",
-          "description": "Zero unwrap()/expect() \u2014 uses ? or unwrap_or_else"
+          "id": "no-unwrap-production",
+          "trap": ".unwrap() used in read_file, fetch_and_process (×3), lookup, and update_and_notify",
+          "description": "Zero unwrap()/expect() — uses ? or unwrap_or_else",
+          "category": "gotcha"
         },
         {
-          "text": "no-block-async",
-          "description": "CPU work in fetch_and_process offloaded or uses proper async patterns"
+          "id": "no-block-async",
+          "trap": "fetch_and_process awaits each URL sequentially in a for loop instead of concurrent futures",
+          "description": "CPU work in fetch_and_process offloaded or uses proper async patterns",
+          "category": "behavior"
         },
         {
-          "text": "channels-not-arc-mutex",
-          "description": "Results collected via channels (mpsc) not Arc<Mutex<Vec>>"
+          "id": "channels-not-arc-mutex",
+          "trap": "fetch_and_process collects results into Arc<Mutex<Vec::new()>> shared across iterations",
+          "description": "Results collected via channels (mpsc) not Arc<Mutex<Vec>>",
+          "category": "architecture"
         },
         {
-          "text": "pre-allocate",
-          "description": "Vec::with_capacity used when size known"
+          "id": "pre-allocate",
+          "trap": "process_batch and process_items use Vec::new() when output size is known from input length",
+          "description": "Vec::with_capacity used when size known",
+          "category": "behavior"
         },
         {
-          "text": "iterator-chains",
-          "description": "process_items uses iterator chain (map/collect) not manual push loop"
+          "id": "iterator-chains",
+          "trap": "process_items uses manual push loop instead of items.iter().map(...).collect()",
+          "description": "process_items uses iterator chain (map/collect) not manual push loop",
+          "category": "format"
         },
         {
-          "text": "unsafe-safety-comment",
-          "description": "unsafe block has // SAFETY: comment justifying invariants"
+          "id": "unsafe-safety-comment",
+          "trap": "read_raw_buffer has unsafe block with no // SAFETY: comment",
+          "description": "unsafe block has // SAFETY: comment justifying invariants",
+          "category": "format"
         },
         {
-          "text": "oncelock-not-lazy-static",
-          "description": "OnceLock/LazyLock used instead of lazy_static"
+          "id": "oncelock-not-lazy-static",
+          "trap": "lazy_static! macro used for CONFIG instead of std::sync::OnceLock/LazyLock",
+          "description": "OnceLock/LazyLock used instead of lazy_static",
+          "category": "behavior"
         },
         {
-          "text": "tracing-not-println",
+          "id": "tracing-not-println",
           "trap": "println! used for debug logging in read_file and fetch_and_process",
-          "description": "println! replaced with tracing macros (debug!/info!/trace!)"
+          "description": "println! replaced with tracing macros (debug!/info!/trace!)",
+          "category": "behavior"
         },
         {
-          "text": "builder-returns-result",
+          "id": "builder-returns-result",
           "trap": "ServerConfigBuilder::build() returns Self instead of Result<ServerConfig, _>",
-          "description": "build() returns Result<ServerConfig, Error>, not Self"
+          "description": "build() returns Result<ServerConfig, Error>, not Self",
+          "category": "behavior"
         },
         {
-          "text": "asref-path",
+          "id": "asref-path",
           "trap": "read_file takes String instead of impl AsRef<Path>",
-          "description": "read_file accepts impl AsRef<Path> instead of String"
+          "description": "read_file accepts impl AsRef<Path> instead of String",
+          "category": "behavior"
         },
         {
-          "text": "sealed-trait",
+          "id": "sealed-trait",
           "trap": "Plugin trait is public and unsealed — external crates can impl it",
-          "description": "Plugin trait is sealed (private supertrait or mod) to prevent downstream impl"
+          "description": "Plugin trait is sealed (private supertrait or mod) to prevent downstream impl",
+          "category": "architecture"
         },
         {
-          "text": "generics-hot-path",
+          "id": "generics-hot-path",
           "trap": "process_batch uses &[Box<dyn Processor>] on hot path instead of generics",
-          "description": "process_batch uses generic P: Processor instead of dyn Trait for hot-path processing"
+          "description": "process_batch uses generic P: Processor instead of dyn Trait for hot-path processing",
+          "category": "behavior"
         },
         {
-          "text": "box-large-variant",
+          "id": "box-large-variant",
           "trap": "NodeKind::Metadata(HashMap<String,String>) is much larger than Leaf(String)",
-          "description": "Large enum variants (Metadata) are Boxed to reduce enum size"
+          "description": "Large enum variants (Metadata) are Boxed to reduce enum size",
+          "category": "behavior"
         },
         {
-          "text": "newtype-parse-dont-validate",
+          "id": "newtype-parse-dont-validate",
           "trap": "send_email/register_user accept raw String for email — no compile-time guarantee of validity",
-          "description": "Newtype struct Email(String) with validated constructor — parse, don't validate"
+          "description": "Newtype struct Email(String) with validated constructor — parse, don't validate",
+          "category": "behavior"
         },
         {
-          "text": "context-explain-why",
+          "id": "context-explain-why",
           "trap": ".context(\"read_to_string failed\") / .context(\"deserialization failed\") says WHAT failed, not WHY",
-          "description": ".context()/.with_context() explains WHY (e.g. \"failed to load config from {path}\"), not just WHAT"
+          "description": ".context()/.with_context() explains WHY (e.g. \"failed to load config from {path}\"), not just WHAT",
+          "category": "format"
         },
         {
-          "text": "copy-small-types",
+          "id": "copy-small-types",
           "trap": "Point (16 bytes, 2x f64) passed by reference (&Point) instead of by value",
-          "description": "Copy small types (<= 24 bytes) by value — Point should derive Copy and be passed by value"
+          "description": "Copy small types (<= 24 bytes) by value — Point should derive Copy and be passed by value",
+          "category": "behavior"
         },
         {
-          "text": "drop-guard-before-await",
+          "id": "drop-guard-before-await",
           "trap": "MutexGuard held across .await in update_and_notify",
-          "description": "Minimize MutexGuard scope; drop before .await to prevent deadlocks"
+          "description": "Minimize MutexGuard scope; drop before .await to prevent deadlocks",
+          "category": "gotcha"
         },
         {
-          "text": "vec-not-linkedlist",
+          "id": "vec-not-linkedlist",
           "trap": "LinkedList<Task> used instead of Vec<Task> for sequential collection",
-          "description": "Vec<T> over LinkedList — cache locality dominates"
+          "description": "Vec<T> over LinkedList — cache locality dominates",
+          "category": "behavior"
         },
         {
-          "text": "fast-hasher-integer-keys",
+          "id": "fast-hasher-integer-keys",
           "trap": "HashMap<u64, usize> with default SipHash for integer keys",
-          "description": "Fast hashers (ahash/fxhash) for integer-key HashMaps instead of default SipHash"
+          "description": "Fast hashers (ahash/fxhash) for integer-key HashMaps instead of default SipHash",
+          "category": "behavior"
         }
       ]
     }

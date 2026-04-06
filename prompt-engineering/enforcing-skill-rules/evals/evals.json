@@ -10,7 +10,8 @@
         {
           "id": "iron-law-system-prompt",
           "trap": "Generic system prompt with no role/constraints/examples",
-          "description": "System prompt must define role + constraints + output format + 1-2 examples minimum"
+          "description": "System prompt must define role + constraints + output format + 1-2 examples minimum",
+          "category": "behavior"
         },
         {
           "id": "model-selection",

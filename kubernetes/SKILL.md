@@ -1,6 +1,6 @@
 ---
 name: kubernetes
-description: Production-grade Kubernetes deployment patterns, manifest authoring, security hardening, autoscaling, RBAC, Helm basics, and operational debugging with kubectl.
+description: Use when writing Kubernetes manifests, configuring RBAC/networking/autoscaling, debugging pods with kubectl, authoring Helm charts, or hardening cluster security.
 ---
 
 ## Gotchas

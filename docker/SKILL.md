@@ -1,6 +1,6 @@
 ---
 name: docker
-description: Docker containerization, Dockerfile best practices, multi-stage builds, docker-compose orchestration, volumes, networking, security hardening, and debugging.
+description: Use when writing Dockerfiles, configuring docker-compose, optimizing container images, debugging container networking, or hardening Docker security.
 ---
 
 ## Gotchas

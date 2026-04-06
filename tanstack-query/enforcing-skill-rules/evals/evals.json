@@ -4,58 +4,68 @@
     {
       "id": 1,
       "name": "new-patterns-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\n// 1. Missing enabled for dependent query\nfunction UserPosts({ userId }: { userId?: string }) {\n  const { data } = useQuery({\n    queryKey: [\"posts\", userId],\n    queryFn: () => fetchPosts(userId!),\n  });\n  return <div>{data?.length} posts</div>;\n}\n\n// 2. No SSR hydration setup\nexport function App() {\n  const queryClient = new QueryClient();\n  return (\n    <QueryClientProvider client={queryClient}>\n      <Router />\n    </QueryClientProvider>\n  );\n}\n\n// 3. Flat query keys without factory\nconst { data: todos } = useQuery({ queryKey: [\"todos\"], queryFn: fetchTodos });\nconst { data: todo } = useQuery({ queryKey: [\"todos\", id], queryFn: () => fetchTodo(id) });\nconst { data: filtered } = useQuery({ queryKey: [\"todos\", \"list\", filter], queryFn: () => fetchFiltered(filter) });\n\n// 4. Optimistic update without rollback\nconst mutation = useMutation({\n  mutationFn: updateTodo,\n  onMutate: async (newTodo) => {\n    queryClient.setQueryData([\"todos\"], (old) => [...old, newTodo]);\n  },\n});\n\n// 5. Default staleTime of 0\nconst queryClient = new QueryClient();\n\n// 6. Date in query key\nconst { data } = useQuery({\n  queryKey: [\"events\", new Date()],\n  queryFn: fetchEvents,\n});\n\n// 7. initialData for loading placeholder\nconst { data } = useQuery({\n  queryKey: [\"profile\"],\n  queryFn: fetchProfile,\n  initialData: { name: \"Loading...\", avatar: \"\" },\n});\n\n// 8. Tests without fresh QueryClient\ntest(\"renders todos\", () => {\n  render(\n    <QueryClientProvider client={globalQueryClient}>\n      <TodoList />\n    </QueryClientProvider>\n  );\n});\n\n// 9. invalidateQueries expecting inactive refetch\nqueryClient.invalidateQueries({ queryKey: [\"todos\"] });\n// expects inactive queries to also refetch\n\n// 10. Prefetching in loader without staleTime coordination\nexport async function loader() {\n  await queryClient.prefetchQuery({ queryKey: [\"posts\"], queryFn: fetchPosts });\n}\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```tsx\nfunction UserPosts({ userId }: { userId?: string }) {\n  const { data } = useQuery({\n    queryKey: [\"posts\", userId],\n    queryFn: () => fetchPosts(userId!),\n  });\n  return <div>{data?.length} posts</div>;\n}\n\nexport function App() {\n  const queryClient = new QueryClient();\n  return (\n    <QueryClientProvider client={queryClient}>\n      <Router />\n    </QueryClientProvider>\n  );\n}\n\nconst { data: todos } = useQuery({ queryKey: [\"todos\"], queryFn: fetchTodos });\nconst { data: todo } = useQuery({ queryKey: [\"todos\", id], queryFn: () => fetchTodo(id) });\nconst { data: filtered } = useQuery({ queryKey: [\"todos\", \"list\", filter], queryFn: () => fetchFiltered(filter) });\n\nconst mutation = useMutation({\n  mutationFn: updateTodo,\n  onMutate: async (newTodo) => {\n    queryClient.setQueryData([\"todos\"], (old) => [...old, newTodo]);\n  },\n});\n\nconst queryClient = new QueryClient();\n\nconst { data } = useQuery({\n  queryKey: [\"events\", new Date()],\n  queryFn: fetchEvents,\n});\n\nconst { data } = useQuery({\n  queryKey: [\"profile\"],\n  queryFn: fetchProfile,\n  initialData: { name: \"Loading...\", avatar: \"\" },\n});\n\ntest(\"renders todos\", () => {\n  render(\n    <QueryClientProvider client={globalQueryClient}>\n      <TodoList />\n    </QueryClientProvider>\n  );\n});\n\nqueryClient.invalidateQueries({ queryKey: [\"todos\"] });\n\nexport async function loader() {\n  await queryClient.prefetchQuery({ queryKey: [\"posts\"], queryFn: fetchPosts });\n}\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all new TanStack Query rules",
       "assertions": [
         {
           "id": "dependent-query-enabled",
           "trap": "Query runs without enabled check on optional userId",
-          "description": "enabled: !!userId for dependent queries to prevent fetch with undefined"
+          "description": "enabled: !!userId for dependent queries to prevent fetch with undefined",
+          "category": "gotcha"
         },
         {
           "id": "ssr-dehydrate-hydrate",
           "trap": "No dehydrate/HydrationBoundary for SSR",
-          "description": "SSR: prefetchQuery + dehydrate on server, HydrationBoundary on client"
+          "description": "SSR: prefetchQuery + dehydrate on server, HydrationBoundary on client",
+          "category": "architecture"
         },
         {
           "id": "query-key-factory",
           "trap": "Flat string keys without hierarchy",
-          "description": "Query key factory pattern for hierarchical invalidation"
+          "description": "Query key factory pattern for hierarchical invalidation",
+          "category": "architecture"
         },
         {
           "id": "optimistic-rollback",
           "trap": "setQueryData without cancel/snapshot/rollback",
-          "description": "Optimistic update: cancel queries, snapshot previous, rollback on error"
+          "description": "Optimistic update: cancel queries, snapshot previous, rollback on error",
+          "category": "behavior"
         },
         {
           "id": "default-staleTime",
           "trap": "Default staleTime of 0 (always refetches)",
-          "description": "Set default staleTime at QueryClient level (e.g. 60s)"
+          "description": "Set default staleTime at QueryClient level (e.g. 60s)",
+          "category": "behavior"
         },
         {
           "id": "serializable-keys",
           "trap": "new Date() in query key (not serializable)",
-          "description": "Query keys must be JSON-serializable -- use date.toISOString()"
+          "description": "Query keys must be JSON-serializable -- use date.toISOString()",
+          "category": "gotcha"
         },
         {
           "id": "placeholderData-not-initialData",
           "trap": "initialData for loading placeholder (persists to cache)",
-          "description": "placeholderData for loading UX, initialData for server-provided data"
+          "description": "placeholderData for loading UX, initialData for server-provided data",
+          "category": "gotcha"
         },
         {
           "id": "fresh-queryclient-tests",
           "trap": "Global QueryClient shared across tests",
-          "description": "Fresh QueryClient per test with retry: false, gcTime: 0"
+          "description": "Fresh QueryClient per test with retry: false, gcTime: 0",
+          "category": "gotcha"
         },
         {
           "id": "refetchType-inactive",
           "trap": "invalidateQueries expecting inactive refetch",
-          "description": "invalidateQueries only refetches active -- use refetchType: all for inactive"
+          "description": "invalidateQueries only refetches active -- use refetchType: all for inactive",
+          "category": "gotcha"
         },
         {
           "id": "loader-staleTime-coordination",
           "trap": "prefetchQuery without staleTime coordination",
-          "description": "Loader prefetch: use ensureQueryData + staleTime >= navigation time"
+          "description": "Loader prefetch: use ensureQueryData + staleTime >= navigation time",
+          "category": "behavior"
         }
       ]
     }

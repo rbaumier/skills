@@ -4,175 +4,248 @@
     {
       "id": 12,
       "name": "full-sweep",
-      "prompt": "Refactor this module. Fix everything wrong with it:\n\n```typescript\nimport { db } from './db';\nimport { cache } from './cache';\nimport { mailer } from './mailer';\n\n// Process orders\nexport async function handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) {\n  // Get user\n  const u = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\n  if (!u.rows[0]) throw new Error('not found');\n  const usr = u.rows[0];\n  if (usr.blocked) throw new Error('blocked');\n\n  // Process items\n  let total = 0;\n  let ct = 0;\n  for (let i = 0; i < items.length; i++) {\n    const itm = items[i];\n    if (itm.qty > 0 && itm.active && !usr.blocked) {\n      const amt = itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0);\n      if (amt > 0) {\n        total += amt;\n        ct++;\n        // Check stock\n        const s = await db.query('SELECT qty FROM stock WHERE id = $1', [itm.id]);\n        if (s.rows[0]?.qty < itm.qty) throw new Error('stock');\n      }\n    }\n  }\n\n  if (total > 1000) {\n    // Notify\n    await mailer.send(usr.email, `Big order: ${total}`);\n    await db.query('INSERT INTO big_orders (user_id, total, ts) VALUES ($1, $2, $3)', [userId, total, Date.now()]);\n  }\n\n  // Create order\n  const order = await db.query('INSERT INTO orders (user_id, total, item_count, status) VALUES ($1, $2, $3, $4) RETURNING *', [userId, total, ct, 'pending']);\n\n  if (isUrgent) {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['high', order.rows[0].id]);\n    await mailer.send(usr.email, 'Urgent order placed');\n  } else {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['normal', order.rows[0].id]);\n  }\n\n  if (sendEmail) await mailer.send(emailTo, 'Order confirmation', JSON.stringify(order.rows[0]));\n\n  // Log inside business logic\n  console.log('Order created:', order.rows[0].id);\n  console.log('Total:', total);\n\n  // Update cache\n  cache.set(`user:${userId}:lastOrder`, order.rows[0].id);\n  // Old approach:\n  // cache.set(`user:${userId}:orders`, [...existingOrders, order.rows[0]]);\n\n  // TODO: add order tracking\n  // FIXME: handle partial failures\n\n  return order.rows[0];\n}\n\n// Types\ntype OrderStatus = string; // should be union\n\ninterface OrderInput {\n  userId: any; // unvalidated\n  items: any[];\n}\n```\n\nOutput ALL component code inline. No unshown imports. Do not write files.",
+      "prompt": "Refactor this module. Fix everything wrong with it:\n\n```typescript\nimport { db } from './db';\nimport { cache } from './cache';\nimport { mailer } from './mailer';\n\n// Process orders\nexport async function handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) {\n  // Get user\n  const u = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\n  if (!u.rows[0]) throw new Error('not found');\n  const usr = u.rows[0];\n  if (usr.blocked) throw new Error('blocked');\n\n  // Process items\n  let total = 0;\n  let ct = 0;\n  for (let i = 0; i < items.length; i++) {\n    const itm = items[i];\n    if (itm.qty > 0 && itm.active && !usr.blocked) {\n      const amt = itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0);\n      if (amt > 0) {\n        total += amt;\n        ct++;\n        // Check stock\n        const s = await db.query('SELECT qty FROM stock WHERE id = $1', [itm.id]);\n        if (s.rows[0]?.qty < itm.qty) throw new Error('stock');\n      }\n    }\n  }\n\n  if (total > 1000) {\n    // Notify\n    await mailer.send(usr.email, `Big order: ${total}`);\n    await db.query('INSERT INTO big_orders (user_id, total, ts) VALUES ($1, $2, $3)', [userId, total, Date.now()]);\n  }\n\n  // Create order\n  const order = await db.query('INSERT INTO orders (user_id, total, item_count, status) VALUES ($1, $2, $3, $4) RETURNING *', [userId, total, ct, 'pending']);\n\n  if (isUrgent) {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['high', order.rows[0].id]);\n    await mailer.send(usr.email, 'Urgent order placed');\n  } else {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['normal', order.rows[0].id]);\n  }\n\n  if (sendEmail) await mailer.send(emailTo, 'Order confirmation', JSON.stringify(order.rows[0]));\n\n  // Log inside business logic\n  console.log('Order created:', order.rows[0].id);\n  console.log('Total:', total);\n\n  // Update cache\n  cache.set(`user:${userId}:lastOrder`, order.rows[0].id);\n  return order.rows[0];\n}\n\n// Types\ntype OrderStatus = string;\n\ninterface OrderInput {\n  userId: any;\n  items: any[];\n}\n```\n\nOutput ALL component code inline. No unshown imports. Do not write files.",
       "expected_output": "Full refactoring covering all coding-standards rules",
       "assertions": [
         {
-          "text": "fs-module-orientation",
-          "description": "Module/function starts with doc comment: what it does + how it works"
+          "id": "fs-module-orientation",
+          "trap": "// Process orders is a terse label, not a doc comment explaining what the module does and how",
+          "description": "Module/function starts with doc comment: what it does + how it works",
+          "category": "format"
         },
         {
-          "text": "fs-consequence-comments",
-          "description": "Comments explain consequences, not mechanics. 'cache so the frontend...' not just 'update cache'"
+          "id": "fs-consequence-comments",
+          "trap": "// Get user, // Process items, // Update cache describe mechanics, not consequences",
+          "description": "Comments explain consequences, not mechanics. 'cache so the frontend...' not just 'update cache'",
+          "category": "format"
         },
         {
-          "text": "fs-term-explanations",
-          "description": "Any domain terms explained on first use"
+          "id": "fs-term-explanations",
+          "trap": "big_orders table and 1000 threshold used without explaining the domain concept",
+          "description": "Any domain terms explained on first use",
+          "category": "format"
         },
         {
-          "text": "fs-conversational-tone",
-          "description": "Conversational comment tone, not mechanical"
+          "id": "fs-conversational-tone",
+          "trap": "// Get user, // Notify, // Check stock are terse mechanical labels",
+          "description": "Conversational comment tone, not mechanical",
+          "category": "format"
         },
         {
-          "text": "fs-inaction-justified",
-          "description": "If any no-op/early-return, justified with why"
+          "id": "fs-inaction-justified",
+          "trap": "throw new Error('blocked') exits early with no explanation of why blocked users are rejected",
+          "description": "If any no-op/early-return, justified with why",
+          "category": "format"
         },
         {
-          "text": "fs-next-caller-effect",
-          "description": "Cache/DB state mutations explain what next caller sees"
+          "id": "fs-next-caller-effect",
+          "trap": "cache.set(`user:${userId}:lastOrder`, ...) with no comment on what next caller sees",
+          "description": "Cache/DB state mutations explain what next caller sees",
+          "category": "format"
         },
         {
-          "text": "fs-return-value-intent",
-          "description": "Return value documented: what the caller should do with it"
+          "id": "fs-return-value-intent",
+          "trap": "return order.rows[0] with no documentation of what the caller should do with it",
+          "description": "Return value documented: what the caller should do with it",
+          "category": "format"
         },
         {
-          "text": "fs-limits-explained",
-          "description": "The 1000 threshold for big orders explained with why"
+          "id": "fs-limits-explained",
+          "trap": "if (total > 1000) has no explanation of why 1000 is the threshold for big orders",
+          "description": "The 1000 threshold for big orders explained with why",
+          "category": "format"
         },
         {
-          "text": "fs-jsdoc-with-example",
-          "description": "Exported function has JSDoc with block description + @example with return value"
+          "id": "fs-jsdoc-with-example",
+          "trap": "export async function handleOrderData(...) has zero JSDoc",
+          "description": "Exported function has JSDoc with block description + @example with return value",
+          "category": "format"
         },
         {
-          "text": "fs-naming-intent",
-          "description": "handleOrderData renamed \u2014 no banned words (handle, data, process). Full words (usr\u2192user, itm\u2192item, ct\u2192count, amt\u2192amount, s\u2192stock)"
+          "id": "fs-naming-intent",
+          "trap": "handleOrderData uses banned words; u, usr, itm, ct, amt, s are cryptic abbreviations",
+          "description": "handleOrderData renamed — no banned words (handle, data, process). Full words (usr→user, itm→item, ct→count, amt→amount, s→stock)",
+          "category": "format"
         },
         {
-          "text": "fs-boolean-prefix",
-          "description": "Booleans use is/has/should prefix in positive form"
+          "id": "fs-boolean-prefix",
+          "trap": "sendEmail is a boolean without is/has/should prefix",
+          "description": "Booleans use is/has/should prefix in positive form",
+          "category": "format"
         },
         {
-          "text": "fs-symmetry",
-          "description": "Naming pairs consistent (get/set, add/remove)"
+          "id": "fs-symmetry",
+          "trap": "cache.set without corresponding cache.get; insert/update naming not symmetric",
+          "description": "Naming pairs consistent (get/set, add/remove)",
+          "category": "format"
         },
         {
-          "text": "fs-no-boolean-flags",
-          "description": "isUrgent and sendEmail boolean params split into separate functions or options object"
+          "id": "fs-no-boolean-flags",
+          "trap": "isUrgent and sendEmail are boolean params that branch internal behavior",
+          "description": "isUrgent and sendEmail boolean params split into separate functions or options object",
+          "category": "behavior"
         },
         {
-          "text": "fs-guard-clauses",
-          "description": "Nested if/else flattened to guard clauses, max 3 indent levels"
+          "id": "fs-guard-clauses",
+          "trap": "if (itm.qty > 0 && itm.active && !usr.blocked) nested inside for loop with inner if (amt > 0)",
+          "description": "Nested if/else flattened to guard clauses, max 3 indent levels",
+          "category": "format"
         },
         {
-          "text": "fs-switch-or-map",
-          "description": "discountCode if/else chain replaced with object map or switch"
+          "id": "fs-switch-or-map",
+          "trap": "discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0 nested ternary chain",
+          "description": "discountCode if/else chain replaced with object map or switch",
+          "category": "behavior"
         },
         {
-          "text": "fs-immutable",
-          "description": "No mutation of items array or item objects"
+          "id": "fs-immutable",
+          "trap": "let total = 0; total += amt; let ct = 0; ct++ mutate accumulators inside loop",
+          "description": "No mutation of items array or item objects",
+          "category": "behavior"
         },
         {
-          "text": "fs-promise-all",
-          "description": "Independent stock checks run in parallel (Promise.all)"
+          "id": "fs-promise-all",
+          "trap": "await db.query('SELECT qty FROM stock...') called sequentially inside for loop",
+          "description": "Independent stock checks run in parallel (Promise.all)",
+          "category": "behavior"
         },
         {
-          "text": "fs-factory-di",
-          "description": "db, cache, mailer injected via factory, not imported as globals"
+          "id": "fs-factory-di",
+          "trap": "import { db }, import { cache }, import { mailer } are hardcoded global imports",
+          "description": "db, cache, mailer injected via factory, not imported as globals",
+          "category": "architecture"
         },
         {
-          "text": "fs-max-30-lines",
-          "description": "No single function exceeds 30 lines \u2014 logic split into helpers"
+          "id": "fs-max-30-lines",
+          "trap": "handleOrderData is ~45 lines with all logic inline",
+          "description": "No single function exceeds 30 lines — logic split into helpers",
+          "category": "format"
         },
         {
-          "text": "fs-max-3-args",
-          "description": "7 positional args replaced with options object"
+          "id": "fs-max-3-args",
+          "trap": "handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) has 7 positional args",
+          "description": "7 positional args replaced with options object",
+          "category": "format"
         },
         {
-          "text": "fs-srp-cqs",
-          "description": "Order creation (command) separated from notification (side-effect)"
+          "id": "fs-srp-cqs",
+          "trap": "Order creation, email sending, cache update, and logging all in one function",
+          "description": "Order creation (command) separated from notification (side-effect)",
+          "category": "architecture"
         },
         {
-          "text": "fs-named-constants",
-          "description": "Magic numbers (1000, 50, 20) extracted to named constants"
+          "id": "fs-named-constants",
+          "trap": "1000, 50, 20 are magic numbers used inline without named constants",
+          "description": "Magic numbers (1000, 50, 20) extracted to named constants",
+          "category": "format"
         },
         {
-          "text": "fs-strict-typing",
-          "description": "Explicit types/interfaces for all params and returns, no any"
+          "id": "fs-strict-typing",
+          "trap": "userId: any, items: any[] accept anything; OrderStatus = string is untyped",
+          "description": "Explicit types/interfaces for all params and returns, no any",
+          "category": "behavior"
         },
         {
-          "text": "fs-externalize-config",
-          "description": "Discount codes/thresholds in config, not inline"
+          "id": "fs-externalize-config",
+          "trap": "'FREE50', 'FREE20' discount codes and 1000 threshold hardcoded in function body",
+          "description": "Discount codes/thresholds in config, not inline",
+          "category": "architecture"
         },
         {
-          "text": "fs-bound-inputs",
-          "description": "Input validation rejects invalid values (negative qty, empty items) \u2014 no ?? fallback"
+          "id": "fs-bound-inputs",
+          "trap": "No validation on qty (could be negative), items array (could be empty)",
+          "description": "Input validation rejects invalid values (negative qty, empty items) — no ?? fallback",
+          "category": "security"
         },
         {
-          "text": "fs-result-not-throw",
-          "description": "Errors returned as Result, no throw"
+          "id": "fs-result-not-throw",
+          "trap": "throw new Error('not found'), throw new Error('blocked'), throw new Error('stock')",
+          "description": "Errors returned as Result, no throw",
+          "category": "behavior"
         },
         {
-          "text": "fs-preserve-cause",
-          "description": "Errors preserve original cause/context"
+          "id": "fs-preserve-cause",
+          "trap": "throw new Error('stock') is a bare string with no original cause or context",
+          "description": "Errors preserve original cause/context",
+          "category": "behavior"
         },
         {
-          "text": "fs-intermediate-vars",
-          "description": "Compound expressions (tax calc, discount) extracted to named variables"
+          "id": "fs-intermediate-vars",
+          "trap": "itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === ...) is one compound expression",
+          "description": "Compound expressions (tax calc, discount) extracted to named variables",
+          "category": "format"
         },
         {
-          "text": "fs-no-clever-code",
-          "description": "Nested ternary for discounts removed, replaced with clear logic"
+          "id": "fs-no-clever-code",
+          "trap": "discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0 nested ternary",
+          "description": "Nested ternary for discounts removed, replaced with clear logic",
+          "category": "format"
         },
         {
-          "text": "fs-blank-lines",
-          "description": "Logical blocks separated with blank lines"
+          "id": "fs-blank-lines",
+          "trap": "Dense code blocks with inconsistent spacing between logical sections",
+          "description": "Logical blocks separated with blank lines",
+          "category": "format"
         },
         {
-          "text": "fs-no-commented-code",
-          "description": "Commented-out old approach removed"
+          "id": "fs-no-commented-code",
+          "trap": "// Log inside business logic comment labels dead-weight code that should be removed",
+          "description": "Commented-out old approach removed",
+          "category": "format"
         },
         {
-          "text": "fs-no-todo-without-issue",
-          "description": "TODO/FIXME without tracking issue removed"
+          "id": "fs-no-todo-without-issue",
+          "trap": "No existing TODOs but refactoring should not introduce any without issue links",
+          "description": "TODO/FIXME without tracking issue removed",
+          "category": "format"
         },
         {
-          "text": "fs-state-narration",
-          "description": "If any conditional branches, narrated with journey (optional \u2014 depends on refactoring approach)"
+          "id": "fs-state-narration",
+          "trap": "if (isUrgent)/else and if (sendEmail) branches have no journey narration",
+          "description": "If any conditional branches, narrated with journey (optional — depends on refactoring approach)",
+          "category": "format"
         },
         {
-          "text": "fs-invalid-states-unrepresentable",
+          "id": "fs-invalid-states-unrepresentable",
           "trap": "OrderStatus = string instead of union type; status 'pending' is a raw string",
-          "description": "Make invalid states unrepresentable \u2014 union types for status, not bare strings"
+          "description": "Make invalid states unrepresentable — union types for status, not bare strings",
+          "category": "behavior"
         },
         {
-          "text": "fs-parse-dont-validate",
-          "trap": "userId: any, items: any[] \u2014 accepted without parsing into typed domain objects",
-          "description": "Parse, don't validate \u2014 construct typed domain objects at boundary, reject invalid"
+          "id": "fs-parse-dont-validate",
+          "trap": "userId: any, items: any[] — accepted without parsing into typed domain objects",
+          "description": "Parse, don't validate — construct typed domain objects at boundary, reject invalid",
+          "category": "behavior"
         },
         {
-          "text": "fs-timeout-io",
-          "trap": "db.query calls have no timeout \u2014 can hang forever",
-          "description": "Timeout on every I/O call"
+          "id": "fs-timeout-io",
+          "trap": "db.query calls have no timeout — can hang forever",
+          "description": "Timeout on every I/O call",
+          "category": "gotcha"
         },
         {
-          "text": "fs-crosscutting-wrapper",
+          "id": "fs-crosscutting-wrapper",
           "trap": "console.log('Order created') inside business logic",
-          "description": "No logging in business logic \u2014 use crosscutting wrapper (withLogging/withTracing)"
+          "description": "No logging in business logic — use crosscutting wrapper (withLogging/withTracing)",
+          "category": "architecture"
         },
         {
-          "text": "fs-structured-api-errors",
-          "trap": "throw new Error('not found') \u2014 bare string, no type/code/status",
-          "description": "Structured errors: { type, code, status, detail } not bare { message }"
+          "id": "fs-structured-api-errors",
+          "trap": "throw new Error('not found') — bare string, no type/code/status",
+          "description": "Structured errors: { type, code, status, detail } not bare { message }",
+          "category": "behavior"
         },
         {
-          "text": "fs-dto-mapping",
-          "trap": "return order.rows[0] \u2014 raw DB row returned to caller",
-          "description": "Map DB entities to DTOs \u2014 dedicated response type, not raw rows"
+          "id": "fs-dto-mapping",
+          "trap": "return order.rows[0] — raw DB row returned to caller",
+          "description": "Map DB entities to DTOs — dedicated response type, not raw rows",
+          "category": "architecture"
         },
         {
-          "text": "fs-exports-at-top",
+          "id": "fs-exports-at-top",
           "trap": "Single export mixed in with all implementation",
-          "description": "Exports/public API at top of file, private helpers at bottom"
+          "description": "Exports/public API at top of file, private helpers at bottom",
+          "category": "architecture"
         }
       ]
     }

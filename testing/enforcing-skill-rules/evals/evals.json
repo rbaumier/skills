@@ -4,131 +4,154 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```typescript\n// user-service.test.ts\nimport { describe, it, expect, afterEach, vi } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nimport { UserService } from './user-service';\nimport { EmailService } from './email-service';\nimport { Database } from './database';\n\nconst mockDb = vi.fn();\nvi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));\n\nlet sharedUser: any;\n\ndescribe('UserService', () => {\n  afterEach(() => {\n    cleanup();\n  });\n\n  it('test1', async () => {\n    mockDb.mockResolvedValue({ id: 1, name: 'Alice' });\n    const service = new UserService(new Database(), new EmailService());\n    const user = await service.getUser(1);\n    sharedUser = user;\n    expect(user).toEqual({ id: 1, name: 'Alice' });\n  });\n\n  it('test2', async () => {\n      expect(sharedUser.name).toBe('Alice');\n    const updated = await service.updateName(sharedUser.id, 'Bob');\n    expect(updated).toBeTruthy();\n  });\n\n  it('test3', async () => {\n    const users = [{ id: 1 }, { id: 2 }, { id: 3 }];\n    const service = new UserService(new Database(), new EmailService());\n    const result = await service.processUsers(users);\n    expect(result).toMatchSnapshot();\n  });\n\n  it('test4', async () => {\n    const service = new UserService(new Database(), new EmailService());\n    // Accessing private internals \u2014 testing implementation not behavior\n    expect((service as any)._cache.size).toBe(0);\n    expect((service as any)._retryCount).toBe(3);\n  });\n\n  it('test5', () => {\n    // Testing what types already guarantee\n    const user = { id: 1, name: 'Alice' };\n    expect(typeof user.id).toBe('number');\n    expect(typeof user.name).toBe('string');\n  });\n});\n\n// playwright.config.ts\nimport { defineConfig } from '@playwright/test';\nexport default defineConfig({\n  use: {\n    trace: 'on',          // always captures traces \u2014 wastes resources\n    video: 'on',          // always records video \u2014 wastes resources\n    screenshot: 'on',     // always takes screenshots \u2014 wastes resources\n  },\n});\n\n// checkout.e2e.ts (Playwright)\nimport { test, expect } from '@playwright/test';\n\ntest('complete checkout flow', async ({ page }) => {\n  await page.goto('/products');\n  await page.click('.product-card:first-child .add-to-cart');\n  await page.waitForTimeout(2000);\n  await page.click('.cart-icon');\n  \n  // Fill shipping\n  await page.fill('#name', 'John Doe');\n  await page.fill('#address', '123 Main St');\n  await page.fill('#card-number', '4242424242424242');\n  await page.click('#submit-order');\n  await page.waitForTimeout(3000);\n  \n  // Verify with Stripe (real API)\n  const response = await page.request.get('https://api.stripe.com/v1/charges');\n  expect(response.ok()).toBeTruthy();\n  \n  const confirmation = await page.$('.confirmation-message');\n  expect(confirmation).not.toBeNull();\n});\n\ntest('cancel order', async ({ page }) => {\n  // Reuses state from previous test\n  await page.click('.cancel-order');\n  await page.waitForTimeout(1000);\n  expect(await page.$('.cancelled-badge')).not.toBeNull();\n});\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```typescript\n// user-service.test.ts\nimport { describe, it, expect, afterEach, vi } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nimport { UserService } from './user-service';\nimport { EmailService } from './email-service';\nimport { Database } from './database';\n\nconst mockDb = vi.fn();\nvi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));\n\nlet sharedUser: any;\n\ndescribe('UserService', () => {\n  afterEach(() => {\n    cleanup();\n  });\n\n  it('test1', async () => {\n    mockDb.mockResolvedValue({ id: 1, name: 'Alice' });\n    const service = new UserService(new Database(), new EmailService());\n    const user = await service.getUser(1);\n    sharedUser = user;\n    expect(user).toEqual({ id: 1, name: 'Alice' });\n  });\n\n  it('test2', async () => {\n      expect(sharedUser.name).toBe('Alice');\n    const updated = await service.updateName(sharedUser.id, 'Bob');\n    expect(updated).toBeTruthy();\n  });\n\n  it('test3', async () => {\n    const users = [{ id: 1 }, { id: 2 }, { id: 3 }];\n    const service = new UserService(new Database(), new EmailService());\n    const result = await service.processUsers(users);\n    expect(result).toMatchSnapshot();\n  });\n\n  it('test4', async () => {\n    const service = new UserService(new Database(), new EmailService());\n    expect((service as any)._cache.size).toBe(0);\n    expect((service as any)._retryCount).toBe(3);\n  });\n\n  it('test5', () => {\n    const user = { id: 1, name: 'Alice' };\n    expect(typeof user.id).toBe('number');\n    expect(typeof user.name).toBe('string');\n  });\n});\n\n// playwright.config.ts\nimport { defineConfig } from '@playwright/test';\nexport default defineConfig({\n  use: {\n    trace: 'on',\n    video: 'on',\n    screenshot: 'on',\n  },\n});\n\n// checkout.e2e.ts (Playwright)\nimport { test, expect } from '@playwright/test';\n\ntest('complete checkout flow', async ({ page }) => {\n  await page.goto('/products');\n  await page.click('.product-card:first-child .add-to-cart');\n  await page.waitForTimeout(2000);\n  await page.click('.cart-icon');\n  \n  // Fill shipping\n  await page.fill('#name', 'John Doe');\n  await page.fill('#address', '123 Main St');\n  await page.fill('#card-number', '4242424242424242');\n  await page.click('#submit-order');\n  await page.waitForTimeout(3000);\n  \n  // Verify with Stripe (real API)\n  const response = await page.request.get('https://api.stripe.com/v1/charges');\n  expect(response.ok()).toBeTruthy();\n  \n  const confirmation = await page.$('.confirmation-message');\n  expect(confirmation).not.toBeNull();\n});\n\ntest('cancel order', async ({ page }) => {\n  await page.click('.cancel-order');\n  await page.waitForTimeout(1000);\n  expect(await page.$('.cancelled-badge')).not.toBeNull();\n});\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all testing rules",
       "assertions": [
         {
           "id": "no-rtl-cleanup",
           "trap": "Manual cleanup() import in Vitest",
-          "description": "No manual cleanup() in Vitest \u2014 automatic. Keep only vi.restoreAllMocks()"
+          "description": "No manual cleanup() in Vitest — automatic. Keep only vi.restoreAllMocks()",
+          "category": "gotcha"
         },
         {
           "id": "vi-hoisted",
           "trap": "mockDb declared before vi.mock but used in factory scope",
-          "description": "Use vi.hoisted() for variables inside vi.mock() factory"
+          "description": "Use vi.hoisted() for variables inside vi.mock() factory",
+          "category": "gotcha"
         },
         {
           "id": "no-test-deps",
           "trap": "test2 depends on sharedUser from test1",
-          "description": "No test-to-test dependencies; explicit setup per test"
+          "description": "No test-to-test dependencies; explicit setup per test",
+          "category": "behavior"
         },
         {
           "id": "descriptive-names",
           "trap": "test1, test2, test3 as test names",
-          "description": "Descriptive names with scenario + expected outcome"
+          "description": "Descriptive names with scenario + expected outcome",
+          "category": "format"
         },
         {
           "id": "no-snapshot",
           "trap": "toMatchSnapshot() instead of specific assertions",
-          "description": "Assert specific values, not snapshots (maintenance trap)"
+          "description": "Assert specific values, not snapshots (maintenance trap)",
+          "category": "behavior"
         },
         {
           "id": "specific-matchers",
           "trap": "toBeTruthy() instead of specific matcher",
-          "description": "Specific matchers over generic equality/truthiness"
+          "description": "Specific matchers over generic equality/truthiness",
+          "category": "behavior"
         },
         {
           "id": "mock-boundaries-only",
           "trap": "EmailService (internal collaborator) mocked",
-          "description": "Mock at boundaries only (network, DB), never internal collaborators"
+          "description": "Mock at boundaries only (network, DB), never internal collaborators",
+          "category": "behavior"
         },
         {
           "id": "factories-not-fixtures",
           "trap": "Hardcoded test data objects",
-          "description": "Factory functions for test data, not fixtures"
+          "description": "Factory functions for test data, not fixtures",
+          "category": "behavior"
         },
         {
           "id": "locator-click",
           "trap": "page.click(selector) deprecated API",
-          "description": "page.locator(selector).click() not page.click()"
+          "description": "page.locator(selector).click() not page.click()",
+          "category": "behavior"
         },
         {
           "id": "no-waitForTimeout",
           "trap": "waitForTimeout(2000/3000/1000) everywhere",
-          "description": "Zero sleep: wait for network/UI state, never waitForTimeout"
+          "description": "Zero sleep: wait for network/UI state, never waitForTimeout",
+          "category": "behavior"
         },
         {
           "id": "role-selectors",
           "trap": "CSS class selectors (.product-card, #name)",
-          "description": "User-centric selectors: getByRole, getByLabel, not CSS classes"
+          "description": "User-centric selectors: getByRole, getByLabel, not CSS classes",
+          "category": "behavior"
         },
         {
           "id": "mock-external-services",
           "trap": "Real Stripe API call in test",
-          "description": "Mock third-party services with page.route() interception"
+          "description": "Mock third-party services with page.route() interception",
+          "category": "behavior"
         },
         {
           "id": "page-object-model",
           "trap": "Raw selectors/actions inline in tests",
-          "description": "Page Object Model for reusable test abstractions"
+          "description": "Page Object Model for reusable test abstractions",
+          "category": "architecture"
         },
         {
           "id": "independent-e2e",
           "trap": "cancel order test depends on checkout test state",
-          "description": "Independent tests with fresh context, no shared state"
+          "description": "Independent tests with fresh context, no shared state",
+          "category": "behavior"
         },
         {
           "id": "web-first-assertions",
           "trap": "page.$() + toBeNull() instead of web-first expect",
-          "description": "Web-first assertions: expect(locator).toBeVisible() with auto-retry"
+          "description": "Web-first assertions: expect(locator).toBeVisible() with auto-retry",
+          "category": "behavior"
         },
         {
           "id": "api-seeding",
           "trap": "UI-driven precondition setup in checkout",
-          "description": "API seeding for preconditions, don't drive UI to create test data"
+          "description": "API seeding for preconditions, don't drive UI to create test data",
+          "category": "behavior"
         },
         {
           "id": "test-behavior-not-impl",
           "trap": "test4 accesses private internals (_cache, _retryCount) via (service as any)",
-          "description": "Test behavior not implementation \u2014 never access private internals"
+          "description": "Test behavior not implementation — never access private internals",
+          "category": "behavior"
         },
         {
           "id": "dont-test-types",
           "trap": "test5 asserts typeof checks that TypeScript already guarantees",
-          "description": "Don't test what types guarantee (typeof checks on typed values)"
+          "description": "Don't test what types guarantee (typeof checks on typed values)",
+          "category": "gotcha"
         },
         {
           "id": "trace-retain-on-failure",
           "trap": "Playwright config has trace/video/screenshot set to 'on' (always) instead of retain-on-failure",
-          "description": "Capture video/traces/screenshots on failure only (trace: 'retain-on-failure')"
+          "description": "Capture video/traces/screenshots on failure only (trace: 'retain-on-failure')",
+          "category": "behavior"
         }
       ]
     },
     {
       "id": 2,
       "name": "tdd-workflow-review",
-      "prompt": "Review this TDD approach and list all issues:\n\nI'm building a shopping cart. Here's my plan:\n1. Write ALL tests first (addItem, removeItem, updateQuantity, calculateTotal, applyDiscount, checkout) \u2014 all 6 at once\n2. Then implement all methods\n3. calculateTotal test is failing due to rounding, so I'll refactor the implementation now\n4. Once all tests pass, ship it\n\nHere's my test file so far (all tests written, all RED):\n\n```typescript\ndescribe('ShoppingCart', () => {\n  it('addItem adds product', () => { /* RED */ });\n  it('removeItem removes product', () => { /* RED */ });\n  it('updateQuantity changes count', () => { /* RED */ });\n  it('calculateTotal sums prices', () => { /* RED */ });\n  it('applyDiscount reduces total', () => { /* RED */ });\n  it('checkout creates order', () => { /* RED */ });\n});\n```\n\nIs this the right approach?\n\nOutput your review listing every issue.",
+      "prompt": "Review this TDD approach and list all issues:\n\nI'm building a shopping cart. Here's my plan:\n1. Write ALL tests first (addItem, removeItem, updateQuantity, calculateTotal, applyDiscount, checkout) — all 6 at once\n2. Then implement all methods\n3. calculateTotal test is failing due to rounding, so I'll refactor the implementation now\n4. Once all tests pass, ship it\n\nHere's my test file so far (all tests written, all RED):\n\n```typescript\ndescribe('ShoppingCart', () => {\n  it('addItem adds product', () => { /* RED */ });\n  it('removeItem removes product', () => { /* RED */ });\n  it('updateQuantity changes count', () => { /* RED */ });\n  it('calculateTotal sums prices', () => { /* RED */ });\n  it('applyDiscount reduces total', () => { /* RED */ });\n  it('checkout creates order', () => { /* RED */ });\n});\n```\n\nIs this the right approach?\n\nOutput your review listing every issue.",
       "expected_output": "Review identifying all TDD workflow violations",
       "assertions": [
         {
           "id": "vertical-slices",
           "trap": "All 6 tests written at once (horizontal slicing)",
-          "description": "Vertical slices: one test \u2192 one impl \u2192 repeat, not batch"
+          "description": "Vertical slices: one test → one impl → repeat, not batch",
+          "category": "behavior"
         },
         {
           "id": "tracer-bullet",
           "trap": "All tests first then all implementation",
-          "description": "Tracer bullet: one thin slice end-to-end first"
+          "description": "Tracer bullet: one thin slice end-to-end first",
+          "category": "behavior"
         },
         {
           "id": "never-refactor-red",
           "trap": "Refactoring calculateTotal while tests are failing",
-          "description": "Never refactor during RED \u2014 only when GREEN"
+          "description": "Never refactor during RED — only when GREEN",
+          "category": "behavior"
         },
         {
           "id": "minimal-code",
           "trap": "Plan to implement all methods at once",
-          "description": "Write only enough code to pass the current test"
+          "description": "Write only enough code to pass the current test",
+          "category": "behavior"
         }
       ]
     },
@@ -141,47 +164,56 @@
         {
           "id": "msw-not-vi-mock-fetch",
           "trap": "vi.mock(\"node-fetch\") instead of MSW",
-          "description": "Use MSW for network mocking, not vi.mock on fetch/axios"
+          "description": "Use MSW for network mocking, not vi.mock on fetch/axios",
+          "category": "behavior"
         },
         {
           "id": "zombies-coverage",
           "trap": "Only happy path tests, no zero/boundary/error cases",
-          "description": "ZOMBIES mnemonic: test Zero, One, Many, Boundaries, Interfaces, Exceptions, Simple"
+          "description": "ZOMBIES mnemonic: test Zero, One, Many, Boundaries, Interfaces, Exceptions, Simple",
+          "category": "behavior"
         },
         {
           "id": "userEvent-not-fireEvent",
           "trap": "fireEvent.click() and fireEvent.change() in RTL",
-          "description": "userEvent over fireEvent -- simulates real browser event sequence"
+          "description": "userEvent over fireEvent -- simulates real browser event sequence",
+          "category": "behavior"
         },
         {
           "id": "contract-test-external-api",
           "trap": "Real Stripe API call in test without contract testing",
-          "description": "Contract tests with MSW for external API boundaries, never call real APIs"
+          "description": "Contract tests with MSW for external API boundaries, never call real APIs",
+          "category": "behavior"
         },
         {
           "id": "coverage-ratchet",
           "trap": "Hardcoded coverage thresholds (80/80/80/80)",
-          "description": "Coverage as ratchet (autoUpdate: true), not hardcoded threshold"
+          "description": "Coverage as ratchet (autoUpdate: true), not hardcoded threshold",
+          "category": "behavior"
         },
         {
           "id": "visual-screenshot-not-html-snapshot",
           "trap": "toMatchSnapshot() on HTML content instead of toHaveScreenshot()",
-          "description": "Visual regression: toHaveScreenshot() not toMatchSnapshot() on HTML"
+          "description": "Visual regression: toHaveScreenshot() not toMatchSnapshot() on HTML",
+          "category": "behavior"
         },
         {
           "id": "flaky-retries-flagged",
           "trap": "retries: 3 in Playwright config with no explanatory comment",
-          "description": "Flag unexplained retries in config -- retries mask real regressions"
+          "description": "Flag unexplained retries in config -- retries mask real regressions",
+          "category": "gotcha"
         },
         {
           "id": "test-each-data-driven",
           "trap": "5 near-identical formatCurrency tests differing only in input",
-          "description": "test.each for data-driven tests instead of duplicated test bodies"
+          "description": "test.each for data-driven tests instead of duplicated test bodies",
+          "category": "format"
         },
         {
           "id": "test-pyramid-ratio",
           "trap": "General awareness -- should mention test pyramid if advising on test strategy",
-          "description": "Test pyramid ratios: ~70% unit, ~20% integration, ~10% E2E"
+          "description": "Test pyramid ratios: ~70% unit, ~20% integration, ~10% E2E",
+          "category": "architecture"
         }
       ]
     }

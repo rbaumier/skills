@@ -14,17 +14,6 @@ Generate a review `.md` file in `./reviews/` (relative to the **git repository r
 Run the bundled script **from the git repo root**:
 
 ```bash
-
-Add support for reviewing working tree changes (unstaged/staged):
-
-```bash
-# Working tree mode (no commits needed)
-cd "$(git rev-parse --show-toplevel)" && bash {SKILL_DIR}/scripts/create-review.sh --working
-```
-
-This uses `git diff` (unstaged) and `git diff --cached` (staged) instead of commit-to-commit diffs. Useful for reviewing changes before committing.
-
-Set `mode: working` in frontmatter instead of `mode: commits`.
 # Compare commits (default mode)
 cd "$(git rev-parse --show-toplevel)" && bash {SKILL_DIR}/scripts/create-review.sh [FROM] [TO]
 
@@ -45,28 +34,6 @@ Output: `reviews/2026-03-11-12h30-commits-abc1234-vs-def5678.md`
 1. Run the script — it computes `git diff --name-status` and generates the frontmatter + skeleton
 2. Return the file path to the user
 3. User opens it in Cursor/VSCode — the extension renders the diff viewer with file tree
-
-Add 'Auto-trigger after task completion' guidance:
-
-When the agent finishes implementing a feature or fixing a bug, automatically offer to generate a diff review:
-
-```
-After completing work, if changes span 3+ files:
-'I've completed the changes. Would you like me to generate a diff review so you can inspect the changes in VSCode?'
-```
-
-This surfaces the skill at the natural review moment rather than requiring the user to remember to ask.
-
-Add 'Review Processing' workflow: after the user annotates the review in VSCode, add guidance for the agent to process feedback:
-
-1. Read the review .md file — look for comments (lines with `- [ ]` = unresolved, `- [x]` = resolved)
-2. For each unresolved comment:
-   a. Read the comment text and referenced file/line
-   b. Fix the issue in the codebase
-   c. Add a reply line: `  > description of fix -- agent`
-   d. Mark as resolved: change `- [ ]` to `- [x]`
-3. Re-run the diff script to generate an updated review with the new changes
-4. Tell the user: 'I've addressed N comments. Please review the updated diff.'
 
 ## Processing Review Feedback
 
