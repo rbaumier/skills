@@ -102,6 +102,12 @@
     "language-rust",
     "coding-standards"
   ],
+  "Skills": [
+    "prompt-engineering",
+    "writing",
+    "skill-creator",
+    "enforcing-skill-rules"
+  ],
   "Testing": [
     "tdd",
     "debugging",
