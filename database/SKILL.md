@@ -14,11 +14,30 @@ description: Data architecture, SQL engineering, persistence strategies, Postgre
 
 ### Schema Design & Modeling
 - PKs: UUIDv7 (index locality, time-sortable). Never random UUIDv4 for clustered keys.
-- FKs: enforce in DB. Index ALL FK columns — prevents cascade lock issues.
+- FKs: enforce in DB. Index ALL FK columns — prevents cascade lock issues. Always specify `ON DELETE` and `ON UPDATE` — forces you to think about referential consequences.
 - Types: TEXT not VARCHAR. TIMESTAMPTZ not TIMESTAMP. NUMERIC for money never FLOAT. JSONB for semi-structured.
-- snake_case naming. Consistent plural/singular.
+- snake_case naming. Always **singular** (e.g. `team` not `teams`).
+- **NOT NULL by default.** NULL is the exception — think Maybe monad. Every nullable column MUST have a comment justifying why NULL is allowed. If no justification, add NOT NULL.
+- Boolean columns must start with `is_` or `has_` (e.g. `is_active`, `has_subscription`).
+- Comment every column — explain rationale and decisions, in plain english.
+- No abbreviations unless well-known AND long (e.g. `i18n`). No reserved PostgreSQL keywords as column names.
+- No PostgreSQL enums — can't remove values. Use a dedicated lookup table or state machine instead.
+- Use `text` or `citext` with CHECK constraint. Never `varchar(n)` or `char(n)`.
 - Soft delete: `deleted_at TIMESTAMPTZ` with partial unique index, or history table. Never boolean `is_deleted`.
 - CHECK constraints: `price > 0`, `status IN (...)`. Make invalid data unrepresentable.
+
+### Naming Conventions
+- Constraints: `{tablename}_{columnname(s)}_{suffix}` — suffixes: `pk`, `fk`, `key` (unique), `chk` (check), `exl` (exclusion), `idx` (index).
+- FK name: `{from_table}_{from_col}_{to_table}_{to_col}_fk`.
+- Functions: `notify_schema_table_event()` for notifications, `_function_name()` (underscore prefix) for private, `function_name()` for public.
+- Function parameters: suffix with `$` to avoid ambiguity (e.g. `user_id$`, `email$`).
+
+### Query Best Practices
+- Never use `BETWEEN` with timestamps — inclusive both sides causes off-by-one bugs. Use `>= AND <`.
+- Prefer `EXISTS` over `IN` — EXISTS exits on first match, IN scans entire subquery. Same for `NOT EXISTS` over `NOT IN`.
+- Prefer `=` over `LIKE` when no wildcard needed — `=` leverages indexes.
+- Prefer `USING (col)` over `ON t1.col = t2.col` when column names match.
+- Multi-line SQL strings: use `$_$...$_$` dollar-quoting.
 
 ### Performance & Indexing
 - Covering indexes: INCLUDE clauses for index-only scans, avoid heap lookups.
@@ -35,6 +54,8 @@ description: Data architecture, SQL engineering, persistence strategies, Postgre
 - CREATE INDEX CONCURRENTLY. ADD CONSTRAINT NOT VALID then VALIDATE separately — avoid table locks.
 - Tune autovacuum frequency on high-churn tables. NEVER disable autovacuum.
 - PgBouncer Transaction Mode for serverless; keep < 100 active DB connections.
+- `SET search_path = pg_catalog` — force explicit schema names in every DDL object. Explicit > implicit.
+- `statement_timeout` per role: `ALTER ROLE app SET statement_timeout TO '250ms'`. Before increasing: check indexes → materialized views → cache settings → disk → CPU/RAM → read replica.
 
 ### Security & Access Control
 - Least privilege: app never superuser. GRANT only SELECT/INSERT/UPDATE/DELETE on specific tables.

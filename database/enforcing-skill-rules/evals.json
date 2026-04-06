@@ -103,6 +103,33 @@
         { "id": "rp-6", "rule": "Transaction returns union of all possible errors", "check": "Transaction function return type is union of all step errors" },
         { "id": "rp-7", "rule": "Derive repo type from factory with ReturnType", "check": "Repository type derived via ReturnType<typeof createXRepository>" }
       ]
+    },
+    {
+      "id": "sql-conventions",
+      "name": "SQL Conventions (new rules)",
+      "prompt": "Fix all issues in this PostgreSQL schema and queries:\n\n```sql\nCREATE TYPE order_status AS ENUM ('pending', 'shipped', 'delivered', 'cancelled');\n\nCREATE TABLE orders (\n  order_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  usr_id UUID REFERENCES users(user_id),\n  status order_status DEFAULT 'pending',\n  desc VARCHAR(500),\n  email VARCHAR(255),\n  total NUMERIC(10,2),\n  verified BOOLEAN DEFAULT false,\n  paid BOOLEAN DEFAULT false,\n  metadata JSONB,\n  created_at TIMESTAMPTZ DEFAULT now(),\n  updated_at TIMESTAMPTZ DEFAULT now()\n);\n\nCREATE TABLE order_items (\n  item_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  order_id UUID REFERENCES orders(order_id),\n  product_id UUID REFERENCES products(product_id),\n  quantity INTEGER,\n  price NUMERIC(10,2)\n);\n\nALTER TABLE order_items ADD CONSTRAINT oi_uniq UNIQUE (order_id, product_id);\nALTER TABLE orders ADD CONSTRAINT chk1 CHECK (total > 0);\n\nCREATE FUNCTION get_recent_orders(user_id UUID, start_date TIMESTAMPTZ, end_date TIMESTAMPTZ)\nRETURNS SETOF orders AS $$\n  SELECT * FROM orders\n  WHERE usr_id = user_id\n    AND created_at BETWEEN start_date AND end_date\n    AND status LIKE 'pending'\n    AND order_id IN (SELECT order_id FROM order_items WHERE quantity > 0)\n  ORDER BY created_at DESC;\n$$ LANGUAGE sql;\n\nCREATE FUNCTION send_order_notification(order_id UUID)\nRETURNS void AS $$\nBEGIN\n  PERFORM pg_notify('order_channel', 'Order ' || order_id::text || ' created at '\n    || now()::text\n    || ' with status pending');\nEND;\n$$ LANGUAGE plpgsql;\n\nSELECT o.order_id, o.total, i.quantity\nFROM orders o\nINNER JOIN order_items i\n  ON o.order_id = i.order_id\nWHERE o.status = 'pending';\n```\n\nOutput fixed code only.",
+      "trap_notes": "Trap code violates 19 new rules: plural table names (orders, order_items), enum type, varchar instead of text/citext, boolean without is/has prefix, no column comments, BETWEEN with timestamps, IN instead of EXISTS, LIKE without wildcard, ON instead of USING, wrong constraint names (oi_uniq, chk1), wrong function naming (get_recent_orders should be public style, send_order_notification should be notify_*), no $ suffix on params, no search_path, nullable columns without justification, abbreviations (usr_id, desc), reserved keyword (desc), no statement_timeout, FK without ON DELETE/ON UPDATE, multi-line string without $_$",
+      "assertions": [
+        { "id": "sc-1", "trap": "tables named 'orders' and 'order_items' (plural)", "description": "Table names must be singular (order, order_item)" },
+        { "id": "sc-2", "trap": "CREATE TYPE order_status AS ENUM", "description": "No PostgreSQL enums — use dedicated lookup table or state machine" },
+        { "id": "sc-3", "trap": "desc VARCHAR(500), email VARCHAR(255)", "description": "Use text or citext with CHECK constraint, not varchar(n)" },
+        { "id": "sc-4", "trap": "verified BOOLEAN, paid BOOLEAN", "description": "Boolean columns must start with is_ or has_ (is_verified, is_paid)" },
+        { "id": "sc-5", "trap": "no COMMENT ON COLUMN anywhere", "description": "Every column must have a comment explaining rationale" },
+        { "id": "sc-6", "trap": "created_at BETWEEN start_date AND end_date", "description": "Never use BETWEEN with timestamps — use >= AND <" },
+        { "id": "sc-7", "trap": "order_id IN (SELECT order_id FROM order_items ...)", "description": "Prefer EXISTS over IN — EXISTS exits on first match" },
+        { "id": "sc-8", "trap": "status LIKE 'pending' (no wildcard)", "description": "Prefer = over LIKE when no wildcard needed" },
+        { "id": "sc-9", "trap": "ON o.order_id = i.order_id", "description": "Prefer USING (order_id) when column names match" },
+        { "id": "sc-10", "trap": "CONSTRAINT oi_uniq, CONSTRAINT chk1", "description": "Constraint names must follow {table}_{cols}_{suffix} pattern" },
+        { "id": "sc-11", "trap": "send_order_notification — notify function without notify_ prefix", "description": "Notify functions must use format notify_schema_table_event()" },
+        { "id": "sc-12", "trap": "params: user_id UUID, start_date, order_id — no $ suffix", "description": "Function parameters must end with $ to avoid ambiguity" },
+        { "id": "sc-13", "trap": "no SET search_path = pg_catalog anywhere", "description": "SET search_path = pg_catalog to force explicit schema names" },
+        { "id": "sc-14", "trap": "quantity INTEGER (nullable), metadata JSONB (nullable) — no justification", "description": "NOT NULL by default — every column should be NOT NULL unless explicitly justified" },
+        { "id": "sc-15", "trap": "usr_id (abbreviation of user)", "description": "No abbreviations — use full words (user_id not usr_id)" },
+        { "id": "sc-16", "trap": "column named 'desc' — reserved keyword", "description": "No reserved PostgreSQL keywords as column names" },
+        { "id": "sc-17", "trap": "multi-line string in pg_notify using || concatenation, not $_$", "description": "Multi-line SQL strings must use $_$...$_$ dollar-quoting" },
+        { "id": "sc-18", "trap": "REFERENCES without ON DELETE / ON UPDATE", "description": "Always specify ON DELETE and ON UPDATE on foreign keys" },
+        { "id": "sc-19", "trap": "no ALTER ROLE ... SET statement_timeout", "description": "Configure statement_timeout per role for reliability" }
+      ]
     }
   ]
 }
