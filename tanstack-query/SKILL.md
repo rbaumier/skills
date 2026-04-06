@@ -1,6 +1,6 @@
 ---
 name: tanstack-query
-description: TanStack Query v5 for React server state management
+description: TanStack Query v5 for React server state management + Table v8, Form, Virtual, Store
 ---
 
 ## When to use
@@ -110,3 +110,27 @@ In loader: `await queryClient.ensureQueryData(queryOptions(...))`. Use `ensureQu
 
 ### Testing
 Create a test utility: `function createTestQueryClient() { return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }) }`. Wrap components: `render(<QueryClientProvider client={createTestQueryClient()}><Component /></QueryClientProvider>)`. Always `retry: false` in tests. Create fresh QueryClient per test to avoid cache leaks.
+
+## Other TanStack Libraries
+
+### Table v8
+- `accessor` renamed to `accessorKey` (string) or `accessorFn` (function)
+- Use `getCoreRowModel()`, `getSortedRowModel()`, `getFilteredRowModel()`, `getPaginationRowModel()` from `@tanstack/react-table`
+- Column definitions use `columnHelper.accessor()` or plain objects with `accessorKey`
+
+### Form
+- Use `@tanstack/react-form` with `@tanstack/zod-form-adapter` for Zod validation
+- Configure: `useForm({ defaultValues, validatorAdapter: zodValidator(), onSubmit })`
+- Field-level validation: `form.Field({ name, validators: { onChange: z.string().min(1) } })`
+- Server-side validation: `createServerValidate()` for isomorphic validation in Start apps
+
+### Virtual
+- `useVirtualizer({ count, getScrollElement, estimateSize })` from `@tanstack/react-virtual`
+- Only renders visible items + overscan buffer. Required for lists >100 items for smooth scroll
+- Set `overscan: 5` minimum. For dynamic heights: provide `measureElement` callback
+
+### Store
+- `import { Store } from '@tanstack/store'`. Create: `new Store(initialState)`
+- Subscribe: `store.subscribe(listener)`. Update: `store.setState((prev) => ({ ...prev, count: prev.count + 1 }))`
+- Use `batch()` to group multiple updates so subscribers fire once
+- Framework bindings: `useStore(store, selector)` from `@tanstack/react-store`
