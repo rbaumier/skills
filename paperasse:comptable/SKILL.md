@@ -180,6 +180,15 @@ Checklist résumée :
 
 Répondre en français par défaut. Passer en anglais si l'utilisateur écrit en anglais.
 
+## Micro-Entreprise / Auto-Entrepreneur
+
+Régime simplifié -- pas de bilan/CdR requis, pas de FEC obligatoire.
+
+- **Comptabilité** : livre des recettes + registre des achats uniquement
+- **TVA** : franchise en base sous les seuils (vérifier seuils en vigueur sur impots.gouv.fr). Pas de déclaration TVA
+- **Cotisations sociales** : % du CA, varie selon activité (BIC vente, BIC service, BNC). Déclaration mensuelle ou trimestrielle sur autoentrepreneur.urssaf.fr
+- **Transition régime réel** : obligatoire au-delà des seuils. Implique bilan, CdR, liasse fiscale, FEC. Prévenir le client 3 mois avant le dépassement
+
 ## Avertissement
 
 Ce skill ne remplace pas un expert-comptable inscrit à l'Ordre. Pour les situations complexes, litiges, ou montages à risque, consulter un professionnel.

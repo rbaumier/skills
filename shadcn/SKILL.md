@@ -82,6 +82,12 @@ These rules are **always enforced**. Each links to a file with Incorrect/Correct
 
 These are the most common patterns that differentiate correct shadcn/ui code. For edge cases, see the linked rule files above.
 
+### Component Wrapper for Custom Variants
+When you need custom variants beyond built-in ones, wrap the base component — don't modify the source. Import with alias, define variants using CVA, export separate interface. Use `ref` prop directly (not `forwardRef` for React 19). This preserves base component behavior while adding custom styling.
+
+### ThemeProvider for Dark Mode
+Wrap the app in a ThemeProvider that toggles `.dark` class on `documentElement`. Store preference in localStorage. Use `suppressHydrationWarning` on `<html>` to avoid SSR hydration mismatch when theme is read from client storage.
+
 ```tsx
 // Form layout: FieldGroup + Field, not div + Label.
 <FieldGroup>
@@ -141,8 +147,9 @@ The injected project context contains these key fields:
 
 - **`aliases`** → use the actual alias prefix for imports (e.g. `@/`, `~/`), never hardcode.
 - **`isRSC`** → when `true`, components using `useState`, `useEffect`, event handlers, or browser APIs need `"use client"` at the top of the file. Always reference this field when advising on the directive.
-- **`tailwindVersion`** → `"v4"` uses `@theme inline` blocks; `"v3"` uses `tailwind.config.js`.
+- **`tailwindVersion`** → `"v4"` uses `@theme inline` blocks; `"v3"` uses `tailwind.config.js`. The `inline` keyword in `@theme inline` is critical — without it, custom properties may not generate utility classes. Always use `@theme inline` for v4 theming
 - **`tailwindCssFile`** → the global CSS file where custom CSS variables are defined. Always edit this file, never create a new one.
+- **Color variable convention**: every color follows `name` / `name-foreground` pairing. The base variable is for backgrounds, `-foreground` is for text/icons on that background. Example: `--primary` is button background, `--primary-foreground` is button text. Never use one without considering the other — they ensure contrast
 - **`style`** → component visual treatment (e.g. `nova`, `vega`).
 - **`base`** → primitive library (`radix` or `base`). Affects component APIs and available props.
 - **`iconLibrary`** → determines icon imports. Use `lucide-react` for `lucide`, `@tabler/icons-react` for `tabler`, etc. Never assume `lucide-react`.

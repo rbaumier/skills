@@ -58,6 +58,7 @@ Both approaches can coexist — use server functions for simple mutations while 
 - `sf-method-selection` — Choose appropriate HTTP method
 - `sf-error-handling` — Handle errors in server functions
 - `sf-response-headers` — Customize response headers when needed
+- `sf-form-validation` — Use `@tanstack/react-form` with `createServerValidate()` from `@tanstack/start`. Server validation runs in the server function, client validation runs in the browser — same schema, both sides. `.functions.ts` exports server validate, component imports and passes to `useForm({ serverValidate })`
 
 ### Security (Prefix: `sec-`)
 
@@ -82,15 +83,18 @@ Both approaches can coexist — use server functions for simple mutations while 
 
 ### API Routes (Prefix: `api-`)
 
-- `api-routes` — Create API routes for external consumers
+- `api-routes` — Create API routes for external consumers. Use `createAPIFileRoute('/api/health')({ GET: async ({ request }) => Response.json({ ok: true }) })` for cleaner typed API route definitions. Each HTTP method is a separate export
 
 ### SSR (Prefix: `ssr-`)
 
-- `ssr-data-loading` — Load data appropriately for SSR
+- `ssr-data-loading` — Load data appropriately for SSR. Coordinate `staleTime` between loader and query: if `staleTime` is too low, the component refetches immediately after the loader already fetched. Set `staleTime >= navigation time` (~5-30s) for prefetched queries, or use `defaultPreloadStaleTime` at router level
 - `ssr-hydration-safety` — Prevent hydration mismatches
-- `ssr-streaming` — Implement streaming SSR for faster TTFB
+- `ssr-streaming` — Implement streaming SSR for faster TTFB. Use `pendingComponent` for route-level loading states (co-located with route, participates in preloading). Use Suspense only for sub-route streaming
 - `ssr-selective` — Apply selective SSR when beneficial
 - `ssr-prerender` — Configure static prerendering and ISR
+- `ssr-search-params` — Define typed search params per route: `createFileRoute('/posts')({ validateSearch: z.object({ page: z.number().default(1), sort: z.enum(['asc', 'desc']).default('desc') }) })`. Access via `Route.useSearch()`. Navigate: `<Link search={{ page: 2 }}>`. Eliminates manual URLSearchParams parsing
+- `ssr-preloading` — Link preload strategies: `<Link preload="intent">` (default, on hover/focus), `<Link preload="render">` (immediate, for above-the-fold), `<Link preload={false}>` (disabled, for rare links). Configure `defaultPreloadStaleTime` in router options
+- `ssr-scroll-restoration` — TanStack Start handles scroll restoration automatically. For custom behavior: `createRouter({ scrollRestoration: { getKey: (location) => location.pathname } })`. Without custom key, back/forward may scroll to wrong position on routes with search params
 
 ### Environment (Prefix: `env-`)
 

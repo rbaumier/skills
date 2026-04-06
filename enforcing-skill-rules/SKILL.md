@@ -24,17 +24,28 @@ extract assertions → write trap prompts → run baseline → grade → root-ca
 
 ## Step 1: Extract Assertions
 
-Read the skill. List every rule as a named assertion. Group by section.
+Read the skill. List every rule as a named assertion. Group by section. Tag each assertion with a category for coverage tracking:
+
+- `behavior` — logic, patterns, decision-making rules
+- `format` — naming, style, structure conventions
+- `architecture` — file organization, module boundaries, dependency direction
+- `security` — secrets, validation, auth, injection prevention
 
 ```
-## Naming (6 assertions)
+## Naming (6 assertions) [format]
 - intent-over-implementation
 - no-mental-mapping
 - explicit-units
 ...
+## Error Handling (4 assertions) [behavior]
+- result-over-throw
+- fail-fast
+...
 ```
 
-Every rule = 1 assertion. No rule left unmeasured.
+Every rule = 1 assertion. No rule left unmeasured. Track category distribution — if 80% of assertions are `format` and 5% are `behavior`, the skill is style-heavy and logic-light.
+
+**Assertion categories for coverage tracking**: Tag each assertion with a category: `format` (naming, style), `behavior` (logic, patterns), `architecture` (structure, organization), `security` (secrets, injection), `gotcha` (common mistakes). Track pass rates per category to identify systemic weaknesses — e.g., 'model follows format rules at 95% but architecture rules at 60%'.
 
 ## Step 2: Write Trap Prompts
 
@@ -67,10 +78,16 @@ If a trap doesn't naturally exercise a rule, the trap is bad — enrich the code
 
 ## Step 3: Run Baseline
 
-**Executor**: Spawn 3 Sonnet agents in parallel (3 runs for variance):
+**First: "Does the model already know this?" baseline** — run the trap prompt WITHOUT the skill loaded. This separates rules the model already follows (non-discriminating) from rules the skill actually teaches (discriminating). Rules where the model passes without the skill can be compressed aggressively later — the skill isn't adding value there.
+
+**Then: With-skill runs** — Spawn 3 Sonnet agents in parallel (3 runs for variance):
 - Each agent reads the skill SKILL.md first, then executes the prompt
 - Save outputs to `{skill}/enforcing-skill-rules/iteration-N/run{1,2,3}-with-skill.md`
+- Save without-skill baseline to `iteration-N/run{1,2,3}-without-skill.md`
 - Increment N for each iteration. Never overwrite previous iterations.
+
+
+**Separate 'does the model already know this?' baseline**: Before writing skill rules, run the trap prompt WITHOUT the skill to establish what the model already knows. Rules where the model passes without the skill are non-discriminating — compress aggressively. This baseline is different from the with-skill run and should be saved separately: `iteration-0/run{1,2,3}-without-skill.md`.
 
 ## Step 4: Grade with Cross-Model Grading
 
@@ -153,6 +170,16 @@ Save `benchmarks/YYYY-MM-DD-{version}.md` in the skill directory:
 
 Commit skill + benchmarks together.
 
+## Pre-Deployment Checklist
+
+Before deploying any skill modification, verify all of these. Benchmark must show 100% pass rate on target model.
+
+- [ ] Every SKILL.md rule has a corresponding assertion in evals.json — audit coverage by diffing rule count vs assertion count
+- [ ] Description triggers correctly — test with 5 prompts that SHOULD activate the skill and 5 that SHOULD NOT. Common failure: description too broad (triggers on unrelated tasks) or too narrow (misses valid use cases)
+- [ ] Benchmark shows 100% pass rate on target model (Sonnet for Sonnet skills, etc.)
+- [ ] No regression on previously-passing assertions — compare current iteration vs previous
+- [ ] Compression didn't break discriminating rules — re-run hardest sections after any word reduction
+
 ## Red Flags
 
 - Grading on a scale (7/10) instead of binary → grader drift, inconsistent results
@@ -161,6 +188,7 @@ Commit skill + benchmarks together.
 - Changing assertions between iterations → can't compare, start over
 - "Looks good enough" without re-measuring → you don't know if the fix worked
 - Compressing before reaching 100% → you'll lose rules that matter
+- **Skill description testing**: The `description` field controls when the skill activates. Test it: write 5 prompts that SHOULD trigger the skill and 5 that SHOULD NOT. Common failure: description too broad (triggers on unrelated prompts, wastes context) or too narrow (never triggers). Use intent patterns (implicit) + content patterns (explicit file/keyword matches).
 - With-skill scores LOWER than without on some assertions → skill is misleading the model, investigate
 - **Hint comments in trap code** ("// this is wrong because...") → model follows hints, not skill rules. Remove ALL hints.
 - **Aspirational fixes** ("would need aria-label") → Opus catches these, Sonnet self-grading doesn't
