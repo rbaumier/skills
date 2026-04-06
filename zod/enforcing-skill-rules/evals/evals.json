@@ -10,117 +10,140 @@
         {
           "id": "no-any-unknown",
           "trap": "z.any() for id field",
-          "description": "z.unknown() not z.any()"
+          "description": "z.unknown() not z.any()",
+          "category": "security"
         },
         {
           "id": "string-validations",
           "trap": "z.string() without .email()/.min()/.url() where applicable",
-          "description": "String validations applied at definition (email, min length)"
+          "description": "String validations applied at definition (email, min length)",
+          "category": "behavior"
         },
         {
           "id": "enum-fixed-values",
           "trap": "role as z.string() instead of z.enum",
-          "description": "z.enum for fixed value sets (role)"
+          "description": "z.enum for fixed value sets (role)",
+          "category": "behavior"
         },
         {
           "id": "coercion-form",
           "trap": "age is z.string() from form instead of z.coerce.number()",
-          "description": "z.coerce for form/query data conversion"
+          "description": "z.coerce for form/query data conversion",
+          "category": "behavior"
         },
         {
           "id": "safeParse",
           "trap": "parse() with try/catch instead of safeParse()",
-          "description": "safeParse() for user input, not parse() with try/catch"
+          "description": "safeParse() for user input, not parse() with try/catch",
+          "category": "behavior"
         },
         {
           "id": "handle-all-issues",
           "trap": "Only first error message returned (e.message)",
-          "description": "Handle all issues not just first; use flatten() for forms"
+          "description": "Handle all issues not just first; use flatten() for forms",
+          "category": "behavior"
         },
         {
           "id": "validate-boundaries",
           "trap": "JSON.parse output trusted without validation",
-          "description": "Validate at boundaries, never trust JSON.parse output"
+          "description": "Validate at boundaries, never trust JSON.parse output",
+          "category": "security"
         },
         {
           "id": "infer-not-manual",
           "trap": "Manual interface User instead of z.infer",
-          "description": "z.infer<typeof schema> not manual type definitions"
+          "description": "z.infer<typeof schema> not manual type definitions",
+          "category": "format"
         },
         {
           "id": "brand-domain-ids",
           "trap": "userId and orderId both z.string().uuid() — swappable",
-          "description": ".brand() for domain IDs to prevent mixing"
+          "description": ".brand() for domain IDs to prevent mixing",
+          "category": "gotcha"
         },
         {
           "id": "strict-unknown-keys",
           "trap": "No strict() mode on schemas receiving external data",
-          "description": "strict() for external data to reject unknown keys"
+          "description": "strict() for external data to reject unknown keys",
+          "category": "security"
         },
         {
           "id": "partial-updates",
           "trap": "updateUserSchema duplicated instead of derived",
-          "description": "partial() to derive update schemas from base"
+          "description": "partial() to derive update schemas from base",
+          "category": "behavior"
         },
         {
           "id": "discriminated-union",
           "trap": "z.union instead of z.discriminatedUnion for tagged types",
-          "description": "z.discriminatedUnion for types with discriminant field"
+          "description": "z.discriminatedUnion for types with discriminant field",
+          "category": "behavior"
         },
         {
           "id": "lazy-recursive",
           "trap": "Direct self-reference in categorySchema",
-          "description": "z.lazy() for recursive schemas"
+          "description": "z.lazy() for recursive schemas",
+          "category": "gotcha"
         },
         {
           "id": "refine-no-throw",
           "trap": "refine callback throws instead of returning false",
-          "description": "Return false in refine, never throw"
+          "description": "Return false in refine, never throw",
+          "category": "gotcha"
         },
         {
           "id": "superRefine-multiple",
           "trap": "Multiple validation checks crammed into single refine",
-          "description": "superRefine() for multiple validation issues"
+          "description": "superRefine() for multiple validation issues",
+          "category": "behavior"
         },
         {
           "id": "cache-schema",
           "trap": "Schema created inside component on every render",
-          "description": "Cache schema instances outside hot paths"
+          "description": "Cache schema instances outside hot paths",
+          "category": "gotcha"
         },
         {
           "id": "export-schema-and-type",
           "trap": "Type exported but not consistently with schema",
-          "description": "Export schemas AND inferred types together"
+          "description": "Export schemas AND inferred types together",
+          "category": "format"
         },
         {
           "id": "parseAsync-async-refine",
           "trap": "sync .parse() used on schema with async refine (usernameSchema)",
-          "description": "parseAsync() for schemas with async refinements"
+          "description": "parseAsync() for schemas with async refinements",
+          "category": "gotcha"
         },
         {
           "id": "pick-omit-variants",
           "trap": "userCardSchema duplicates fields from userProfileSchema instead of .pick()",
-          "description": "pick()/omit() for schema variants instead of duplication"
+          "description": "pick()/omit() for schema variants instead of duplication",
+          "category": "behavior"
         },
         {
           "id": "pipe-multi-stage",
           "trap": "Manual multi-stage parsing (parse string then new Date) instead of .pipe()",
-          "description": "pipe() for multi-stage validation chains"
+          "description": "pipe() for multi-stage validation chains",
+          "category": "behavior"
         },
         {
           "id": "default-catch",
           "trap": "settingsSchema fields crash on missing/bad data — no default() or catch()",
-          "description": "default() for defaults; catch() for fault-tolerant parsing"
+          "description": "default() for defaults; catch() for fault-tolerant parsing",
+          "category": "behavior"
         },
         {
           "id": "z-input-vs-infer",
           "trap": "dateFieldSchema transform: only z.infer used, z.input type not distinguished",
-          "description": "Distinguish z.input (pre-transform) from z.infer (post-transform) for schemas with transforms"
+          "description": "Distinguish z.input (pre-transform) from z.infer (post-transform) for schemas with transforms",
+          "category": "format"
         },
         {
           "id": "custom-messages",
           "trap": "orderSchema fields use default Zod messages (e.g. 'Number must be greater than or equal to 1', 'Invalid email') — not user-friendly",
-          "description": "Custom user-friendly messages on all schema validations, never default Zod messages"
+          "description": "Custom user-friendly messages on all schema validations, never default Zod messages",
+          "category": "behavior"
         }
       ]
     }

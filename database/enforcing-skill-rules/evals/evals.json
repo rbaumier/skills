@@ -10,187 +10,224 @@
         {
           "id": "uuidv7",
           "trap": "gen_random_uuid() used everywhere (UUIDv4)",
-          "description": "UUIDv7 recommended over random UUIDv4 for primary keys"
+          "description": "UUIDv7 recommended over random UUIDv4 for primary keys",
+          "category": "behavior"
         },
         {
           "id": "fk-indexes",
           "trap": "FK columns (org_id, project_id, assignee_id) have no explicit indexes",
-          "description": "All FK columns get explicit indexes"
+          "description": "All FK columns get explicit indexes",
+          "category": "gotcha"
         },
         {
           "id": "text-not-varchar",
           "trap": "VARCHAR(100), VARCHAR(255) used for strings",
-          "description": "TEXT used instead of VARCHAR"
+          "description": "TEXT used instead of VARCHAR",
+          "category": "format"
         },
         {
           "id": "timestamptz",
           "trap": "TIMESTAMP used everywhere instead of TIMESTAMPTZ",
-          "description": "TIMESTAMPTZ used instead of bare TIMESTAMP"
+          "description": "TIMESTAMPTZ used instead of bare TIMESTAMP",
+          "category": "gotcha"
         },
         {
           "id": "numeric-not-float",
           "trap": "FLOAT used for budget and price_estimate",
-          "description": "NUMERIC used for money, not FLOAT"
+          "description": "NUMERIC used for money, not FLOAT",
+          "category": "gotcha"
         },
         {
           "id": "jsonb",
           "trap": "preferences stored as TEXT instead of JSONB",
-          "description": "Semi-structured data uses JSONB"
+          "description": "Semi-structured data uses JSONB",
+          "category": "format"
         },
         {
           "id": "soft-delete",
           "trap": "is_deleted BOOLEAN used for soft delete",
-          "description": "Soft delete uses deleted_at TIMESTAMPTZ, not boolean is_deleted"
+          "description": "Soft delete uses deleted_at TIMESTAMPTZ, not boolean is_deleted",
+          "category": "behavior"
         },
         {
           "id": "check-constraints",
           "trap": "No CHECK constraints on price, status, etc.",
-          "description": "CHECK constraints added (price > 0, status IN (...))"
+          "description": "CHECK constraints added (price > 0, status IN (...))",
+          "category": "behavior"
         },
         {
           "id": "no-select-star",
           "trap": "SELECT * in all queries",
-          "description": "Explicit column lists instead of SELECT *"
+          "description": "Explicit column lists instead of SELECT *",
+          "category": "behavior"
         },
         {
           "id": "covering-index",
           "trap": "No INCLUDE clauses on indexes",
-          "description": "Covering indexes with INCLUDE for index-only scans"
+          "description": "Covering indexes with INCLUDE for index-only scans",
+          "category": "behavior"
         },
         {
           "id": "partial-index",
           "trap": "No partial index for status='active' queries",
-          "description": "Partial index WHERE status = 'active'"
+          "description": "Partial index WHERE status = 'active'",
+          "category": "behavior"
         },
         {
           "id": "brin-time-series",
           "trap": "No BRIN index for created_at queries",
-          "description": "BRIN index recommended for time-series created_at"
+          "description": "BRIN index recommended for time-series created_at",
+          "category": "behavior"
         },
         {
           "id": "cursor-pagination",
           "trap": "OFFSET 200 LIMIT 20 pagination",
-          "description": "Cursor/keyset pagination instead of OFFSET/LIMIT"
+          "description": "Cursor/keyset pagination instead of OFFSET/LIMIT",
+          "category": "behavior"
         },
         {
           "id": "tsvector-gin",
           "trap": "LIKE '%deploy%' for text search",
-          "description": "TSVECTOR + GIN index instead of LIKE '%term%'"
+          "description": "TSVECTOR + GIN index instead of LIKE '%term%'",
+          "category": "behavior"
         },
         {
           "id": "expand-contract",
           "trap": "Direct ALTER TABLE RENAME for column rename",
-          "description": "Expand-and-contract pattern for breaking column rename"
+          "description": "Expand-and-contract pattern for breaking column rename",
+          "category": "behavior"
         },
         {
           "id": "lock-timeout",
           "trap": "No lock_timeout on DDL migration",
-          "description": "SET lock_timeout on DDL migrations"
+          "description": "SET lock_timeout on DDL migrations",
+          "category": "gotcha"
         },
         {
           "id": "concurrent-index",
           "trap": "CREATE INDEX without CONCURRENTLY",
-          "description": "CREATE INDEX CONCURRENTLY to avoid table lock"
+          "description": "CREATE INDEX CONCURRENTLY to avoid table lock",
+          "category": "gotcha"
         },
         {
           "id": "not-valid-validate",
           "trap": "ALTER COLUMN SET NOT NULL directly",
-          "description": "ADD CONSTRAINT NOT VALID then VALIDATE separately"
+          "description": "ADD CONSTRAINT NOT VALID then VALIDATE separately",
+          "category": "gotcha"
         },
         {
           "id": "no-disable-autovacuum",
           "trap": "autovacuum_enabled = false",
-          "description": "Tune autovacuum, never disable it"
+          "description": "Tune autovacuum, never disable it",
+          "category": "gotcha"
         },
         {
           "id": "now-clock-timestamp",
           "trap": "NOW() - INTERVAL in query (may be in transaction)",
-          "description": "Warns about NOW() in transactions, recommends clock_timestamp()"
+          "description": "Warns about NOW() in transactions, recommends clock_timestamp()",
+          "category": "gotcha"
         },
         {
           "id": "pool-math-pgbouncer",
           "trap": "5 instances x 20 pool = 100 connections",
-          "description": "Calculates pool math, recommends PgBouncer"
+          "description": "Calculates pool math, recommends PgBouncer",
+          "category": "architecture"
         },
         {
           "id": "truncate-vs-delete",
           "trap": "TRUNCATE TABLE audit_logs during traffic",
-          "description": "DELETE FROM instead of TRUNCATE during live traffic"
+          "description": "DELETE FROM instead of TRUNCATE during live traffic",
+          "category": "gotcha"
         },
         {
           "id": "least-privilege",
           "trap": "App connects as postgres superuser",
-          "description": "App should never use superuser, grant specific permissions"
+          "description": "App should never use superuser, grant specific permissions",
+          "category": "security"
         },
         {
           "id": "rls",
           "trap": "No RLS policies defined",
-          "description": "RLS on every table for multi-tenant isolation"
+          "description": "RLS on every table for multi-tenant isolation",
+          "category": "security"
         },
         {
           "id": "parameterized-queries",
           "trap": "String concatenation: LIKE '%${userInput}%' (SQL injection)",
-          "description": "Parameterized queries only, flags SQL injection"
+          "description": "Parameterized queries only, flags SQL injection",
+          "category": "security"
         },
         {
           "id": "password-secrets",
           "trap": "api_key stored as plain text",
-          "description": "Never store API keys/secrets in plain text"
+          "description": "Never store API keys/secrets in plain text",
+          "category": "security"
         },
         {
           "id": "drizzle-uuidv7",
           "trap": "serial PK, no uuidv7 defaultFn",
-          "description": "UUIDv7 with .$defaultFn(() => uuidv7()) on PKs"
+          "description": "UUIDv7 with .$defaultFn(() => uuidv7()) on PKs",
+          "category": "behavior"
         },
         {
           "id": "drizzle-timezone",
           "trap": "bare timestamp('created_at').defaultNow()",
-          "description": "Timestamps use { withTimezone: true }"
+          "description": "Timestamps use { withTimezone: true }",
+          "category": "gotcha"
         },
         {
           "id": "drizzle-constraints",
           "trap": "No check/index in third pgTable argument",
-          "description": "Constraints in pgTable third argument"
+          "description": "Constraints in pgTable third argument",
+          "category": "behavior"
         },
         {
           "id": "drizzle-infer-type",
           "trap": "No type export from schema",
-          "description": "Export InferSelectModel<typeof table> for row types"
+          "description": "Export InferSelectModel<typeof table> for row types",
+          "category": "format"
         },
         {
           "id": "drizzle-cli-review",
           "trap": "Generated by drizzle-kit, using as-is",
-          "description": "CLI output is starting point, must review for timezone/constraints/indexes"
+          "description": "CLI output is starting point, must review for timezone/constraints/indexes",
+          "category": "gotcha"
         },
         {
           "id": "errors-as-values",
           "trap": "throw new Error('Task not found')",
-          "description": "Return errors as values, never throw"
+          "description": "Return errors as values, never throw",
+          "category": "behavior"
         },
         {
           "id": "domain-error-classes",
           "trap": "Generic Error('Task not found')",
-          "description": "Domain-specific error classes (TaskNotFoundError)"
+          "description": "Domain-specific error classes (TaskNotFoundError)",
+          "category": "behavior"
         },
         {
           "id": "transaction-error-union",
           "trap": "Transaction has no typed error return",
-          "description": "Transaction returns union of all step errors"
+          "description": "Transaction returns union of all step errors",
+          "category": "behavior"
         },
         {
           "id": "exhaustive-match",
           "trap": "No error-to-HTTP mapping",
-          "description": "Exhaustive matchError() maps every error to HTTP status"
+          "description": "Exhaustive matchError() maps every error to HTTP status",
+          "category": "architecture"
         },
         {
           "id": "derive-repo-type",
           "trap": "Class export instead of factory with ReturnType",
-          "description": "Factory pattern with ReturnType<typeof createXRepository>"
+          "description": "Factory pattern with ReturnType<typeof createXRepository>",
+          "category": "architecture"
         },
         {
           "id": "otel-logger",
           "trap": "db.ts has no OTel logger",
-          "description": "OtelDrizzleLogger passed at Drizzle client creation"
+          "description": "OtelDrizzleLogger passed at Drizzle client creation",
+          "category": "architecture"
         }
       ]
     }

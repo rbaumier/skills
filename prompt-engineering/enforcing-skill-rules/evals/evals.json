@@ -16,42 +16,50 @@
         {
           "id": "model-selection",
           "trap": "Choosing GPT-4o without considering task fit",
-          "description": "Model selection: match model to task complexity -- not always the biggest model"
+          "description": "Model selection: match model to task complexity -- not always the biggest model",
+          "category": "behavior"
         },
         {
           "id": "subtractive-optimization",
           "trap": "Adding more instructions to make it longer",
-          "description": "Subtractive optimization: remove tokens, measure, keep only what improves output"
+          "description": "Subtractive optimization: remove tokens, measure, keep only what improves output",
+          "category": "gotcha"
         },
         {
           "id": "xml-tags-structure",
           "trap": "Unstructured prompt without delimiters",
-          "description": "XML tags (<data>, <instructions>, <format>) for clear prompt structure"
+          "description": "XML tags (<data>, <instructions>, <format>) for clear prompt structure",
+          "category": "format"
         },
         {
           "id": "all-caps-anti-pattern",
           "trap": "THIS IS VERY IMPORTANT, ALWAYS, NEVER, EXACTLY in all caps",
-          "description": "ALL CAPS emphasis is noise -- rephrase as clear constraints instead"
+          "description": "ALL CAPS emphasis is noise -- rephrase as clear constraints instead",
+          "category": "gotcha"
         },
         {
           "id": "tree-of-thoughts",
           "trap": "Multi-step analysis crammed into single prompt",
-          "description": "Tree-of-Thoughts for complex multi-step reasoning tasks"
+          "description": "Tree-of-Thoughts for complex multi-step reasoning tasks",
+          "category": "behavior"
         },
         {
           "id": "toon-format",
           "trap": "No consideration for token reduction",
-          "description": "TOON format for token-optimized prompt compression"
+          "description": "TOON format for token-optimized prompt compression",
+          "category": "format"
         },
         {
           "id": "jinja2-templates",
           "trap": "Hardcoded data in prompt instead of parameterized",
-          "description": "Jinja2 templates for parameterized prompts with dynamic data"
+          "description": "Jinja2 templates for parameterized prompts with dynamic data",
+          "category": "architecture"
         },
         {
           "id": "human-in-the-loop",
           "trap": "Full automation without checkpoints",
-          "description": "Human-in-the-loop workflow for high-stakes multi-step analysis"
+          "description": "Human-in-the-loop workflow for high-stakes multi-step analysis",
+          "category": "security"
         }
       ]
     }

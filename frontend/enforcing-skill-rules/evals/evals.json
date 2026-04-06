@@ -10,137 +10,164 @@
         {
           "id": "use-client-minimal",
           "trap": "'use client' on whole page that could be server component",
-          "description": "'use client' only for hooks/event handlers, not entire pages"
+          "description": "'use client' only for hooks/event handlers, not entire pages",
+          "category": "architecture"
         },
         {
           "id": "no-derived-state-effect",
           "trap": "useEffect to sync filteredProducts from products+search",
-          "description": "Derive state during render, not in useEffect"
+          "description": "Derive state during render, not in useEffect",
+          "category": "gotcha"
         },
         {
           "id": "stable-key",
           "trap": "key={index} on dynamic product list",
-          "description": "Stable IDs for keys, never array index on dynamic lists"
+          "description": "Stable IDs for keys, never array index on dynamic lists",
+          "category": "gotcha"
         },
         {
           "id": "composition-not-booleans",
           "trap": "isPrimary/isGhost/isCompact boolean props",
-          "description": "Variant prop with defined values, not boolean mode props"
+          "description": "Variant prop with defined values, not boolean mode props",
+          "category": "architecture"
         },
         {
           "id": "no-barrel-import",
           "trap": "Import from '../index' barrel file",
-          "description": "Direct imports, no barrel files"
+          "description": "Direct imports, no barrel files",
+          "category": "architecture"
         },
         {
           "id": "colocated-types",
           "trap": "Types in global @/types/ instead of with feature",
-          "description": "Types colocated with feature, not global types/ dump"
+          "description": "Types colocated with feature, not global types/ dump",
+          "category": "architecture"
         },
         {
           "id": "no-forwardRef",
           "trap": "forwardRef pattern (deprecated in React 19)",
-          "description": "React 19: ref is regular prop, no forwardRef"
+          "description": "React 19: ref is regular prop, no forwardRef",
+          "category": "gotcha"
         },
         {
           "id": "suspense-not-isLoading",
           "trap": "if (isLoading) return <Spinner/> pattern",
-          "description": "Suspense-first with useSuspenseQuery, not isLoading early returns"
+          "description": "Suspense-first with useSuspenseQuery, not isLoading early returns",
+          "category": "behavior"
         },
         {
           "id": "design-tokens",
           "trap": "Hardcoded colors/padding in inline styles",
-          "description": "Design tokens, never hardcoded colors/spacing"
+          "description": "Design tokens, never hardcoded colors/spacing",
+          "category": "format"
         },
         {
           "id": "zustand-selector",
           "trap": "useStore() full destructure",
-          "description": "useStore(s => s.field) selector, never destructure full store"
+          "description": "useStore(s => s.field) selector, never destructure full store",
+          "category": "gotcha"
         },
         {
           "id": "empty-state",
           "trap": "products.length === 0 renders null",
-          "description": "Every list needs an empty state"
+          "description": "Every list needs an empty state",
+          "category": "behavior"
         },
         {
           "id": "debounce-search",
           "trap": "No debounce on search input onChange",
-          "description": "Debounce search 300-500ms"
+          "description": "Debounce search 300-500ms",
+          "category": "behavior"
         },
         {
           "id": "no-inline-fetch",
           "trap": "Inline fetch in useEffect instead of isolated api layer",
-          "description": "No inline fetch; isolate in feature api/ layer"
+          "description": "No inline fetch; isolate in feature api/ layer",
+          "category": "architecture"
         },
         {
           "id": "file-order",
           "trap": "Types, hooks, render mixed up in component",
-          "description": "File order: types -> hooks -> useMemo -> useCallback -> render -> export"
+          "description": "File order: types -> hooks -> useMemo -> useCallback -> render -> export",
+          "category": "format"
         },
         {
           "id": "accessibility",
           "trap": "div onClick without keyboard nav/role/aria",
-          "description": "Semantic HTML, ARIA labels, keyboard navigation"
+          "description": "Semantic HTML, ARIA labels, keyboard navigation",
+          "category": "security"
         },
         {
           "id": "fetch-cache-default",
           "trap": "Server-side fetch() without cache: 'no-store' or revalidate in ProductLoader",
-          "description": "Next.js fetch() caches by default in prod; add { cache: 'no-store' } or revalidate"
+          "description": "Next.js fetch() caches by default in prod; add { cache: 'no-store' } or revalidate",
+          "category": "gotcha"
         },
         {
           "id": "compound-components",
           "trap": "ProductSidebar and ProductDetail receive selectedId via prop drilling from parent",
-          "description": "Compound components (Context+Provider) for sibling shared state, never prop-drill"
+          "description": "Compound components (Context+Provider) for sibling shared state, never prop-drill",
+          "category": "architecture"
         },
         {
           "id": "children-over-renderX",
           "trap": "renderHeader prop on ProductCard instead of children",
-          "description": "Children over renderX props; render props only when passing data back"
+          "description": "Children over renderX props; render props only when passing data back",
+          "category": "architecture"
         },
         {
           "id": "error-boundary-retry",
           "trap": "No ErrorBoundary wrapping the component tree",
-          "description": "Error Boundaries with retry for resilient UI"
+          "description": "Error Boundaries with retry for resilient UI",
+          "category": "behavior"
         },
         {
           "id": "minimize-rsc-serialization",
           "trap": "ProductLoader passes entire Product[] objects to client component instead of only needed fields",
-          "description": "Minimize RSC boundary serialization, pass only needed fields"
+          "description": "Minimize RSC boundary serialization, pass only needed fields",
+          "category": "architecture"
         },
         {
           "id": "error-hierarchy",
           "trap": "alert() for form validation instead of inline field error",
-          "description": "Error hierarchy: inline (field) > toast (recoverable) > banner > full screen"
+          "description": "Error hierarchy: inline (field) > toast (recoverable) > banner > full screen",
+          "category": "behavior"
         },
         {
           "id": "disable-button-loading",
           "trap": "Submit button not disabled during async submission, no loading indicator",
-          "description": "Disable buttons + loading indicator during async submission"
+          "description": "Disable buttons + loading indicator during async submission",
+          "category": "behavior"
         },
         {
           "id": "virtualize-long-list",
           "trap": "Rendering all filteredProducts without virtualization (potentially >50 items)",
-          "description": "Virtualize >50 items with @tanstack/react-virtual"
+          "description": "Virtualize >50 items with @tanstack/react-virtual",
+          "category": "behavior"
         },
         {
           "id": "next-dynamic-heavy",
           "trap": "Static import of heavy ProductChart component (200KB charting lib)",
-          "description": "next/dynamic for heavy components, lazy load charts/modals"
+          "description": "next/dynamic for heavy components, lazy load charts/modals",
+          "category": "architecture"
         },
         {
           "id": "focus-trap-modal",
           "trap": "Modal has no focus trap and does not restore focus to trigger on close",
-          "description": "Focus trap modals, restore focus to trigger on close"
+          "description": "Focus trap modals, restore focus to trigger on close",
+          "category": "security"
         },
         {
           "id": "wcag-contrast",
           "trap": ".low-contrast-hint has #aaa on #fff — fails WCAG 2.1 AA contrast ratio",
-          "description": "WCAG 2.1 AA contrast ratios must be met"
+          "description": "WCAG 2.1 AA contrast ratios must be met",
+          "category": "security"
         },
         {
           "id": "prefers-reduced-motion",
           "trap": "CSS animation with transform/scale and no @media (prefers-reduced-motion) override",
-          "description": "prefers-reduced-motion: disable transforms, opacity only"
+          "description": "prefers-reduced-motion: disable transforms, opacity only",
+          "category": "security"
         }
       ]
     }

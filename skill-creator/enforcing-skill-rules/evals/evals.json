@@ -10,47 +10,56 @@
         {
           "id": "validation-name-format",
           "trap": "Name with spaces and special characters",
-          "description": "Skill name must use only lowercase letters, numbers, and hyphens"
+          "description": "Skill name must use only lowercase letters, numbers, and hyphens",
+          "category": "format"
         },
         {
           "id": "validation-description-length",
           "trap": "Description over 1024 chars",
-          "description": "Skill description must be under 1024 characters"
+          "description": "Skill description must be under 1024 characters",
+          "category": "format"
         },
         {
           "id": "validation-extra-frontmatter",
           "trap": "Extra frontmatter fields (version, author, tags)",
-          "description": "YAML frontmatter should have only name and description fields"
+          "description": "YAML frontmatter should have only name and description fields",
+          "category": "format"
         },
         {
           "id": "validation-body-length",
           "trap": "SKILL.md body is 650 lines (over 500)",
-          "description": "SKILL.md body should be under 500 lines -- split into references"
+          "description": "SKILL.md body should be under 500 lines -- split into references",
+          "category": "architecture"
         },
         {
           "id": "validation-force-loaded-refs",
           "trap": "Force-loaded @ references in body",
-          "description": "No force-loaded @ references in body -- they bloat context unconditionally"
+          "description": "No force-loaded @ references in body -- they bloat context unconditionally",
+          "category": "gotcha"
         },
         {
           "id": "progressive-disclosure-sizing",
           "trap": "Body too long without progressive disclosure",
-          "description": "<300 lines for frequent skills, <500 for specialized, references unlimited with TOC"
+          "description": "<300 lines for frequent skills, <500 for specialized, references unlimited with TOC",
+          "category": "architecture"
         },
         {
           "id": "regression-testing",
           "trap": "Shipped after description change without re-running full evals",
-          "description": "Re-run full eval suite after description optimization to catch regressions"
+          "description": "Re-run full eval suite after description optimization to catch regressions",
+          "category": "behavior"
         },
         {
           "id": "cost-projection",
           "trap": "No token cost analysis",
-          "description": "Estimate cost_per_invoke and monthly projection after evals"
+          "description": "Estimate cost_per_invoke and monthly projection after evals",
+          "category": "behavior"
         },
         {
           "id": "scaffolding-command",
           "trap": "Manual directory creation from scratch",
-          "description": "Use scaffold_skill command for quick-start directory structure"
+          "description": "Use scaffold_skill command for quick-start directory structure",
+          "category": "behavior"
         }
       ]
     }

@@ -3,33 +3,165 @@
   "evals": [
     {
       "id": 1,
-      "name": "new-patterns-sweep",
-      "prompt": "Fix all issues in this shadcn/ui project:\n\n```tsx\n// components/ui/button.tsx -- added \"danger\" variant directly to source\n\nexport function App() {\n  return (\n    <div className=\"dark:bg-gray-900 dark:text-white\">\n      <Dashboard />\n    </div>\n  );\n}\n\nexport function StatusBadge({ status }: { status: string }) {\n  return (\n    <span className={status === \"active\" ? \"bg-green-500 text-white\" : \"bg-red-500 text-white\"}>\n      {status}\n    </span>\n  );\n}\n\n/* globals.css */\n@theme { --color-brand: ... }\n```\n\nOutput fixed code only.",
-      "expected_output": "Full refactoring applying all new shadcn rules",
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\nimport { Search, AlertCircle, User, Loader2 } from \"lucide-react\";\nimport { Button } from \"@/components/ui/button\";\nimport { Input } from \"@/components/ui/input\";\nimport { Textarea } from \"@/components/ui/textarea\";\nimport { Card, CardContent } from \"@/components/ui/card\";\nimport { Dialog, DialogContent } from \"@/components/ui/dialog\";\nimport { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from \"@/components/ui/select\";\nimport { Tabs, Tabs Trigger, TabsContent } from \"@/components/ui/tabs\";\nimport { Avatar, AvatarImage } from \"@/components/ui/avatar\";\nimport { InputGroup } from \"@/components/ui/input-group\";\n\nconst iconMap: Record<string, string> = {\n  search: \"search\",\n  alert: \"alert-circle\",\n};\n\nexport function UserDashboard({ user, notifications }: DashboardProps) {\n  const [activeTab, setActiveTab] = useState(\"profile\");\n  const [saving, setSaving] = useState(false);\n\n  return (\n    <div className=\"dark:bg-slate-900 dark:text-gray-100\">\n      <Card>\n        <CardContent>\n          <h2 className=\"text-lg font-bold\">{user.name}</h2>\n          <p className=\"text-gray-500\">{user.bio}</p>\n          <Avatar className=\"w-12 h-12\">\n            <AvatarImage src={user.avatar} />\n          </Avatar>\n        </CardContent>\n      </Card>\n\n      <Tabs value={activeTab} onValueChange={setActiveTab}>\n        <TabsTrigger value=\"profile\">Profile</TabsTrigger>\n        <TabsTrigger value=\"settings\">Settings</TabsTrigger>\n        <TabsContent value=\"profile\">\n          <div className=\"space-y-4\">\n            <div>\n              <label>Display Name</label>\n              <Input id=\"name\" defaultValue={user.name} />\n            </div>\n            <div>\n              <label>Bio</label>\n              <InputGroup>\n                <Textarea id=\"bio\" defaultValue={user.bio} />\n              </InputGroup>\n            </div>\n          </div>\n        </TabsContent>\n        <TabsContent value=\"settings\">\n          <div className=\"space-y-6\">\n            <div>\n              <h3>Theme</h3>\n              <div className=\"flex gap-2\">\n                {[\"light\", \"dark\", \"system\"].map((t) => (\n                  <Button\n                    key={t}\n                    variant={activeTab === t ? \"default\" : \"outline\"}\n                    onClick={() => setTheme(t)}\n                  >\n                    {t}\n                  </Button>\n                ))}\n              </div>\n            </div>\n            <div>\n              <h3>Notifications</h3>\n              <div className=\"flex items-center\">\n                <input type=\"checkbox\" id=\"email-notif\" />\n                <label htmlFor=\"email-notif\">Email</label>\n              </div>\n              <div className=\"flex items-center\">\n                <input type=\"checkbox\" id=\"sms-notif\" />\n                <label htmlFor=\"sms-notif\">SMS</label>\n              </div>\n            </div>\n            <Select>\n              <SelectTrigger>\n                <SelectValue placeholder=\"Language\" />\n              </SelectTrigger>\n              <SelectContent>\n                <SelectItem value=\"en\">English</SelectItem>\n                <SelectItem value=\"fr\">French</SelectItem>\n                <SelectItem value=\"es\">Spanish</SelectItem>\n              </SelectContent>\n            </Select>\n          </div>\n        </TabsContent>\n      </Tabs>\n\n      <div className=\"flex space-x-3 mt-4\">\n        <Button\n          onClick={handleSave}\n          isLoading={saving}\n        >\n          <Search className=\"w-4 h-4 mr-2\" />\n          Save\n        </Button>\n      </div>\n\n      <Dialog>\n        <DialogContent>\n          <p>Are you sure you want to delete your account?</p>\n        </DialogContent>\n      </Dialog>\n\n      {notifications.length === 0 && (\n        <div className=\"text-center py-10 text-gray-400\">\n          <p>No notifications yet</p>\n        </div>\n      )}\n\n      <div className={`p-4 rounded border ${user.verified ? \"bg-green-100 border-green-500 text-green-800\" : \"bg-yellow-100 border-yellow-500 text-yellow-800\"}`}>\n        {user.verified ? \"Account verified\" : \"Please verify your account\"}\n      </div>\n\n      <div className=\"border-t my-4\" />\n\n      <div className=\"flex items-center gap-2\">\n        <span className=\"bg-blue-500 text-white text-xs px-2 py-1 rounded-full\">{user.role}</span>\n      </div>\n\n      {saving && (\n        <div className=\"animate-pulse bg-gray-200 h-4 w-32 rounded\" />\n      )}\n\n      <Dialog open={showConfirm}>\n        <DialogContent className=\"z-50\">\n          <p>Confirm changes?</p>\n        </DialogContent>\n      </Dialog>\n\n      <div className={`overflow-hidden text-ellipsis whitespace-nowrap`}>\n        {user.longDescription}\n      </div>\n    </div>\n  );\n}\n\n/* globals.css */\n@theme {\n  --color-brand: oklch(0.7 0.15 200);\n}\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all shadcn critical rules",
       "assertions": [
         {
-          "id": "component-wrapper-pattern",
-          "trap": "Modifying shadcn source directly for custom variants",
-          "description": "Wrap base component for custom variants -- never modify shadcn source",
-          "category": "architecture"
+          "id": "no-space-xy",
+          "trap": "space-y-4 and space-x-3 used for layout spacing",
+          "description": "Replace space-y-* and space-x-* with flex + gap-*. Must not contain space-y- or space-x- anywhere.",
+          "category": "styling"
         },
         {
-          "id": "theme-provider-dark",
-          "trap": "Manual dark: classes without ThemeProvider",
-          "description": "ThemeProvider for dark mode -- toggles .dark class, stores in localStorage",
-          "category": "behavior"
+          "id": "size-shorthand",
+          "trap": "w-12 h-12 on Avatar instead of size-12",
+          "description": "Use size-* when width and height are equal. Avatar must use size-12 not w-12 h-12.",
+          "category": "styling"
         },
         {
-          "id": "color-variable-convention",
-          "trap": "Raw colors (green-500) instead of semantic tokens",
-          "description": "name/name-foreground pairing -- base for bg, -foreground for text",
-          "category": "format"
+          "id": "truncate-shorthand",
+          "trap": "overflow-hidden text-ellipsis whitespace-nowrap instead of truncate",
+          "description": "Use truncate shorthand class instead of the three-class expansion.",
+          "category": "styling"
+        },
+        {
+          "id": "no-dark-manual",
+          "trap": "dark:bg-slate-900 dark:text-gray-100 manual overrides",
+          "description": "No manual dark: color overrides. Use semantic tokens like bg-background text-foreground.",
+          "category": "styling"
+        },
+        {
+          "id": "semantic-colors",
+          "trap": "Raw colors: bg-green-100, text-green-800, bg-blue-500, text-gray-500, bg-gray-200",
+          "description": "Use semantic color tokens (bg-primary, text-muted-foreground, etc.) instead of raw color values like bg-green-500 or text-gray-500.",
+          "category": "styling"
+        },
+        {
+          "id": "cn-conditional",
+          "trap": "Template literal ternary for conditional classes on the callout div",
+          "description": "Use cn() for conditional classes instead of manual template literal ternaries.",
+          "category": "styling"
+        },
+        {
+          "id": "no-z-index-overlay",
+          "trap": "z-50 on DialogContent",
+          "description": "No manual z-index on overlay components. Dialog handles its own stacking context.",
+          "category": "styling"
+        },
+        {
+          "id": "form-field-group",
+          "trap": "Raw divs with labels for form layout instead of FieldGroup + Field",
+          "description": "Forms must use FieldGroup + Field for layout. Never use raw div wrapping label + input.",
+          "category": "forms"
+        },
+        {
+          "id": "inputgroup-textarea",
+          "trap": "Raw Textarea inside InputGroup instead of InputGroupTextarea",
+          "description": "InputGroup must use InputGroupTextarea, never raw Textarea.",
+          "category": "forms"
+        },
+        {
+          "id": "togglegroup-options",
+          "trap": "Looped Button with manual active state for theme selection (3 options)",
+          "description": "Option sets of 2-7 choices must use ToggleGroup + ToggleGroupItem, not mapped Buttons with manual active variant.",
+          "category": "forms"
+        },
+        {
+          "id": "fieldset-checkboxes",
+          "trap": "Checkboxes grouped with a div + h3 heading instead of FieldSet + FieldLegend",
+          "description": "Related checkboxes/radios must be grouped with FieldSet + FieldLegend, not a div with a heading.",
+          "category": "forms"
+        },
+        {
+          "id": "select-item-group",
+          "trap": "SelectItem rendered directly inside SelectContent without SelectGroup",
+          "description": "Items must be inside their Group. SelectItem must be inside SelectGroup.",
+          "category": "composition"
+        },
+        {
+          "id": "dialog-title",
+          "trap": "Dialog without DialogTitle",
+          "description": "Dialog always needs DialogTitle for accessibility. Use sr-only if visually hidden.",
+          "category": "composition"
+        },
+        {
+          "id": "card-full-composition",
+          "trap": "Card with only CardContent, dumping h2 and p directly inside",
+          "description": "Use full Card composition: CardHeader + CardTitle + CardDescription + CardContent + CardFooter.",
+          "category": "composition"
+        },
+        {
+          "id": "tabs-trigger-in-list",
+          "trap": "TabsTrigger rendered directly inside Tabs without TabsList",
+          "description": "TabsTrigger must be inside TabsList. Never render triggers directly in Tabs.",
+          "category": "composition"
+        },
+        {
+          "id": "avatar-fallback",
+          "trap": "Avatar with only AvatarImage, no AvatarFallback",
+          "description": "Avatar always needs AvatarFallback for when the image fails to load.",
+          "category": "composition"
+        },
+        {
+          "id": "button-no-isloading",
+          "trap": "isLoading prop on Button",
+          "description": "Button has no isPending/isLoading prop. Compose with Spinner + data-icon + disabled.",
+          "category": "composition"
+        },
+        {
+          "id": "empty-state-component",
+          "trap": "Custom div for empty notifications instead of Empty component",
+          "description": "Empty states must use the Empty component, not custom styled divs.",
+          "category": "composition"
+        },
+        {
+          "id": "alert-for-callout",
+          "trap": "Custom styled div for verified/unverified callout instead of Alert",
+          "description": "Callouts must use Alert component, not custom styled divs with border and background.",
+          "category": "composition"
+        },
+        {
+          "id": "separator-not-border",
+          "trap": "div with border-t used as a separator",
+          "description": "Use Separator component instead of <hr> or <div className=\"border-t\">.",
+          "category": "composition"
+        },
+        {
+          "id": "badge-not-span",
+          "trap": "Custom styled span for user.role instead of Badge",
+          "description": "Use Badge component instead of custom styled spans for status/role indicators.",
+          "category": "composition"
+        },
+        {
+          "id": "skeleton-loading",
+          "trap": "Custom animate-pulse div for loading state instead of Skeleton",
+          "description": "Use Skeleton component for loading placeholders, not custom animate-pulse divs.",
+          "category": "composition"
+        },
+        {
+          "id": "icon-data-icon",
+          "trap": "Search icon inside Button without data-icon attribute",
+          "description": "Icons in Button must use data-icon=\"inline-start\" or data-icon=\"inline-end\".",
+          "category": "icons"
+        },
+        {
+          "id": "icon-no-sizing",
+          "trap": "w-4 h-4 sizing classes on Search icon inside Button",
+          "description": "No sizing classes on icons inside components. Components handle icon sizing via CSS.",
+          "category": "icons"
+        },
+        {
+          "id": "icon-as-object",
+          "trap": "iconMap using string keys to look up icons",
+          "description": "Pass icons as objects (icon={CheckIcon}), not via string key lookup maps.",
+          "category": "icons"
         },
         {
           "id": "theme-inline-keyword",
-          "trap": "@theme without inline keyword",
-          "description": "@theme inline required in v4 -- without it custom props may not generate utilities",
-          "category": "gotcha"
+          "trap": "@theme without inline keyword in globals.css",
+          "description": "@theme inline required in Tailwind v4. Without inline, custom properties may not generate utility classes.",
+          "category": "config"
         }
       ]
     }

@@ -3,44 +3,140 @@
   "evals": [
     {
       "id": 1,
-      "name": "new-patterns-sweep",
-      "prompt": "Fix all issues in this Expo app:\n\n```tsx\nimport { useNavigation } from \"@react-navigation/native\";\nexport function HomeScreen() {\n  const navigation = useNavigation();\n  return (\n    <Button onPress={() => navigation.navigate(\"UserProfile\", { userId: \"123\" })} title=\"Go\" />\n  );\n}\n\n// app.json\n{ \"expo\": { \"scheme\": \"myapp\" } }\n\nimport * as Notifications from \"expo-notifications\";\nasync function register() {\n  const token = await Notifications.getExpoPushTokenAsync();\n  console.log(token);\n}\n\nexport function Feed({ posts }: { posts: Post[] }) {\n  return (\n    <FlatList\n      data={posts}\n      renderItem={({ item }) => (\n        <View style={{ padding: 16, marginBottom: 8, backgroundColor: \"white\" }}>\n          <Text onPress={() => console.log(item.id)}>{item.title}</Text>\n        </View>\n      )}\n    />\n  );\n}\n```\n\nOutput fixed code only.",
-      "expected_output": "Full refactoring applying all new React Native rules",
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\n// HomeScreen.tsx\nimport { createStackNavigator } from '@react-navigation/stack';\nimport { useNavigation } from '@react-navigation/native';\nimport { Animated, FlatList, View, TouchableOpacity, Image } from 'react-native';\nimport { render, screen } from '@testing-library/react';\nimport AsyncStorage from '@react-native-async-storage/async-storage';\n\nconst API_KEY = 'sk-proj-abc123secret';\nconst BASE_URL = 'https://api.myapp.com';\n\nconst Stack = createStackNavigator();\n\nfunction AppNavigator() {\n  return (\n    <Stack.Navigator>\n      <Stack.Screen name=\"Home\" component={HomeScreen} />\n      <Stack.Screen name=\"Profile\" component={ProfileScreen} />\n      <Stack.Screen name=\"Settings\" component={SettingsScreen} />\n    </Stack.Navigator>\n  );\n}\n\nfunction HomeScreen() {\n  const navigation = useNavigation();\n  const [user, setUser] = useState(null);\n  const [token, setToken] = useState(null);\n\n  useEffect(() => {\n    AsyncStorage.getItem('auth_token').then(t => setToken(t));\n  }, []);\n\n  const fadeAnim = useRef(new Animated.Value(0)).current;\n  useEffect(() => {\n    Animated.timing(fadeAnim, {\n      toValue: 1,\n      duration: 300,\n      useNativeDriver: true,\n    }).start();\n  }, []);\n\n  return (\n    <View>\n      <TouchableOpacity onPress={() => navigation.navigate('Profile', { userId: '42' })}>\n        <Text>Go to Profile</Text>\n      </TouchableOpacity>\n      <TouchableOpacity onPress={() => navigation.navigate('Settings')}>\n        <Text>Settings</Text>\n      </TouchableOpacity>\n    </View>\n  );\n}\n\nfunction ProfileScreen({ route }) {\n  const { userId } = route.params;\n  const [profile, setProfile] = useState(null);\n\n  const data = fetch(`${BASE_URL}/users/${userId}`, {\n    headers: { 'Authorization': `Bearer ${API_KEY}` },\n  }).then(r => r.json());\n\n  return (\n    <View>\n      {profile && <Text>{profile.name}</Text>}\n      <Image source=\"https://cdn.myapp.com/avatar.png\" />\n    </View>\n  );\n}\n\nfunction FeedScreen({ posts }) {\n  const count = posts.length;\n  return (\n    <View>\n      {count && <Text>{count} posts</Text>}\n      <FlatList\n        data={posts}\n        renderItem={({ item }) => (\n          <View style={{ padding: 16, marginBottom: 8, backgroundColor: '#fff' }}>\n            <TouchableOpacity\n              style={{ flexDirection: 'row', alignItems: 'center' }}\n              onPress={() => console.log(item.id)}\n            >\n              <Text>{item.title}</Text>\n              {item.body}\n            </TouchableOpacity>\n          </View>\n        )}\n      />\n    </View>\n  );\n}\n\nfunction LoginScreen() {\n  const navigation = useNavigation();\n\n  async function handleLogin() {\n    const result = await login();\n    if (result.success) {\n      await AsyncStorage.setItem('auth_token', result.token);\n      navigation.navigate('Home');\n    }\n  }\n\n  return (\n    <TouchableOpacity onPress={handleLogin}>\n      <Text>Log In</Text>\n    </TouchableOpacity>\n  );\n}\n\nimport * as Notifications from 'expo-notifications';\n\nasync function registerForPush() {\n  const token = await Notifications.getExpoPushTokenAsync();\n  await fetch(`${BASE_URL}/register-token`, {\n    method: 'POST',\n    body: JSON.stringify({ token: token.data }),\n  });\n}\n\nfunction NotificationSetup() {\n  useEffect(() => {\n    registerForPush();\n  }, []);\n\n  return null;\n}\n\nfunction DeepLinkHandler() {\n  const url = Linking.useURL();\n  useEffect(() => {\n    if (url) {\n      const { path, queryParams } = Linking.parse(url);\n      navigation.navigate(path, queryParams);\n    }\n  }, [url]);\n  return null;\n}\n\nfunction SettingsScreen() {\n  return (\n    <View style={{ flex: 1, padding: 16 }}>\n      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#333' }}>Settings</Text>\n      <TouchableOpacity style={{ marginTop: 20, padding: 12, backgroundColor: '#007AFF', borderRadius: 8 }}>\n        <Text style={{ color: 'white', textAlign: 'center' }}>Save</Text>\n      </TouchableOpacity>\n    </View>\n  );\n}\n\n// app.json\n{\n  \"expo\": {\n    \"name\": \"MyApp\",\n    \"slug\": \"myapp\",\n    \"version\": \"1.0.0\"\n  }\n}\n\n// test file\nimport { render, screen } from '@testing-library/react';\n\ntest('renders home screen', () => {\n  render(<HomeScreen />);\n  expect(screen.getByText('Go to Profile')).toBeTruthy();\n});\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all React Native skill rules",
       "assertions": [
         {
-          "id": "expo-router-typed",
-          "trap": "useNavigation with string route names",
-          "description": "Use Expo Router with typed routes for type-safe navigation",
+          "id": "expo-router-navigation",
+          "trap": "createStackNavigator + useNavigation from @react-navigation/native",
+          "description": "Use Expo Router file-based navigation instead of React Navigation stack",
           "category": "architecture"
         },
         {
-          "id": "deep-linking-config",
-          "trap": "No linking configuration in navigation",
-          "description": "Configure deep linking with URL scheme and path mapping",
+          "id": "typed-routes",
+          "trap": "navigation.navigate('Profile', { userId: '42' }) with string route names",
+          "description": "Use Expo Router typed routes: router.push('/profile/[id]') with useLocalSearchParams<{ id: string }>()",
           "category": "architecture"
         },
         {
-          "id": "push-notification-permissions",
-          "trap": "Getting push token without checking permissions",
+          "id": "auth-securestore",
+          "trap": "Auth token stored in AsyncStorage",
+          "description": "Auth tokens must use SecureStore, not AsyncStorage",
+          "category": "security"
+        },
+        {
+          "id": "no-secrets-in-code",
+          "trap": "API_KEY = 'sk-proj-abc123secret' hardcoded in source",
+          "description": "No secrets in code — use SecureStore or env config",
+          "category": "security"
+        },
+        {
+          "id": "no-fetch-in-render",
+          "trap": "fetch() called directly in ProfileScreen render body",
+          "description": "No fetch calls in render — use useEffect or React Query",
+          "category": "gotcha"
+        },
+        {
+          "id": "flashlist-over-flatlist",
+          "trap": "FlatList used for the posts feed",
+          "description": "Use FlashList over FlatList for long lists",
+          "category": "behavior"
+        },
+        {
+          "id": "memo-list-items",
+          "trap": "Inline arrow function in renderItem, not extracted or memoized",
+          "description": "Extract renderItem as named component wrapped in React.memo",
+          "category": "behavior"
+        },
+        {
+          "id": "stylesheet-create",
+          "trap": "Inline style objects on every View/TouchableOpacity/Text in SettingsScreen and FeedScreen",
+          "description": "Use StyleSheet.create for all styles, never inline objects",
+          "category": "behavior"
+        },
+        {
+          "id": "reanimated-animations",
+          "trap": "Animated.timing from react-native Animated API",
+          "description": "Use Reanimated for 60fps native-thread animations instead of RN Animated",
+          "category": "behavior"
+        },
+        {
+          "id": "haptic-feedback",
+          "trap": "TouchableOpacity onPress handlers with no haptic feedback",
+          "description": "Always add haptic feedback (expo-haptics) on user interactions",
+          "category": "behavior"
+        },
+        {
+          "id": "error-boundaries",
+          "trap": "No error boundary wrapping any screen or feature",
+          "description": "Error boundaries required at feature level",
+          "category": "architecture"
+        },
+        {
+          "id": "router-replace-after-login",
+          "trap": "navigation.navigate('Home') after login instead of replace",
+          "description": "Use router.replace() after login to prevent back navigation to login screen",
+          "category": "gotcha"
+        },
+        {
+          "id": "push-permissions-first",
+          "trap": "getExpoPushTokenAsync called without requestPermissionsAsync",
           "description": "Request and check notification permissions before getting push token",
           "category": "security"
         },
         {
-          "id": "flatlist-performance",
-          "trap": "Inline styles and arrow functions in FlatList renderItem",
-          "description": "Memoize renderItem, extract styles -- inline closures cause re-renders",
+          "id": "push-token-projectid",
+          "trap": "getExpoPushTokenAsync() called without projectId parameter",
+          "description": "Pass projectId to getExpoPushTokenAsync({ projectId })",
           "category": "gotcha"
         },
         {
-          "id": "eas-build-profiles",
-          "trap": "No EAS build configuration",
-          "description": "Configure eas.json with development/preview/production profiles",
+          "id": "foreground-notification-handler",
+          "trap": "No setNotificationHandler configured for foreground notifications",
+          "description": "Configure Notifications.setNotificationHandler for foreground display",
+          "category": "behavior"
+        },
+        {
+          "id": "notification-tap-handler",
+          "trap": "No useLastNotificationResponse to handle notification taps",
+          "description": "Handle notification tap with useLastNotificationResponse + navigate",
+          "category": "behavior"
+        },
+        {
+          "id": "deep-link-scheme",
+          "trap": "app.json missing scheme field",
+          "description": "Configure scheme in app.json for deep linking: { expo: { scheme: 'myapp' } }",
           "category": "architecture"
         },
         {
-          "id": "e2e-testing-setup",
-          "trap": "No E2E testing framework",
-          "description": "Set up Maestro or Detox for mobile E2E testing",
+          "id": "validate-deep-link-params",
+          "trap": "Deep link path and queryParams passed directly to navigate without validation",
+          "description": "Always validate deep link params before navigation",
+          "category": "security"
+        },
+        {
+          "id": "falsy-number-and-operator",
+          "trap": "{count && <Text>} renders 0 when posts is empty",
+          "description": "Never use && with potentially falsy numbers — use count > 0 &&",
+          "category": "gotcha"
+        },
+        {
+          "id": "raw-string-in-text",
+          "trap": "{item.body} rendered as bare string outside <Text> component",
+          "description": "Always wrap raw strings in <Text> — bare strings crash on native",
+          "category": "gotcha"
+        },
+        {
+          "id": "image-source-uri",
+          "trap": "Image source is a bare string instead of { uri: string }",
+          "description": "Remote image source must be { uri: string }, not a bare string",
+          "category": "gotcha"
+        },
+        {
+          "id": "testing-library-react-native",
+          "trap": "import from '@testing-library/react' instead of react-native variant",
+          "description": "Use @testing-library/react-native for component tests, not @testing-library/react",
           "category": "behavior"
         }
       ]

@@ -8,18 +8,18 @@
       "expected_output": "Le skill détecte l'absence du répertoire copros/ et lance le setup guidé. Il demande combien de copropriétés seront gérées. Il collecte les informations : nom, adresse complète, nombre de lots (54 total), exercice comptable, type de syndic actuel. Il pose les questions sur le conseil syndical, le compte bancaire séparé, le budget prévisionnel. Il génère copros/les-oliviers.json et affiche un récapitulatif.",
       "files": [],
       "assertions": [
-        "Le skill détecte l'absence du répertoire copros/ et lance le setup guidé",
-        "Le skill demande combien de copropriétés seront gérées",
-        "Le skill demande l'adresse complète de la copropriété",
-        "Le skill demande le numéro d'immatriculation RNC",
-        "Le skill identifie 24 lots principaux et 30 lots annexes (54 total)",
-        "Le skill demande les dates de l'exercice comptable",
-        "Le skill demande le type de syndic actuel et note la transition souhaitée",
-        "Le skill demande la composition du conseil syndical",
-        "Le skill demande les informations du compte bancaire séparé (art. 26-7 décret 1967)",
-        "Le skill génère copros/les-oliviers.json avec tous les champs obligatoires",
-        "Le skill mentionne la nécessité de voter le changement de syndic en AG (art. 25)",
-        "Le skill propose de configurer une autre copropriété"
+        { "id": "detect-missing-copros-dir", "description": "Le skill détecte l'absence du répertoire copros/ et lance le setup guidé", "category": "behavior" },
+        { "id": "ask-copro-count", "description": "Le skill demande combien de copropriétés seront gérées", "category": "behavior" },
+        { "id": "ask-full-address", "description": "Le skill demande l'adresse complète de la copropriété", "category": "behavior" },
+        { "id": "ask-rnc-number", "description": "Le skill demande le numéro d'immatriculation RNC", "category": "security" },
+        { "id": "identify-lots-total", "description": "Le skill identifie 24 lots principaux et 30 lots annexes (54 total)", "category": "behavior" },
+        { "id": "ask-exercice-dates", "description": "Le skill demande les dates de l'exercice comptable", "category": "behavior" },
+        { "id": "ask-syndic-type-transition", "description": "Le skill demande le type de syndic actuel et note la transition souhaitée", "category": "behavior" },
+        { "id": "ask-conseil-syndical", "description": "Le skill demande la composition du conseil syndical", "category": "behavior" },
+        { "id": "ask-compte-bancaire-separe", "description": "Le skill demande les informations du compte bancaire séparé (art. 26-7 décret 1967)", "category": "security" },
+        { "id": "generate-copro-json", "description": "Le skill génère copros/les-oliviers.json avec tous les champs obligatoires", "category": "architecture" },
+        { "id": "mention-vote-ag-art-25", "description": "Le skill mentionne la nécessité de voter le changement de syndic en AG (art. 25)", "category": "behavior" },
+        { "id": "propose-another-copro", "description": "Le skill propose de configurer une autre copropriété", "category": "behavior" }
       ]
     },
     {
@@ -31,20 +31,20 @@
         "evals/files/copro-oliviers.json"
       ],
       "assertions": [
-        "Le skill identifie la copropriété Les Oliviers et charge copros/les-oliviers.json",
-        "Le skill vérifie le calendrier et les échéances",
-        "Le délai de 21 jours minimum est rappelé (art. 9-1 décret 1967)",
-        "L'ordre du jour contient la désignation du bureau en premier",
-        "L'approbation des comptes est à la majorité de l'art. 24",
-        "Le vote du budget prévisionnel est à la majorité de l'art. 24",
-        "Le renouvellement du syndic est à la majorité de l'art. 25",
-        "Le ravalement (travaux de conservation imposé) est à la majorité de l'art. 24",
-        "Les 3 devis doivent être joints à la convocation (art. 11 décret 1967)",
-        "Les 5 annexes comptables doivent être jointes",
-        "Le projet de contrat de syndic doit être joint (renouvellement)",
-        "Le formulaire de vote par correspondance est mentionné",
-        "L'envoi par LRAR est précisé",
-        "Le template convocation-ag.md est utilisé ou proposé"
+        { "id": "load-copro-oliviers", "description": "Le skill identifie la copropriété Les Oliviers et charge copros/les-oliviers.json", "category": "behavior" },
+        { "id": "check-calendar-deadlines", "description": "Le skill vérifie le calendrier et les échéances", "category": "behavior" },
+        { "id": "delai-21-jours-art-9-1", "description": "Le délai de 21 jours minimum est rappelé (art. 9-1 décret 1967)", "category": "behavior" },
+        { "id": "bureau-first-in-odj", "description": "L'ordre du jour contient la désignation du bureau en premier", "category": "format" },
+        { "id": "comptes-art-24", "description": "L'approbation des comptes est à la majorité de l'art. 24", "category": "behavior" },
+        { "id": "budget-art-24", "description": "Le vote du budget prévisionnel est à la majorité de l'art. 24", "category": "behavior" },
+        { "id": "syndic-art-25", "description": "Le renouvellement du syndic est à la majorité de l'art. 25", "category": "behavior" },
+        { "id": "ravalement-art-24", "description": "Le ravalement (travaux de conservation imposé) est à la majorité de l'art. 24", "category": "gotcha" },
+        { "id": "devis-joints-art-11", "description": "Les 3 devis doivent être joints à la convocation (art. 11 décret 1967)", "category": "format" },
+        { "id": "annexes-comptables-jointes", "description": "Les 5 annexes comptables doivent être jointes", "category": "format" },
+        { "id": "contrat-syndic-joint", "description": "Le projet de contrat de syndic doit être joint (renouvellement)", "category": "format" },
+        { "id": "vote-par-correspondance", "description": "Le formulaire de vote par correspondance est mentionné", "category": "format" },
+        { "id": "envoi-lrar", "description": "L'envoi par LRAR est précisé", "category": "behavior" },
+        { "id": "template-convocation-ag", "description": "Le template convocation-ag.md est utilisé ou proposé", "category": "architecture" }
       ]
     },
     {
@@ -56,15 +56,15 @@
         "evals/files/copro-oliviers.json"
       ],
       "assertions": [
-        "Les provisions courantes trimestrielles sont de 7 000 EUR au total",
-        "Le fonds de travaux trimestriel est de 350 EUR au total",
-        "L'appel travaux ravalement est de 5 000 EUR (15 000 / 3)",
-        "Chaque copropriétaire paie au prorata de ses tantièmes / 10 000",
-        "L'écriture comptable 411/701 est indiquée pour les provisions courantes",
-        "L'écriture comptable 414/105 est indiquée pour le fonds de travaux",
-        "L'écriture comptable 412/702 est indiquée pour les travaux votés",
-        "La date d'exigibilité (1er avril) est précisée",
-        "Le template appel-de-fonds.md est utilisé ou proposé"
+        { "id": "provisions-courantes-7000", "description": "Les provisions courantes trimestrielles sont de 7 000 EUR au total", "category": "behavior" },
+        { "id": "fonds-travaux-350", "description": "Le fonds de travaux trimestriel est de 350 EUR au total", "category": "behavior" },
+        { "id": "appel-ravalement-5000", "description": "L'appel travaux ravalement est de 5 000 EUR (15 000 / 3)", "category": "behavior" },
+        { "id": "prorata-tantiemes", "description": "Chaque copropriétaire paie au prorata de ses tantièmes / 10 000", "category": "behavior" },
+        { "id": "ecriture-411-701-provisions", "description": "L'écriture comptable 411/701 est indiquée pour les provisions courantes", "category": "format" },
+        { "id": "ecriture-414-105-fonds-travaux", "description": "L'écriture comptable 414/105 est indiquée pour le fonds de travaux", "category": "format" },
+        { "id": "ecriture-412-702-travaux-votes", "description": "L'écriture comptable 412/702 est indiquée pour les travaux votés", "category": "format" },
+        { "id": "date-exigibilite-1er-avril", "description": "La date d'exigibilité (1er avril) est précisée", "category": "behavior" },
+        { "id": "template-appel-de-fonds", "description": "Le template appel-de-fonds.md est utilisé ou proposé", "category": "architecture" }
       ]
     },
     {
@@ -76,16 +76,16 @@
         "evals/files/copro-oliviers.json"
       ],
       "assertions": [
-        "La relance par simple email n'a pas de valeur juridique pour déclencher la procédure",
-        "La mise en demeure par LRAR est recommandée comme prochaine étape",
-        "Le délai de 30 jours après mise en demeure est mentionné",
-        "La déchéance du terme (art. 19-2) est expliquée après 30 jours sans réponse",
-        "L'injonction de payer est recommandée car le montant est < 5 000 EUR",
-        "Les frais de recouvrement sont à la charge du débiteur (art. 10-1 loi 1965)",
-        "Le privilège immobilier spécial est mentionné (art. 19-2)",
-        "Un plan d'apurement est proposé comme alternative amiable",
-        "Le template mise-en-demeure.md est utilisé ou proposé",
-        "Le skill ne recommande pas d'assigner en justice directement sans mise en demeure préalable"
+        { "id": "email-no-legal-value", "description": "La relance par simple email n'a pas de valeur juridique pour déclencher la procédure", "category": "gotcha" },
+        { "id": "mise-en-demeure-lrar", "description": "La mise en demeure par LRAR est recommandée comme prochaine étape", "category": "behavior" },
+        { "id": "delai-30-jours-mise-en-demeure", "description": "Le délai de 30 jours après mise en demeure est mentionné", "category": "behavior" },
+        { "id": "decheance-du-terme-art-19-2", "description": "La déchéance du terme (art. 19-2) est expliquée après 30 jours sans réponse", "category": "behavior" },
+        { "id": "injonction-payer-inf-5000", "description": "L'injonction de payer est recommandée car le montant est < 5 000 EUR", "category": "behavior" },
+        { "id": "frais-recouvrement-debiteur-art-10-1", "description": "Les frais de recouvrement sont à la charge du débiteur (art. 10-1 loi 1965)", "category": "behavior" },
+        { "id": "privilege-immobilier-special", "description": "Le privilège immobilier spécial est mentionné (art. 19-2)", "category": "behavior" },
+        { "id": "plan-apurement-alternatif", "description": "Un plan d'apurement est proposé comme alternative amiable", "category": "behavior" },
+        { "id": "template-mise-en-demeure", "description": "Le template mise-en-demeure.md est utilisé ou proposé", "category": "architecture" },
+        { "id": "no-assignation-sans-mise-en-demeure", "description": "Le skill ne recommande pas d'assigner en justice directement sans mise en demeure préalable", "category": "gotcha" }
       ]
     },
     {
@@ -97,16 +97,16 @@
         "evals/files/copro-oliviers.json"
       ],
       "assertions": [
-        "Le vote de non-renouvellement est à la majorité de l'art. 25",
-        "L'élection du nouveau syndic bénévole est à la majorité de l'art. 25",
-        "La passerelle art. 25-1 est mentionnée (si art. 25 non atteint)",
-        "Le projet de contrat de syndic doit être joint à la convocation (art. 11)",
-        "Le candidat doit être copropriétaire (art. 17-1 loi 1965)",
-        "La souscription d'une assurance RC syndic bénévole est recommandée",
-        "La transmission des archives est obligatoire sous 3 mois (art. 18-2)",
-        "L'ouverture d'un nouveau compte bancaire séparé est mentionnée",
-        "La mise à jour de l'immatriculation RNC est mentionnée",
-        "La procédure en cas de refus de transmission des archives est mentionnée (mise en demeure puis tribunal)"
+        { "id": "non-renouvellement-art-25", "description": "Le vote de non-renouvellement est à la majorité de l'art. 25", "category": "behavior" },
+        { "id": "election-syndic-benevole-art-25", "description": "L'élection du nouveau syndic bénévole est à la majorité de l'art. 25", "category": "behavior" },
+        { "id": "passerelle-art-25-1", "description": "La passerelle art. 25-1 est mentionnée (si art. 25 non atteint)", "category": "gotcha" },
+        { "id": "contrat-syndic-joint-art-11", "description": "Le projet de contrat de syndic doit être joint à la convocation (art. 11)", "category": "format" },
+        { "id": "candidat-copropriétaire-art-17-1", "description": "Le candidat doit être copropriétaire (art. 17-1 loi 1965)", "category": "security" },
+        { "id": "assurance-rc-syndic-benevole", "description": "La souscription d'une assurance RC syndic bénévole est recommandée", "category": "security" },
+        { "id": "transmission-archives-3-mois", "description": "La transmission des archives est obligatoire sous 3 mois (art. 18-2)", "category": "behavior" },
+        { "id": "ouverture-compte-bancaire-separe", "description": "L'ouverture d'un nouveau compte bancaire séparé est mentionnée", "category": "behavior" },
+        { "id": "mise-a-jour-rnc", "description": "La mise à jour de l'immatriculation RNC est mentionnée", "category": "behavior" },
+        { "id": "refus-transmission-procedure", "description": "La procédure en cas de refus de transmission des archives est mentionnée (mise en demeure puis tribunal)", "category": "behavior" }
       ]
     },
     {
@@ -119,16 +119,16 @@
         "evals/files/parc-des-cedres.json"
       ],
       "assertions": [
-        "Le skill lit tous les fichiers JSON dans copros/",
-        "Le tableau de bord portfolio affiche les deux copropriétés",
-        "Les totaux consolidés sont calculés (lots, budget, impayés, fonds travaux)",
-        "Les Oliviers : 24 lots principaux, budget 28 000 EUR",
-        "Parc des Cèdres : 32 lots principaux, budget 45 000 EUR",
-        "Le total du portefeuille est affiché (56 lots principaux, 73 000 EUR de budget)",
-        "Les impayés du Parc des Cèdres (3 200 EUR, 2 débiteurs) sont signalés en alerte",
-        "Les prochaines échéances des deux copros sont triées par date",
-        "Le skill demande ensuite sur quelle copropriété travailler",
-        "Les exercices comptables différents (01/01 vs 01/07) sont correctement pris en compte"
+        { "id": "read-all-copro-json", "description": "Le skill lit tous les fichiers JSON dans copros/", "category": "behavior" },
+        { "id": "dashboard-two-copros", "description": "Le tableau de bord portfolio affiche les deux copropriétés", "category": "format" },
+        { "id": "totaux-consolides", "description": "Les totaux consolidés sont calculés (lots, budget, impayés, fonds travaux)", "category": "behavior" },
+        { "id": "oliviers-24-lots-28k", "description": "Les Oliviers : 24 lots principaux, budget 28 000 EUR", "category": "behavior" },
+        { "id": "cedres-32-lots-45k", "description": "Parc des Cèdres : 32 lots principaux, budget 45 000 EUR", "category": "behavior" },
+        { "id": "total-portefeuille-56-lots-73k", "description": "Le total du portefeuille est affiché (56 lots principaux, 73 000 EUR de budget)", "category": "behavior" },
+        { "id": "alerte-impayes-cedres", "description": "Les impayés du Parc des Cèdres (3 200 EUR, 2 débiteurs) sont signalés en alerte", "category": "behavior" },
+        { "id": "echeances-triees-par-date", "description": "Les prochaines échéances des deux copros sont triées par date", "category": "format" },
+        { "id": "ask-which-copro", "description": "Le skill demande ensuite sur quelle copropriété travailler", "category": "behavior" },
+        { "id": "exercices-differents-pris-en-compte", "description": "Les exercices comptables différents (01/01 vs 01/07) sont correctement pris en compte", "category": "gotcha" }
       ]
     },
     {
@@ -140,18 +140,18 @@
         "evals/files/copro-oliviers.json"
       ],
       "assertions": [
-        "Le skill distingue les documents accessibles AVANT le vote (extranet, PV AG, fiche synthétique) et ceux accessibles APRÈS (comptabilité complète, art. 18-2)",
-        "Le skill ne demande PAS de récupérer la comptabilité complète avant le vote",
-        "Le skill mentionne l'extranet copropriétaires comme source d'information avant le vote (obligation ALUR)",
-        "Le skill recommande de consulter les copropriétaires AVANT l'AG pour estimer le soutien",
-        "Le skill calcule le seuil de majorité art. 25 nécessaire",
-        "La LRAR de convocation est mentionnée avec le délai de 21 jours (art. 9-1)",
-        "La LRAR de notification du PV est mentionnée avec le délai de 1 mois (art. 18 décret)",
-        "Le délai de contestation de 2 mois est mentionné (art. 42, court à compter de la notification)",
-        "La LRAR au syndic sortant pour demander la transmission est mentionnée",
-        "Le délai de 3 mois pour la transmission des archives est cité (art. 18-2)",
-        "La procédure en cas de refus (mise en demeure LRAR puis référé) est mentionnée",
-        "L'assurance RC syndic bénévole est recommandée pour le candidat"
+        { "id": "docs-avant-vs-apres-vote", "description": "Le skill distingue les documents accessibles AVANT le vote (extranet, PV AG, fiche synthétique) et ceux accessibles APRÈS (comptabilité complète, art. 18-2)", "category": "gotcha" },
+        { "id": "no-comptabilite-avant-vote", "description": "Le skill ne demande PAS de récupérer la comptabilité complète avant le vote", "category": "gotcha" },
+        { "id": "extranet-obligation-alur", "description": "Le skill mentionne l'extranet copropriétaires comme source d'information avant le vote (obligation ALUR)", "category": "behavior" },
+        { "id": "consulter-coproprietaires-avant-ag", "description": "Le skill recommande de consulter les copropriétaires AVANT l'AG pour estimer le soutien", "category": "behavior" },
+        { "id": "calcul-seuil-art-25", "description": "Le skill calcule le seuil de majorité art. 25 nécessaire", "category": "behavior" },
+        { "id": "lrar-convocation-21-jours", "description": "La LRAR de convocation est mentionnée avec le délai de 21 jours (art. 9-1)", "category": "behavior" },
+        { "id": "lrar-notification-pv-1-mois", "description": "La LRAR de notification du PV est mentionnée avec le délai de 1 mois (art. 18 décret)", "category": "behavior" },
+        { "id": "delai-contestation-2-mois", "description": "Le délai de contestation de 2 mois est mentionné (art. 42, court à compter de la notification)", "category": "behavior" },
+        { "id": "lrar-demande-transmission", "description": "La LRAR au syndic sortant pour demander la transmission est mentionnée", "category": "behavior" },
+        { "id": "delai-transmission-3-mois", "description": "Le délai de 3 mois pour la transmission des archives est cité (art. 18-2)", "category": "behavior" },
+        { "id": "refus-transmission-refere", "description": "La procédure en cas de refus (mise en demeure LRAR puis référé) est mentionnée", "category": "behavior" },
+        { "id": "assurance-rc-candidat", "description": "L'assurance RC syndic bénévole est recommandée pour le candidat", "category": "security" }
       ]
     },
     {
@@ -163,16 +163,16 @@
         "evals/files/copro-oliviers.json"
       ],
       "assertions": [
-        "Le skill identifie qu'il s'agit d'un dégât des eaux (DDE)",
-        "La convention IRSI est mentionnée",
-        "Le délai de déclaration de 5 jours ouvrés est cité",
-        "Le skill identifie que l'origine est en parties communes",
-        "L'assureur du syndicat est identifié comme compétent pour la recherche de fuite (origine en parties communes)",
-        "Le skill demande au syndic de prendre des mesures conservatoires d'urgence (couper l'eau si possible)",
-        "Les deux copropriétaires concernés (lots 8 et 4) doivent déclarer à leurs propres assureurs",
-        "Le seuil de 5 000 EUR HT de la convention IRSI est mentionné",
-        "Le skill propose la checklist sinistre pour le suivi",
-        "Les dommages aux parties privatives du lot 4 sont à la charge de l'assureur de l'occupant du lot 4 (convention IRSI)"
+        { "id": "identify-degat-des-eaux", "description": "Le skill identifie qu'il s'agit d'un dégât des eaux (DDE)", "category": "behavior" },
+        { "id": "convention-irsi-mentionnee", "description": "La convention IRSI est mentionnée", "category": "behavior" },
+        { "id": "delai-declaration-5-jours", "description": "Le délai de déclaration de 5 jours ouvrés est cité", "category": "behavior" },
+        { "id": "origine-parties-communes", "description": "Le skill identifie que l'origine est en parties communes", "category": "behavior" },
+        { "id": "assureur-syndicat-competent", "description": "L'assureur du syndicat est identifié comme compétent pour la recherche de fuite (origine en parties communes)", "category": "behavior" },
+        { "id": "mesures-conservatoires-urgence", "description": "Le skill demande au syndic de prendre des mesures conservatoires d'urgence (couper l'eau si possible)", "category": "behavior" },
+        { "id": "declaration-assureurs-respectifs", "description": "Les deux copropriétaires concernés (lots 8 et 4) doivent déclarer à leurs propres assureurs", "category": "behavior" },
+        { "id": "seuil-irsi-5000-ht", "description": "Le seuil de 5 000 EUR HT de la convention IRSI est mentionné", "category": "behavior" },
+        { "id": "checklist-sinistre-suivi", "description": "Le skill propose la checklist sinistre pour le suivi", "category": "architecture" },
+        { "id": "dommages-privatifs-lot-4-irsi", "description": "Les dommages aux parties privatives du lot 4 sont à la charge de l'assureur de l'occupant du lot 4 (convention IRSI)", "category": "gotcha" }
       ]
     }
   ]

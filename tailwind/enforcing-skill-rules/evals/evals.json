@@ -10,167 +10,200 @@
         {
           "id": "cn-merge",
           "trap": "Template literal string concatenation for classes",
-          "description": "cn() (twMerge + clsx) for conditional/merged classes"
+          "description": "cn() (twMerge + clsx) for conditional/merged classes",
+          "category": "behavior"
         },
         {
           "id": "cva-variants",
           "trap": "Manual ternary for variant classes",
-          "description": "cva() for component variants, not manual conditionals"
+          "description": "cva() for component variants, not manual conditionals",
+          "category": "behavior"
         },
         {
           "id": "no-apply-components",
           "trap": "@apply in card.css component styles",
-          "description": "@apply only for base/typography, not component styles"
+          "description": "@apply only for base/typography, not component styles",
+          "category": "architecture"
         },
         {
           "id": "spacing-scale",
           "trap": "p-5, mb-7 odd spacing values",
-          "description": "Spacing scale increments of 4 (4,6,8,12,16,24)"
+          "description": "Spacing scale increments of 4 (4,6,8,12,16,24)",
+          "category": "format"
         },
         {
           "id": "tailwind-sizes",
           "trap": "text-[12px], text-[16px] arbitrary pixel values",
-          "description": "Tailwind size classes (text-sm, text-base) not arbitrary px"
+          "description": "Tailwind size classes (text-sm, text-base) not arbitrary px",
+          "category": "format"
         },
         {
           "id": "no-dynamic-classes",
           "trap": "bg-${color}-500 dynamic class construction",
-          "description": "Never concatenate dynamic classes; use full string maps"
+          "description": "Never concatenate dynamic classes; use full string maps",
+          "category": "gotcha"
         },
         {
           "id": "oklch-tokens",
           "trap": "Hex colors #3b82f6 in config and components",
-          "description": "OKLCH format for design token colors in @theme"
+          "description": "OKLCH format for design token colors in @theme",
+          "category": "format"
         },
         {
           "id": "v4-theme-css",
           "trap": "tailwind.config.ts instead of @theme in CSS",
-          "description": "v4: @theme {} in CSS replaces tailwind.config.ts"
+          "description": "v4: @theme {} in CSS replaces tailwind.config.ts",
+          "category": "architecture"
         },
         {
           "id": "v4-import",
           "trap": "@tailwind base/components/utilities directives",
-          "description": "v4: @import 'tailwindcss' replaces @tailwind directives"
+          "description": "v4: @import 'tailwindcss' replaces @tailwind directives",
+          "category": "format"
         },
         {
           "id": "no-content-node-modules",
           "trap": "node_modules in content array",
-          "description": "v4: auto content detection, never include node_modules"
+          "description": "v4: auto content detection, never include node_modules",
+          "category": "gotcha"
         },
         {
           "id": "bg-opacity-slash",
           "trap": "bg-opacity-50 old syntax",
-          "description": "v4: bg-black/50 not bg-opacity-50"
+          "description": "v4: bg-black/50 not bg-opacity-50",
+          "category": "gotcha"
         },
         {
           "id": "focus-ring",
           "trap": "No focus styles on interactive elements",
-          "description": "focus:ring-2 focus:ring-offset-2 on all interactive elements"
+          "description": "focus:ring-2 focus:ring-offset-2 on all interactive elements",
+          "category": "behavior"
         },
         {
           "id": "touch-targets",
           "trap": "Small button without min touch target",
-          "description": "44x44px minimum touch targets on mobile"
+          "description": "44x44px minimum touch targets on mobile",
+          "category": "behavior"
         },
         {
           "id": "sr-only-icons",
           "trap": "MenuButton has icon-only SVG button with no text and no aria-label",
-          "description": "sr-only for screen-reader text; icon buttons need aria-label"
+          "description": "sr-only for screen-reader text; icon buttons need aria-label",
+          "category": "behavior"
         },
         {
           "id": "motion-reduce",
           "trap": "transition-all without motion-reduce variant",
-          "description": "motion-reduce:transition-none for animations"
+          "description": "motion-reduce:transition-none for animations",
+          "category": "behavior"
         },
         {
           "id": "gpu-properties",
           "trap": "transition-all animates width/height",
-          "description": "Only GPU properties (transform, opacity); avoid transition-all"
+          "description": "Only GPU properties (transform, opacity); avoid transition-all",
+          "category": "gotcha"
         },
         {
           "id": "no-forwardRef",
           "trap": "forwardRef pattern in Card component",
-          "description": "React 19: ref is regular prop, no forwardRef"
+          "description": "React 19: ref is regular prop, no forwardRef",
+          "category": "gotcha"
         },
         {
           "id": "compound-dialog",
           "trap": "Dialog as single component, not compound",
-          "description": "Compound component pattern (Dialog.Trigger, Dialog.Content)"
+          "description": "Compound component pattern (Dialog.Trigger, Dialog.Content)",
+          "category": "architecture"
         },
         {
           "id": "z-index-systematic",
           "trap": "z-999 arbitrary z-index",
-          "description": "Systematic z-index scale (10,20,40,50)"
+          "description": "Systematic z-index scale (10,20,40,50)",
+          "category": "format"
         },
         {
           "id": "dark-mode-tokens",
           "trap": "No dark mode support",
-          "description": "Dark mode with .dark { --color-*: value } overrides"
+          "description": "Dark mode with .dark { --color-*: value } overrides",
+          "category": "behavior"
         },
         {
           "id": "mobile-first",
           "trap": "No responsive variants, fixed width w-[480px]",
-          "description": "Mobile-first responsive: base=mobile, add sm:/md:/lg:"
+          "description": "Mobile-first responsive: base=mobile, add sm:/md:/lg:",
+          "category": "behavior"
         },
         {
           "id": "size-shorthand",
           "trap": "w-8 h-8 on avatar instead of size-8",
-          "description": "size-* shorthand when w and h are equal"
+          "description": "size-* shorthand when w and h are equal",
+          "category": "format"
         },
         {
           "id": "color-mix-oklab",
           "trap": "rgba() for semi-transparent primary-50/primary-10 variants",
-          "description": "color-mix() in oklab for semi-transparent color variants"
+          "description": "color-mix() in oklab for semi-transparent color variants",
+          "category": "format"
         },
         {
           "id": "color-initial",
           "trap": "@theme defines custom colors without clearing defaults first",
-          "description": "--color-*: initial to clear defaults before custom palette"
+          "description": "--color-*: initial to clear defaults before custom palette",
+          "category": "gotcha"
         },
         {
           "id": "animation-tokens-theme",
           "trap": "animate-pulse used but no --animate-* tokens or @keyframes in @theme",
-          "description": "Animation tokens: --animate-* and @keyframes defined in @theme"
+          "description": "Animation tokens: --animate-* and @keyframes defined in @theme",
+          "category": "architecture"
         },
         {
           "id": "container-queries",
           "trap": "ContainerCard has no @container, children use no @lg: variants",
-          "description": "Container queries: @container on parent + @lg:/@2xl: on children"
+          "description": "Container queries: @container on parent + @lg:/@2xl: on children",
+          "category": "behavior"
         },
         {
           "id": "grid-truncate-min-w-0",
           "trap": "truncate in grid cells without min-w-0 causes overflow",
-          "description": "min-w-0 + truncate in grid cells to prevent overflow"
+          "description": "min-w-0 + truncate in grid cells to prevent overflow",
+          "category": "gotcha"
         },
         {
           "id": "contrast-more",
           "trap": "PriceTag has no contrast-more: variant for high-contrast",
-          "description": "contrast-more: variant for high-contrast support"
+          "description": "contrast-more: variant for high-contrast support",
+          "category": "behavior"
         },
         {
           "id": "skeleton-pattern",
           "trap": "Skeleton uses bg-gray-300 rounded-sm, not bg-gray-200 rounded-md dark:bg-gray-800",
-          "description": "Skeleton: animate-pulse + rounded-md bg-gray-200 dark:bg-gray-800"
+          "description": "Skeleton: animate-pulse + rounded-md bg-gray-200 dark:bg-gray-800",
+          "category": "format"
         },
         {
           "id": "starting-style-popover",
           "trap": "Native popover has no @starting-style for entry animation",
-          "description": "@starting-style for native popover/entry animations"
+          "description": "@starting-style for native popover/entry animations",
+          "category": "behavior"
         },
         {
           "id": "custom-variant-dark",
           "trap": "@variant dark instead of @custom-variant dark (&:where(.dark, .dark *))",
-          "description": "v4: @custom-variant dark (&:where(.dark, .dark *)) syntax"
+          "description": "v4: @custom-variant dark (&:where(.dark, .dark *)) syntax",
+          "category": "gotcha"
         },
         {
           "id": "body-semantic-tokens",
           "trap": "body has no bg-background text-foreground; no border-border on *",
-          "description": "bg-background text-foreground on body, border-border on *"
+          "description": "bg-background text-foreground on body, border-border on *",
+          "category": "architecture"
         },
         {
           "id": "radix-primitives",
           "trap": "Dropdown built from scratch instead of using Radix primitives",
-          "description": "Radix primitives for accessible unstyled components"
+          "description": "Radix primitives for accessible unstyled components",
+          "category": "architecture"
         }
       ]
     },
@@ -183,32 +216,38 @@
         {
           "id": "read-theme-first",
           "trap": "bg-blue-500 instead of project design tokens",
-          "description": "Iron Law: read @theme config before applying utilities -- use project tokens"
+          "description": "Iron Law: read @theme config before applying utilities -- use project tokens",
+          "category": "behavior"
         },
         {
           "id": "oklch-double-wrap",
           "trap": "oklch(oklch(...)) double-wrapping in @theme",
-          "description": "Define raw OKLCH values in @theme -- Tailwind wraps oklch() automatically"
+          "description": "Define raw OKLCH values in @theme -- Tailwind wraps oklch() automatically",
+          "category": "gotcha"
         },
         {
           "id": "cva-3-variant-threshold",
           "trap": "CVA for only 2 variants",
-          "description": "3+ variants threshold: inline utilities for <3 variants, CVA for 3+"
+          "description": "3+ variants threshold: inline utilities for <3 variants, CVA for 3+",
+          "category": "behavior"
         },
         {
           "id": "z-index-tokens",
           "trap": "Arbitrary z-[999] and z-[1000] values",
-          "description": "Define z-index tokens in @theme (--z-dropdown, --z-modal etc.)"
+          "description": "Define z-index tokens in @theme (--z-dropdown, --z-modal etc.)",
+          "category": "format"
         },
         {
           "id": "tw-animate-css",
           "trap": "Custom @keyframes for standard fade animation",
-          "description": "Prefer tw-animate-css package for standard entrance animations"
+          "description": "Prefer tw-animate-css package for standard entrance animations",
+          "category": "behavior"
         },
         {
           "id": "plugin-directive",
           "trap": "tailwind.config.js plugins array instead of @plugin",
-          "description": "v4: @plugin directive in CSS replaces plugins array in config"
+          "description": "v4: @plugin directive in CSS replaces plugins array in config",
+          "category": "architecture"
         }
       ]
     }

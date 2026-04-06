@@ -10,67 +10,80 @@
         {
           "id": "json-typed",
           "trap": "json('metadata') without .$type<T>()",
-          "description": "json column uses .$type<T>() for typed JSON"
+          "description": "json column uses .$type<T>() for typed JSON",
+          "category": "format"
         },
         {
           "id": "infer-select",
           "trap": "InferSelectModel<typeof products> instead of $inferSelect",
-          "description": "Uses typeof products.$inferSelect not InferSelectModel"
+          "description": "Uses typeof products.$inferSelect not InferSelectModel",
+          "category": "format"
         },
         {
           "id": "camel-snake-mapping",
           "trap": "createdAt column maps to 'createdAt' not 'created_at'",
-          "description": "camelCase TS props map to snake_case DB columns"
+          "description": "camelCase TS props map to snake_case DB columns",
+          "category": "format"
         },
         {
           "id": "fk-indexes",
           "trap": "productId and userId FK columns have no indexes",
-          "description": "Indexes defined on FK columns"
+          "description": "Indexes defined on FK columns",
+          "category": "gotcha"
         },
         {
           "id": "junction-table",
           "trap": "Many-to-many via JSON array instead of junction table",
-          "description": "Junction table with composite primaryKey for many-to-many"
+          "description": "Junction table with composite primaryKey for many-to-many",
+          "category": "architecture"
         },
         {
           "id": "relational-queries",
           "trap": "Manual join via two separate queries",
-          "description": "db.query.X.findMany({ with: {} }) for relational queries"
+          "description": "db.query.X.findMany({ with: {} }) for relational queries",
+          "category": "behavior"
         },
         {
           "id": "cursor-pagination",
           "trap": "OFFSET-based pagination",
-          "description": "Cursor pagination with gt(id, lastSeenId)"
+          "description": "Cursor pagination with gt(id, lastSeenId)",
+          "category": "behavior"
         },
         {
           "id": "transaction",
           "trap": "Two updates without transaction wrapper",
-          "description": "db.transaction() wraps multi-step data modifications"
+          "description": "db.transaction() wraps multi-step data modifications",
+          "category": "gotcha"
         },
         {
           "id": "satisfies-config",
           "trap": "const config: Config = instead of satisfies Config",
-          "description": "} satisfies Config not const config: Config ="
+          "description": "} satisfies Config not const config: Config =",
+          "category": "format"
         },
         {
           "id": "select-columns",
           "trap": "select() without specific columns on large tables",
-          "description": "select({ id, name }) with specific columns"
+          "description": "select({ id, name }) with specific columns",
+          "category": "behavior"
         },
         {
           "id": "paginate-production",
           "trap": "getAllProducts fetches all rows",
-          "description": "Production queries always paginated, never fetch all"
+          "description": "Production queries always paginated, never fetch all",
+          "category": "gotcha"
         },
         {
           "id": "serverless-pool",
           "trap": "New Pool() created inside handler, no max:1",
-          "description": "Serverless: cache db outside handler, pool max: 1"
+          "description": "Serverless: cache db outside handler, pool max: 1",
+          "category": "gotcha"
         },
         {
           "id": "sql-no-concat",
           "trap": "String interpolation in raw SQL query (SQL injection)",
-          "description": "sql template tag for raw SQL, never string concatenation"
+          "description": "sql template tag for raw SQL, never string concatenation",
+          "category": "security"
         }
       ]
     }

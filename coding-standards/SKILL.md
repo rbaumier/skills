@@ -53,7 +53,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - `switch`/object maps over `if/else` chains
 - **Split boolean flags into two named functions**: `sendUrgentNotification()` / `sendNormalNotification()` not `sendNotification(msg, isUrgent)`. **A ternary, if/else, or options object is NOT a fix** -- boolean still exists as param. Result: two independently callable functions with zero boolean params. Reviews: boolean controlling branch -> split
 - Return new data, don't mutate inputs
-- `Promise.all` for independent async ops
+- **`Promise.all` for independent async ops** -- even when using Result types: run all async calls with `Promise.all`, then check each Result. `const results = await Promise.all(items.map(i => checkStock(i)))` → `const firstError = results.find(r => !r.ok)`. Never sequential `for...await` when calls are independent
 
 ## Functions
 
@@ -78,7 +78,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - Surface all failures -- every `catch` handles or propagates
 - **Result for ALL errors, no exceptions** -- never `throw`, not in public functions, not in private helpers, not anywhere. `if (!user) throw new Error('not found')` → `if (!user) return err({ type: 'NOT_FOUND' })`. Every function returns `Result<T, E>`. Error boundaries at the edge (middleware, main) convert Result errors to HTTP 500 / process exit / log + restart
 - Preserve original stack trace/cause when wrapping
-- Timeout on every I/O
+- **Timeout on every I/O** -- wrap with `AbortSignal.timeout(ms)` or a `withTimeout` helper: `await withTimeout(db.query(...), 5_000)`. No bare `await fetch()` / `await db.query()` without a timeout. Default: 5s for DB, 10s for external APIs, 30s for file ops
 - **Option<T> for absence, Result<T,E> for errors** -- distinguish between 'value might not exist' (Optional/Option) and 'operation can fail' (Result). `findUser(id)` returns `Option<User>` (user may not exist, that's normal). `chargeCustomer(id)` returns `Result<Receipt, PaymentError>` (failure is an error). Reviews: Result used for normal absence -> flag 'use Option'; Option used for operation failure -> flag 'use Result'
 
 ## Readability
