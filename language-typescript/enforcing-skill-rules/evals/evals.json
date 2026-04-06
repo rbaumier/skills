@@ -71,7 +71,65 @@
         {
           "text": "no-description-param-returns",
           "trap": "JSDoc uses @description, @param, @returns tags",
-          "description": "JSDoc uses plain block description + @example only — no @description/@param/@returns tags"
+          "description": "JSDoc uses plain block description + @example only \u2014 no @description/@param/@returns tags"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "new-patterns-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\n// 1. Numeric enum instead of discriminated union\nenum Shape { Circle, Square, Triangle }\nfunction area(shape: Shape, radius?: number, side?: number) {\n  if (shape === Shape.Circle) return Math.PI * radius! * radius!;\n  if (shape === Shape.Square) return side! * side!;\n  return 0;\n}\n\n// 2. Missing strict tsconfig flags\n// tsconfig.json: { \"strict\": true }\nconst items: string[] = [\"a\", \"b\", \"c\"];\nconst char = items[5].toUpperCase(); // no noUncheckedIndexedAccess\n\ninterface Config {\n  port?: number;\n  host?: string;\n}\nconst cfg: Config = { port: undefined, host: \"localhost\" }; // no exactOptionalPropertyTypes\n\n// 3. Mutable array parameters\nfunction processIds(ids: number[]) {\n  ids.sort(); // mutates caller array\n  return ids.map(id => id * 2);\n}\n\n// 4. Type assertion instead of assertion function\nfunction getUser(data: unknown) {\n  const user = data as { name: string; age: number };\n  return user;\n}\n\n// 5. Function overloads instead of union/object\nfunction createDate(timestamp: number): Date;\nfunction createDate(year: number, month: number, day: number): Date;\nfunction createDate(a: number, b?: number, c?: number): Date {\n  if (b !== undefined && c !== undefined) return new Date(a, b, c);\n  return new Date(a);\n}\n\n// 6. String type where template literal would catch errors\nfunction route(method: string, path: string) { /* ... */ }\nroute(\"DELTE\", \"/users\"); // typo not caught\n\n// 7. Using Biome instead of oxlint+oxfmt\n// biome.json config...\n\n// 8. Narrowing with typeof in wrong order\nfunction format(val: string | number | null) {\n  if (val !== null) {\n    if (typeof val === \"string\") return val.trim();\n    return val.toFixed(2);\n  }\n  return \"N/A\";\n}\n// Missing exhaustive check\ntype Status = \"active\" | \"inactive\" | \"pending\";\nfunction label(s: Status): string {\n  switch (s) {\n    case \"active\": return \"Active\";\n    case \"inactive\": return \"Inactive\";\n  }\n}\n\n// 9. Object.freeze instead of as const satisfies\nconst ROUTES = Object.freeze({\n  home: \"/\",\n  about: \"/about\",\n  contact: \"/contact\",\n});\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all new TypeScript rules",
+      "assertions": [
+        {
+          "id": "discriminated-union",
+          "trap": "Numeric enum with optional params instead of discriminated union",
+          "description": "Discriminated unions over numeric enums for type-safe branching"
+        },
+        {
+          "id": "strict-tsconfig-unchecked-index",
+          "trap": "items[5].toUpperCase() without noUncheckedIndexedAccess",
+          "description": "Enable noUncheckedIndexedAccess in tsconfig"
+        },
+        {
+          "id": "exact-optional-properties",
+          "trap": "port: undefined assigned to optional field",
+          "description": "Enable exactOptionalPropertyTypes in tsconfig"
+        },
+        {
+          "id": "readonly-params",
+          "trap": "Mutable array parameter mutated with sort()",
+          "description": "ReadonlyArray<T> for function parameters to prevent mutation"
+        },
+        {
+          "id": "assertion-function",
+          "trap": "as { name: string } type assertion on unknown",
+          "description": "Assertion functions (asserts x is T) over type assertions for runtime validation"
+        },
+        {
+          "id": "no-function-overloads",
+          "trap": "Function overloads for createDate",
+          "description": "Union params or options object over function overloads"
+        },
+        {
+          "id": "template-literal-types",
+          "trap": "string type for HTTP method allows typos",
+          "description": "Template literal types for string-typed APIs"
+        },
+        {
+          "id": "oxlint-not-biome",
+          "trap": "Biome config instead of oxlint+oxfmt",
+          "description": "oxlint + oxfmt over Biome for linting/formatting"
+        },
+        {
+          "id": "exhaustive-switch",
+          "trap": "Switch on Status missing pending case",
+          "description": "Exhaustive switch with assertNever default for union types"
+        },
+        {
+          "id": "as-const-satisfies",
+          "trap": "Object.freeze instead of as const satisfies",
+          "description": "as const satisfies for literal types with type checking"
         }
       ]
     }

@@ -1,0 +1,33 @@
+{
+  "skill_name": "shadcn",
+  "evals": [
+    {
+      "id": 1,
+      "name": "new-patterns-sweep",
+      "prompt": "Fix all issues in this shadcn/ui project:\n\n```tsx\n// 1. Modifying shadcn source for custom variant\n// In components/ui/button.tsx -- added \"danger\" variant directly to source\n\n// 2. Dark mode without ThemeProvider\nexport function App() {\n  return (\n    <div className=\"dark:bg-gray-900 dark:text-white\">\n      <Dashboard />\n    </div>\n  );\n}\n\n// 3. Using raw colors instead of semantic tokens\nexport function StatusBadge({ status }: { status: string }) {\n  return (\n    <span className={status === \"active\" ? \"bg-green-500 text-white\" : \"bg-red-500 text-white\"}>\n      {status}\n    </span>\n  );\n}\n\n// 4. Theming without @theme inline\n/* globals.css */\n/* @theme { --color-brand: ... } -- missing inline keyword */\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all new shadcn rules",
+      "assertions": [
+        {
+          "id": "component-wrapper-pattern",
+          "trap": "Modifying shadcn source directly for custom variants",
+          "description": "Wrap base component for custom variants -- never modify shadcn source"
+        },
+        {
+          "id": "theme-provider-dark",
+          "trap": "Manual dark: classes without ThemeProvider",
+          "description": "ThemeProvider for dark mode -- toggles .dark class, stores in localStorage"
+        },
+        {
+          "id": "color-variable-convention",
+          "trap": "Raw colors (green-500) instead of semantic tokens",
+          "description": "name/name-foreground pairing -- base for bg, -foreground for text"
+        },
+        {
+          "id": "theme-inline-keyword",
+          "trap": "@theme without inline keyword",
+          "description": "@theme inline required in v4 -- without it custom props may not generate utilities"
+        }
+      ]
+    }
+  ]
+}

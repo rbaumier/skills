@@ -20,7 +20,12 @@ description: Enforce engineering standards — readability, robustness, maintain
 - **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`)
 - **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
 
-**Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue
+- **Concrete over abstract in comments** -- specific numbers, names, thresholds. `// Retry 3 times with 500ms backoff` not `// Retry with backoff`. `// Rate limited to 100 req/s per API contract` not `// Rate limited`. If there's a number, name it
+- **Comments are sentences** -- capitalize, punctuate. A comment is prose, not a label. `// The cache expires after 30 minutes to avoid stale pricing data.` not `// cache expiry 30m`
+- **Emphatic word at end** -- the most important part of the comment goes last, where the eye lands. `// Skip validation — already checked by the middleware upstream` (the WHY lands last). Not `// Already checked upstream, so skip validation`
+- **Error messages ARE comments** -- error messages explain what went wrong AND what the user should do about it. `"API key expired. Generate a new one at /settings/api-keys"` not `"Invalid API key"`. Every error message is a micro-comment for the person debugging at 2am
+
+**Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue link, comments that restate the function name
 
 ## Philosophy
 
@@ -33,6 +38,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - Symmetry: `get/set`, `add/remove`, `start/stop`
 - Booleans: `is`/`has`/`should`/`can` prefix, positive form
 - Full words always (`user` not `u`, `account` not `acct`). Destructure abbreviations: `const { timestamp, buffer, userId } = record`. Remove unused params
+- **Code smell detection table for reviews** -- flag common naming smells during review: single-letter names (`const d = new Date()` -> `const createdAt = new Date()`), generic names (`data`, `info`, `temp`, `result` -> name by what it represents), misleading names (`userList` but it's a Set -> `userSet`), encoding types (`strName` -> `name`). Reviews: any variable matching these patterns -> flag with fix
 - Explicit units: `delayMs`, `fileSizeKb`
 
 ## Control Flow
@@ -50,6 +56,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - Max 3 positional args; options object for 4+
 - CQS -- command OR query. Composition over inheritance
 - Focused modules -- no `common`/`shared` grab-bags
+- **No default parameters -- use explicit factory methods** -- default params hide behavior and create invisible coupling. `createUser(name, role = 'viewer')` -> `createViewer(name)` / `createAdmin(name)`. Each factory is self-documenting and independently testable. Reviews: function with default params controlling behavior -> flag 'extract named factory'
 
 ## Data & Types
 
@@ -58,6 +65,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - Strict typing everywhere
 - Externalize config -- rates, thresholds, multipliers in config objects, not inline. Business params changeable without editing function bodies
 - **Bound every input -- reject, always reject** -- every external param validated and **rejected** if invalid. `weight` must be `> 0 && < MAX_WEIGHT` or return Result error. **NEVER `?? defaultValue`, `?? 0`, `|| fallback` for invalid inputs** -- silent-failure bugs. Only correct response: **return Result error**. Reviews: `?? value` or `|| default` on external input -> flag as bug
+- **Boundary condition awareness** -- every function handling collections, indices, or numeric ranges must address: null/undefined input, empty collection, single element, off-by-one at boundaries, numeric overflow/underflow. Reviews: loop or index access without boundary check -> flag
 
 ## Error Handling
 
@@ -65,6 +73,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **Result for ALL errors, no exceptions** -- never `throw`, not in public functions, not in private helpers, not anywhere. `if (!user) throw new Error('not found')` → `if (!user) return err({ type: 'NOT_FOUND' })`. Every function returns `Result<T, E>`. Error boundaries at the edge (middleware, main) convert Result errors to HTTP 500 / process exit / log + restart
 - Preserve original stack trace/cause when wrapping
 - Timeout on every I/O
+- **Option<T> for absence, Result<T,E> for errors** -- distinguish between 'value might not exist' (Optional/Option) and 'operation can fail' (Result). `findUser(id)` returns `Option<User>` (user may not exist, that's normal). `chargeCustomer(id)` returns `Result<Receipt, PaymentError>` (failure is an error). Reviews: Result used for normal absence -> flag 'use Option'; Option used for operation failure -> flag 'use Result'
 
 ## Readability
 
@@ -88,10 +97,13 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **Structured API errors** -- `{ type, code, status, detail }` not bare `{ message }` strings
 - **Map DB entities to DTOs** -- dedicated response types for API outputs. Reviews: raw DB entity returned -> flag "missing DTO mapping"
 - **API-first** -- define schema (OpenAPI, route schema) BEFORE handler. Zod is complementary but not api-first. Contract must exist as standalone artifact. Reviews: handler without schema -> flag "missing API contract"
+- **Security review checklist in reviews** -- every code review must check: no exposed secrets/credentials, input validation on all external boundaries, authorization checks on all state-changing operations, no PII in logs, no SQL/XSS injection vectors. Reviews: state-changing endpoint without auth check -> P0 blocker
 
 ## Project Hygiene
 
 - Tests, linting, CI/CD, monitoring from day 1
 - Constrain first, relax later
 - Codebase homogeneity -- all-at-once or keep old way
+- **Custom lint error messages as remediation instructions** -- when writing custom lint rules or CI checks, write the error message as a step-by-step fix the reader (or an AI agent) can follow directly. Not `'File too large'` but `'File exceeds 200 lines. Split by extracting the helper functions below line 120 into a separate module.'` This makes lints self-service and removes the human bottleneck of explaining violations.
+- **Dead code removal as hygiene** -- unused imports, unreachable branches, commented-out code, and unused exports are liabilities. Run dead-code detection (`ts-prune`, `knip`, `deadcode` for Go) in CI. Reviews: any unreferenced export, unused variable, or unreachable branch -> flag for removal
 - Structural guardrails over discipline. Hard cutover. Pin all versions

@@ -1,0 +1,58 @@
+{
+  "skill_name": "skill-creator",
+  "evals": [
+    {
+      "id": 1,
+      "name": "new-patterns-sweep",
+      "prompt": "Review this skill creation workflow and list all issues:\n\n1. I wrote a skill with this frontmatter:\n```yaml\nname: My Cool Skill!!\ndescription: A very long description that goes on and on...(imagine 2000 chars)\nversion: 1.0\nauthor: me\ntags: [coding, ai]\n```\n\n2. The SKILL.md body is 650 lines with force-loaded @references scattered throughout\n\n3. I ran the description optimizer and got a new description with better trigger scores\n\n4. I packaged and shipped it without running the full eval suite again\n\n5. I never looked at token cost per invocation\n\n6. I created the entire directory structure manually from scratch\n\nList every issue with this approach.",
+      "expected_output": "Review identifying all skill creation violations",
+      "assertions": [
+        {
+          "id": "validation-name-format",
+          "trap": "Name with spaces and special characters",
+          "description": "Skill name must use only lowercase letters, numbers, and hyphens"
+        },
+        {
+          "id": "validation-description-length",
+          "trap": "Description over 1024 chars",
+          "description": "Skill description must be under 1024 characters"
+        },
+        {
+          "id": "validation-extra-frontmatter",
+          "trap": "Extra frontmatter fields (version, author, tags)",
+          "description": "YAML frontmatter should have only name and description fields"
+        },
+        {
+          "id": "validation-body-length",
+          "trap": "SKILL.md body is 650 lines (over 500)",
+          "description": "SKILL.md body should be under 500 lines -- split into references"
+        },
+        {
+          "id": "validation-force-loaded-refs",
+          "trap": "Force-loaded @ references in body",
+          "description": "No force-loaded @ references in body -- they bloat context unconditionally"
+        },
+        {
+          "id": "progressive-disclosure-sizing",
+          "trap": "Body too long without progressive disclosure",
+          "description": "<300 lines for frequent skills, <500 for specialized, references unlimited with TOC"
+        },
+        {
+          "id": "regression-testing",
+          "trap": "Shipped after description change without re-running full evals",
+          "description": "Re-run full eval suite after description optimization to catch regressions"
+        },
+        {
+          "id": "cost-projection",
+          "trap": "No token cost analysis",
+          "description": "Estimate cost_per_invoke and monthly projection after evals"
+        },
+        {
+          "id": "scaffolding-command",
+          "trap": "Manual directory creation from scratch",
+          "description": "Use scaffold_skill command for quick-start directory structure"
+        }
+      ]
+    }
+  ]
+}

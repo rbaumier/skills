@@ -173,6 +173,44 @@
           "description": "Radix primitives for accessible unstyled components"
         }
       ]
+    },
+    {
+      "id": 2,
+      "name": "new-patterns-sweep",
+      "prompt": "Fix all issues in this Tailwind v4 project:\n\n```css\n/* globals.css */\n@import \"tailwindcss\";\n\n@theme {\n  --color-brand: oklch(0.7 0.15 250);\n  --color-brand-foreground: oklch(oklch(0.98 0.01 250));\n  --animate-fade: fadeIn 0.3s ease-out;\n}\n\n@keyframes fadeIn {\n  from { opacity: 0; }\n  to { opacity: 1; }\n}\n```\n\n```tsx\n// Card.tsx -- does not read @theme before applying classes\nexport function Card({ variant }: { variant: \"primary\" | \"secondary\" }) {\n  return (\n    <div className={variant === \"primary\" ? \"bg-blue-500 text-white\" : \"bg-gray-100 text-gray-900\"}>\n      <h2 className=\"text-lg font-bold\">Title</h2>\n    </div>\n  );\n}\n\n// ButtonGroup.tsx -- only 2 variants, using CVA\nimport { cva } from \"class-variance-authority\";\nconst buttonVariants = cva(\"px-4 py-2 rounded\", {\n  variants: {\n    variant: {\n      primary: \"bg-brand text-white\",\n      secondary: \"bg-gray-200 text-gray-800\",\n    },\n  },\n});\n\n// Layout.tsx -- manual z-index values\nexport function Layout() {\n  return (\n    <div>\n      <nav className=\"fixed top-0 z-[999] w-full bg-white\">Nav</nav>\n      <div className=\"fixed bottom-4 right-4 z-[1000]\">Toast</div>\n    </div>\n  );\n}\n\n// Animation -- custom @keyframes instead of tw-animate-css\n// (already in globals.css above)\n\n// tailwind.config.js -- using old plugin syntax\nmodule.exports = {\n  plugins: [require(\"@tailwindcss/typography\")],\n};\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all new Tailwind rules",
+      "assertions": [
+        {
+          "id": "read-theme-first",
+          "trap": "bg-blue-500 instead of project design tokens",
+          "description": "Iron Law: read @theme config before applying utilities -- use project tokens"
+        },
+        {
+          "id": "oklch-double-wrap",
+          "trap": "oklch(oklch(...)) double-wrapping in @theme",
+          "description": "Define raw OKLCH values in @theme -- Tailwind wraps oklch() automatically"
+        },
+        {
+          "id": "cva-3-variant-threshold",
+          "trap": "CVA for only 2 variants",
+          "description": "3+ variants threshold: inline utilities for <3 variants, CVA for 3+"
+        },
+        {
+          "id": "z-index-tokens",
+          "trap": "Arbitrary z-[999] and z-[1000] values",
+          "description": "Define z-index tokens in @theme (--z-dropdown, --z-modal etc.)"
+        },
+        {
+          "id": "tw-animate-css",
+          "trap": "Custom @keyframes for standard fade animation",
+          "description": "Prefer tw-animate-css package for standard entrance animations"
+        },
+        {
+          "id": "plugin-directive",
+          "trap": "tailwind.config.js plugins array instead of @plugin",
+          "description": "v4: @plugin directive in CSS replaces plugins array in config"
+        }
+      ]
     }
   ]
 }

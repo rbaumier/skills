@@ -53,6 +53,28 @@ Start by understanding the user's intent. The current conversation might already
 3. What's the expected output format?
 4. Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.
 
+### When to Create a Skill
+
+**Create when:**
+- Technique wasn't intuitively obvious to you
+- You'd reference this again across projects
+- Pattern applies broadly (not project-specific)
+- Others would benefit
+
+**Don't create for:**
+- One-off solutions
+- Standard practices well-documented elsewhere
+- Project-specific conventions (put in CLAUDE.md)
+- Mechanical constraints (if it's enforceable with regex/validation, automate it — save documentation for judgment calls)
+
+### Skill Types
+
+Different skill types need different approaches to writing and testing:
+
+- **Technique**: Concrete method with steps (condition-based-waiting, root-cause-tracing)
+- **Pattern**: Way of thinking about problems (flatten-with-flags, test-invariants)
+- **Reference**: API docs, syntax guides, tool documentation (office docs)
+
 ### Interview and Research
 
 Proactively ask questions about edge cases, input/output formats, example files, success criteria, and dependencies. Wait to write test prompts until you've got this part ironed out.
@@ -63,8 +85,8 @@ Check available MCPs - if useful for research (searching docs, finding similar s
 
 Based on the user interview, fill in these components:
 
-- **name**: Skill identifier
-- **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"
+- **name**: Skill identifier. Use letters, numbers, and hyphens only (no parentheses, special chars). Use active voice, verb-first naming: `creating-skills` not `skill-creation`, `condition-based-waiting` not `async-test-helpers`. Gerunds (-ing) work well for processes.
+- **description**: When to trigger, what it does. This is the primary triggering mechanism — see the Claude Search Optimization section below for detailed guidance on writing effective descriptions.
 - **compatibility**: Required tools, dependencies (optional, rarely needed)
 - **the rest of the skill :)**
 
@@ -134,9 +156,131 @@ Input: Added user authentication with JWT tokens
 Output: feat(auth): implement JWT-based authentication
 ```
 
+**One excellent example beats many mediocre ones.** Choose the most relevant language for the domain (testing -> TypeScript/JS, system debugging -> Shell/Python, data -> Python). Good examples are complete, runnable, well-commented explaining WHY, from real scenarios, and ready to adapt. Don't implement in 5+ languages or create fill-in-the-blank templates.
+
+#### SKILL.md Structure Template
+
+```markdown
+---
+name: Skill-Name-With-Hyphens
+description: Use when [specific triggering conditions and symptoms]
+---
+
+# Skill Name
+
+## Overview
+What is this? Core principle in 1-2 sentences.
+
+## When to Use
+Bullet list with SYMPTOMS and use cases.
+When NOT to use.
+
+## Core Pattern (for techniques/patterns)
+Before/after code comparison
+
+## Quick Reference
+Table or bullets for scanning common operations
+
+## Implementation
+Inline code for simple patterns
+Link to file for heavy reference or reusable tools
+
+## Common Mistakes
+What goes wrong + fixes
+```
+
 ### Writing Style
 
 Try to explain to the model why things are important in lieu of heavy-handed musty MUSTs. Use theory of mind and try to make the skill general and not super-narrow to specific examples. Start by writing a draft and then look at it with fresh eyes and improve it.
+
+**Positives beat negatives.** Reformulate "DO NOT do X" as "DO Y instead" — followed more reliably. Exception: keep 3-5 absolute safety interdictions as negatives (e.g. "NEVER skip tests", "NEVER deploy untested skills").
+
+#### Flowchart Usage
+
+Use flowcharts ONLY for non-obvious decision points, process loops where you might stop too early, or "when to use A vs B" decisions. Never use flowcharts for reference material (use tables/lists), code examples (use markdown blocks), linear instructions (use numbered lists), or labels without semantic meaning (step1, helper2).
+
+#### Token Efficiency
+
+Skills load into context, so every token counts — especially for frequently-loaded skills.
+
+**Target word counts:**
+- Getting-started workflows: <150 words each
+- Frequently-loaded skills: <200 words total
+- Other skills: <500 words (still be concise)
+
+**Techniques:**
+- Move details to tool `--help` instead of documenting all flags
+- Use cross-references to other skills instead of repeating content
+- Compress examples: minimal but complete
+- Don't repeat what's in cross-referenced skills or obvious from commands
+
+#### Cross-Referencing Other Skills
+
+Use skill name only, with explicit requirement markers:
+- Good: `**REQUIRED SUB-SKILL:** Use tdd`
+- Good: `**REQUIRED BACKGROUND:** You MUST understand debugging`
+- Bad: `See skills/testing/test-driven-development` (unclear if required)
+- Bad: `@skills/testing/test-driven-development/SKILL.md` (force-loads, burns context)
+
+Why no `@` links: `@` syntax force-loads files immediately, consuming context before you need them.
+
+#### Anti-Patterns to Avoid
+
+- **Narrative storytelling**: "In session 2025-10-03, we found empty projectDir caused..." — too specific, not reusable
+- **Multi-language dilution**: example-js.js, example-py.py, example-go.go — mediocre quality, maintenance burden
+- **Code in flowcharts**: Can't copy-paste, hard to read
+- **Generic labels**: helper1, helper2, step3 — labels should have semantic meaning
+
+---
+
+## Claude Search Optimization (CSO)
+
+Future Claude needs to FIND your skill. The description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill.
+
+### Description Field
+
+**Purpose:** Claude reads the description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
+
+**Format:** Start with "Use when..." to focus on triggering conditions. Include both what the skill does AND specific contexts for when to use it.
+
+**CRITICAL: Description = When to Use, NOT What the Skill Does**
+
+The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
+
+**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews. When the description was changed to just triggering conditions (no workflow summary), Claude correctly read and followed the full skill body.
+
+**The trap:** Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
+
+**Description length:** Very short (<50 chars) may not trigger reliably. Sweet spot: 100-300 chars with specific triggers. Over 500 chars competes with skill body and risks the shortcut trap. Currently Claude has a tendency to "undertrigger" skills — to not use them when they'd be useful. To combat this, make descriptions a little bit "pushy" about when to use them.
+
+```yaml
+# BAD: Summarizes workflow - Claude may follow this instead of reading skill
+description: Use when executing plans - dispatches subagent per task with code review between tasks
+
+# BAD: Too abstract, vague
+description: For async testing
+
+# GOOD: Just triggering conditions, no workflow summary
+description: Use when executing implementation plans with independent tasks in the current session
+
+# GOOD: Pushy about triggering
+description: How to build a simple fast dashboard to display internal data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of data, even if they don't explicitly ask for a 'dashboard.'
+```
+
+**Content rules:**
+- Use concrete triggers, symptoms, and situations that signal this skill applies
+- Describe the *problem* (race conditions, inconsistent behavior) not *language-specific symptoms* (setTimeout, sleep)
+- Keep triggers technology-agnostic unless the skill itself is technology-specific
+- Write in third person (injected into system prompt)
+- NEVER summarize the skill's process or workflow
+
+### Keyword Coverage
+
+Use words Claude would search for throughout the skill:
+- Error messages: "Hook timed out", "ENOTEMPTY", "race condition"
+- Symptoms: "flaky", "hanging", "zombie", "pollution"
+- Synonyms: "timeout/hang/freeze", "cleanup/teardown/afterEach"
+- Tools: Actual commands, library names, file types
 
 ### Test Cases
 
@@ -160,11 +304,39 @@ Save test cases to `evals/evals.json`. Don't write assertions yet — just the p
 
 See `references/schemas.md` for the full schema (including the `assertions` field, which you'll add later).
 
+---
+
 ## Running and evaluating test cases
 
 This section is one continuous sequence — don't stop partway through. Do NOT use `/skill-test` or any other testing skill.
 
 Put results in `<skill-name>-workspace/` as a sibling to the skill directory. Within the workspace, organize results by iteration (`iteration-1/`, `iteration-2/`, etc.) and within that, each test case gets a directory (`eval-0/`, `eval-1/`, etc.). Don't create all of this upfront — just create directories as you go.
+
+### Testing by Skill Type
+
+Different skill types need different test approaches:
+
+**Discipline-enforcing skills** (rules/requirements like TDD, verification-before-completion):
+- Academic questions: Do they understand the rules?
+- Pressure scenarios: Do they comply under stress? (time + sunk cost + exhaustion)
+- Identify rationalizations and add explicit counters
+- Success criteria: Agent follows rule under maximum pressure
+
+**Technique skills** (how-to guides like condition-based-waiting, root-cause-tracing):
+- Application scenarios: Can they apply the technique correctly?
+- Variation scenarios: Do they handle edge cases?
+- Missing information tests: Do instructions have gaps?
+- Success criteria: Agent successfully applies technique to new scenario
+
+**Pattern skills** (mental models like reducing-complexity):
+- Recognition scenarios: Do they recognize when pattern applies?
+- Counter-examples: Do they know when NOT to apply?
+- Success criteria: Agent correctly identifies when/how to apply pattern
+
+**Reference skills** (API docs, command references):
+- Retrieval scenarios: Can they find the right information?
+- Gap testing: Are common use cases covered?
+- Success criteria: Agent finds and correctly applies reference information
 
 ### Step 1: Spawn all runs (with-skill AND baseline) in the same turn
 
@@ -202,6 +374,8 @@ Don't just wait for the runs to finish — you can use this time productively. D
 
 Good assertions are objectively verifiable and have descriptive names — they should read clearly in the benchmark viewer so someone glancing at the results immediately understands what each one checks. Subjective skills (writing style, design quality) are better evaluated qualitatively — don't force assertions onto things that need human judgment.
 
+**Tip:** 1 prompt = 1 assertion is faster and more precise than 1 prompt = N assertions. Use targeted prompts to iterate on flaky assertions. Reserve broad prompts for full sweeps.
+
 Update the `eval_metadata.json` files and `evals/evals.json` with the assertions once drafted. Also explain to the user what they'll see in the viewer — both the qualitative outputs and the quantitative benchmark.
 
 ### Step 3: As runs complete, capture timing data
@@ -228,7 +402,7 @@ Once all runs are done:
    ```bash
    python -m scripts.aggregate_benchmark <workspace>/iteration-N --skill-name <name>
    ```
-   This produces `benchmark.json` and `benchmark.md` with pass_rate, time, and tokens for each configuration, with mean ± stddev and the delta. If generating benchmark.json manually, see `references/schemas.md` for the exact schema the viewer expects.
+   This produces `benchmark.json` and `benchmark.md` with pass_rate, time, and tokens for each configuration, with mean +/- stddev and the delta. If generating benchmark.json manually, see `references/schemas.md` for the exact schema the viewer expects.
 Put each with_skill version before its baseline counterpart.
 
 3. **Do an analyst pass** — read the benchmark data and surface patterns the aggregate stats might hide. See `agents/analyzer.md` (the "Analyzing Benchmark Results" section) for what to look for — things like assertions that always pass regardless of skill (non-discriminating), high-variance evals (possibly flaky), and time/token tradeoffs.
@@ -305,6 +479,34 @@ This is the heart of the loop. You've run the test cases, the user has reviewed 
 
 This task is pretty important (we are trying to create billions a year in economic value here!) and your thinking time is not the blocker; take your time and really mull things over. I'd suggest writing a draft revision and then looking at it anew and making improvements. Really do your best to get into the head of the user and understand what they want and need.
 
+### Bulletproofing Discipline Skills
+
+Skills that enforce discipline (like TDD) need to resist rationalization. Agents are smart and will find loopholes when under pressure.
+
+**Close every loophole explicitly.** Don't just state the rule — forbid specific workarounds:
+
+```markdown
+Write code before test? Delete it. Start over.
+
+**No exceptions:**
+- Don't keep it as "reference"
+- Don't "adapt" it while writing tests
+- Don't look at it
+- Delete means delete
+```
+
+**Address "spirit vs letter" arguments** early: "Violating the letter of the rules is violating the spirit of the rules."
+
+**Build a rationalization table** from baseline testing — every excuse agents make goes in the table with a reality check:
+
+| Excuse | Reality |
+|--------|---------|
+| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "I'll test after" | Tests passing immediately prove nothing. |
+| "It's about spirit not ritual" | Letter = spirit. Follow the process. |
+
+**Create a red flags list** so agents can self-check when rationalizing.
+
 ### The iteration loop
 
 After improving the skill:
@@ -332,7 +534,7 @@ This is optional, requires subagents, and most users won't need it. The human re
 
 ## Description Optimization
 
-The description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill. After creating or improving a skill, offer to optimize the description for better triggering accuracy.
+After creating or improving a skill, offer to optimize the description for better triggering accuracy.
 
 ### Step 1: Generate trigger eval queries
 
@@ -363,9 +565,9 @@ Present the eval set to the user for review using the HTML template:
 
 1. Read the template from `assets/eval_review.html`
 2. Replace the placeholders:
-   - `__EVAL_DATA_PLACEHOLDER__` → the JSON array of eval items (no quotes around it — it's a JS variable assignment)
-   - `__SKILL_NAME_PLACEHOLDER__` → the skill's name
-   - `__SKILL_DESCRIPTION_PLACEHOLDER__` → the skill's current description
+   - `__EVAL_DATA_PLACEHOLDER__` -> the JSON array of eval items (no quotes around it — it's a JS variable assignment)
+   - `__SKILL_NAME_PLACEHOLDER__` -> the skill's name
+   - `__SKILL_DESCRIPTION_PLACEHOLDER__` -> the skill's current description
 3. Write to a temp file (e.g., `/tmp/eval_review_<skill-name>.html`) and open it: `open /tmp/eval_review_<skill-name>.html`
 4. The user can edit queries, toggle should-trigger, add/remove entries, then click "Export Eval Set"
 5. The file downloads to `~/Downloads/eval_set.json` — check the Downloads folder for the most recent version in case there are multiple (e.g., `eval_set (1).json`)
@@ -417,9 +619,57 @@ After packaging, direct the user to the resulting `.skill` file path so they can
 
 ---
 
+## Skill Versioning
+
+When updating an existing skill:
+1. Add `metadata.last_updated` to frontmatter (date of last significant change)
+2. Keep a CHANGELOG section at the bottom of SKILL.md for major revisions
+3. When a skill's behavior changes in ways that affect existing users, note breaking changes explicitly
+
+---
+
+## Deployment Checklist
+
+After writing any skill, complete this before moving on. Do NOT create multiple skills in batch without testing each.
+
+**RED Phase - Baseline:**
+- [ ] Create test scenarios (3+ combined pressures for discipline skills)
+- [ ] Run scenarios WITHOUT skill - document baseline behavior
+- [ ] Identify patterns in failures/rationalizations
+
+**GREEN Phase - Write Skill:**
+- [ ] YAML frontmatter with name and description (max 1024 chars)
+- [ ] Description starts with "Use when..." with specific triggers/symptoms
+- [ ] Keywords throughout for search (errors, symptoms, tools)
+- [ ] Clear overview with core principle
+- [ ] Address specific baseline failures identified in RED
+- [ ] One excellent example (not multi-language)
+- [ ] Run scenarios WITH skill - verify agents now comply
+
+**REFACTOR Phase - Close Loopholes:**
+- [ ] Identify NEW rationalizations from testing
+- [ ] Add explicit counters (if discipline skill)
+- [ ] Re-test until bulletproof
+
+**Quality Checks:**
+- [ ] Flowcharts only if decision non-obvious
+- [ ] Quick reference table
+- [ ] Common mistakes section
+- [ ] No narrative storytelling
+- [ ] Supporting files only for tools or heavy reference
+
+**Sharing (if publishing):**
+- [ ] Remove all hardcoded paths (use `{SKILL_DIR}` placeholder)
+- [ ] Remove personal/company-specific references
+- [ ] Ensure no secrets or API keys in any file
+- [ ] Test with a fresh Claude session (no prior context)
+- [ ] Verify description triggers correctly from a cold start
+
+---
+
 ## Claude.ai-specific instructions
 
-In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:
+In Claude.ai, the core workflow is the same (draft -> test -> review -> improve -> repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:
 
 **Running test cases**: No subagents means no parallel execution. For each test case, read the skill's SKILL.md, then follow its instructions to accomplish the test prompt yourself. Do them one at a time. This is less rigorous than independent subagents (you wrote the skill and you're also running it, so you have full context), but it's a useful sanity check — and the human review step compensates. Skip the baseline runs — just use the skill to complete the task as requested.
 

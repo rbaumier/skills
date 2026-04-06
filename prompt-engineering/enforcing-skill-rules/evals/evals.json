@@ -1,0 +1,58 @@
+{
+  "skill_name": "prompt-engineering",
+  "evals": [
+    {
+      "id": 1,
+      "name": "new-patterns-sweep",
+      "prompt": "Review this prompt and list all issues:\n\n```\nSystem prompt: You are a helpful assistant.\n\nUser: I have a dataset of 500 customer reviews. Analyze the sentiment, extract key themes, identify outliers, and generate a summary report with recommendations.\n\nNote: THIS IS VERY IMPORTANT -- you MUST follow these instructions EXACTLY. ALWAYS use the EXACT format specified. NEVER deviate.\n\nFormat the output as JSON.\n```\n\nAlso, I want to use GPT-4o for this task. And I want to add more instructions to make it longer and more detailed so Claude follows them better.\n\nList every issue with this prompt approach.",
+      "expected_output": "Review identifying all prompt engineering violations",
+      "assertions": [
+        {
+          "id": "iron-law-system-prompt",
+          "trap": "Generic system prompt with no role/constraints/examples",
+          "description": "System prompt must define role + constraints + output format + 1-2 examples minimum"
+        },
+        {
+          "id": "model-selection",
+          "trap": "Choosing GPT-4o without considering task fit",
+          "description": "Model selection: match model to task complexity -- not always the biggest model"
+        },
+        {
+          "id": "subtractive-optimization",
+          "trap": "Adding more instructions to make it longer",
+          "description": "Subtractive optimization: remove tokens, measure, keep only what improves output"
+        },
+        {
+          "id": "xml-tags-structure",
+          "trap": "Unstructured prompt without delimiters",
+          "description": "XML tags (<data>, <instructions>, <format>) for clear prompt structure"
+        },
+        {
+          "id": "all-caps-anti-pattern",
+          "trap": "THIS IS VERY IMPORTANT, ALWAYS, NEVER, EXACTLY in all caps",
+          "description": "ALL CAPS emphasis is noise -- rephrase as clear constraints instead"
+        },
+        {
+          "id": "tree-of-thoughts",
+          "trap": "Multi-step analysis crammed into single prompt",
+          "description": "Tree-of-Thoughts for complex multi-step reasoning tasks"
+        },
+        {
+          "id": "toon-format",
+          "trap": "No consideration for token reduction",
+          "description": "TOON format for token-optimized prompt compression"
+        },
+        {
+          "id": "jinja2-templates",
+          "trap": "Hardcoded data in prompt instead of parameterized",
+          "description": "Jinja2 templates for parameterized prompts with dynamic data"
+        },
+        {
+          "id": "human-in-the-loop",
+          "trap": "Full automation without checkpoints",
+          "description": "Human-in-the-loop workflow for high-stakes multi-step analysis"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "skill_name": "tanstack-query",
+  "evals": [
+    {
+      "id": 1,
+      "name": "new-patterns-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\n// 1. Missing enabled for dependent query\nfunction UserPosts({ userId }: { userId?: string }) {\n  const { data } = useQuery({\n    queryKey: [\"posts\", userId],\n    queryFn: () => fetchPosts(userId!),\n  });\n  return <div>{data?.length} posts</div>;\n}\n\n// 2. No SSR hydration setup\nexport function App() {\n  const queryClient = new QueryClient();\n  return (\n    <QueryClientProvider client={queryClient}>\n      <Router />\n    </QueryClientProvider>\n  );\n}\n\n// 3. Flat query keys without factory\nconst { data: todos } = useQuery({ queryKey: [\"todos\"], queryFn: fetchTodos });\nconst { data: todo } = useQuery({ queryKey: [\"todos\", id], queryFn: () => fetchTodo(id) });\nconst { data: filtered } = useQuery({ queryKey: [\"todos\", \"list\", filter], queryFn: () => fetchFiltered(filter) });\n\n// 4. Optimistic update without rollback\nconst mutation = useMutation({\n  mutationFn: updateTodo,\n  onMutate: async (newTodo) => {\n    queryClient.setQueryData([\"todos\"], (old) => [...old, newTodo]);\n  },\n});\n\n// 5. Default staleTime of 0\nconst queryClient = new QueryClient();\n\n// 6. Date in query key\nconst { data } = useQuery({\n  queryKey: [\"events\", new Date()],\n  queryFn: fetchEvents,\n});\n\n// 7. initialData for loading placeholder\nconst { data } = useQuery({\n  queryKey: [\"profile\"],\n  queryFn: fetchProfile,\n  initialData: { name: \"Loading...\", avatar: \"\" },\n});\n\n// 8. Tests without fresh QueryClient\ntest(\"renders todos\", () => {\n  render(\n    <QueryClientProvider client={globalQueryClient}>\n      <TodoList />\n    </QueryClientProvider>\n  );\n});\n\n// 9. invalidateQueries expecting inactive refetch\nqueryClient.invalidateQueries({ queryKey: [\"todos\"] });\n// expects inactive queries to also refetch\n\n// 10. Prefetching in loader without staleTime coordination\nexport async function loader() {\n  await queryClient.prefetchQuery({ queryKey: [\"posts\"], queryFn: fetchPosts });\n}\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all new TanStack Query rules",
+      "assertions": [
+        {
+          "id": "dependent-query-enabled",
+          "trap": "Query runs without enabled check on optional userId",
+          "description": "enabled: !!userId for dependent queries to prevent fetch with undefined"
+        },
+        {
+          "id": "ssr-dehydrate-hydrate",
+          "trap": "No dehydrate/HydrationBoundary for SSR",
+          "description": "SSR: prefetchQuery + dehydrate on server, HydrationBoundary on client"
+        },
+        {
+          "id": "query-key-factory",
+          "trap": "Flat string keys without hierarchy",
+          "description": "Query key factory pattern for hierarchical invalidation"
+        },
+        {
+          "id": "optimistic-rollback",
+          "trap": "setQueryData without cancel/snapshot/rollback",
+          "description": "Optimistic update: cancel queries, snapshot previous, rollback on error"
+        },
+        {
+          "id": "default-staleTime",
+          "trap": "Default staleTime of 0 (always refetches)",
+          "description": "Set default staleTime at QueryClient level (e.g. 60s)"
+        },
+        {
+          "id": "serializable-keys",
+          "trap": "new Date() in query key (not serializable)",
+          "description": "Query keys must be JSON-serializable -- use date.toISOString()"
+        },
+        {
+          "id": "placeholderData-not-initialData",
+          "trap": "initialData for loading placeholder (persists to cache)",
+          "description": "placeholderData for loading UX, initialData for server-provided data"
+        },
+        {
+          "id": "fresh-queryclient-tests",
+          "trap": "Global QueryClient shared across tests",
+          "description": "Fresh QueryClient per test with retry: false, gcTime: 0"
+        },
+        {
+          "id": "refetchType-inactive",
+          "trap": "invalidateQueries expecting inactive refetch",
+          "description": "invalidateQueries only refetches active -- use refetchType: all for inactive"
+        },
+        {
+          "id": "loader-staleTime-coordination",
+          "trap": "prefetchQuery without staleTime coordination",
+          "description": "Loader prefetch: use ensureQueryData + staleTime >= navigation time"
+        }
+      ]
+    }
+  ]
+}

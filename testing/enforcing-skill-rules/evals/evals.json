@@ -4,13 +4,13 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```typescript\n// user-service.test.ts\nimport { describe, it, expect, afterEach, vi } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nimport { UserService } from './user-service';\nimport { EmailService } from './email-service';\nimport { Database } from './database';\n\nconst mockDb = vi.fn();\nvi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));\n\nlet sharedUser: any;\n\ndescribe('UserService', () => {\n  afterEach(() => {\n    cleanup();\n  });\n\n  it('test1', async () => {\n    mockDb.mockResolvedValue({ id: 1, name: 'Alice' });\n    const service = new UserService(new Database(), new EmailService());\n    const user = await service.getUser(1);\n    sharedUser = user;\n    expect(user).toEqual({ id: 1, name: 'Alice' });\n  });\n\n  it('test2', async () => {\n      expect(sharedUser.name).toBe('Alice');\n    const updated = await service.updateName(sharedUser.id, 'Bob');\n    expect(updated).toBeTruthy();\n  });\n\n  it('test3', async () => {\n    const users = [{ id: 1 }, { id: 2 }, { id: 3 }];\n    const service = new UserService(new Database(), new EmailService());\n    const result = await service.processUsers(users);\n    expect(result).toMatchSnapshot();\n  });\n\n  it('test4', async () => {\n    const service = new UserService(new Database(), new EmailService());\n    // Accessing private internals — testing implementation not behavior\n    expect((service as any)._cache.size).toBe(0);\n    expect((service as any)._retryCount).toBe(3);\n  });\n\n  it('test5', () => {\n    // Testing what types already guarantee\n    const user = { id: 1, name: 'Alice' };\n    expect(typeof user.id).toBe('number');\n    expect(typeof user.name).toBe('string');\n  });\n});\n\n// playwright.config.ts\nimport { defineConfig } from '@playwright/test';\nexport default defineConfig({\n  use: {\n    trace: 'on',          // always captures traces — wastes resources\n    video: 'on',          // always records video — wastes resources\n    screenshot: 'on',     // always takes screenshots — wastes resources\n  },\n});\n\n// checkout.e2e.ts (Playwright)\nimport { test, expect } from '@playwright/test';\n\ntest('complete checkout flow', async ({ page }) => {\n  await page.goto('/products');\n  await page.click('.product-card:first-child .add-to-cart');\n  await page.waitForTimeout(2000);\n  await page.click('.cart-icon');\n  \n  // Fill shipping\n  await page.fill('#name', 'John Doe');\n  await page.fill('#address', '123 Main St');\n  await page.fill('#card-number', '4242424242424242');\n  await page.click('#submit-order');\n  await page.waitForTimeout(3000);\n  \n  // Verify with Stripe (real API)\n  const response = await page.request.get('https://api.stripe.com/v1/charges');\n  expect(response.ok()).toBeTruthy();\n  \n  const confirmation = await page.$('.confirmation-message');\n  expect(confirmation).not.toBeNull();\n});\n\ntest('cancel order', async ({ page }) => {\n  // Reuses state from previous test\n  await page.click('.cancel-order');\n  await page.waitForTimeout(1000);\n  expect(await page.$('.cancelled-badge')).not.toBeNull();\n});\n```\n\nOutput fixed code only.",
+      "prompt": "Fix all issues:\n\n```typescript\n// user-service.test.ts\nimport { describe, it, expect, afterEach, vi } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nimport { UserService } from './user-service';\nimport { EmailService } from './email-service';\nimport { Database } from './database';\n\nconst mockDb = vi.fn();\nvi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));\n\nlet sharedUser: any;\n\ndescribe('UserService', () => {\n  afterEach(() => {\n    cleanup();\n  });\n\n  it('test1', async () => {\n    mockDb.mockResolvedValue({ id: 1, name: 'Alice' });\n    const service = new UserService(new Database(), new EmailService());\n    const user = await service.getUser(1);\n    sharedUser = user;\n    expect(user).toEqual({ id: 1, name: 'Alice' });\n  });\n\n  it('test2', async () => {\n      expect(sharedUser.name).toBe('Alice');\n    const updated = await service.updateName(sharedUser.id, 'Bob');\n    expect(updated).toBeTruthy();\n  });\n\n  it('test3', async () => {\n    const users = [{ id: 1 }, { id: 2 }, { id: 3 }];\n    const service = new UserService(new Database(), new EmailService());\n    const result = await service.processUsers(users);\n    expect(result).toMatchSnapshot();\n  });\n\n  it('test4', async () => {\n    const service = new UserService(new Database(), new EmailService());\n    // Accessing private internals \u2014 testing implementation not behavior\n    expect((service as any)._cache.size).toBe(0);\n    expect((service as any)._retryCount).toBe(3);\n  });\n\n  it('test5', () => {\n    // Testing what types already guarantee\n    const user = { id: 1, name: 'Alice' };\n    expect(typeof user.id).toBe('number');\n    expect(typeof user.name).toBe('string');\n  });\n});\n\n// playwright.config.ts\nimport { defineConfig } from '@playwright/test';\nexport default defineConfig({\n  use: {\n    trace: 'on',          // always captures traces \u2014 wastes resources\n    video: 'on',          // always records video \u2014 wastes resources\n    screenshot: 'on',     // always takes screenshots \u2014 wastes resources\n  },\n});\n\n// checkout.e2e.ts (Playwright)\nimport { test, expect } from '@playwright/test';\n\ntest('complete checkout flow', async ({ page }) => {\n  await page.goto('/products');\n  await page.click('.product-card:first-child .add-to-cart');\n  await page.waitForTimeout(2000);\n  await page.click('.cart-icon');\n  \n  // Fill shipping\n  await page.fill('#name', 'John Doe');\n  await page.fill('#address', '123 Main St');\n  await page.fill('#card-number', '4242424242424242');\n  await page.click('#submit-order');\n  await page.waitForTimeout(3000);\n  \n  // Verify with Stripe (real API)\n  const response = await page.request.get('https://api.stripe.com/v1/charges');\n  expect(response.ok()).toBeTruthy();\n  \n  const confirmation = await page.$('.confirmation-message');\n  expect(confirmation).not.toBeNull();\n});\n\ntest('cancel order', async ({ page }) => {\n  // Reuses state from previous test\n  await page.click('.cancel-order');\n  await page.waitForTimeout(1000);\n  expect(await page.$('.cancelled-badge')).not.toBeNull();\n});\n```\n\nOutput fixed code only.",
       "expected_output": "Full refactoring applying all testing rules",
       "assertions": [
         {
           "id": "no-rtl-cleanup",
           "trap": "Manual cleanup() import in Vitest",
-          "description": "No manual cleanup() in Vitest — automatic. Keep only vi.restoreAllMocks()"
+          "description": "No manual cleanup() in Vitest \u2014 automatic. Keep only vi.restoreAllMocks()"
         },
         {
           "id": "vi-hoisted",
@@ -90,7 +90,7 @@
         {
           "id": "test-behavior-not-impl",
           "trap": "test4 accesses private internals (_cache, _retryCount) via (service as any)",
-          "description": "Test behavior not implementation — never access private internals"
+          "description": "Test behavior not implementation \u2014 never access private internals"
         },
         {
           "id": "dont-test-types",
@@ -107,13 +107,13 @@
     {
       "id": 2,
       "name": "tdd-workflow-review",
-      "prompt": "Review this TDD approach and list all issues:\n\nI'm building a shopping cart. Here's my plan:\n1. Write ALL tests first (addItem, removeItem, updateQuantity, calculateTotal, applyDiscount, checkout) — all 6 at once\n2. Then implement all methods\n3. calculateTotal test is failing due to rounding, so I'll refactor the implementation now\n4. Once all tests pass, ship it\n\nHere's my test file so far (all tests written, all RED):\n\n```typescript\ndescribe('ShoppingCart', () => {\n  it('addItem adds product', () => { /* RED */ });\n  it('removeItem removes product', () => { /* RED */ });\n  it('updateQuantity changes count', () => { /* RED */ });\n  it('calculateTotal sums prices', () => { /* RED */ });\n  it('applyDiscount reduces total', () => { /* RED */ });\n  it('checkout creates order', () => { /* RED */ });\n});\n```\n\nIs this the right approach?\n\nOutput your review listing every issue.",
+      "prompt": "Review this TDD approach and list all issues:\n\nI'm building a shopping cart. Here's my plan:\n1. Write ALL tests first (addItem, removeItem, updateQuantity, calculateTotal, applyDiscount, checkout) \u2014 all 6 at once\n2. Then implement all methods\n3. calculateTotal test is failing due to rounding, so I'll refactor the implementation now\n4. Once all tests pass, ship it\n\nHere's my test file so far (all tests written, all RED):\n\n```typescript\ndescribe('ShoppingCart', () => {\n  it('addItem adds product', () => { /* RED */ });\n  it('removeItem removes product', () => { /* RED */ });\n  it('updateQuantity changes count', () => { /* RED */ });\n  it('calculateTotal sums prices', () => { /* RED */ });\n  it('applyDiscount reduces total', () => { /* RED */ });\n  it('checkout creates order', () => { /* RED */ });\n});\n```\n\nIs this the right approach?\n\nOutput your review listing every issue.",
       "expected_output": "Review identifying all TDD workflow violations",
       "assertions": [
         {
           "id": "vertical-slices",
           "trap": "All 6 tests written at once (horizontal slicing)",
-          "description": "Vertical slices: one test → one impl → repeat, not batch"
+          "description": "Vertical slices: one test \u2192 one impl \u2192 repeat, not batch"
         },
         {
           "id": "tracer-bullet",
@@ -123,12 +123,65 @@
         {
           "id": "never-refactor-red",
           "trap": "Refactoring calculateTotal while tests are failing",
-          "description": "Never refactor during RED — only when GREEN"
+          "description": "Never refactor during RED \u2014 only when GREEN"
         },
         {
           "id": "minimal-code",
           "trap": "Plan to implement all methods at once",
           "description": "Write only enough code to pass the current test"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "new-patterns-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\n// api-client.test.ts\nimport { describe, it, expect, vi } from \"vitest\";\n\nvi.mock(\"node-fetch\", () => ({ default: vi.fn() }));\nimport fetch from \"node-fetch\";\n\ndescribe(\"ApiClient\", () => {\n  it(\"fetches users\", async () => {\n    (fetch as any).mockResolvedValue({ ok: true, json: () => [{ id: 1 }] });\n    const users = await getUsers();\n    expect(users.length).toBe(1);\n  });\n\n  it(\"fetches single user\", async () => {\n    (fetch as any).mockResolvedValue({ ok: true, json: () => ({ id: 1, name: \"Alice\" }) });\n    const user = await getUser(1);\n    expect(user.name).toBe(\"Alice\");\n  });\n});\n\n// form.test.tsx\nimport { render, fireEvent } from \"@testing-library/react\";\nimport { LoginForm } from \"./LoginForm\";\n\ndescribe(\"LoginForm\", () => {\n  it(\"submits the form\", () => {\n    const { getByRole } = render(<LoginForm />);\n    const button = getByRole(\"button\", { name: \"Submit\" });\n    fireEvent.click(button);\n    const input = getByRole(\"textbox\", { name: \"Email\" });\n    fireEvent.change(input, { target: { value: \"test@test.com\" } });\n  });\n});\n\n// external-api.test.ts\ndescribe(\"ExternalPaymentService\", () => {\n  it(\"verifies payment status\", async () => {\n    const res = await fetch(\"https://api.stripe.com/v1/charges/ch_123\");\n    expect(res.ok).toBeTruthy();\n  });\n});\n\n// vitest.config.ts\nimport { defineConfig } from \"vitest/config\";\nexport default defineConfig({\n  test: {\n    coverage: {\n      thresholds: {\n        statements: 80,\n        branches: 80,\n        functions: 80,\n        lines: 80,\n      },\n    },\n  },\n});\n\n// dashboard.e2e.ts\nimport { test, expect } from \"@playwright/test\";\ntest(\"dashboard layout\", async ({ page }) => {\n  await page.goto(\"/dashboard\");\n  const html = await page.content();\n  expect(html).toMatchSnapshot(\"dashboard.html\");\n});\n\n// playwright.config.ts\nimport { defineConfig } from \"@playwright/test\";\nexport default defineConfig({\n  retries: 3,\n});\n\n// format.test.ts\ndescribe(\"formatCurrency\", () => {\n  it(\"formats USD\", () => { expect(formatCurrency(100, \"USD\")).toBe(\"dollar100.00\"); });\n  it(\"formats EUR\", () => { expect(formatCurrency(100, \"EUR\")).toBe(\"euro100.00\"); });\n  it(\"formats GBP\", () => { expect(formatCurrency(100, \"GBP\")).toBe(\"pound100.00\"); });\n  it(\"formats JPY\", () => { expect(formatCurrency(1000, \"JPY\")).toBe(\"yen1000\"); });\n  it(\"formats zero\", () => { expect(formatCurrency(0, \"USD\")).toBe(\"dollar0.00\"); });\n});\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all new testing rules",
+      "assertions": [
+        {
+          "id": "msw-not-vi-mock-fetch",
+          "trap": "vi.mock(\"node-fetch\") instead of MSW",
+          "description": "Use MSW for network mocking, not vi.mock on fetch/axios"
+        },
+        {
+          "id": "zombies-coverage",
+          "trap": "Only happy path tests, no zero/boundary/error cases",
+          "description": "ZOMBIES mnemonic: test Zero, One, Many, Boundaries, Interfaces, Exceptions, Simple"
+        },
+        {
+          "id": "userEvent-not-fireEvent",
+          "trap": "fireEvent.click() and fireEvent.change() in RTL",
+          "description": "userEvent over fireEvent -- simulates real browser event sequence"
+        },
+        {
+          "id": "contract-test-external-api",
+          "trap": "Real Stripe API call in test without contract testing",
+          "description": "Contract tests with MSW for external API boundaries, never call real APIs"
+        },
+        {
+          "id": "coverage-ratchet",
+          "trap": "Hardcoded coverage thresholds (80/80/80/80)",
+          "description": "Coverage as ratchet (autoUpdate: true), not hardcoded threshold"
+        },
+        {
+          "id": "visual-screenshot-not-html-snapshot",
+          "trap": "toMatchSnapshot() on HTML content instead of toHaveScreenshot()",
+          "description": "Visual regression: toHaveScreenshot() not toMatchSnapshot() on HTML"
+        },
+        {
+          "id": "flaky-retries-flagged",
+          "trap": "retries: 3 in Playwright config with no explanatory comment",
+          "description": "Flag unexplained retries in config -- retries mask real regressions"
+        },
+        {
+          "id": "test-each-data-driven",
+          "trap": "5 near-identical formatCurrency tests differing only in input",
+          "description": "test.each for data-driven tests instead of duplicated test bodies"
+        },
+        {
+          "id": "test-pyramid-ratio",
+          "trap": "General awareness -- should mention test pyramid if advising on test strategy",
+          "description": "Test pyramid ratios: ~70% unit, ~20% integration, ~10% E2E"
         }
       ]
     }

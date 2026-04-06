@@ -1,0 +1,43 @@
+{
+  "skill_name": "react-native",
+  "evals": [
+    {
+      "id": 1,
+      "name": "new-patterns-sweep",
+      "prompt": "Fix all issues in this Expo app:\n\n```tsx\n// Navigation -- using navigation.navigate without typed routes\nimport { useNavigation } from \"@react-navigation/native\";\nexport function HomeScreen() {\n  const navigation = useNavigation();\n  return (\n    <Button onPress={() => navigation.navigate(\"UserProfile\", { userId: \"123\" })} title=\"Go\" />\n  );\n}\n\n// Deep linking -- no config\n// app.json: { \"expo\": { \"scheme\": \"myapp\" } }\n// No linking config in navigation\n\n// Push notifications -- no permission handling\nimport * as Notifications from \"expo-notifications\";\nasync function register() {\n  const token = await Notifications.getExpoPushTokenAsync();\n  console.log(token);\n}\n\n// Rendering -- inline styles and functions in FlatList\nexport function Feed({ posts }: { posts: Post[] }) {\n  return (\n    <FlatList\n      data={posts}\n      renderItem={({ item }) => (\n        <View style={{ padding: 16, marginBottom: 8, backgroundColor: \"white\" }}>\n          <Text onPress={() => console.log(item.id)}>{item.title}</Text>\n        </View>\n      )}\n    />\n  );\n}\n\n// EAS Build -- no profile config\n// eas.json missing\n\n// Testing -- no detox or maestro setup\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all new React Native rules",
+      "assertions": [
+        {
+          "id": "expo-router-typed",
+          "trap": "useNavigation with string route names",
+          "description": "Use Expo Router with typed routes for type-safe navigation"
+        },
+        {
+          "id": "deep-linking-config",
+          "trap": "No linking configuration in navigation",
+          "description": "Configure deep linking with URL scheme and path mapping"
+        },
+        {
+          "id": "push-notification-permissions",
+          "trap": "Getting push token without checking permissions",
+          "description": "Request and check notification permissions before getting push token"
+        },
+        {
+          "id": "flatlist-performance",
+          "trap": "Inline styles and arrow functions in FlatList renderItem",
+          "description": "Memoize renderItem, extract styles -- inline closures cause re-renders"
+        },
+        {
+          "id": "eas-build-profiles",
+          "trap": "No EAS build configuration",
+          "description": "Configure eas.json with development/preview/production profiles"
+        },
+        {
+          "id": "e2e-testing-setup",
+          "trap": "No E2E testing framework",
+          "description": "Set up Maestro or Detox for mobile E2E testing"
+        }
+      ]
+    }
+  ]
+}
