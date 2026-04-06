@@ -73,11 +73,14 @@ Skip any step = lying, not verifying.
 
 AI-generated work leaves debris — catch it now, not in code review.
 
-### 2.1 — Debug artifacts
+### 2.1 — Debug artifacts and leaked secrets
 
 ```bash
 # console.log / console.debug in changed files
 git diff --name-only <base-branch>...HEAD | xargs grep -n 'console\.\(log\|debug\|warn\)' 2>/dev/null
+
+# Leaked secrets — hardcoded passwords, API keys, private keys
+git diff --name-only <base-branch>...HEAD | xargs grep -inE 'password\s*=|secret\s*=|api_key|private_key|credentials|Bearer [A-Za-z0-9]' 2>/dev/null
 
 # debugger statements
 git diff --name-only <base-branch>...HEAD | xargs grep -n 'debugger' 2>/dev/null

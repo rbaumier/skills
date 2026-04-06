@@ -137,6 +137,15 @@ PR merged → staging deploy (auto) → manual verify → production deploy → 
                                                                          └── clean → done
 ```
 
+**Rollout decision thresholds** — advance, hold, or rollback:
+
+| Signal | Advance | Hold & Investigate | Rollback immediately |
+|--------|---------|-------------------|---------------------|
+| Error rate | ≤ baseline | >1.5x baseline | >2x baseline |
+| P95 latency | ≤ baseline +20% | >30% above baseline | >50% above baseline |
+| Business metrics | Stable | Decline >2% | Decline >5% |
+| Health checks | All passing | Intermittent failures | Sustained failures |
+
 Every deployment must be reversible. Ship a rollback workflow:
 
 ```yaml
