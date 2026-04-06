@@ -47,7 +47,7 @@ description: Data architecture, SQL engineering, persistence strategies, Postgre
 - Pagination: cursor-based (keyset). OFFSET/LIMIT is O(N) on deep pages.
 - Text search: TSVECTOR + GIN. Never `LIKE '%term%'` on large tables.
 - Index based on query patterns (WHERE, JOIN, ORDER BY).
-- **N+1 query detection and prevention**: N+1 = 1 query for a list + N queries for each item's relation. With Drizzle: use `.findMany({ with: { relation: true } })` or explicit JOINs. Never loop over results and query inside the loop. Detection: enable query logging and count queries per request -- if count scales with result set size, you have N+1. In reviews: if you see `for (const item of items) { await db.query... }`, flag it as N+1.
+- **N+1 query detection and prevention**: N+1 = 1 query for a list + N queries for each item's relation. Use eager loading / JOINs instead. Never loop over results and query inside the loop. Detection: enable query logging and count queries per request -- if count scales with result set size, you have N+1. In reviews: if you see `for (const item of items) { await db.query... }`, flag it as N+1.
 - **EXPLAIN ANALYZE before deploying queries on large tables**: Always run `EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)` on new queries against production-sized data. Red flags: Seq Scan on tables >10K rows, Nested Loop with large outer set, Sort with high memory usage. Add missing indexes when you see unexpected Seq Scans. In reviews: if a PR adds a new query on a table with >10K rows without an EXPLAIN plan, request one.
 - **Materialized views for expensive aggregations**: Create materialized views for dashboard queries, reports, and analytics that aggregate large tables. Refresh strategy: `REFRESH MATERIALIZED VIEW CONCURRENTLY` (requires unique index) for zero-downtime refresh. Schedule via pg_cron or application cron. Never query materialized views expecting real-time data -- always document staleness. In reviews: if a query aggregates >100K rows and runs frequently, suggest a materialized view.
 - **N+1 query detection in reviews** -- any loop that calls a database/API inside the loop body is an N+1 bug. Reviews: `for (const item of items) { await db.query(...item.id) }` -> flag 'batch this query'. Use `Promise.all` + `WHERE IN` or DataLoader pattern.
@@ -73,14 +73,9 @@ description: Data architecture, SQL engineering, persistence strategies, Postgre
 - Parameterized queries only. Never concatenate strings into SQL.
 - Identify PII. Encrypt sensitive columns at rest (pgcrypto) if compliance requires.
 
-### Drizzle ORM
-- `pgTable()` with typed columns. `InferSelectModel<typeof table>` for row types — never deprecated `InferModel`.
-- UUIDv7: `.$defaultFn(() => uuidv7())` on PKs. Never `defaultRandom()` (UUIDv4).
-- Timestamps: always `{ withTimezone: true }`. Never bare `timestamp()`.
-- Constraints in third argument: `check()`, `uniqueIndex()`, `index()`.
-- Export table + `InferSelectModel` type from same file.
-- CLI output (drizzle-kit, better-auth) is a starting point, NOT production-ready. Always review for: `withTimezone: true`, CHECK constraints, custom indexes, snake_case.
-- **ON CONFLICT (UPSERT) patterns**: Use `INSERT ... ON CONFLICT (key) DO UPDATE SET ...` for idempotent writes. For conditional upserts: `DO UPDATE SET value = EXCLUDED.value WHERE table.updated_at < EXCLUDED.updated_at` (last-write-wins with timestamp guard). For insert-if-not-exists: `ON CONFLICT DO NOTHING`. In Drizzle: `db.insert(table).values(data).onConflictDoUpdate({ target: table.id, set: { ... } })`. In reviews: if you see SELECT-then-INSERT patterns, recommend UPSERT to eliminate race conditions.
+### ORM
+- For Drizzle ORM specifics, see the `drizzle-orm` skill.
+- **ON CONFLICT (UPSERT) patterns**: Use `INSERT ... ON CONFLICT (key) DO UPDATE SET ...` for idempotent writes. For conditional upserts: `DO UPDATE SET value = EXCLUDED.value WHERE table.updated_at < EXCLUDED.updated_at` (last-write-wins with timestamp guard). For insert-if-not-exists: `ON CONFLICT DO NOTHING`. In reviews: if you see SELECT-then-INSERT patterns, recommend UPSERT to eliminate race conditions.
 
 ### Repository Pattern & Typed Errors
 - Return errors as values, never throw: `Promise<Entity | DomainError | DatabaseError>`.
@@ -90,11 +85,6 @@ description: Data architecture, SQL engineering, persistence strategies, Postgre
 - Exhaustive `matchError()` in routes: every error `_tag` maps to specific HTTP status + problem code.
 - Transactions return union of ALL step errors: `Promise<Result | ThreadCreateError | CommentCreateError | DatabaseError>`.
 - Derive repo type from factory: `type DiffRepository = ReturnType<typeof createDiffRepository>`.
-
-### OTel Query Logging
-- `OtelDrizzleLogger` attaches `db.statement`/`db.system` to active OTel span.
-- Guard with `trace.getActiveSpan()`. Zero overhead when no span active.
-- Pass at client creation: `drizzle(pgClient, { schema, logger: new OtelDrizzleLogger() })`.
 
 ## Reference Files
 
