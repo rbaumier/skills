@@ -5,26 +5,28 @@
     "better-auth-best-practices",
     "better-result-adopt",
     "security-defensive",
+    "api-design",
     "language-typescript",
     "coding-standards",
     "zod"
   ],
   "Code Review": [
-    "superpowers:requesting-code-review",
-    "superpowers:receiving-code-review",
     "code-review",
-    "dhh-review",
     "coding-standards"
   ],
   "Dev Process": [
-    "superpowers:dispatching-parallel-agents",
-    "superpowers:subagent-driven-development",
-    "superpowers:using-git-worktrees",
-    "superpowers:finishing-a-development-branch",
-    "superpowers:using-superpowers",
-    "continue",
+    "parallel-agents",
+    "subagent-development",
+    "git-worktrees",
+    "finishing-branch",
+    "using-skills",
     "build-fix",
     "refactor-clean"
+  ],
+  "DevOps": [
+    "ci-cd",
+    "docker",
+    "kubernetes"
   ],
   "Frontend - React": [
     "frontend",
@@ -34,7 +36,6 @@
     "ui-ux",
     "ui-animations",
     "web-performance",
-    "tanstack",
     "tanstack-query",
     "tanstack-start-best-practices",
     "language-typescript",
@@ -68,8 +69,9 @@
     "paperasse:controleur-fiscal"
   ],
   "Meta": [
-    "find-skills",
-    "superpowers:writing-skills",
+    "skill-creator",
+    "enforcing-skill-rules",
+    "using-skills",
     "learn",
     "update-codemaps",
     "claude-hud:setup",
@@ -81,17 +83,17 @@
     "coding-standards"
   ],
   "Planning": [
-    "superpowers:brainstorming",
-    "superpowers:writing-plans",
-    "superpowers:executing-plans",
+    "brainstorming",
+    "plans",
     "grill-me",
     "plan",
     "generate-visual-plan",
     "plan-review"
   ],
   "Review & Docs": [
-    "diff-review-ui",
+    "vscode-diff-review",
     "diff-review",
+    "documentation",
     "project-recap",
     "update-docs",
     "fact-check"
@@ -100,31 +102,13 @@
     "language-rust",
     "coding-standards"
   ],
-  "Superpowers": [
-    "superpowers:brainstorming",
-    "superpowers:writing-plans",
-    "superpowers:executing-plans",
-    "superpowers:dispatching-parallel-agents",
-    "superpowers:subagent-driven-development",
-    "superpowers:using-git-worktrees",
-    "superpowers:finishing-a-development-branch",
-    "superpowers:using-superpowers",
-    "superpowers:test-driven-development",
-    "superpowers:systematic-debugging",
-    "superpowers:verification-before-completion",
-    "superpowers:requesting-code-review",
-    "superpowers:receiving-code-review",
-    "superpowers:writing-skills"
-  ],
   "Testing": [
-    "superpowers:test-driven-development",
-    "superpowers:systematic-debugging",
-    "superpowers:verification-before-completion",
+    "tdd",
+    "debugging",
     "testing",
     "expect",
     "dogfood",
     "e2e",
-    "tdd",
     "test-coverage"
   ],
   "Writing": [
