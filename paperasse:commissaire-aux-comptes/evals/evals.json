@@ -11,18 +11,18 @@
         "evals/files/fec-webagency.txt"
       ],
       "assertions": [
-        "Le skill lit company.json pour obtenir le contexte automatiquement",
-        "Le FEC est contrôlé : format 18 colonnes, équilibre global, numérotation séquentielle",
-        "Chaque écriture est vérifiée équilibrée (débit = crédit par EcritureNum)",
-        "L'amortissement du MacBook Pro est vérifié (1800 EUR, 3 ans, prorata depuis juin = ~350 EUR)",
-        "Le PCA est identifié pour l'abonnement annuel Client Alpha (12 000 EUR en décembre, 11/12 mois sur N+1)",
-        "L'abonnement Netflix (15,99 EUR en 6181) est questionné comme charge potentiellement personnelle",
-        "Le bureau domicile (250 EUR en mai seulement) est signalé comme incomplet ou à justifier",
-        "Les frais Stripe ne sont enregistrés que pour T2 (127,50 EUR), les autres trimestres manquent",
-        "Le solde du compte 411 est vérifié",
-        "Le seuil franchise TVA (36 800 EUR) est vérifié par rapport au CA total",
-        "Un rapport d'audit structuré est produit avec opinion et tableau de synthèse",
-        "Les recommandations incluent les points d'amélioration identifiés"
+        { "id": "read-company-json-context", "description": "Le skill lit company.json pour obtenir le contexte automatiquement", "category": "behavior" },
+        { "id": "fec-format-18-columns", "description": "Le FEC est contrôlé : format 18 colonnes, équilibre global, numérotation séquentielle", "category": "format" },
+        { "id": "ecriture-equilibre-debit-credit", "description": "Chaque écriture est vérifiée équilibrée (débit = crédit par EcritureNum)", "category": "behavior" },
+        { "id": "amortissement-macbook-verification", "description": "L'amortissement du MacBook Pro est vérifié (1800 EUR, 3 ans, prorata depuis juin = ~350 EUR)", "category": "behavior" },
+        { "id": "pca-abonnement-client-alpha", "description": "Le PCA est identifié pour l'abonnement annuel Client Alpha (12 000 EUR en décembre, 11/12 mois sur N+1)", "category": "gotcha" },
+        { "id": "netflix-charge-personnelle", "description": "L'abonnement Netflix (15,99 EUR en 6181) est questionné comme charge potentiellement personnelle", "category": "gotcha" },
+        { "id": "bureau-domicile-incomplet", "description": "Le bureau domicile (250 EUR en mai seulement) est signalé comme incomplet ou à justifier", "category": "gotcha" },
+        { "id": "stripe-fees-partial-t2-only", "description": "Les frais Stripe ne sont enregistrés que pour T2 (127,50 EUR), les autres trimestres manquent", "category": "gotcha" },
+        { "id": "solde-compte-411-verification", "description": "Le solde du compte 411 est vérifié", "category": "behavior" },
+        { "id": "seuil-franchise-tva-verification", "description": "Le seuil franchise TVA (36 800 EUR) est vérifié par rapport au CA total", "category": "behavior" },
+        { "id": "rapport-audit-structure-opinion", "description": "Un rapport d'audit structuré est produit avec opinion et tableau de synthèse", "category": "format" },
+        { "id": "recommandations-amelioration", "description": "Les recommandations incluent les points d'amélioration identifiés", "category": "format" }
       ]
     },
     {
@@ -35,14 +35,14 @@
         "evals/files/fec-webagency.txt"
       ],
       "assertions": [
-        "Les 18 colonnes obligatoires sont vérifiées présentes",
-        "L'équilibre global est vérifié (total débit = total crédit)",
-        "Chaque écriture est vérifiée individuellement pour l'équilibre",
-        "La numérotation séquentielle est vérifiée (001 à 029 sans trous)",
-        "Toutes les dates sont vérifiées dans la période 01/01/2025 au 31/12/2025",
-        "Les comptes sont vérifiés contre le PCG (racines 1-7)",
-        "Aucun montant négatif n'est signalé",
-        "Le résultat est présenté de façon structurée avec conclusion (conforme / non conforme)"
+        { "id": "verify-18-columns", "description": "Les 18 colonnes obligatoires sont vérifiées présentes", "category": "format" },
+        { "id": "verify-global-balance", "description": "L'équilibre global est vérifié (total débit = total crédit)", "category": "behavior" },
+        { "id": "verify-individual-balance", "description": "Chaque écriture est vérifiée individuellement pour l'équilibre", "category": "behavior" },
+        { "id": "verify-sequential-numbering", "description": "La numérotation séquentielle est vérifiée (001 à 029 sans trous)", "category": "format" },
+        { "id": "verify-dates-in-period", "description": "Toutes les dates sont vérifiées dans la période 01/01/2025 au 31/12/2025", "category": "security" },
+        { "id": "verify-pcg-accounts", "description": "Les comptes sont vérifiés contre le PCG (racines 1-7)", "category": "behavior" },
+        { "id": "no-negative-amounts", "description": "Aucun montant négatif n'est signalé", "category": "format" },
+        { "id": "structured-result-conclusion", "description": "Le résultat est présenté de façon structurée avec conclusion (conforme / non conforme)", "category": "format" }
       ]
     }
   ]

@@ -8,17 +8,17 @@
       "expected_output": "Le skill calcule les frais de notaire complets : DMTO (taxe départementale selon data/dmto-departements.json, taxe communale 1,20%, prélèvement État), émoluments du notaire par tranche, TVA sur émoluments, CSI (0,10%), débours estimés. Le total devrait être autour de 7-8% du prix pour un bien ancien.",
       "files": [],
       "assertions": [
-        "Le skill identifie l'opération comme un achat immobilier dans l'ancien",
-        "Le taux DMTO du Rhône (69) est vérifié dans data/dmto-departements.json",
-        "La taxe départementale est calculée avec le taux du Rhône lu dans data/dmto-departements.json",
-        "La taxe communale est calculée (1,20% de 280 000 = 3 360 EUR)",
-        "Le prélèvement pour l'État est calculé (2,37% de la taxe départementale)",
-        "Les émoluments du notaire sont calculés par tranche (3,945%, 1,627%, 1,085%, 0,814%)",
-        "La TVA sur les émoluments est appliquée (20%)",
-        "La CSI est calculée (0,10% de 280 000 = 280 EUR)",
-        "Les débours sont estimés",
-        "Le total est présenté avec le format structuré (frais de notaire)",
-        "Le pourcentage par rapport au prix de vente est indiqué"
+        { "id": "identify-achat-ancien", "description": "Le skill identifie l'opération comme un achat immobilier dans l'ancien", "category": "behavior" },
+        { "id": "dmto-taux-rhone", "description": "Le taux DMTO du Rhône (69) est vérifié dans data/dmto-departements.json", "category": "behavior" },
+        { "id": "taxe-departementale-calcul", "description": "La taxe départementale est calculée avec le taux du Rhône lu dans data/dmto-departements.json", "category": "behavior" },
+        { "id": "taxe-communale-calcul", "description": "La taxe communale est calculée (1,20% de 280 000 = 3 360 EUR)", "category": "behavior" },
+        { "id": "prelevement-etat-calcul", "description": "Le prélèvement pour l'État est calculé (2,37% de la taxe départementale)", "category": "behavior" },
+        { "id": "emoluments-par-tranche", "description": "Les émoluments du notaire sont calculés par tranche (3,945%, 1,627%, 1,085%, 0,814%)", "category": "behavior" },
+        { "id": "tva-emoluments", "description": "La TVA sur les émoluments est appliquée (20%)", "category": "behavior" },
+        { "id": "csi-calcul", "description": "La CSI est calculée (0,10% de 280 000 = 280 EUR)", "category": "behavior" },
+        { "id": "debours-estimation", "description": "Les débours sont estimés", "category": "behavior" },
+        { "id": "total-format-structure", "description": "Le total est présenté avec le format structuré (frais de notaire)", "category": "format" },
+        { "id": "pourcentage-prix-vente", "description": "Le pourcentage par rapport au prix de vente est indiqué", "category": "format" }
       ]
     },
     {
@@ -28,18 +28,18 @@
       "expected_output": "Le skill identifie la dévolution légale (2 enfants, pas de conjoint survivant). L'assurance-vie est traitée hors succession (art. L132-12). L'actif successoral = 450 000 + 80 000 = 530 000 EUR. Chaque enfant reçoit 265 000 EUR, abattement 100 000 EUR en ligne directe, part taxable 165 000 EUR, droits calculés par tranche (5%, 10%, 15%, 20%). Pour l'assurance-vie : 75 000 EUR par bénéficiaire, abattement 152 500 EUR chacun, donc exonéré.",
       "files": [],
       "assertions": [
-        "Le skill identifie l'opération comme une succession",
-        "Le skill collecte le contexte : père décédé veuf, 2 enfants, pas de testament",
-        "L'assurance-vie est traitée séparément, hors succession (art. L132-12 Code des assurances)",
-        "L'actif net de succession est de 530 000 EUR (450 000 + 80 000)",
-        "Chaque enfant reçoit 1/2 soit 265 000 EUR",
-        "L'abattement en ligne directe de 100 000 EUR est appliqué par enfant (art. 779 CGI)",
-        "La part nette taxable par enfant est de 165 000 EUR",
-        "Les droits sont calculés par tranche avec le barème en ligne directe (5%, 10%, 15%, 20%)",
-        "L'assurance-vie bénéficie de l'abattement de 152 500 EUR par bénéficiaire (art. 990 I CGI)",
-        "L'assurance-vie est exonérée car 75 000 EUR < 152 500 EUR d'abattement",
-        "Les émoluments notaire sont estimés",
-        "Le total des droits de succession est présenté de façon détaillée"
+        { "id": "identify-succession", "description": "Le skill identifie l'opération comme une succession", "category": "behavior" },
+        { "id": "collect-context-succession", "description": "Le skill collecte le contexte : père décédé veuf, 2 enfants, pas de testament", "category": "behavior" },
+        { "id": "assurance-vie-hors-succession", "description": "L'assurance-vie est traitée séparément, hors succession (art. L132-12 Code des assurances)", "category": "gotcha" },
+        { "id": "actif-net-530k", "description": "L'actif net de succession est de 530 000 EUR (450 000 + 80 000)", "category": "behavior" },
+        { "id": "part-enfant-moitie", "description": "Chaque enfant reçoit 1/2 soit 265 000 EUR", "category": "behavior" },
+        { "id": "abattement-ligne-directe-100k", "description": "L'abattement en ligne directe de 100 000 EUR est appliqué par enfant (art. 779 CGI)", "category": "behavior" },
+        { "id": "part-nette-taxable-165k", "description": "La part nette taxable par enfant est de 165 000 EUR", "category": "behavior" },
+        { "id": "bareme-ligne-directe-tranches", "description": "Les droits sont calculés par tranche avec le barème en ligne directe (5%, 10%, 15%, 20%)", "category": "behavior" },
+        { "id": "abattement-assurance-vie-152500", "description": "L'assurance-vie bénéficie de l'abattement de 152 500 EUR par bénéficiaire (art. 990 I CGI)", "category": "gotcha" },
+        { "id": "assurance-vie-exoneree", "description": "L'assurance-vie est exonérée car 75 000 EUR < 152 500 EUR d'abattement", "category": "gotcha" },
+        { "id": "emoluments-notaire-estimation", "description": "Les émoluments notaire sont estimés", "category": "behavior" },
+        { "id": "total-droits-detaille", "description": "Le total des droits de succession est présenté de façon détaillée", "category": "format" }
       ]
     },
     {
@@ -49,14 +49,14 @@
       "expected_output": "Le skill calcule les droits de donation en ligne directe. Abattement 100 000 EUR (art. 779 CGI). Don familial de sommes d'argent exonéré 31 865 EUR si donateur < 80 ans et donataire majeur (art. 790 G CGI). Base taxable = 200 000 - 100 000 - 31 865 = 68 135 EUR. Droits calculés par tranche.",
       "files": [],
       "assertions": [
-        "Le skill identifie l'opération comme une donation en ligne directe",
-        "L'abattement de 100 000 EUR en ligne directe est appliqué (art. 779 CGI)",
-        "Le don familial de sommes d'argent (31 865 EUR) est mentionné (art. 790 G CGI)",
-        "Les conditions du don familial sont vérifiées (donateur < 80 ans, donataire > 18 ans)",
-        "La base taxable est calculée après les deux abattements",
-        "Les droits sont calculés par tranche avec le barème en ligne directe",
-        "L'absence de donations antérieures (< 15 ans) est prise en compte",
-        "Le skill mentionne l'obligation de déclaration (formulaire 2735)"
+        { "id": "identify-donation-ligne-directe", "description": "Le skill identifie l'opération comme une donation en ligne directe", "category": "behavior" },
+        { "id": "abattement-100k-art-779", "description": "L'abattement de 100 000 EUR en ligne directe est appliqué (art. 779 CGI)", "category": "behavior" },
+        { "id": "don-familial-31865", "description": "Le don familial de sommes d'argent (31 865 EUR) est mentionné (art. 790 G CGI)", "category": "gotcha" },
+        { "id": "conditions-don-familial", "description": "Les conditions du don familial sont vérifiées (donateur < 80 ans, donataire > 18 ans)", "category": "security" },
+        { "id": "base-taxable-apres-abattements", "description": "La base taxable est calculée après les deux abattements", "category": "behavior" },
+        { "id": "droits-par-tranche-bareme", "description": "Les droits sont calculés par tranche avec le barème en ligne directe", "category": "behavior" },
+        { "id": "absence-donations-anterieures", "description": "L'absence de donations antérieures (< 15 ans) est prise en compte", "category": "behavior" },
+        { "id": "obligation-declaration-2735", "description": "Le skill mentionne l'obligation de déclaration (formulaire 2735)", "category": "format" }
       ]
     },
     {
@@ -66,16 +66,16 @@
       "expected_output": "Le skill calcule la plus-value immobilière. Prix d'acquisition majoré du forfait frais (7,5%) et forfait travaux (15% si > 5 ans). Plus-value brute. Abattements pour durée de détention (12 ans) : IR 6%/an de la 6e à la 21e année = 42%, PS 1,65%/an de la 6e à la 21e année = 11,55%. IR 19% + PS 17,2% sur les montants nets. Pas de surtaxe si PV nette IR < 50 000 EUR.",
       "files": [],
       "assertions": [
-        "Le skill identifie que ce n'est pas une résidence principale (pas d'exonération)",
-        "Le forfait frais d'acquisition (7,5%) est appliqué au prix d'achat",
-        "Le forfait travaux (15%) est appliqué car détention > 5 ans",
-        "La plus-value brute est calculée (prix cession - prix acquisition corrigé)",
-        "L'abattement IR pour 12 ans de détention est calculé (6% par an de la 6e à la 21e année = 42%)",
-        "L'abattement PS pour 12 ans de détention est calculé (1,65% par an de la 6e à la 21e année = 11,55%)",
-        "L'IR (19%) est calculé sur la plus-value nette IR",
-        "Les PS (17,2%) sont calculés sur la plus-value nette PS",
-        "La surtaxe est vérifiée (applicable si PV nette IR > 50 000 EUR)",
-        "Le total de l'impôt est présenté avec le format structuré"
+        { "id": "not-residence-principale", "description": "Le skill identifie que ce n'est pas une résidence principale (pas d'exonération)", "category": "behavior" },
+        { "id": "forfait-frais-acquisition-7-5", "description": "Le forfait frais d'acquisition (7,5%) est appliqué au prix d'achat", "category": "behavior" },
+        { "id": "forfait-travaux-15-pourcent", "description": "Le forfait travaux (15%) est appliqué car détention > 5 ans", "category": "gotcha" },
+        { "id": "plus-value-brute-calcul", "description": "La plus-value brute est calculée (prix cession - prix acquisition corrigé)", "category": "behavior" },
+        { "id": "abattement-ir-12-ans-42-pourcent", "description": "L'abattement IR pour 12 ans de détention est calculé (6% par an de la 6e à la 21e année = 42%)", "category": "behavior" },
+        { "id": "abattement-ps-12-ans-11-55", "description": "L'abattement PS pour 12 ans de détention est calculé (1,65% par an de la 6e à la 21e année = 11,55%)", "category": "behavior" },
+        { "id": "ir-19-pourcent-pv-nette", "description": "L'IR (19%) est calculé sur la plus-value nette IR", "category": "behavior" },
+        { "id": "ps-17-2-pourcent-pv-nette", "description": "Les PS (17,2%) sont calculés sur la plus-value nette PS", "category": "behavior" },
+        { "id": "surtaxe-verification-seuil-50k", "description": "La surtaxe est vérifiée (applicable si PV nette IR > 50 000 EUR)", "category": "gotcha" },
+        { "id": "total-impot-format-structure", "description": "Le total de l'impôt est présenté avec le format structuré", "category": "format" }
       ]
     }
   ]
