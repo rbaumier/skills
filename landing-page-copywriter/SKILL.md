@@ -209,12 +209,12 @@ When a user needs landing page copy or marketing website content:
 
 4. **Format Output**:
    ```
-   🎯 LANDING PAGE COPY
+   LANDING PAGE COPY
    Product/Service: [Name]
    Framework: [PAS/AIDA/StoryBrand]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   🏆 HERO SECTION
+   HERO SECTION
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Headline: [Powerful 10-word value proposition]
@@ -226,13 +226,13 @@ When a user needs landing page copy or marketing website content:
    Trust Bar: [Social proof element]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   😤 PROBLEM SECTION
+   PROBLEM SECTION
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    [Problem description with emotional resonance]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ✅ SOLUTION SECTION
+   SOLUTION SECTION
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    [How your product solves it]
@@ -242,7 +242,7 @@ When a user needs landing page copy or marketing website content:
    Feature 3: [Benefit-focused description]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   🔄 HOW IT WORKS
+   HOW IT WORKS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Step 1: [Simple action]
@@ -250,20 +250,20 @@ When a user needs landing page copy or marketing website content:
    Step 3: [Simple action]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ⭐ SOCIAL PROOF
+   SOCIAL PROOF
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    [Testimonial quotes with attribution]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ❓ FAQ
+   FAQ
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Q: [Common objection]
    A: [Clear, confident answer]
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   🚀 FINAL CTA
+   FINAL CTA
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    [Urgency/scarcity element]
@@ -271,7 +271,7 @@ When a user needs landing page copy or marketing website content:
    Button: "[Action text]"
 
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   💡 OPTIMIZATION NOTES
+   OPTIMIZATION NOTES
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    A/B Test Ideas:

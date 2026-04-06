@@ -91,17 +91,15 @@ If a trap doesn't naturally exercise a rule, the trap is bad — enrich the code
 
 ## Step 4: Grade with Cross-Model Grading
 
-<EXTREMELY-IMPORTANT>
-**The grader MUST be a different model than the executor.** Sonnet executes → Opus grades. NEVER let the executor grade its own output — it will be indulgent.
+**The grader MUST be a different model than the executor.** Sonnet executes, Opus grades. Never let the executor grade its own output -- it will be indulgent.
 
-**Opus grader instructions — be EXTREMELY strict:**
+**Opus grader instructions -- strict grading, no leniency:**
 - PASS: the violation is CLEARLY fixed in the actual code output
 - FAIL: violation still present, fix is superficial, fix is "aspirational" (described but not coded), or fix is delegated to an unshown component
-- "The comment says it's fixed but the code doesn't show it" → FAIL
-- "Delegated to another component not shown" → FAIL
-- "Would need aria-label" without actually adding one → FAIL
-- If unsure → FAIL
-</EXTREMELY-IMPORTANT>
+- "The comment says it's fixed but the code doesn't show it" -- FAIL
+- "Delegated to another component not shown" -- FAIL
+- "Would need aria-label" without actually adding one -- FAIL
+- If unsure -- FAIL
 
 Spawn Opus grader agent with:
 1. The assertions (evals/evals.json)

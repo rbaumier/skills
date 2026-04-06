@@ -89,14 +89,6 @@ Task("Fix tool-approval-race-conditions.test.ts failures")
 Agents write completion status to a shared file using append (`>>`, never `>`). This lets the orchestrator monitor progress without reading full agent output.
 
 ```bash
-
-Add Architecture Pattern Selection section: before dispatching, choose between Supervisor (one orchestrator delegates and collects), Fan-Out/Fan-In (broadcast same task to N agents, merge results), and Pipeline (agent A output feeds agent B). Include a decision table:
-
-| Pattern | Use When | Example |
-|---------|----------|---------|
-| Supervisor | Independent tasks, different domains | Fix 3 test files |
-| Fan-Out/Fan-In | Same task, different inputs | Search 5 codebases |
-| Pipeline | Sequential dependencies | Extract → Transform → Load |
 # Each agent appends on completion:
 echo "COMPLETE: <task-name> - $(date)" >> .claude/cache/<batch-name>-status.txt
 ```
@@ -131,22 +123,6 @@ When agents return:
 - Verify fixes don't conflict
 - Run full test suite
 - Integrate all changes
-
-Add guidance on agent result deduplication: when multiple agents investigate overlapping areas, their fixes may conflict. After all agents complete:
-1. `git diff --stat` each agent's changes
-2. Check for overlapping files: if 2+ agents modified the same file, review manually before integrating
-3. For code changes: apply non-overlapping first, then resolve conflicts
-4. For research: merge findings, flag contradictions
-
-Add Error Recovery Strategies section:
-
-**When an agent fails:**
-1. Check if failure is transient (timeout, rate limit) → retry once with same prompt
-2. Check if failure is from scope too large → split task and re-dispatch as 2 smaller agents
-3. Check if failure is from missing context → re-dispatch with additional context
-4. If agent produces partial results → salvage what's usable, dispatch new agent for remainder
-
-**Never:** retry more than once without changing something (prompt, scope, or context).
 
 ## Error Recovery
 
@@ -186,27 +162,6 @@ Do NOT just increase timeouts - find the real issue.
 Return: Summary of what you found and what you fixed.
 ```
 
-Add agent prompt template for research/exploration tasks (complement the existing fix-focused template):
-
-```markdown
-Investigate [specific question] in [scope]:
-
-Context: [what we know so far]
-
-Your task:
-1. Search for [specific artifacts]
-2. Analyze [specific aspect]
-3. Document findings in .claude/cache/agents/<batch>/<id>/output.md
-
-Output format:
-- Summary (2-3 sentences)
-- Key findings (bulleted)
-- Recommendations (if applicable)
-- Confidence level (high/medium/low)
-
-Append completion to status file when done.
-```
-
 ### Research/Exploration Prompt Template
 
 For investigation tasks (complement the fix-focused template above):
@@ -229,23 +184,23 @@ Do NOT propose fixes or changes. Research only.
 
 ## Common Mistakes
 
-**❌ Too broad:** "Fix all the tests" - agent gets lost
-**✅ Specific:** "Fix agent-tool-abort.test.ts" - focused scope
+**Too broad:** "Fix all the tests" - agent gets lost
+**Specific:** "Fix agent-tool-abort.test.ts" - focused scope
 
-**❌ No context:** "Fix the race condition" - agent doesn't know where
-**✅ Context:** Paste the error messages and test names
+**No context:** "Fix the race condition" - agent doesn't know where
+**Context:** Paste the error messages and test names
 
-**❌ No constraints:** Agent might refactor everything
-**✅ Constraints:** "Do NOT change production code" or "Fix tests only"
+**No constraints:** Agent might refactor everything
+**Constraints:** "Do NOT change production code" or "Fix tests only"
 
-**❌ Vague output:** "Fix it" - you don't know what changed
-**✅ Specific:** "Return summary of root cause and changes"
+**Vague output:** "Fix it" - you don't know what changed
+**Specific:** "Return summary of root cause and changes"
 
-**❌ No status tracking:** Agents complete silently, orchestrator polls blindly
-**✅ Status file:** Agents append to shared status file with timestamp on completion
+**No status tracking:** Agents complete silently, orchestrator polls blindly
+**Status file:** Agents append to shared status file with timestamp on completion
 
-**❌ Too many at once:** 20+ agents launched, half time out
-**✅ Batched:** Max 15 per batch, wait for completion before next batch
+**Too many at once:** 20+ agents launched, half time out
+**Batched:** Max 15 per batch, wait for completion before next batch
 
 ## When NOT to Use
 

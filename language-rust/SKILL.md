@@ -101,9 +101,7 @@ description: Rust systems engineering — zero-cost abstractions, memory safety,
 
 ## Post-Modification Audit
 
-<EXTREMELY-IMPORTANT>
-MANDATORY: After ANY modification to Rust files, you MUST run clippy before considering your work done. This is not optional. Do not skip this step. Do not rationalize why "this change is too small" or "I'll run it later."
-</EXTREMELY-IMPORTANT>
+**MANDATORY: After ANY modification to Rust files, run clippy before considering your work done.** No exceptions -- not for "small changes," not for "I'll run it later."
 
 ```bash
 cargo clippy --all --all-features --all-targets -- -D warnings

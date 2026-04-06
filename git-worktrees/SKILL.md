@@ -83,10 +83,6 @@ project=$(basename "$(git rev-parse --show-toplevel)")
 ### 2. Create Worktree
 
 ```bash
-
-Handle submodules in worktrees — worktrees don't automatically initialize submodules. After creating a worktree in a repo with submodules, run `git submodule update --init --recursive` in the new worktree.
-
-Per-worktree .env files — worktrees share git config but NOT working directory files. Each worktree needs its own `.env` file (different ports, different DB names to avoid conflicts). Symlink shared config (tsconfig, eslintrc) but copy .env templates.
 # Determine full path
 case $LOCATION in
   .worktrees|worktrees)
@@ -163,12 +159,6 @@ Ready to implement <feature-name>
 | Long-lived worktree | `git worktree lock <path>` prevents accidental pruning |
 | Unlock when done | `git worktree unlock <path>` |
 
-Worktree lock for long-lived worktrees — `git worktree lock <path>` prevents accidental pruning of worktrees on external drives, remote mounts, or in use by other agents. `git worktree unlock <path>` when done.
-
-List and audit worktrees periodically — run `git worktree list` to see all active worktrees. Stale worktrees (deleted directories) show as 'prunable'. Run `git worktree prune` to clean them. Before creating a new worktree, check if one already exists for that branch.
-
-Cleanup after finishing — run `git worktree remove <path>` (not just `rm -rf`), then `git worktree prune` to clean stale references. Delete the branch if merged: `git branch -d <branch>`. Add to finishing-a-development-branch integration.
-
 ## Advanced: Bare Repo Pattern
 
 For worktree-centric workflows: `git clone --bare <url> .bare && echo 'gitdir: ./.bare' > .git`. All branches as worktrees, no "main" checkout. Used when the primary workflow IS worktree-based (e.g., reviewing multiple PRs simultaneously). Trade-off: more disk space, simpler mental model.
@@ -200,8 +190,6 @@ For worktree-centric workflows: `git clone --bare <url> .bare && echo 'gitdir: .
 - **Problem:** Breaks on projects using different tools
 - **Fix:** Auto-detect from project files (package.json, etc.)
 
-Shared hooks across worktrees — git hooks in `.git/hooks` are shared across all worktrees (they're in the common git directory). Custom hooks that use relative paths may break in worktrees. Use `core.hooksPath` pointing to a versioned hooks directory if hooks need to be worktree-aware.
-
 ### Submodules not initialized
 
 - **Problem:** Worktrees don't automatically initialize submodules. Build fails with missing dependencies
@@ -232,8 +220,6 @@ git worktree prune            # Clean stale worktree references
 git branch -d <branch>        # Delete branch if merged
 ```
 
-Run `git worktree list` periodically to audit active worktrees. Stale entries (deleted directories) show as "prunable". Run `git worktree prune` to clean them. Add cleanup to your finishing-a-development-branch workflow. Stale worktrees accumulate and confuse `git worktree list`.
-
 ## Red Flags
 
 **Never:**
@@ -259,6 +245,3 @@ Run `git worktree list` periodically to audit active worktrees. Stale entries (d
 
 **Pairs with:**
 - **finishing-a-development-branch** - REQUIRED for cleanup after work complete
-
-
-Bare repo pattern for worktree-centric workflows — `git clone --bare <url> .bare && echo 'gitdir: ./.bare' > .git`. All branches as worktrees, no 'main' checkout. Used when the primary workflow IS worktrees (e.g., multi-agent development).

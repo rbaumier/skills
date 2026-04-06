@@ -1,6 +1,6 @@
 ---
 name: drizzle-orm
-description: "Type-safe SQL ORM for TypeScript with zero runtime overhead"
+description: "Use when writing Drizzle ORM schemas, migrations, queries, or debugging Drizzle type errors in TypeScript projects."
 ---
 
 # Drizzle ORM

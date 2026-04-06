@@ -157,41 +157,6 @@ You MUST complete each phase before proceeding to the next.
    - Keep tracing up until you find the source
    - Fix at source, not at symptom
 
-#### Git Bisect for Regression Bugs
-
-When a test/feature that previously worked is now broken:
-```bash
-git bisect start
-git bisect bad HEAD
-git bisect good <last-known-good-commit>
-# Run test at each step
-git bisect run <test-command>
-```
-Narrows root cause to a single commit in O(log n) steps. After finding the commit, `git show <commit>` reveals exactly what changed. **Use when:** regression bugs where "it used to work." **Skip when:** bug is in new code (no good commit exists).
-
-#### Debug Log Analysis
-
-When dealing with complex systems that produce log output:
-
-1. **Reduce noise first**: filter logs to the relevant time window and service
-2. **Search for ERROR/WARN**: start with explicit failures
-3. **Trace request flow**: follow a single request ID through all services
-4. **Compare good vs bad**: diff logs from a working run vs broken run
-5. **Check for absence**: sometimes what's MISSING from logs is the clue (expected log line not appearing = code path not reached)
-
-Tool: `grep -B5 -A10 'ERROR' <logfile> | head -100`
-
-#### Intermittent Bug Protocol
-
-When a bug is not consistently reproducible:
-1. Run the failing test/scenario 10 times, record pass/fail ratio
-2. Look for timing dependencies: add `console.log(Date.now())` at key points
-3. Check for shared state: does running tests in isolation vs. suite change behavior?
-4. Check for resource leaks: memory, file handles, connections
-5. If truly random: add structured logging and run in a loop until it fails, then analyze the failing run's logs
-
-**Key insight:** intermittent bugs are almost always timing, shared state, or resource exhaustion -- never truly random.
-
 ### Phase 2: Pattern Analysis
 
 **Find the pattern before fixing:**
@@ -241,10 +206,6 @@ When a bug is not consistently reproducible:
    - Research more
 
 **Reflection checkpoint:** before moving to Phase 4, write a 2-sentence summary: "The root cause is X because evidence Y proves it. The fix is Z because it addresses X directly." If you can't write this clearly, you're not ready for Phase 4 -- return to Phase 1. This prevents the common failure mode of "I think I understand it" leading to symptom fixes.
-
-### Reflection Checkpoint
-
-Before implementing a fix, write a 2-sentence summary: "The root cause is X because evidence Y proves it. The fix is Z because it addresses X directly." If you can't write this clearly, you haven't finished Phase 3 -- go back.
 
 ### Phase 4: Implementation
 

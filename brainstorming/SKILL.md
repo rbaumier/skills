@@ -9,9 +9,7 @@ Help turn ideas into fully formed designs and specs through natural collaborativ
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
 
-<HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
-</HARD-GATE>
+**No implementation before approval.** Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
 
 ## Step 0: Triage — Lightweight vs Heavyweight
 
@@ -185,8 +183,6 @@ You MUST create a task for each of these items and complete them in order:
 9. **User reviews written spec** — ask user to review the spec file before proceeding
 10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
-Mandatory Decision Log: for every design decision, record WHAT was chosen, WHAT was rejected, and WHY. Reasoning evaporates from context windows — if it's not written down, it didn't happen. Include the Decision Log as a required section in every design doc.
-
 ## Process Flow
 
 ```dot
@@ -273,8 +269,6 @@ digraph brainstorming {
 - Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design - the way a good developer improves code they're working in.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
-Spec interview technique: before writing the design, conduct a structured interview with probing questions across dimensions — Technical Implementation (architecture tradeoffs, edge cases, failure modes, performance, security), UI/UX (mental models, expectations), Business (success metrics, constraints). Asking non-obvious questions surfaces hidden requirements.
-
 ## After the Design
 
 **Documentation:**
@@ -305,8 +299,6 @@ Wait for the user's response. If they request changes, make them and re-run the 
 - Invoke the writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. writing-plans is the next step.
 
-Five-role adversarial validation before implementation: (1) Devil's Advocate challenges assumptions, (2) Domain Expert checks feasibility, (3) User Advocate tests usability, (4) Security Reviewer finds attack vectors, (5) Arbiter issues final verdict (APPROVED/REVISE/REJECT). No code until Arbiter approves.
-
 ## Key Principles
 
 - **Creativity Faucet** -- accept that early ideas are low-quality. The bad ideas must flow first to clear the pipe. Don't self-censor during divergent thinking; filter during convergence
@@ -318,8 +310,6 @@ Five-role adversarial validation before implementation: (1) Devil's Advocate cha
 - **Be flexible** - Go back and clarify when something doesn't make sense
 - **Be honest, not supportive** - If an idea is weak, say so with kindness. A good ideation partner is not a yes-machine. Push back on complexity, question real value, point out when the emperor has no clothes.
 - **The restatement changes the frame** - "Help restaurants compete" becomes "retain existing customers." Reframing is where the real insight lives.
-
-Creativity Faucet technique: allot 60+ minutes of uninterrupted time. Accept that the first 15-30 minutes yield exclusively low-quality output — this is intentional. The bad ideas must flow first to 'unclog the pipe' before novel insights emerge. Don't evaluate during this phase.
 
 ## Visual Companion
 
@@ -339,6 +329,3 @@ A question about a UI topic is not automatically a visual question. "What does p
 
 If they agree to the companion, read the detailed guide before proceeding:
 `skills/brainstorming/visual-companion.md`
-
-
-Scope decomposition trigger: if the request describes multiple independent subsystems, flag immediately — don't spend questions refining details of a project that needs decomposition first. Help decompose into sub-projects, then brainstorm the first sub-project through the normal flow.

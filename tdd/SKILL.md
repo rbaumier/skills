@@ -199,10 +199,6 @@ Keep tests green. Don't add behavior.
 
 Next failing test for next feature.
 
-Acceptance test as the outer loop — before Red-Green-Refactor on unit tests, write one failing acceptance/integration test that describes the complete feature from the user's perspective. This stays red until all unit-level TDD cycles complete. Provides the 'north star' for the feature.
-
-London School (outside-in, mockist) vs Chicago School (inside-out, classicist) — document both approaches. London: start from acceptance test, mock collaborators, work inward. Chicago: start from domain objects, build up with real collaborators. Default to Chicago for new features; London when system boundaries are well-defined.
-
 ## TDD Approaches
 
 **Chicago School (inside-out, classicist):** start from domain logic, build up. Use real objects, minimal mocks. Prefer for: business logic, data transformations, pure functions. Produces designs driven by actual usage.
@@ -223,12 +219,6 @@ London School (outside-in, mockist) vs Chicago School (inside-out, classicist) �
 | **Minimal** | One thing. "and" in name? Split it. | `test('validates email and domain and whitespace')` |
 | **Clear** | Name describes behavior | `test('test1')` |
 | **Shows intent** | Demonstrates desired API | Obscures what code should do |
-
-Given-When-Then naming for test structure — `test('GIVEN expired token WHEN refreshing THEN returns new token')`. The Given is the setup, When is the action, Then is the assertion. Maps to Arrange-Act-Assert. Enforces one behavior per test via naming discipline.
-
-Test isolation checklist — each test must: (1) create its own data (no shared mutable state), (2) clean up after itself or use transactions, (3) not depend on test execution order, (4) pass when run alone. If tests fail when run in parallel but pass sequentially, they share state.
-
-Test doubles vocabulary — Stub (returns canned answers), Spy (records calls), Mock (verifies interactions), Fake (working simplified implementation). Prefer Fakes > Stubs > Spies > Mocks. More mocks = more coupling to implementation. If you need 3+ mocks, redesign the interface.
 
 ## Why Order Matters
 
@@ -314,8 +304,6 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 
 **All of these mean: Delete code. Start over with TDD.**
 
-Flaky test policy — flaky test = quarantine immediately (move to separate suite), fix within 48h or delete. Never skip with `.skip`/`@Disabled` indefinitely. A flaky test that stays is worse than no test — it trains the team to ignore failures.
-
 ## Example: Bug Fix
 
 **Bug:** Empty email accepted
@@ -367,20 +355,6 @@ Before marking work complete:
 - [ ] Edge cases and errors covered
 
 Can't check all boxes? You skipped TDD. Start over.
-
-Property-based testing as TDD complement — after completing unit-level TDD, add property tests for functions with mathematical invariants (idempotence, commutativity, round-trip). Property tests discover edge cases you didn't think to test. Use fast-check (JS), Hypothesis (Python), proptest (Rust).
-
-## Flaky Test Policy
-
-Flaky test = quarantine immediately (move to separate suite), fix within 48h or delete. Never `.skip`/`@Disabled` indefinitely. A flaky test that stays is worse than no test -- it teaches the team to ignore failures. Track flaky tests in a list; if the same test flakes 3+ times, the underlying code has a design problem.
-
-## Test Isolation
-
-Each test must: (1) create its own data (no shared mutable state), (2) clean up after itself or use transactions, (3) not depend on test execution order, (4) pass when run alone. If reordering tests breaks them, you have hidden coupling.
-
-## Property-Based Testing
-
-After completing unit-level TDD, add property tests for functions with mathematical invariants (idempotence, commutativity, round-trip encode/decode). Property tests discover edge cases humans miss by generating hundreds of random inputs. Use fast-check (JS/TS) or Hypothesis (Python).
 
 ## When Stuck
 
