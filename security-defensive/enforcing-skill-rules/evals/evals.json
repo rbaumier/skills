@@ -3,128 +3,146 @@
   "evals": [
     {
       "id": 1,
-      "name": "full-sweep",
-      "prompt": "Fix all security issues:\n\n```typescript\nimport express from 'express';\nimport { exec } from 'child_process';\nimport fs from 'fs';\nimport jwt from 'jsonwebtoken';\nimport cors from 'cors';\n\nconst app = express();\nconst SECRET = 'my-jwt-secret-key-2024';\n\napp.use(cors({ origin: '*', credentials: true }));\napp.use(express.json());\n\napp.post('/login', async (req, res) => {\n  const { email, password } = req.body;\n  const user = await db.query(`SELECT * FROM users WHERE email = '${email}' AND password = '${password}'`);\n  if (!user) return res.status(401).json({ error: 'Invalid' });\n\n  const token = jwt.sign({ userId: user.id, role: user.role }, SECRET, { algorithm: 'HS256' });\n  res.json({ token });\n});\n\napp.get('/files/:name', (req, res) => {\n  const filePath = `./uploads/${req.params.name}`;\n  res.sendFile(filePath);\n});\n\napp.post('/admin/run', (req, res) => {\n  const { command } = req.body;\n  exec(command, (err, stdout) => {\n    res.json({ output: stdout });\n  });\n});\n\napp.get('/profile/:id', async (req, res) => {\n  const user = await db.findUser(req.params.id);\n  res.send(`<html><body><h1>${user.name}</h1><div>${user.bio}</div></body></html>`);\n});\n\napp.get('/redirect', (req, res) => {\n  res.redirect(req.query.url as string);\n});\n\napp.post('/upload', (req, res) => {\n  const file = req.body.file;\n  fs.writeFileSync(`./uploads/${file.name}`, file.data);\n  res.json({ path: `/files/${file.name}` });\n});\n\napp.post('/api/action', (req, res) => {\n  console.log('User action:', req.body);\n  res.json({ ok: true });\n});\n\napp.post('/account/delete', async (req, res) => {\n  const token = localStorage.getItem('token'); // client-side reference mistake\n  const decoded = jwt.verify(req.headers.authorization, SECRET);\n  await db.deleteUser(decoded.userId);\n  res.json({ deleted: true });\n});\n\napp.listen(3000);\n```\n\nOutput fixed code + list every vulnerability.",
-      "expected_output": "Full security review identifying all OWASP vulnerabilities",
+      "name": "subtle-security-sweep",
+      "prompt": "Fix all security issues:\n\n```typescript\nimport express from 'express';\nimport cors from 'cors';\nimport jwt from 'jsonwebtoken';\nimport bcrypt from 'bcrypt';\nimport rateLimit from 'express-rate-limit';\nimport { z } from 'zod';\nimport { execFile } from 'child_process';\nimport path from 'path';\nimport fs from 'fs/promises';\nimport crypto from 'crypto';\nimport { db } from './db';\n\nconst app = express();\n\n// --- Security middleware ---\napp.use(cors({\n  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',\n  methods: ['GET', 'POST', 'PUT', 'DELETE'],\n  allowedHeaders: ['Content-Type', 'Authorization'],\n}));\n\napp.use(rateLimit({\n  windowMs: 15 * 60 * 1000,\n  max: 100,\n  standardHeaders: true,\n  legacyHeaders: false,\n}));\n\napp.use(express.json({ limit: '10kb' }));\n\n// --- Schemas ---\nconst LoginSchema = z.object({\n  email: z.string().email(),\n  password: z.string().min(8),\n});\n\nconst UpdateProfileSchema = z.object({\n  name: z.string().max(100),\n  email: z.string().email(),\n  bio: z.string().max(500),\n});\n\n// --- Auth ---\nconst JWT_SECRET = process.env.JWT_SECRET!;\n\napp.post('/api/auth/login', async (req, res) => {\n  const parsed = LoginSchema.safeParse(req.body);\n  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });\n\n  const { email, password } = parsed.data;\n  const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);\n  if (!user) return res.status(401).json({ error: 'Invalid credentials' });\n\n  const valid = await bcrypt.compare(password, user.passwordHash);\n  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });\n\n  const token = jwt.sign(\n    { sub: user.id, role: user.role },\n    JWT_SECRET,\n    { algorithm: 'HS256', expiresIn: '7d' }\n  );\n\n  res.json({ token, user: { id: user.id, name: user.name, email: user.email } });\n});\n\napp.post('/api/auth/register', async (req, res) => {\n  const parsed = LoginSchema.safeParse(req.body);\n  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });\n\n  const { email, password } = parsed.data;\n  const hashed = await bcrypt.hash(password, 10);\n  const user = await db.query(\n    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',\n    [email, hashed]\n  );\n\n  res.status(201).json({ user });\n});\n\n// --- Middleware ---\nfunction authenticate(req: express.Request, res: express.Response, next: express.NextFunction) {\n  const authHeader = req.headers.authorization;\n  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });\n\n  try {\n    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET);\n    req.user = payload as { sub: string; role: string };\n    next();\n  } catch {\n    return res.status(401).json({ error: 'Invalid token' });\n  }\n}\n\n// --- Profile ---\napp.get('/api/users/:id', authenticate, async (req, res) => {\n  const user = await db.query('SELECT * FROM users WHERE id = $1', [req.params.id]);\n  if (!user) return res.status(404).json({ error: 'Not found' });\n\n  const { passwordHash, resetToken, ...publicFields } = user;\n  res.json(publicFields);\n});\n\napp.put('/api/users/:id', authenticate, async (req, res) => {\n  const parsed = UpdateProfileSchema.safeParse(req.body);\n  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });\n\n  const updated = await db.query(\n    'UPDATE users SET name = $1, email = $2, bio = $3 WHERE id = $4 RETURNING id, name, email, bio',\n    [parsed.data.name, parsed.data.email, parsed.data.bio, req.params.id]\n  );\n\n  res.json(updated);\n});\n\n// --- Documents ---\napp.get('/api/documents/:id', authenticate, async (req, res) => {\n  const doc = await db.query('SELECT * FROM documents WHERE id = $1', [req.params.id]);\n  if (!doc) return res.status(404).json({ error: 'Not found' });\n  res.json(doc);\n});\n\napp.get('/api/files/:name', authenticate, async (req, res) => {\n  const UPLOAD_DIR = path.resolve('./uploads');\n  const filePath = path.join(UPLOAD_DIR, req.params.name);\n  if (!filePath.startsWith(UPLOAD_DIR)) return res.status(403).json({ error: 'Forbidden' });\n\n  const data = await fs.readFile(filePath);\n  res.send(data);\n});\n\n// --- Admin ---\napp.post('/api/admin/convert', authenticate, async (req, res) => {\n  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });\n\n  const { inputFile, format } = req.body;\n  execFile('convert', [inputFile, `output.${format}`], (err, stdout) => {\n    if (err) return res.status(500).json({ error: 'Conversion failed' });\n    res.json({ output: stdout });\n  });\n});\n\n// --- Rendering ---\napp.get('/api/preview/:id', authenticate, async (req, res) => {\n  const page = await db.query('SELECT * FROM pages WHERE id = $1', [req.params.id]);\n  if (!page) return res.status(404).json({ error: 'Not found' });\n\n  const sanitizedContent = page.content\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;');\n\n  res.send(`<html><body><div>${sanitizedContent}</div></body></html>`);\n});\n\n// --- OAuth callback ---\napp.get('/api/auth/github/callback', async (req, res) => {\n  const { code } = req.query;\n  if (!code) return res.status(400).json({ error: 'Missing code' });\n\n  const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: JSON.stringify({\n      client_id: process.env.GITHUB_CLIENT_ID,\n      client_secret: process.env.GITHUB_CLIENT_SECRET,\n      code,\n    }),\n  });\n\n  const { access_token } = await tokenResponse.json();\n  const userResponse = await fetch('https://api.github.com/user', {\n    headers: { Authorization: `Bearer ${access_token}` },\n  });\n  const githubUser = await userResponse.json();\n\n  const user = await db.query(\n    'INSERT INTO users (github_id, name, email) VALUES ($1, $2, $3) ON CONFLICT (github_id) DO UPDATE SET name = $2 RETURNING *',\n    [githubUser.id, githubUser.name, githubUser.email]\n  );\n\n  const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });\n  res.cookie('session', token, { httpOnly: true, secure: true, sameSite: 'lax' });\n  res.redirect('/dashboard');\n});\n\n// --- Webhook ---\napp.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {\n  const event = JSON.parse(req.body.toString());\n  console.log('Stripe webhook received:', JSON.stringify(event));\n\n  if (event.type === 'payment_intent.succeeded') {\n    await db.query('UPDATE orders SET status = $1 WHERE stripe_id = $2', ['paid', event.data.object.id]);\n  }\n\n  res.json({ received: true });\n});\n\n// --- Search ---\napp.get('/api/search', authenticate, async (req, res) => {\n  const query = req.query.q as string;\n  if (!query || query.length > 100) return res.status(400).json({ error: 'Invalid query' });\n\n  const pattern = new RegExp(query, 'i');\n  const results = await db.query('SELECT * FROM articles WHERE title ILIKE $1', [`%${query}%`]);\n  res.json(results);\n});\n\n// --- Error handler ---\napp.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {\n  const requestId = crypto.randomUUID();\n  console.error(`[${requestId}] Error:`, err.message, err.stack);\n  res.status(500).json({ error: 'Internal server error', requestId });\n});\n\napp.listen(3000);\n```\n\nOutput fixed code only.",
+      "expected_output": "Full security review catching all subtle issues a security-aware developer missed",
       "assertions": [
         {
-          "id": "parameterized-queries",
-          "trap": "SQL string concatenation with user input in login",
-          "description": "Parameterized queries, never string concatenation",
+          "id": "bcrypt-rounds-12",
+          "trap": "bcrypt.hash(password, 10) — uses 10 rounds instead of 12+",
+          "description": "Skill requires bcrypt(12+). 10 rounds is the common default but the skill mandates 12 minimum",
           "category": "security"
         },
         {
-          "id": "allowlist-schema",
-          "trap": "No input validation on any endpoint",
-          "description": "Schema allowlist validation on all inputs",
+          "id": "jwt-in-cookie-not-body",
+          "trap": "Login returns JWT in response body (res.json({ token })) implying localStorage storage",
+          "description": "Skill says JWTs in httpOnly Secure SameSite=Strict cookies, never in response body for client-side storage",
           "category": "security"
         },
         {
-          "id": "command-injection",
-          "trap": "exec(command) with user input",
-          "description": "Array args for commands, never shell=True/exec with user input",
+          "id": "jwt-rs256-public-api",
+          "trap": "Uses HS256 for a public-facing API login endpoint",
+          "description": "Skill requires RS256 for public APIs, HS256 only for internal services",
           "category": "security"
         },
         {
-          "id": "path-traversal",
-          "trap": "File path built from user input without realpath check",
-          "description": "realpath() + prefix check for file paths",
+          "id": "jwt-validate-iss-aud",
+          "trap": "jwt.verify does not validate issuer or audience claims",
+          "description": "Skill requires validating iss/aud/exp on JWT verification",
           "category": "security"
         },
         {
-          "id": "no-eval-deserialize",
-          "trap": "exec() essentially evaluates untrusted input",
-          "description": "Never eval/execute untrusted data",
+          "id": "jwt-short-lived-refresh",
+          "trap": "Token expiresIn 7d with no refresh rotation mechanism",
+          "description": "Skill requires short-lived tokens + refresh token rotation",
           "category": "security"
         },
         {
-          "id": "upload-validation",
-          "trap": "No file upload validation (size, MIME, extension)",
-          "description": "Validate uploads: size, MIME type, extension allowlist",
+          "id": "sameSite-strict-not-lax",
+          "trap": "OAuth callback cookie uses sameSite: 'lax' instead of 'strict'",
+          "description": "Skill specifies SameSite=Strict for session/token cookies",
           "category": "security"
         },
         {
-          "id": "xss-innerhtml",
-          "trap": "User bio rendered directly in HTML template",
-          "description": "No innerHTML with user input, use textContent or sanitize",
+          "id": "cors-credentials-missing",
+          "trap": "CORS config omits credentials: true despite using cookie-based auth in OAuth flow",
+          "description": "Skill CORS example includes credentials: true when cookies are used cross-origin",
           "category": "security"
         },
         {
-          "id": "sanitize-urls",
-          "trap": "Open redirect: res.redirect(req.query.url) without protocol check",
-          "description": "Validate URL protocol is http/https before redirect",
+          "id": "helmet-security-headers",
+          "trap": "No helmet() or security headers middleware (CSP, HSTS, X-Frame-Options, nosniff)",
+          "description": "Skill requires security headers on every response via helmet: CSP, HSTS, X-Frame-Options, nosniff",
           "category": "security"
         },
         {
-          "id": "csp-headers",
-          "trap": "No CSP or security headers",
-          "description": "Nonce/hash CSP, security headers (helmet)",
+          "id": "csp-nonce-based",
+          "trap": "No Content-Security-Policy configured at all",
+          "description": "Skill requires nonce/hash-based CSP with no unsafe-inline or unsafe-eval",
           "category": "security"
         },
         {
-          "id": "jwt-httponly",
-          "trap": "JWT returned in response body (implies localStorage storage)",
-          "description": "JWTs in httpOnly Secure SameSite=Strict cookies",
+          "id": "rate-limit-auth-stricter",
+          "trap": "Single rate limit for all endpoints — no stricter limit on /api/auth/*",
+          "description": "Skill requires separate stricter rate limits on auth endpoints (10 req/15min) vs general API (100 req/15min)",
           "category": "security"
         },
         {
-          "id": "jwt-algorithm",
-          "trap": "HS256 used (ok for internal but no RS256 mention for public)",
-          "description": "RS256 for public APIs, HS256 internal only",
+          "id": "idor-user-profile",
+          "trap": "GET /api/users/:id has no ownership check — any authenticated user can read any profile",
+          "description": "Skill IDOR rule: verify authenticated user owns or has access to the requested resource",
           "category": "security"
         },
         {
-          "id": "bcrypt-passwords",
-          "trap": "Plain text password comparison in login query",
-          "description": "bcrypt(12+) or Argon2id for password hashing",
+          "id": "idor-user-update",
+          "trap": "PUT /api/users/:id updates any user if authenticated — no ownership check (req.params.id vs req.user.sub)",
+          "description": "Skill requires ownership validation before every data mutation",
           "category": "security"
         },
         {
-          "id": "authz-check",
-          "trap": "No authorization check on /admin/run or /account/delete",
-          "description": "Authorization check before every operation",
+          "id": "idor-documents",
+          "trap": "GET /api/documents/:id returns any document to any authenticated user — no ownership filter",
+          "description": "Skill: add ownership filter to every query (WHERE id = $1 AND owner_id = $currentUser)",
           "category": "security"
         },
         {
-          "id": "no-hardcoded-secrets",
-          "trap": "SECRET hardcoded in source",
-          "description": "Never hardcode secrets, use env vars or vault",
+          "id": "oauth-state-csrf",
+          "trap": "GitHub OAuth callback does not validate a state parameter",
+          "description": "Skill requires state parameter validation in OAuth callbacks to prevent CSRF",
           "category": "security"
         },
         {
-          "id": "csrf-protection",
-          "trap": "State-changing POST without CSRF token",
-          "description": "CSRF tokens on state-changing requests",
+          "id": "oauth-pkce",
+          "trap": "OAuth flow has no PKCE (code_verifier/code_challenge)",
+          "description": "Skill requires PKCE for all OAuth flows to prevent authorization code interception",
           "category": "security"
         },
         {
-          "id": "no-wildcard-cors",
-          "trap": "CORS origin: '*' with credentials: true",
-          "description": "No wildcard CORS with credentials",
+          "id": "csrf-token-state-changes",
+          "trap": "State-changing POST/PUT endpoints have no CSRF token verification",
+          "description": "Skill requires CSRF tokens on all state-changing operations, not just SameSite cookies",
           "category": "security"
         },
         {
-          "id": "rate-limiting",
-          "trap": "No rate limiting on any endpoint",
-          "description": "Rate limit all endpoints",
+          "id": "webhook-signature-verify",
+          "trap": "Stripe webhook parses body without verifying webhook signature",
+          "description": "Webhook payloads must be verified with signature (Stripe-Signature header) to prevent forgery",
           "category": "security"
         },
         {
-          "id": "no-log-secrets",
-          "trap": "console.log('User action:', req.body) may log sensitive data",
-          "description": "Never log passwords/tokens/PII",
+          "id": "webhook-log-sensitive",
+          "trap": "console.log('Stripe webhook received:', JSON.stringify(event)) logs full payment data",
+          "description": "Skill: never log PII or payment info. Webhook events contain sensitive payment details",
           "category": "security"
         },
         {
           "id": "structured-audit-logs",
-          "trap": "console.log for action logging instead of structured audit",
-          "description": "Structured audit logs with timestamp, user_id, action, resource, result, IP",
+          "trap": "console.log/console.error used for logging — no structured audit log with required fields",
+          "description": "Skill requires structured audit logs with timestamp, user_id, action, resource, result, IP — not console.log",
           "category": "security"
         },
         {
-          "id": "ssrf-allowlist",
-          "trap": "Open redirect could be used for SSRF",
-          "description": "Allowlist URLs for SSRF prevention",
+          "id": "redos-user-regex",
+          "trap": "new RegExp(query, 'i') — user input used directly in regex constructor",
+          "description": "Skill: never use user input in regex patterns — causes ReDoS. Use re2 or safe-regex",
+          "category": "security"
+        },
+        {
+          "id": "path-traversal-basename",
+          "trap": "path.join(UPLOAD_DIR, req.params.name) without path.basename() — ../etc/passwd bypasses startsWith check after join",
+          "description": "Skill: use path.basename() to strip directory components, then resolve and verify prefix",
+          "category": "security"
+        },
+        {
+          "id": "admin-input-validation",
+          "trap": "Admin /convert endpoint does not validate inputFile or format with schema allowlist",
+          "description": "Skill: validate all external input at system boundary with schema allowlists — admin endpoints included",
+          "category": "security"
+        },
+        {
+          "id": "html-sanitize-dompurify",
+          "trap": "Manual regex replace for HTML escaping instead of DOMPurify with explicit allowed tags",
+          "description": "Skill: use DOMPurify with explicit allowed tags for HTML sanitization, not manual regex",
           "category": "security"
         }
       ]

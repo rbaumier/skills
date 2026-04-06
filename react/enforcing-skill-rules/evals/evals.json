@@ -4,199 +4,223 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\n// app/dashboard/page.tsx\nimport { cookies } from 'next/headers';\nimport { DashboardClient } from './dashboard-client';\n\nexport default async function DashboardPage() {\n  const session = cookies().get('session');\n  const user = await fetchUser(session?.value);\n  const orders = await fetchOrders(user.id);\n  const analytics = await fetchAnalytics(user.id);\n\n  return <DashboardClient user={user} orders={orders} analytics={analytics} />;\n}\n\nasync function fetchUser(sessionId: string) {\n  return db.user.find(sessionId);\n}\n\nasync function fetchAnalytics(userId: string) {\n  return db.analytics.find(userId);\n}\n\n// dashboard-client.tsx\n'use client';\nimport React, { useState, useEffect, useMemo, useCallback } from 'react';\nimport { formatDate, parseQuery, debounce } from '@/utils';\nimport { Chart } from '@/components';\n\nexport function DashboardClient({ user, orders, analytics }) {\n  const [selectedTab, setSelectedTab] = useState('orders');\n  const [loading, setLoading] = useState(false);\n  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });\n\n  useEffect(() => {\n    // runs like componentDidMount\n    initDashboard();\n  }, []);\n\n  useEffect(() => {\n    const handler = (e) => setMousePos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('mousemove', handler);\n    return () => window.removeEventListener('mousemove', handler);\n  }, []);\n\n  const [totalRevenue, setTotalRevenue] = useState(0);\n  useEffect(() => {\n    setTotalRevenue(orders.reduce((sum, o) => sum + o.total, 0));\n  }, [orders]);\n\n  const tabLabel = useMemo(() => selectedTab.toUpperCase(), [selectedTab]);\n\n  useEffect(() => {\n    trackPageView(user);\n  }, [user]);\n\n  const handleExport = async () => {\n    setLoading(true);\n    try {\n      const data = await exportDashboard(user.id);\n      download(data);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n\n  const categories = ['electronics', 'clothing', 'food'];\n  const enrichedOrders = orders.map(order => ({\n    ...order,\n    category: categories.find(c => c === order.categoryId),\n  }));\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\n  const uniqueTags = orders\n    .flatMap(o => o.tags)\n    .filter((v, i, a) => a.indexOf(v) === i);\n\n  const activeHighValue = orders\n    .filter(o => o.status === 'active')\n    .map(o => o.total)\n    .filter(t => t > 100)\n    .reduce((sum, t) => sum + t, 0);\n\n  // Toggle handler updates count directly instead of functional setState\n  const [count, setCount] = useState(0);\n  const increment = useCallback(() => setCount(count + 1), [count]);\n\n  // Interaction logic in effect instead of event handler\n  const [searchQuery, setSearchQuery] = useState('');\n  useEffect(() => {\n    if (searchQuery) {\n      fetch(`/api/search?q=${searchQuery}`).then(r => r.json()).then(setResults);\n    }\n  }, [searchQuery]);\n\n  // Non-primitive default prop recreated every render\n  const OrderList = ({ filters = { status: 'active', sort: 'date' } }) => {\n    return <div>{JSON.stringify(filters)}</div>;\n  };\n\n  // Subscribing to full store object instead of derived boolean\n  const store = useStore(state => state);\n  const isAdmin = store.role === 'admin';\n\n  // Expensive subtree not memoized\n  const renderChart = () => {\n    return <Chart data={analytics.timeSeries} config={analytics.chartConfig} />;\n  };\n\n  // Callback in effect dep recreated every render\n  const onMessage = useCallback((msg) => {\n    console.log(user.name, msg);\n  }, [user.name]);\n  useEffect(() => {\n    socket.on('message', onMessage);\n    return () => socket.off('message', onMessage);\n  }, [onMessage]);\n\n  // Reading localStorage on every render\n  const theme = localStorage.getItem('theme') || 'light';\n  const lang = sessionStorage.getItem('lang') || 'en';\n\n  // Static JSX recreated every render inside component\n  const footer = (\n    <footer>\n      <p>© 2024 Dashboard Inc. All rights reserved.</p>\n      <a href=\"/privacy\">Privacy Policy</a>\n    </footer>\n  );\n\n  // Mutating array with sort instead of toSorted\n  const sortedOrders = [...orders].sort((a, b) => a.date - b.date);\n  const reversedOrders = [...orders].reverse();\n\n  return (\n    <div>\n      <h1>{tabLabel}</h1>\n      {loading && <Spinner />}\n      <button onClick={handleExport}>Export</button>\n      {orders.map((order, i) => (\n        <div key={i}>\n          {order.isAdmin && <AdminPanel />}\n          <span>{order.name}</span>\n        </div>\n      ))}\n      {renderChart()}\n      {footer}\n    </div>\n  );\n}\n\nimport HeavyModal from './heavy-modal';\n\nexport function ModalTrigger() {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Open</button>\n      {open && <HeavyModal />}\n    </>\n  );\n}\n\n// app/products/page.tsx — no Suspense boundaries, no streaming\nexport default async function ProductsPage() {\n  const products = await fetchProducts();\n  const reviews = await fetchReviews();\n  return (\n    <div>\n      <ProductList products={products} />\n      <ReviewSection reviews={reviews} />\n    </div>\n  );\n}\n\n// app/layout.tsx — third-party script loaded eagerly\nimport Script from 'next/script';\n\nexport default function RootLayout({ children }) {\n  return (\n    <html>\n      <head>\n        <Script src=\"https://analytics.example.com/tracker.js\" />\n      </head>\n      <body>{children}</body>\n    </html>\n  );\n}\n\n// app/feed/page.tsx — client component fetches same data multiple times\n'use client';\nimport { useEffect, useState } from 'react';\n\nexport function FeedPage() {\n  const [posts, setPosts] = useState([]);\n  const [trending, setTrending] = useState([]);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(setPosts);\n  }, []);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(data => {\n      setTrending(data.filter(p => p.trending));\n    });\n  }, []);\n\n  return (\n    <div>\n      <PostList posts={posts} />\n      <TrendingSidebar posts={trending} />\n    </div>\n  );\n}\n```\n\nOutput fixed code + list every issue.",
+      "prompt": "Fix all issues:\n\n```tsx\n// app/layout.tsx\nimport { cookies } from 'next/headers';\nimport Script from 'next/script';\nimport { ThemeProvider } from './theme-provider';\n\nexport default async function RootLayout({ children }: { children: React.ReactNode }) {\n  const session = (await cookies()).get('session');\n  const theme = session?.value === 'dark' ? 'dark' : 'light';\n\n  return (\n    <html>\n      <head>\n        <Script src=\"https://analytics.thirdparty.io/v3/track.js\" />\n      </head>\n      <body>\n        <ThemeProvider theme={theme}>{children}</ThemeProvider>\n      </body>\n    </html>\n  );\n}\n\n// app/projects/page.tsx\nimport { getUser } from '@/lib/data';\nimport { getProjects } from '@/lib/data';\nimport { getNotifications } from '@/lib/data';\nimport { ProjectDashboard } from './project-dashboard';\n\nexport default async function ProjectsPage() {\n  const user = await getUser();\n  const projects = await getProjects(user.teamId);\n  const notifications = await getNotifications(user.id);\n\n  return (\n    <ProjectDashboard\n      user={user}\n      projects={projects}\n      notifications={notifications}\n    />\n  );\n}\n\nasync function logPageView(userId: string) {\n  await db.analytics.insert({ userId, page: 'projects', ts: Date.now() });\n}\n\n// app/projects/project-dashboard.tsx\n'use client';\nimport React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';\nimport { formatCurrency, cn, slugify, truncate } from '@/lib/utils';\nimport { Chart } from '@/components';\n\ninterface Project {\n  id: string;\n  name: string;\n  budget: number;\n  status: 'active' | 'archived' | 'draft';\n  ownerId: string;\n  tags: string[];\n  createdAt: string;\n  categoryId: string;\n}\n\ninterface User {\n  id: string;\n  name: string;\n  email: string;\n  role: string;\n  teamId: string;\n}\n\nconst categories = [\n  { id: 'eng', label: 'Engineering' },\n  { id: 'design', label: 'Design' },\n  { id: 'marketing', label: 'Marketing' },\n  { id: 'sales', label: 'Sales' },\n  { id: 'ops', label: 'Operations' },\n];\n\nexport function ProjectDashboard({ user, projects, notifications }: {\n  user: User;\n  projects: Project[];\n  notifications: Notification[];\n}) {\n  const [filter, setFilter] = useState('');\n  const [selectedProject, setSelectedProject] = useState<string | null>(null);\n\n  const [activeBudget, setActiveBudget] = useState(0);\n  useEffect(() => {\n    const total = projects\n      .filter(p => p.status === 'active')\n      .reduce((sum, p) => sum + p.budget, 0);\n    setActiveBudget(total);\n  }, [projects]);\n\n  const [sortedProjects, setSortedProjects] = useState<Project[]>([]);\n  useEffect(() => {\n    const sorted = [...projects].sort((a, b) =>\n      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()\n    );\n    setSortedProjects(sorted);\n  }, [projects]);\n\n  const enrichedProjects = projects.map(project => ({\n    ...project,\n    categoryLabel: categories.find(c => c.id === project.categoryId)?.label ?? 'Unknown',\n  }));\n\n  const allTags = projects\n    .flatMap(p => p.tags)\n    .filter((tag, idx, arr) => arr.indexOf(tag) === idx);\n\n  const highBudgetActive = projects\n    .filter(p => p.status === 'active')\n    .map(p => ({ name: p.name, budget: p.budget }))\n    .filter(p => p.budget > 50000)\n    .map(p => p.name);\n\n  useEffect(() => {\n    trackView(user);\n  }, [user]);\n\n  const handleSearch = useCallback((query: string) => {\n    setFilter(query);\n  }, []);\n\n  const filtered = enrichedProjects.filter(p =>\n    p.name.toLowerCase().includes(filter.toLowerCase())\n  );\n\n  const store = useProjectStore(state => state);\n  const canEdit = store.permissions.includes('edit');\n  const canDelete = store.permissions.includes('delete');\n\n  const budgetFormatter = useMemo(\n    () => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),\n    []\n  );\n\n  const statusLabel = useMemo(() => {\n    if (!selectedProject) return 'None';\n    const p = projects.find(p => p.id === selectedProject);\n    return p?.status?.toUpperCase() ?? 'UNKNOWN';\n  }, [selectedProject, projects]);\n\n  const projectNameSlug = useMemo(\n    () => filter.trim().toLowerCase().replace(/\\s+/g, '-'),\n    [filter]\n  );\n\n  const onProjectUpdate = useCallback((update: ProjectUpdate) => {\n    console.log(`Project update by ${user.name}:`, update);\n    sendAnalytics(user.id, update);\n  }, [user.name, user.id]);\n\n  useEffect(() => {\n    const ws = new WebSocket('/ws/projects');\n    ws.onmessage = (e) => onProjectUpdate(JSON.parse(e.data));\n    return () => ws.close();\n  }, [onProjectUpdate]);\n\n  const [savedTheme, setSavedTheme] = useState(localStorage.getItem('projectTheme') || 'default');\n\n  const [windowWidth, setWindowWidth] = useState(window.innerWidth);\n  useEffect(() => {\n    const handler = () => setWindowWidth(window.innerWidth);\n    window.addEventListener('resize', handler);\n    return () => window.removeEventListener('resize', handler);\n  }, []);\n\n  const urlPattern = /https?:\\/\\/[^\\s/$.?#].[^\\s]*/gi;\n\n  const footer = (\n    <footer className=\"border-t mt-8 pt-4 text-sm text-gray-500\">\n      <p>© 2025 ProjectHub. All rights reserved.</p>\n      <nav>\n        <a href=\"/terms\">Terms</a>\n        <a href=\"/privacy\">Privacy</a>\n      </nav>\n    </footer>\n  );\n\n  const orderedByBudget = [...projects].sort((a, b) => b.budget - a.budget);\n  const reversedProjects = [...projects].reverse();\n\n  const [count, setCount] = useState(0);\n  const increment = useCallback(() => setCount(count + 1), [count]);\n  const decrement = useCallback(() => setCount(count - 1), [count]);\n\n  return (\n    <div>\n      <header>\n        <h1>Projects — {statusLabel}</h1>\n        <span>Budget: {budgetFormatter.format(activeBudget)}</span>\n        <span>Slug: {projectNameSlug}</span>\n        <div>\n          <button onClick={increment}>+</button>\n          <span>{count}</span>\n          <button onClick={decrement}>-</button>\n        </div>\n      </header>\n\n      <input\n        value={filter}\n        onChange={e => handleSearch(e.target.value)}\n        placeholder=\"Search projects...\"\n      />\n\n      <section>\n        {filtered.map((project, index) => (\n          <div key={index} onClick={() => setSelectedProject(project.id)}>\n            <h3>{project.name}</h3>\n            <span>{project.categoryLabel}</span>\n            <span>{budgetFormatter.format(project.budget)}</span>\n            {project.status === 'draft' && <DraftBadge />}\n            {canEdit && <EditButton projectId={project.id} />}\n          </div>\n        ))}\n      </section>\n\n      <aside>\n        <h2>Tags</h2>\n        {allTags.map(tag => <span key={tag}>{tag}</span>)}\n      </aside>\n\n      <ProjectChart data={projects} config={{ animate: true }} />\n\n      {footer}\n    </div>\n  );\n}\n\nfunction ProjectChart({ data, config }: { data: Project[]; config: ChartConfig }) {\n  return <Chart data={data} config={config} />;\n}\n\n// app/projects/export-modal.tsx\nimport ExportWizard from './export-wizard';\n\nexport function ExportTrigger() {\n  const [open, setOpen] = useState(false);\n  const [exporting, setExporting] = useState(false);\n\n  const handleExport = async () => {\n    setExporting(true);\n    try {\n      await runExport();\n    } finally {\n      setExporting(false);\n    }\n  };\n\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>\n        {exporting ? 'Exporting...' : 'Export'}\n      </button>\n      {open && <ExportWizard onExport={handleExport} onClose={() => setOpen(false)} />}\n    </>\n  );\n}\n\n// app/projects/settings/page.tsx\nimport { useSearchParams } from 'next/navigation';\n\nexport default function ProjectSettingsPage() {\n  const searchParams = useSearchParams();\n  const tab = searchParams.get('tab') || 'general';\n\n  return (\n    <div>\n      <h1>Settings</h1>\n      <TabPanel activeTab={tab} />\n    </div>\n  );\n}\n\n// app/feed/page.tsx\n'use client';\nimport { useEffect, useState } from 'react';\n\nexport function FeedPage() {\n  const [posts, setPosts] = useState([]);\n  const [trending, setTrending] = useState([]);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(setPosts);\n  }, []);\n\n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(data => {\n      setTrending(data.filter((p: any) => p.trending));\n    });\n  }, []);\n\n  return (\n    <div>\n      <PostList posts={posts} />\n      <TrendingSidebar posts={trending} />\n    </div>\n  );\n}\n\n// app/actions/project-actions.ts\n'use server';\n\nexport async function updateProject(formData: FormData) {\n  const name = formData.get('name') as string;\n  const budget = Number(formData.get('budget'));\n  const status = formData.get('status') as string;\n  await db.projects.update({ name, budget, status });\n  return { success: true };\n}\n\nexport async function deleteProject(formData: FormData) {\n  const projectId = formData.get('projectId') as string;\n  await db.projects.delete(projectId);\n  return { success: true };\n}\n\n// app/projects/edit-form.tsx\n'use client';\nimport { useState } from 'react';\n\nexport function ProjectEditForm({ project }: { project: Project }) {\n  const [pending, setPending] = useState(false);\n  const [error, setError] = useState('');\n  const [success, setSuccess] = useState(false);\n\n  async function handleSubmit(e: React.FormEvent) {\n    e.preventDefault();\n    setPending(true);\n    setError('');\n    try {\n      await updateProject(new FormData(e.target as HTMLFormElement));\n      setSuccess(true);\n    } catch (err) {\n      setError('Update failed');\n    } finally {\n      setPending(false);\n    }\n  }\n\n  return (\n    <form onSubmit={handleSubmit}>\n      <input name=\"name\" defaultValue={project.name} />\n      <input name=\"budget\" type=\"number\" defaultValue={project.budget} />\n      <select name=\"status\" defaultValue={project.status}>\n        <option value=\"active\">Active</option>\n        <option value=\"archived\">Archived</option>\n        <option value=\"draft\">Draft</option>\n      </select>\n      <button type=\"submit\" disabled={pending}>\n        {pending ? 'Saving...' : 'Save'}\n      </button>\n      {error && <p className=\"text-red-500\">{error}</p>}\n      {success && <p className=\"text-green-500\">Saved!</p>}\n    </form>\n  );\n}\n\n// app/projects/team-list.tsx\n'use client';\nimport { useState } from 'react';\n\nexport function TeamList({ members }: { members: TeamMember[] }) {\n  const [editingId, setEditingId] = useState<string | null>(null);\n\n  return (\n    <ul>\n      {members.map((member, i) => (\n        <li key={i}>\n          {editingId === member.id ? (\n            <MemberEditForm member={member} onDone={() => setEditingId(null)} />\n          ) : (\n            <MemberCard member={member} onEdit={() => setEditingId(member.id)} />\n          )}\n        </li>\n      ))}\n    </ul>\n  );\n}\n```\n\nOutput fixed code only.",
       "expected_output": "Full review fixing all react skill rules",
       "assertions": [
         {
-          "id": "parallel-fetches",
-          "trap": "Sequential await fetchUser/fetchOrders/fetchAnalytics",
-          "description": "Parallelize independent fetches with Promise.all / start-early-await-late",
-          "category": "behavior"
-        },
-        {
-          "id": "react-cache",
-          "trap": "fetchUser/fetchAnalytics not wrapped in React.cache()",
-          "description": "React.cache() for per-request deduplication in server components",
-          "category": "behavior"
-        },
-        {
-          "id": "cookies-blast-radius",
-          "trap": "cookies() in page makes route dynamic",
-          "description": "Flag cookies()/headers() in layouts — explain dynamic blast radius",
+          "id": "cookies-layout-blast-radius",
+          "trap": "cookies() in layout makes ALL child routes dynamic — session check should be in page or middleware",
+          "description": "cookies()/headers() in layouts make every child page dynamic. Flag and explain the blast radius",
           "category": "gotcha"
         },
         {
-          "id": "no-derived-effect",
-          "trap": "useEffect to compute totalRevenue from orders",
-          "description": "Derive state during render, never in effects",
+          "id": "defer-third-party-script",
+          "trap": "Script tag without strategy prop loads eagerly and blocks rendering",
+          "description": "Defer third-party scripts with strategy='lazyOnload'",
           "category": "behavior"
         },
         {
-          "id": "no-premature-memo",
-          "trap": "useMemo for simple toUpperCase()",
-          "description": "Don't useMemo simple primitive expressions",
-          "category": "behavior"
-        },
-        {
-          "id": "primitive-deps",
-          "trap": "useEffect depends on user object, not user.id",
-          "description": "Primitive values as effect dependencies, not objects",
-          "category": "gotcha"
-        },
-        {
-          "id": "usestate-initializer",
-          "trap": "useState(window.innerWidth) crashes SSR",
-          "description": "useState(() => fn) initializer for SSR-unsafe/expensive defaults",
-          "category": "gotcha"
-        },
-        {
-          "id": "useTransition",
-          "trap": "Manual loading/setLoading boolean for async",
-          "description": "useTransition for non-urgent state updates instead of manual loading booleans",
-          "category": "behavior"
-        },
-        {
-          "id": "ref-for-mouse",
-          "trap": "useState for high-frequency mouse position",
-          "description": "useRef for transient high-frequency values (mouse position)",
-          "category": "behavior"
-        },
-        {
-          "id": "map-lookup",
-          "trap": "categories.find() inside orders.map() — O(n*m)",
-          "description": "Build Map/index for repeated collection lookups",
-          "category": "behavior"
-        },
-        {
-          "id": "set-dedup",
-          "trap": ".filter((v,i,a) => a.indexOf(v) === i) deduplication",
-          "description": "[...new Set(arr)] for deduplication",
-          "category": "behavior"
-        },
-        {
-          "id": "single-loop",
-          "trap": "Chained .filter().map().filter().reduce() on orders",
-          "description": "Combine chained filter/map/reduce into single loop for large arrays",
-          "category": "behavior"
-        },
-        {
-          "id": "hoist-regex",
-          "trap": "Regex created inside component",
-          "description": "Hoist RegExp creation outside component functions",
-          "category": "behavior"
-        },
-        {
-          "id": "ternary-conditional",
-          "trap": "{order.isAdmin && <AdminPanel />}",
-          "description": "Ternary operator for conditional rendering, not &&",
-          "category": "format"
-        },
-        {
-          "id": "dynamic-import",
-          "trap": "HeavyModal imported eagerly",
-          "description": "next/dynamic or React.lazy for heavy/rarely-used components",
+          "id": "barrel-file-imports",
+          "trap": "import { formatCurrency, cn, slugify, truncate } from '@/lib/utils' and import { Chart } from '@/components' are barrel file imports",
+          "description": "Import directly from specific modules, avoid barrel files that bundle unused code",
           "category": "architecture"
         },
         {
-          "id": "preload-hover",
-          "trap": "No preload on modal trigger hover",
-          "description": "Preload lazy-loaded components on hover/focus",
+          "id": "sequential-fetches-better-all",
+          "trap": "Sequential await getUser/getProjects/getNotifications where notifications is independent of projects",
+          "description": "Use better-all pattern: start independent fetches early, await late. getNotifications can start during getProjects",
           "category": "behavior"
         },
         {
-          "id": "minimize-rsc-serialization",
-          "trap": "All data passed from server to single client component",
-          "description": "Minimize data passed from server to client; avoid duplicate serialization",
+          "id": "react-cache-dedup",
+          "trap": "getUser/getProjects/getNotifications not wrapped in React.cache()",
+          "description": "Wrap server-side data fetching functions in React.cache() for per-request deduplication",
+          "category": "behavior"
+        },
+        {
+          "id": "no-suspense-streaming",
+          "trap": "ProjectsPage awaits all data sequentially before rendering anything — no progressive streaming",
+          "description": "Use Suspense boundaries to stream progressively instead of blocking on all data",
           "category": "architecture"
         },
         {
-          "id": "useEffect-not-cdm",
-          "trap": "Comment says 'runs like componentDidMount'",
-          "description": "useEffect with [] is NOT componentDidMount — runs after paint",
+          "id": "after-for-analytics",
+          "trap": "logPageView defined but analytics logging should use after() for non-blocking post-response work",
+          "description": "Use after() for non-blocking post-response work like analytics, logging",
+          "category": "behavior"
+        },
+        {
+          "id": "derived-state-activeBudget",
+          "trap": "useEffect to compute activeBudget from projects — classic derive-in-effect anti-pattern",
+          "description": "Derive state during render (const activeBudget = ...), never in effects",
+          "category": "behavior"
+        },
+        {
+          "id": "derived-state-sortedProjects",
+          "trap": "useEffect to compute sortedProjects — another derived state in effect with unnecessary extra render",
+          "description": "Derive sorted list during render or useMemo, not via effect + setState",
+          "category": "behavior"
+        },
+        {
+          "id": "map-lookup-categories",
+          "trap": "categories.find() inside projects.map() — O(n*m) lookup each render",
+          "description": "Build a Map from categories for O(1) lookups instead of .find() inside .map()",
+          "category": "behavior"
+        },
+        {
+          "id": "set-dedup-tags",
+          "trap": ".filter((tag, idx, arr) => arr.indexOf(tag) === idx) for deduplication",
+          "description": "Use [...new Set(arr)] instead of indexOf-based deduplication",
+          "category": "behavior"
+        },
+        {
+          "id": "single-loop-chain",
+          "trap": "Chained .filter().map().filter().map() on projects for highBudgetActive",
+          "description": "Combine chained filter/map/reduce into a single loop for large arrays",
+          "category": "behavior"
+        },
+        {
+          "id": "primitive-effect-deps-user",
+          "trap": "useEffect depends on user object reference, not user.id — fires on every render if user is a new object",
+          "description": "Use primitive values (user.id) as effect dependencies, not objects",
           "category": "gotcha"
         },
         {
-          "id": "content-visibility",
-          "trap": "Long list of orders rendered without virtualization hint",
-          "description": "content-visibility: auto for long off-screen lists",
+          "id": "subscribe-derived-not-full-store",
+          "trap": "useProjectStore(state => state) subscribes to entire store, only uses permissions",
+          "description": "Subscribe to derived values: useProjectStore(s => s.permissions) or derived booleans",
           "category": "behavior"
         },
         {
-          "id": "barrel-import",
-          "trap": "import { formatDate, parseQuery, debounce } from '@/utils' and import { Chart } from '@/components' — barrel file imports",
-          "description": "Import directly from modules, avoid barrel files",
-          "category": "architecture"
+          "id": "premature-usememo-slug",
+          "trap": "useMemo for a simple string trim/toLowerCase/replace — trivial computation",
+          "description": "Don't wrap simple primitive expressions in useMemo — only memoize genuinely expensive computations",
+          "category": "behavior"
         },
         {
-          "id": "functional-setState",
-          "trap": "setCount(count + 1) with count in useCallback deps — stale closure",
-          "description": "Use functional setState (setCount(c => c + 1)) for stable callbacks",
+          "id": "useLatest-ref-websocket",
+          "trap": "onProjectUpdate callback in effect dep causes WebSocket reconnect on every user.name/user.id change",
+          "description": "Store callback in ref (useLatest pattern) to avoid effect re-runs and WebSocket reconnections",
+          "category": "behavior"
+        },
+        {
+          "id": "useState-localstorage-ssr",
+          "trap": "useState(localStorage.getItem(...)) crashes in SSR — no lazy initializer",
+          "description": "Pass initializer function to useState for SSR-unsafe defaults: useState(() => localStorage.getItem(...))",
           "category": "gotcha"
         },
         {
-          "id": "interaction-in-handler",
-          "trap": "useEffect fires fetch on searchQuery change instead of event handler",
-          "description": "Put interaction logic in event handlers, not effects",
-          "category": "behavior"
-        },
-        {
-          "id": "hoist-default-props",
-          "trap": "Default prop { status: 'active', sort: 'date' } object recreated every render",
-          "description": "Hoist default non-primitive props outside render",
+          "id": "useState-window-ssr",
+          "trap": "useState(window.innerWidth) crashes in SSR — browser API in initial state",
+          "description": "Use lazy initializer useState(() => window.innerWidth) for SSR safety",
           "category": "gotcha"
         },
         {
-          "id": "subscribe-derived-boolean",
-          "trap": "useStore(state => state) subscribes to full store, only uses role",
-          "description": "Subscribe to derived booleans (useStore(s => s.role === 'admin')), not full objects",
-          "category": "behavior"
-        },
-        {
-          "id": "memoize-expensive-subtree",
-          "trap": "renderChart() inlined — expensive Chart subtree re-renders on every parent render",
-          "description": "Extract expensive subtrees into memoized components (React.memo)",
-          "category": "behavior"
-        },
-        {
-          "id": "useLatest-ref-pattern",
-          "trap": "onMessage callback in effect dep causes re-subscribe on every user.name change",
-          "description": "useLatest/ref pattern for stable callback references — store in ref to avoid effect re-runs",
-          "category": "behavior"
-        },
-        {
-          "id": "cache-storage-reads",
-          "trap": "localStorage.getItem/sessionStorage.getItem called on every render",
-          "description": "Cache localStorage/sessionStorage reads — read once into state or ref",
+          "id": "hoist-regex-outside",
+          "trap": "urlPattern regex created inside component body — recreated every render",
+          "description": "Hoist RegExp creation outside component functions as module-level constant",
           "category": "behavior"
         },
         {
           "id": "hoist-static-jsx",
-          "trap": "Static footer JSX recreated every render inside component",
-          "description": "Hoist static JSX outside component functions",
+          "trap": "Static footer JSX literal created inside component every render",
+          "description": "Hoist static JSX (footer) outside the component function",
           "category": "behavior"
         },
         {
-          "id": "immutable-array-transforms",
-          "trap": "[...orders].sort() and [...orders].reverse() instead of toSorted()/toReversed()",
+          "id": "toSorted-toReversed",
+          "trap": "[...projects].sort() and [...projects].reverse() instead of toSorted()/toReversed()",
           "description": "Use toSorted()/toReversed() for immutable array transforms",
-          "category": "format"
-        },
-        {
-          "id": "suspense-streaming",
-          "trap": "ProductsPage awaits all data before rendering — no Suspense boundaries",
-          "description": "Use Suspense boundaries to stream progressively",
           "category": "behavior"
         },
         {
-          "id": "defer-third-party-script",
-          "trap": "Script tag without strategy prop loads eagerly, blocks rendering",
-          "description": "Defer third-party scripts with strategy=\"lazyOnload\"",
+          "id": "functional-setState-stale",
+          "trap": "setCount(count + 1) with count in useCallback deps — stale closure, re-creates callback on every count change",
+          "description": "Use functional setState: setCount(c => c + 1) for stable callbacks without deps",
+          "category": "gotcha"
+        },
+        {
+          "id": "ternary-not-ampersand",
+          "trap": "{project.status === 'draft' && <DraftBadge />} could render false/undefined unexpectedly",
+          "description": "Use ternary operator (? : null) instead of && for conditional JSX rendering",
           "category": "behavior"
+        },
+        {
+          "id": "content-visibility-list",
+          "trap": "Project list renders many items via .map() without content-visibility optimization",
+          "description": "Add content-visibility: auto for long off-screen lists — free browser virtualization",
+          "category": "behavior"
+        },
+        {
+          "id": "dynamic-import-modal",
+          "trap": "ExportWizard imported eagerly at top level despite being conditionally rendered",
+          "description": "Use next/dynamic or React.lazy for heavy/rarely-used components like modals",
+          "category": "architecture"
+        },
+        {
+          "id": "preload-on-hover",
+          "trap": "Export button has no onMouseEnter/onFocus to preload the lazy modal chunk",
+          "description": "Trigger import() on hover/focus for lazy-loaded components to preload during ~200ms before click",
+          "category": "behavior"
+        },
+        {
+          "id": "useTransition-export",
+          "trap": "Manual useState(false) loading boolean for async export operation",
+          "description": "Use useTransition for non-urgent state updates instead of manual loading booleans",
+          "category": "behavior"
+        },
+        {
+          "id": "useSearchParams-suspense",
+          "trap": "useSearchParams() without Suspense boundary forces entire page to client-side render",
+          "description": "Wrap component using useSearchParams in a Suspense boundary to prevent CSR bailout",
+          "category": "gotcha"
         },
         {
           "id": "swr-client-dedup",
-          "trap": "FeedPage fetches /api/posts twice in separate useEffects",
-          "description": "Use SWR for client request deduplication",
+          "trap": "FeedPage fetches /api/posts twice in separate useEffects — duplicate network requests",
+          "description": "Use SWR for client-side request deduplication instead of raw fetch in effects",
+          "category": "behavior"
+        },
+        {
+          "id": "server-action-validation",
+          "trap": "updateProject and deleteProject trust FormData without Zod validation or auth checks",
+          "description": "Server actions are public HTTP endpoints — validate inputs with Zod, check auth/authz",
+          "category": "gotcha"
+        },
+        {
+          "id": "useActionState-form",
+          "trap": "ProjectEditForm uses manual useState for pending/error/success instead of useActionState",
+          "description": "useActionState (React 19) replaces manual form loading patterns — works with progressive enhancement",
+          "category": "behavior"
+        },
+        {
+          "id": "key-index-reorderable",
+          "trap": "TeamList uses key={i} on a list of members that can be edited/reordered",
+          "description": "Never use array index as key for dynamic lists — use stable id (member.id) to prevent state bugs",
+          "category": "gotcha"
+        },
+        {
+          "id": "key-index-projects",
+          "trap": "Project list uses key={index} on filtered/sortable list",
+          "description": "Use project.id as key — index keys cause state corruption when list is filtered or reordered",
+          "category": "gotcha"
+        },
+        {
+          "id": "minimize-rsc-serialization",
+          "trap": "All server data (user, projects, notifications) dumped into single client component",
+          "description": "Minimize data passed from server to client — split into smaller client components receiving only what they need",
+          "category": "architecture"
+        },
+        {
+          "id": "useDeferredValue-search",
+          "trap": "Search input filtering causes re-render of entire project list on every keystroke",
+          "description": "Use useDeferredValue for expensive re-renders during typing to keep input responsive",
+          "category": "behavior"
+        },
+        {
+          "id": "cache-localstorage-reads",
+          "trap": "localStorage.getItem called as useState initializer runs on every render path in dev",
+          "description": "Cache localStorage reads — read once into state with lazy initializer, not raw call",
           "category": "behavior"
         }
       ]

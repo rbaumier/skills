@@ -4,59 +4,219 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Fix all issues:\n\n```tsx\nimport React, { useState } from 'react';\n\nexport default function DashboardPage() {\n  const [x, setX] = useState(0); // drives animation\n\n  return (\n    <div className=\"h-screen bg-black\" style={{ fontFamily: 'Inter, sans-serif' }}>\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no\" />\n\n      <h1\n        className=\"text-8xl font-semibold text-center bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent\"\n      >\n        Elevate Your Workflow\n      </h1>\n      <p className=\"text-gray-500 text-sm leading-tight text-center\" style={{ fontSize: '1.5em' }}>\n        The CLI will be installed on your system.\n      </p>\n\n      <div className=\"grid grid-cols-3 gap-4 p-4 w-full\">\n        <div className=\"p-4 border border-gray-200 rounded-lg shadow-md\" style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>\n          <div className=\"p-3 border rounded-2xl shadow-sm\">\n            <label>Email:</label>\n            <input\n              className=\"outline-none border px-2 py-1 bg-white\"\n              onPaste={(e) => e.preventDefault()}\n              placeholder=\"john@example.com\"\n            />\n          </div>\n          <div className=\"mt-4 mb-4\">\n            <span className=\"text-6xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent\">2,847</span>\n            <p className=\"text-sm text-gray-400\">Total Users</p>\n          </div>\n          <div className=\"mt-4 mb-4\">\n            <span className=\"text-lg\">$1,234.56</span>\n            <span className=\"text-lg\" style={{ marginLeft: '16px' }}>$789.00</span>\n          </div>\n        </div>\n\n        <div className=\"p-4 border rounded-lg shadow-md\" style={{ borderRadius: '4px' }}>\n          <p className=\"text-blue-500\">Status: Active</p>\n          <p className=\"text-emerald-600\">Revenue: $5k</p>\n          <p className=\"text-purple-400\">Growth: 12%</p>\n          <p className=\"text-gray-500 font-medium\" style={{ maxWidth: '100%' }}>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minima veniam, quis nostrum exercitationem.</p>\n        </div>\n\n        <div className=\"p-4 border rounded-sm shadow-md\">\n          <img src=\"/avatar.png\" alt=\"User\" />\n          <p>John Doe</p>\n          <p>jane@example.com</p>\n        </div>\n      </div>\n\n      <div\n        className=\"card p-4 border rounded cursor-pointer\"\n        onClick={() => toggleNotifications()}\n      >\n        <span>Enable notifications</span>\n      </div>\n\n      <div className=\"flex gap-4\">\n        <button className=\"bg-blue-600 text-white px-6 py-2 rounded-lg font-bold\">\n          Save Settings\n        </button>\n        <button className=\"bg-blue-600 text-white px-6 py-2 rounded-lg\">\n          Export Data\n        </button>\n        <button className=\"bg-blue-600 text-white px-6 py-2 rounded-lg\">\n          Create Report\n        </button>\n        <button className=\"bg-red-600 text-white px-6 py-2 rounded-lg text-lg\">\n          Delete Account\n        </button>\n      </div>\n\n      <button className=\"p-1 w-4 h-4\">\n        <TrashIcon className=\"w-4 h-4\" />\n      </button>\n\n      <button\n        className=\"transition-all duration-300\"\n        style={{ animation: 'bounce 1s infinite' }}\n      >\n        <BellIcon />\n      </button>\n\n      <div className=\"custom-modal\" style={{ zIndex: 9999 }}>\n        <div style={{ zIndex: 10000 }}>\n          <p>Are you sure you want to enable dark mode?</p>\n          <button>Yes</button><button>No</button>\n        </div>\n      </div>\n\n      {items.map(item => (\n        <div key={item.id} className=\"p-4 border rounded-lg shadow-md mb-4\">\n          <span className=\"font-semibold\">{item.title}</span>\n          <span className=\"font-medium text-gray-600\">{item.description}</span>\n        </div>\n      ))}\n\n      <div>\n        <p className=\"text-gray-500\" style={{ background: '#dbeafe' }}>Info text on blue</p>\n      </div>\n\n      <p className=\"text-red-500 text-sm\">Invalid input</p>\n\n      <div className=\"empty-state\">\n        <p>No items found</p>\n      </div>\n\n      <style>{`\n        .card:hover { box-shadow: 0 8px 16px rgba(0,0,0,0.2); transition: box-shadow 0.3s; }\n        @font-face { font-family: 'CustomFont'; src: url('/font.woff2'); }\n        @keyframes slideIn {\n          from { left: -100px; opacity: 0; }\n          to { left: 0; opacity: 1; }\n        }\n        button:focus { outline: 2px solid blue; }\n      `}</style>\n\n      {/* console.log('debug render') */}\n      {/* TODO: fix layout */}\n    </div>\n  );\n}\n```\n\nOutput fixed code + list every issue.",
+      "prompt": "Fix all issues:\n\n```tsx\nimport { useState } from 'react';\nimport { Search, Bell, Settings, ChevronRight, Plus } from 'lucide-react';\n\ninterface Project {\n  id: string;\n  name: string;\n  status: 'active' | 'archived';\n  progress: number;\n  updatedAt: string;\n}\n\nexport default function ProjectsDashboard({ projects }: { projects: Project[] }) {\n  const [query, setQuery] = useState('');\n  const [showArchived, setShowArchived] = useState(false);\n\n  const filtered = projects.filter(p =>\n    p.name.toLowerCase().includes(query.toLowerCase()) &&\n    (showArchived || p.status === 'active')\n  );\n\n  return (\n    <div\n      className=\"min-h-[100dvh] bg-zinc-950 text-zinc-100 antialiased\"\n      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}\n    >\n      <header className=\"flex items-center justify-between px-6 py-4 border-b border-zinc-800\">\n        <h1 className=\"text-2xl font-semibold tracking-tight\">Projects</h1>\n        <div className=\"flex items-center gap-3\">\n          <button className=\"p-2 rounded-lg hover:bg-zinc-800 transition-colors duration-200\">\n            <Bell className=\"w-5 h-5\" />\n          </button>\n          <button className=\"p-2 rounded-lg hover:bg-zinc-800 transition-colors duration-200\">\n            <Settings className=\"w-5 h-5\" />\n          </button>\n        </div>\n      </header>\n\n      <main className=\"max-w-5xl mx-auto px-6 py-8\">\n        <div className=\"flex items-center justify-between mb-8\">\n          <div>\n            <h2 className=\"text-3xl font-bold tracking-tight\">Your Workspace</h2>\n            <p className=\"text-zinc-400 mt-1\">Manage and track all your projects seamlessly in one place.</p>\n          </div>\n          <button className=\"flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-500 transition-colors duration-200\">\n            <Plus className=\"w-4 h-4\" />\n            New Project\n          </button>\n        </div>\n\n        <div className=\"flex items-center gap-4 mb-6\">\n          <div className=\"relative flex-1\">\n            <Search className=\"absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500\" />\n            <input\n              type=\"text\"\n              value={query}\n              onChange={(e) => setQuery(e.target.value)}\n              placeholder=\"Search projects...\"\n              className=\"w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500 transition-colors duration-200\"\n            />\n          </div>\n          <label className=\"flex items-center gap-2 text-sm text-zinc-400 cursor-pointer\">\n            <input\n              type=\"checkbox\"\n              checked={showArchived}\n              onChange={(e) => setShowArchived(e.target.checked)}\n              className=\"rounded border-zinc-600\"\n            />\n            Show archived\n          </label>\n        </div>\n\n        <div className=\"grid grid-cols-3 gap-4\">\n          {filtered.map((project) => (\n            <div\n              key={project.id}\n              className=\"p-5 bg-zinc-900 border border-zinc-800 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300\"\n            >\n              <div className=\"flex items-center justify-between mb-3\">\n                <h3 className=\"font-semibold text-zinc-100\">{project.name}</h3>\n                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${\n                  project.status === 'active'\n                    ? 'bg-emerald-500/10 text-emerald-400'\n                    : 'bg-zinc-700 text-zinc-400'\n                }`}>\n                  {project.status}\n                </span>\n              </div>\n              <div className=\"mb-4\">\n                <div className=\"flex justify-between text-sm mb-1\">\n                  <span className=\"text-zinc-500\">Progress</span>\n                  <span className=\"text-zinc-300 font-medium\">{project.progress}%</span>\n                </div>\n                <div className=\"h-1.5 bg-zinc-800 rounded-full overflow-hidden\">\n                  <div\n                    className=\"h-full bg-indigo-500 rounded-full\"\n                    style={{ width: `${project.progress}%` }}\n                  />\n                </div>\n              </div>\n              <div className=\"flex items-center justify-between\">\n                <span className=\"text-xs text-zinc-500\">\n                  Updated {project.updatedAt}\n                </span>\n                <button className=\"text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors duration-200\">\n                  Learn More <ChevronRight className=\"w-3 h-3\" />\n                </button>\n              </div>\n            </div>\n          ))}\n        </div>\n\n        {filtered.length === 0 && (\n          <div className=\"text-center py-16\">\n            <p className=\"text-zinc-500 text-lg\">No projects found</p>\n            <p className=\"text-zinc-600 text-sm mt-1\">Try adjusting your search or filters.</p>\n          </div>\n        )}\n\n        <section className=\"mt-12 p-6 bg-zinc-900 border border-zinc-800 rounded-xl\">\n          <h3 className=\"text-xl font-bold mb-4\">Activity Feed</h3>\n          <div className=\"space-y-3\">\n            <div className=\"flex items-start gap-3 p-3 bg-zinc-800/50 rounded-lg\">\n              <div className=\"w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center\">\n                <Plus className=\"w-4 h-4 text-indigo-400\" />\n              </div>\n              <div>\n                <p className=\"text-sm text-zinc-200\">\n                  <span className=\"font-medium\">John Doe</span> created a new project\n                </p>\n                <p className=\"text-xs text-zinc-500 mt-0.5\">2 hours ago</p>\n              </div>\n            </div>\n            <div className=\"flex items-start gap-3 p-3 bg-zinc-800/50 rounded-lg\">\n              <div className=\"w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center\">\n                <ChevronRight className=\"w-4 h-4 text-emerald-400\" />\n              </div>\n              <div>\n                <p className=\"text-sm text-zinc-200\">\n                  <span className=\"font-medium\">Sarah Chen</span> completed milestone 3\n                </p>\n                <p className=\"text-xs text-zinc-500 mt-0.5\">5 hours ago</p>\n              </div>\n            </div>\n          </div>\n        </section>\n      </main>\n\n      <style>{`\n        .hover-card:hover {\n          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);\n          transition: box-shadow 0.3s ease;\n        }\n      `}</style>\n    </div>\n  );\n}\n```\n\nOutput fixed code only.",
       "expected_output": "Full review fixing all ui-ux rules",
       "assertions": [
-        { "id": "no-ai-color-palette", "trap": "Purple-to-blue gradient, cyan accents on dark bg", "description": "No cyan-on-dark, purple-to-blue gradients, neon accents", "category": "format" },
-        { "id": "no-default-fonts", "trap": "font-family: 'Inter, sans-serif'", "description": "No Inter/Roboto/Arial — distinctive fonts (Geist, Outfit, Satoshi)", "category": "format" },
-        { "id": "no-gradient-text", "trap": "bg-clip-text bg-gradient on h1 and metric", "description": "No gradient text on headings/metrics", "category": "format" },
-        { "id": "no-pure-black", "trap": "bg-black (#000)", "description": "No pure black — off-black (zinc-950)", "category": "format" },
-        { "id": "no-pure-white", "trap": "bg-white on input", "description": "No pure white (#fff) — tinted off-white", "category": "format" },
-        { "id": "no-pure-black-shadows", "trap": "rgba(0,0,0,0.1) in box-shadow", "description": "Tint shadows, never pure black rgba", "category": "format" },
-        { "id": "no-h-screen", "trap": "h-screen on page wrapper", "description": "min-h-[100dvh] not h-screen", "category": "gotcha" },
-        { "id": "no-bounce-easing", "trap": "animation: bounce 1s infinite", "description": "No bounce easing — ease-out-quart/expo", "category": "behavior" },
-        { "id": "no-div-onclick", "trap": "div onClick for toggle", "description": "button for actions, never div onClick", "category": "security" },
-        { "id": "no-outline-none", "trap": "outline-none without focus-visible", "description": "Never outline-none without :focus-visible replacement", "category": "security" },
-        { "id": "no-box-shadow-animation", "trap": "CSS .card:hover { box-shadow: ...; transition: box-shadow 0.3s; } — animates box-shadow directly", "description": "Pseudo-element opacity for shadow, not direct animation", "category": "behavior" },
-        { "id": "button-verb-noun", "trap": "'Save Settings', 'Export Data', 'Create Report' — but 3 identical primary CTAs", "description": "Verb + noun labels, never generic Submit/Continue", "category": "format" },
-        { "id": "icon-button-aria", "trap": "TrashIcon/BellIcon buttons without aria-label", "description": "Icon buttons must have aria-label", "category": "security" },
-        { "id": "tabular-nums", "trap": "Price values without tabular-nums", "description": "tabular-nums on number displays", "category": "format" },
-        { "id": "text-wrap-balance", "trap": "h1 without text-wrap: balance", "description": "Headings: text-wrap: balance", "category": "format" },
-        { "id": "no-nesting-cards", "trap": "Card inside card (borders+shadows nested)", "description": "Never nest cards — flatten with spacing", "category": "architecture" },
-        { "id": "destructive-not-primary", "trap": "Red solid Delete Account as primary CTA", "description": "Destructive: secondary style + confirmation, not primary", "category": "behavior" },
-        { "id": "no-user-scalable-no", "trap": "maximum-scale=1, user-scalable=no", "description": "Never block zoom", "category": "security" },
-        { "id": "no-block-paste", "trap": "onPaste preventDefault on input", "description": "Never block paste", "category": "security" },
-        { "id": "gap-over-margins", "trap": "mb-4 on list children instead of gap on parent", "description": "gap for spacing, not margins", "category": "format" },
-        { "id": "error-msg-includes-fix", "trap": "'Invalid input' with no explanation", "description": "Errors: what + why + how to fix", "category": "behavior" },
-        { "id": "animate-transform-opacity", "trap": "Animating left in keyframes", "description": "Only animate transform/opacity", "category": "behavior" },
-        { "id": "no-3col-equal-grid", "trap": "grid-cols-3 with identical cards", "description": "No 3-column equal card grids — asymmetric layout", "category": "format" },
-        { "id": "no-hero-metric-layout", "trap": "Big number + small label + gradient = template", "description": "No hero metric template (big number + label + gradient)", "category": "format" },
-        { "id": "no-filler-copy", "trap": "'Elevate Your Workflow' heading", "description": "No filler: Elevate, Seamless, Unleash, Next-Gen", "category": "format" },
-        { "id": "no-oversized-h1", "trap": "text-8xl as sole hierarchy tool", "description": "Control hierarchy with weight+color, not massive scale alone", "category": "format" },
-        { "id": "no-center-everything", "trap": "text-center on everything", "description": "Left-align + asymmetric — don't center everything", "category": "format" },
-        { "id": "no-generic-placeholders", "trap": "John Doe, jane@example.com", "description": "No generic John Doe / example.com placeholders", "category": "format" },
-        { "id": "max-2-3-text-colors", "trap": "text-blue-500, text-emerald-600, text-purple-400, text-gray-500", "description": "2-3 text colors only: dark, grey, light grey", "category": "format" },
-        { "id": "max-2-font-weights", "trap": "font-bold + font-semibold + font-medium mixed", "description": "2 font weights for UI: normal (400/500) + bold (600/700)", "category": "format" },
-        { "id": "one-primary-action", "trap": "Three bg-blue-600 buttons on same page", "description": "1 primary action per page", "category": "behavior" },
-        { "id": "labels-last-resort", "trap": "'Email:' label on self-explanatory input", "description": "Drop labels if format is obvious", "category": "behavior" },
-        { "id": "consistent-border-radius", "trap": "rounded-lg + rounded-2xl + rounded-sm mixed", "description": "Consistent border-radius — pick one system", "category": "format" },
-        { "id": "line-length-45-75", "trap": "w-full paragraph with no max-width", "description": "45-75 chars/line — max-width: 20-35em on prose", "category": "format" },
-        { "id": "semantic-z-index", "trap": "z-index: 9999, 10000", "description": "Semantic z-index scale (100-600), not arbitrary 9999", "category": "architecture" },
-        { "id": "no-modal-simple-action", "trap": "Modal for enabling dark mode toggle", "description": "No modals for simple actions — inline/sheet/drawer", "category": "behavior" },
-        { "id": "no-card-wrapping-everything", "trap": "Every item wrapped in border rounded shadow", "description": "Not everything needs a card container", "category": "architecture" },
-        { "id": "img-dimensions", "trap": "img without width/height", "description": "Images must have width/height (prevents CLS)", "category": "gotcha" },
-        { "id": "no-grey-on-color", "trap": "text-gray-500 on bg-blue-100", "description": "No grey text on colored background — use same-hue shade", "category": "gotcha" },
-        { "id": "form-input-labels", "trap": "Input with placeholder only, no associated label", "description": "Form inputs need associated labels for a11y", "category": "security" },
-        { "id": "focus-visible-not-focus", "trap": "button:focus instead of button:focus-visible", "description": ":focus-visible over :focus", "category": "gotcha" },
-        { "id": "empty-state-5-elements", "trap": "'No items found' with no guidance", "description": "Empty state: what, why, how to start, visual, help", "category": "behavior" },
-        { "id": "font-display-swap", "trap": "@font-face without font-display: swap", "description": "font-display: swap on @font-face", "category": "gotcha" },
-        { "id": "no-em-type-scale", "trap": "fontSize: '1.5em'", "description": "px or rem only, never em for type", "category": "format" },
-        { "id": "active-voice", "trap": "'The CLI will be installed' (passive)", "description": "Active voice: 'Install the CLI' not 'will be installed'", "category": "format" },
-        { "id": "no-console-no-todo", "trap": "console.log debug + TODO comment", "description": "No console.log, no TODO in production code", "category": "gotcha" },
-        { "id": "weight-contrast", "trap": "font-semibold + font-medium (600 vs 500)", "description": "Dramatic weight pairing: 700+400, not 600+500", "category": "format" },
-        { "id": "css-logical-properties", "trap": "marginLeft: '16px' instead of margin-inline-start", "description": "CSS logical properties for RTL support", "category": "format" },
-        { "id": "touch-target-44px", "trap": "w-4 h-4 (16px) icon button", "description": "Touch targets >= 44px", "category": "security" },
-        { "id": "antialiased-body", "trap": "No -webkit-font-smoothing: antialiased", "description": "antialiased font smoothing on body", "category": "format" }
+        {
+          "id": "no-inter-font",
+          "trap": "fontFamily: 'Inter, system-ui, sans-serif' — Inter is the most common AI default",
+          "description": "Inter is banned for premium/creative work. Use Geist, Outfit, Cabinet Grotesk, or Satoshi",
+          "category": "format"
+        },
+        {
+          "id": "max-2-font-weights",
+          "trap": "Uses 3 font weights: font-semibold (600), font-bold (700), font-medium (500)",
+          "description": "2 font weights for UI: normal (400/500) and bold (600/700). Pick one from each tier, not three",
+          "category": "format"
+        },
+        {
+          "id": "weight-contrast-too-narrow",
+          "trap": "font-semibold (600) paired with font-medium (500) — only 100 weight apart",
+          "description": "Dramatic weight pairing: 400+700, not 600+500. Weight contrast must be visible",
+          "category": "format"
+        },
+        {
+          "id": "no-3col-equal-grid",
+          "trap": "grid grid-cols-3 gap-4 for project cards — the classic AI card grid",
+          "description": "3-column equal card grids are banned. Use asymmetric grid, zig-zag, or auto-fit minmax",
+          "category": "format"
+        },
+        {
+          "id": "no-filler-copy-seamlessly",
+          "trap": "'Manage and track all your projects seamlessly in one place' — filler with 'seamlessly'",
+          "description": "Filler words banned: 'seamlessly', 'elevate', 'unleash', 'next-gen'. Use concrete verbs",
+          "category": "format"
+        },
+        {
+          "id": "no-learn-more-link",
+          "trap": "'Learn More' link on project cards — generic, says nothing about the destination",
+          "description": "Button/link text must be specific verb+noun: 'View details', 'Open project', not 'Learn More'",
+          "category": "format"
+        },
+        {
+          "id": "no-pure-black-shadow-css",
+          "trap": "rgba(0, 0, 0, 0.3) in the hover-card CSS — pure black shadow",
+          "description": "Never pure black shadows. Tint to background hue: rgba(17, 24, 39, 0.08) or similar",
+          "category": "format"
+        },
+        {
+          "id": "no-direct-shadow-animation",
+          "trap": "transition: box-shadow 0.3s ease in CSS and transition-shadow on cards",
+          "description": "Never transition box-shadow directly. Use pseudo-element opacity technique",
+          "category": "behavior"
+        },
+        {
+          "id": "icon-buttons-need-aria-label",
+          "trap": "Bell and Settings icon buttons have no aria-label",
+          "description": "Icon buttons must have aria-label for screen reader users",
+          "category": "security"
+        },
+        {
+          "id": "search-input-no-label",
+          "trap": "Search input uses placeholder only, no associated <label> or aria-label",
+          "description": "Form inputs need associated labels for accessibility. Placeholder is not a label",
+          "category": "security"
+        },
+        {
+          "id": "no-outline-none-without-focus-visible",
+          "trap": "outline-none on search input without :focus-visible ring replacement",
+          "description": "Never outline-none without a :focus-visible replacement. Keyboard users need visible focus",
+          "category": "security"
+        },
+        {
+          "id": "focus-border-not-ring",
+          "trap": "focus:border-indigo-500 — using border change for focus instead of ring",
+          "description": "Use focus-visible:ring-2 ring-offset, not border color change, for focus indication",
+          "category": "gotcha"
+        },
+        {
+          "id": "empty-state-missing-elements",
+          "trap": "Empty state is just 2 lines of text — no icon, no CTA, no illustration",
+          "description": "Empty states need: icon/illustration, why it's empty, CTA to take action, help link. This is an onboarding moment",
+          "category": "behavior"
+        },
+        {
+          "id": "empty-state-centered",
+          "trap": "Empty state is text-center with no visual weight — looks like an afterthought",
+          "description": "Empty states are onboarding opportunities. Needs illustration, clear message, primary CTA button",
+          "category": "behavior"
+        },
+        {
+          "id": "no-generic-names-john-doe",
+          "trap": "'John Doe' in activity feed — the most generic placeholder name",
+          "description": "Generic names banned. Use creative, realistic names that feel intentional",
+          "category": "format"
+        },
+        {
+          "id": "no-generic-names-sarah",
+          "trap": "'Sarah Chen' — common AI-generated diverse placeholder name",
+          "description": "AI-typical diverse placeholder names are a tell. Use distinctive, contextual names",
+          "category": "format"
+        },
+        {
+          "id": "card-wrapping-activity",
+          "trap": "Activity feed items wrapped in bg-zinc-800/50 rounded-lg inside an already-bordered section",
+          "description": "Cards inside a card section — flatten hierarchy with spacing or divide-y, not nested containers",
+          "category": "format"
+        },
+        {
+          "id": "too-many-text-colors",
+          "trap": "Uses zinc-100, zinc-200, zinc-300, zinc-400, zinc-500, zinc-600 — 6 text shades",
+          "description": "2-3 text colors only: primary (dark/light), secondary (grey), tertiary (light grey). 6 shades is noise",
+          "category": "format"
+        },
+        {
+          "id": "emerald-as-second-accent",
+          "trap": "emerald-400/500 for status + indigo-400/500/600 for actions — two accent colors",
+          "description": "Max 1 accent color with saturation < 80%. Status can use semantic color but both shouldn't be saturated",
+          "category": "format"
+        },
+        {
+          "id": "no-transition-all-implicit",
+          "trap": "transition-colors duration-200 is fine, but transition-shadow duration-300 triggers box-shadow repaint",
+          "description": "Animating box-shadow causes expensive repaints. Use pseudo-element opacity technique instead",
+          "category": "behavior"
+        },
+        {
+          "id": "progress-bar-no-tabular-nums",
+          "trap": "Progress percentage displayed without font-variant-numeric: tabular-nums",
+          "description": "Numbers that change (percentages, counts) need tabular-nums so layout doesn't shift",
+          "category": "format"
+        },
+        {
+          "id": "no-text-wrap-balance",
+          "trap": "h2 'Your Workspace' heading without text-wrap: balance",
+          "description": "Headings should use text-wrap: balance to prevent orphans and awkward line breaks",
+          "category": "format"
+        },
+        {
+          "id": "heading-hierarchy-size-only",
+          "trap": "h2 uses text-3xl font-bold — hierarchy through size alone, h3 uses font-semibold only",
+          "description": "Control hierarchy with weight + color + space, not just font-size scaling",
+          "category": "format"
+        },
+        {
+          "id": "no-loading-state",
+          "trap": "Component only renders populated and empty states — no loading/skeleton state",
+          "description": "Every data-fetching view needs loading state with skeleton screens matching content layout",
+          "category": "behavior"
+        },
+        {
+          "id": "no-error-state",
+          "trap": "No error state handling — what if the project fetch fails?",
+          "description": "Error states need: what went wrong, why, how to fix, retry button. Never just omit them",
+          "category": "behavior"
+        },
+        {
+          "id": "hardcoded-border-color",
+          "trap": "border-zinc-800, border-zinc-700 — hardcoded border colors instead of alpha tokens",
+          "description": "Use semi-transparent borders (border-white/10) that adapt across themes, not hardcoded zinc shades",
+          "category": "gotcha"
+        },
+        {
+          "id": "centered-hero-banned",
+          "trap": "Section heading 'Your Workspace' uses centered-ish layout with mx-auto",
+          "description": "With default DESIGN_VARIANCE=8, centered hero/H1 sections are banned. Use left-aligned + asymmetric",
+          "category": "format"
+        },
+        {
+          "id": "no-reduced-motion",
+          "trap": "Multiple transition-colors and hover animations with no @media (prefers-reduced-motion)",
+          "description": "Reduced motion support is not optional. Provide @media (prefers-reduced-motion: reduce) alternatives",
+          "category": "security"
+        },
+        {
+          "id": "no-tactile-feedback",
+          "trap": "Buttons have hover states but no :active press feedback",
+          "description": "Active state needs tactile feedback: -translate-y-[1px] or scale-[0.98] to simulate physical press",
+          "category": "behavior"
+        },
+        {
+          "id": "same-spacing-everywhere",
+          "trap": "gap-4 on grid, gap-3 in header, space-y-3 in feed — no deliberate spacing rhythm/scale",
+          "description": "Define a spacing scale and use it deliberately. Spacing should create rhythm, not be arbitrary",
+          "category": "format"
+        },
+        {
+          "id": "card-same-border-radius",
+          "trap": "Outer card rounded-xl (12px) contains inner items with rounded-lg (8px) — not concentric",
+          "description": "Concentric border radius: outer = inner + padding. Same-level elements should share one radius",
+          "category": "format"
+        },
+        {
+          "id": "passive-voice-subtitle",
+          "trap": "'Manage and track all your projects' is ok, but description is directive-style filler",
+          "description": "Subtitles should describe concrete value, not restate the obvious. Cut redundant copy",
+          "category": "format"
+        },
+        {
+          "id": "status-text-not-badge",
+          "trap": "Status shown as colored text badge — uses emerald for 'active', looks like traffic light UI",
+          "description": "Status indicators should be semantic and accessible, not rely on color alone. Add icon or pattern",
+          "category": "security"
+        },
+        {
+          "id": "search-decorative-icon",
+          "trap": "Search icon inside input is decorative but not marked aria-hidden",
+          "description": "Decorative icons must have aria-hidden='true' to avoid screen reader noise",
+          "category": "security"
+        },
+        {
+          "id": "no-ease-keyword",
+          "trap": "ease used in CSS transition: box-shadow 0.3s ease — not a deliberate easing curve",
+          "description": "Don't use generic 'ease'. Use specific curves: cubic-bezier(0.16, 1, 0.3, 1) for ease-out-expo",
+          "category": "behavior"
+        }
       ]
     }
   ]

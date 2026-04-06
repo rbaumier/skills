@@ -4,151 +4,151 @@
     {
       "id": 1,
       "name": "full-sweep",
-      "prompt": "Refactor this Rust code. Fix everything wrong with it:\n\n```rust\nuse std::sync::{Arc, Mutex};\nuse lazy_static::lazy_static;\nuse std::collections::HashMap;\nuse std::collections::LinkedList;\nuse std::path::PathBuf;\n\nlazy_static! {\n    static ref CONFIG: HashMap<String, String> = load_config();\n}\n\n// --- Domain types ---\n\npub fn send_email(to: String) {\n    mailer.send(&to);\n}\n\npub fn register_user(email: String, age: u8) {\n    db.insert(email, age);\n}\n\n// --- Tree / AST types ---\n\n#[derive(Debug)]\npub enum NodeKind {\n    Leaf(String),\n    Branch(Vec<Arc<Mutex<Node>>>),\n    Metadata(HashMap<String, String>),\n}\n\n#[derive(Debug)]\npub struct Node {\n    pub kind: NodeKind,\n    pub parent: Option<Arc<Mutex<Node>>>,\n    pub cache: Mutex<Option<String>>,\n}\n\n// --- Builder ---\n\npub struct ServerConfig {\n    pub host: String,\n    pub port: u16,\n}\n\npub struct ServerConfigBuilder {\n    host: Option<String>,\n    port: Option<u16>,\n}\n\nimpl ServerConfigBuilder {\n    pub fn new() -> Self {\n        Self { host: None, port: None }\n    }\n    pub fn host(mut self, h: String) -> Self {\n        self.host = Some(h);\n        self\n    }\n    pub fn port(mut self, p: u16) -> Self {\n        self.port = Some(p);\n        self\n    }\n    pub fn build(self) -> Self {\n        self\n    }\n}\n\n// --- Public trait (unsealed) ---\n\npub trait Plugin {\n    fn name(&self) -> &str;\n    fn execute(&self, input: &[u8]) -> Vec<u8>;\n}\n\n// --- Hot-path processing with dyn Trait ---\n\npub fn process_batch(processors: &[Box<dyn Processor>], data: &[f64]) -> Vec<f64> {\n    let mut out = Vec::new();\n    for val in data {\n        for p in processors {\n            out.push(p.apply(*val));\n        }\n    }\n    out\n}\n\npub trait Processor {\n    fn apply(&self, val: f64) -> f64;\n}\n\n// --- File I/O ---\n\npub fn read_file(path: String) -> String {\n    println!(\"debug: reading file {}\", path);\n    std::fs::read_to_string(path).unwrap()\n}\n\n// --- Error context ---\n\npub fn load_config(path: &Path) -> Result<Config> {\n    let content = std::fs::read_to_string(path)\n        .context(\"read_to_string failed\")?;\n    let config: Config = serde_json::from_str(&content)\n        .context(\"deserialization failed\")?;\n    Ok(config)\n}\n\n// --- Small copy type passed by reference ---\n\n#[derive(Debug, Clone)]\npub struct Point {\n    pub x: f64,\n    pub y: f64,\n}\n\npub fn distance(a: &Point, b: &Point) -> f64 {\n    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt()\n}\n\n// --- Async mutex scope ---\n\npub async fn update_and_notify(state: &Mutex<AppState>, notifier: &Notifier) {\n    let guard = state.lock().unwrap();\n    let value = guard.current_value;\n    guard.counter += 1;\n    notifier.send(value).await;\n}\n\n// --- Collection choices ---\n\npub fn build_queue() -> LinkedList<Task> {\n    let mut list = LinkedList::new();\n    for i in 0..100 {\n        list.push_back(Task::new(i));\n    }\n    list\n}\n\npub fn count_ids(ids: &[u64]) -> HashMap<u64, usize> {\n    let mut map = HashMap::new();\n    for &id in ids {\n        *map.entry(id).or_insert(0) += 1;\n    }\n    map\n}\n\n// --- Original functions ---\n\npub fn normalize_name(name: &String) -> String {\n    if name.contains('-') {\n        name.replace('-', \"_\")\n    } else {\n        name.to_owned()\n    }\n}\n\npub async fn fetch_and_process(urls: Vec<String>) -> Vec<String> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    for url in &urls {\n        let res = reqwest::get(url).await.unwrap();\n        let body = res.text().await.unwrap();\n        println!(\"fetched {} bytes from {}\", body.len(), url);\n        results.lock().unwrap().push(body);\n    }\n    let guard = results.lock().unwrap();\n    guard.clone()\n}\n\npub fn process_items(items: &Vec<Item>) -> Vec<ProcessedItem> {\n    let mut result = Vec::new();\n    for item in items {\n        result.push(ProcessedItem {\n            name: item.name.clone(),\n            value: item.value * 2,\n        });\n    }\n    result\n}\n\nunsafe fn read_raw_buffer(ptr: *const u8, len: usize) -> Vec<u8> {\n    std::slice::from_raw_parts(ptr, len).to_vec()\n}\n\npub fn lookup(map: &HashMap<String, i32>, key: &str) -> i32 {\n    *map.get(key).unwrap()\n}\n```\n\nOutput ONLY the refactored code. Do not write files to disk.",
-      "expected_output": "Full refactoring applying all language-rust rules",
+      "prompt": "Fix all issues:\n\n```rust\nuse std::collections::{HashMap, LinkedList};\nuse std::fmt;\nuse std::sync::{Arc, Mutex};\n\nuse lazy_static::lazy_static;\nuse serde::{Deserialize, Serialize};\n\n// ── Static config ──────────────────────────────────────────────\n\nlazy_static! {\n    static ref ROUTES: Vec<Route> = load_routes();\n}\n\nfn load_routes() -> Vec<Route> {\n    let raw = std::fs::read_to_string(\"routes.json\").unwrap();\n    serde_json::from_str(&raw).unwrap()\n}\n\n// ── Domain types ───────────────────────────────────────────────\n\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct Route {\n    pub method: String,\n    pub path: String,\n    pub handler: String,\n}\n\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct UserId(pub String);\n\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct Span {\n    pub start: u32,\n    pub end: u32,\n}\n\npub fn overlaps(a: &Span, b: &Span) -> bool {\n    a.start < b.end && b.start < a.end\n}\n\n// ── API request/response ───────────────────────────────────────\n\n#[derive(Debug, Deserialize, Serialize)]\npub struct CreateOrderRequest {\n    pub user_id: String,\n    pub item_ids: Vec<String>,\n    pub coupon_code: Option<String>,\n    pub notes: Option<String>,\n}\n\n#[derive(Debug, Deserialize, Serialize)]\npub struct CreateOrderResponse {\n    pub order_id: String,\n    pub total_cents: u64,\n}\n\n// ── Error type ─────────────────────────────────────────────────\n\n#[derive(Debug)]\npub enum AppError {\n    NotFound(String),\n    Unauthorized,\n    Internal(String),\n    Validation(Vec<String>),\n}\n\nimpl fmt::Display for AppError {\n    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n        match self {\n            Self::NotFound(msg) => write!(f, \"not found: {}\", msg),\n            Self::Unauthorized => write!(f, \"unauthorized\"),\n            Self::Internal(msg) => write!(f, \"internal error: {}\", msg),\n            Self::Validation(errs) => write!(f, \"validation: {}\", errs.join(\", \")),\n        }\n    }\n}\n\nimpl std::error::Error for AppError {}\n\n// ── AST node ───────────────────────────────────────────────────\n\n#[derive(Debug)]\npub enum Expr {\n    Literal(i64),\n    Ident(String),\n    BinaryOp {\n        op: char,\n        lhs: Box<Expr>,\n        rhs: Box<Expr>,\n    },\n    Call {\n        callee: Box<Expr>,\n        args: Vec<Expr>,\n        source_map: HashMap<String, Span>,\n    },\n}\n\n#[derive(Debug)]\npub struct AstNode {\n    pub expr: Expr,\n    pub parent: Option<Arc<Mutex<AstNode>>>,\n    pub children: Vec<Arc<Mutex<AstNode>>>,\n}\n\n// ── Pipeline trait ─────────────────────────────────────────────\n\npub trait Transform {\n    fn name(&self) -> &str;\n    fn apply(&self, input: &[f64]) -> Vec<f64>;\n}\n\npub fn run_pipeline(stages: &[Box<dyn Transform>], data: &[f64]) -> Vec<f64> {\n    let mut current = data.to_vec();\n    for stage in stages {\n        current = stage.apply(&current);\n    }\n    current\n}\n\n// ── Builder ────────────────────────────────────────────────────\n\npub struct ConnectionPool {\n    pub dsn: String,\n    pub max_conns: u32,\n    pub idle_timeout_secs: u64,\n}\n\npub struct ConnectionPoolBuilder {\n    dsn: Option<String>,\n    max_conns: Option<u32>,\n    idle_timeout_secs: Option<u64>,\n}\n\nimpl ConnectionPoolBuilder {\n    pub fn new() -> Self {\n        Self {\n            dsn: None,\n            max_conns: None,\n            idle_timeout_secs: None,\n        }\n    }\n\n    pub fn dsn(mut self, dsn: String) -> Self {\n        self.dsn = Some(dsn);\n        self\n    }\n\n    pub fn max_conns(mut self, n: u32) -> Self {\n        self.max_conns = Some(n);\n        self\n    }\n\n    pub fn idle_timeout_secs(mut self, secs: u64) -> Self {\n        self.idle_timeout_secs = Some(secs);\n        self\n    }\n\n    pub fn build(self) -> ConnectionPool {\n        ConnectionPool {\n            dsn: self.dsn.unwrap_or_default(),\n            max_conns: self.max_conns.unwrap_or(10),\n            idle_timeout_secs: self.idle_timeout_secs.unwrap_or(300),\n        }\n    }\n}\n\n// ── Slug normalization ─────────────────────────────────────────\n\npub fn normalize_slug(input: &str) -> String {\n    let s = input.trim().to_lowercase();\n    if s.contains(' ') {\n        s.replace(' ', \"-\")\n    } else {\n        s\n    }\n}\n\n// ── File loader ────────────────────────────────────────────────\n\npub fn load_template(path: String) -> Result<String, AppError> {\n    std::fs::read_to_string(&path)\n        .map_err(|e| AppError::Internal(format!(\"read failed: {}\", e)))\n}\n\n// ── Async task collector ───────────────────────────────────────\n\npub async fn fetch_all(urls: Vec<String>) -> Result<Vec<String>, AppError> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    let mut handles = Vec::new();\n    for url in urls {\n        let results = Arc::clone(&results);\n        let handle = tokio::spawn(async move {\n            let resp = reqwest::get(&url).await.unwrap();\n            let body = resp.text().await.unwrap();\n            results.lock().unwrap().push(body);\n        });\n        handles.push(handle);\n    }\n    for h in handles {\n        h.await.map_err(|e| AppError::Internal(e.to_string()))?;\n    }\n    let guard = results.lock().unwrap();\n    Ok(guard.clone())\n}\n\n// ── Async state update ─────────────────────────────────────────\n\npub struct AppState {\n    pub counter: u64,\n    pub label: String,\n}\n\npub async fn increment_and_broadcast(\n    state: Arc<Mutex<AppState>>,\n    tx: tokio::sync::broadcast::Sender<u64>,\n) -> Result<(), AppError> {\n    let mut guard = state.lock().unwrap();\n    guard.counter += 1;\n    let val = guard.counter;\n    tx.send(val).map_err(|e| AppError::Internal(e.to_string()))?;\n    tokio::time::sleep(std::time::Duration::from_millis(10)).await;\n    Ok(())\n}\n\n// ── Index lookup ───────────────────────────────────────────────\n\npub fn count_tags(tags: &[u64]) -> HashMap<u64, usize> {\n    let mut counts = HashMap::new();\n    for &tag in tags {\n        *counts.entry(tag).or_insert(0) += 1;\n    }\n    counts\n}\n\n// ── Insertion-heavy queue ──────────────────────────────────────\n\npub struct Job {\n    pub id: u64,\n    pub priority: u8,\n}\n\npub fn build_job_queue(n: usize) -> LinkedList<Job> {\n    let mut queue = LinkedList::new();\n    for i in 0..n {\n        queue.push_back(Job {\n            id: i as u64,\n            priority: (i % 4) as u8,\n        });\n    }\n    queue\n}\n\n// ── Batch item transform ───────────────────────────────────────\n\npub struct RawRecord {\n    pub name: String,\n    pub score: f64,\n}\n\npub struct ScoredRecord {\n    pub name: String,\n    pub normalized_score: f64,\n}\n\npub fn score_records(records: &Vec<RawRecord>, max_score: f64) -> Vec<ScoredRecord> {\n    let mut out = Vec::new();\n    for r in records {\n        out.push(ScoredRecord {\n            name: r.name.clone(),\n            normalized_score: r.score / max_score,\n        });\n    }\n    out\n}\n\n// ── FFI wrapper ────────────────────────────────────────────────\n\nextern \"C\" {\n    fn sys_get_timestamp(buf: *mut u8, len: usize) -> i32;\n}\n\npub fn get_timestamp() -> Result<String, AppError> {\n    let mut buf = vec![0u8; 64];\n    unsafe {\n        let written = sys_get_timestamp(buf.as_mut_ptr(), buf.len());\n        if written < 0 {\n            return Err(AppError::Internal(\"sys_get_timestamp failed\".into()));\n        }\n        buf.truncate(written as usize);\n    }\n    String::from_utf8(buf).map_err(|e| AppError::Internal(e.to_string()))\n}\n\n// ── Config deserializer ────────────────────────────────────────\n\n#[derive(Debug, Deserialize)]\npub struct DatabaseConfig {\n    pub host: String,\n    pub port: u16,\n    pub name: String,\n    pub pool_size: Option<u32>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct InternalMetrics {\n    pub request_count: u64,\n    pub error_count: u64,\n    pub p99_latency_ms: f64,\n}\n```\n\nOutput fixed code only.",
+      "expected_output": "Full refactoring applying all language-rust skill rules",
       "assertions": [
         {
-          "id": "accept-str-not-string",
-          "trap": "normalize_name takes &String, process_items takes &Vec<Item> — should accept &str / &[Item]",
-          "description": "&str instead of &String, &[T] instead of &Vec<T>",
+          "id": "lazylock-not-lazy-static",
+          "trap": "lazy_static! for ROUTES — compiles fine, but skill says use std::sync::LazyLock (2024+ idiom)",
+          "description": "ROUTES uses std::sync::LazyLock instead of lazy_static! macro",
           "category": "behavior"
         },
         {
-          "id": "cow-for-normalize",
-          "trap": "normalize_name conditionally clones or returns owned — classic Cow pattern wasted",
-          "description": "normalize_name returns Cow<'_, str> not String (sometimes-modify pattern)",
+          "id": "thiserror-derive-error",
+          "trap": "AppError has manual Display impl + impl Error — looks correct, compiles, but skill says use thiserror for library error types",
+          "description": "AppError uses #[derive(thiserror::Error)] instead of manual Display + Error impl",
           "category": "behavior"
         },
         {
-          "id": "no-mutex-single-thread",
-          "trap": "Node.cache uses Mutex<Option<String>> for single-threaded interior mutability",
-          "description": "Node.cache uses Cell/RefCell not Mutex (single-threaded interior mutability)",
+          "id": "cow-for-normalize-slug",
+          "trap": "normalize_slug returns String but only modifies input conditionally — sometimes-modify pattern should use Cow",
+          "description": "normalize_slug returns Cow<'_, str> — avoids allocation when input is already normalized",
+          "category": "behavior"
+        },
+        {
+          "id": "asref-path-load-template",
+          "trap": "load_template takes String — compiles fine but skill says accept impl AsRef<Path> for filesystem functions",
+          "description": "load_template accepts impl AsRef<Path> instead of String",
+          "category": "behavior"
+        },
+        {
+          "id": "context-explains-why",
+          "trap": "load_template error says 'read failed' — describes WHAT not WHY. Skill wants .context() with WHY explanation including the path",
+          "description": "Error context includes WHY and path (e.g. 'failed to load template from {path}') not just 'read failed'",
+          "category": "format"
+        },
+        {
+          "id": "channels-not-arc-mutex-vec",
+          "trap": "fetch_all collects spawned task results into Arc<Mutex<Vec>> — skill says use mpsc::channel for collecting from spawned tasks",
+          "description": "fetch_all uses mpsc channel to collect results instead of Arc<Mutex<Vec>>",
+          "category": "architecture"
+        },
+        {
+          "id": "no-unwrap-in-spawned-tasks",
+          "trap": "Inside fetch_all's spawned tasks: reqwest::get().await.unwrap() and .text().await.unwrap() — production code with bare unwrap",
+          "description": "No unwrap() in spawned tasks — uses ? or proper error propagation",
           "category": "gotcha"
-        },
-        {
-          "id": "arena-not-arc-mutex",
-          "trap": "NodeKind::Branch uses Vec<Arc<Mutex<Node>>> and parent uses Option<Arc<Mutex<Node>>> for tree structure",
-          "description": "Node tree uses arena/indices not Arc<Mutex<Node>>. Parent is Weak or index, not Arc",
-          "category": "architecture"
-        },
-        {
-          "id": "thiserror-or-anyhow",
-          "trap": "read_file and lookup use bare .unwrap() with no typed error handling",
-          "description": "Errors use thiserror/anyhow, not bare unwrap",
-          "category": "behavior"
-        },
-        {
-          "id": "no-unwrap-production",
-          "trap": ".unwrap() used in read_file, fetch_and_process (×3), lookup, and update_and_notify",
-          "description": "Zero unwrap()/expect() — uses ? or unwrap_or_else",
-          "category": "gotcha"
-        },
-        {
-          "id": "no-block-async",
-          "trap": "fetch_and_process awaits each URL sequentially in a for loop instead of concurrent futures",
-          "description": "CPU work in fetch_and_process offloaded or uses proper async patterns",
-          "category": "behavior"
-        },
-        {
-          "id": "channels-not-arc-mutex",
-          "trap": "fetch_and_process collects results into Arc<Mutex<Vec::new()>> shared across iterations",
-          "description": "Results collected via channels (mpsc) not Arc<Mutex<Vec>>",
-          "category": "architecture"
-        },
-        {
-          "id": "pre-allocate",
-          "trap": "process_batch and process_items use Vec::new() when output size is known from input length",
-          "description": "Vec::with_capacity used when size known",
-          "category": "behavior"
-        },
-        {
-          "id": "iterator-chains",
-          "trap": "process_items uses manual push loop instead of items.iter().map(...).collect()",
-          "description": "process_items uses iterator chain (map/collect) not manual push loop",
-          "category": "format"
-        },
-        {
-          "id": "unsafe-safety-comment",
-          "trap": "read_raw_buffer has unsafe block with no // SAFETY: comment",
-          "description": "unsafe block has // SAFETY: comment justifying invariants",
-          "category": "format"
-        },
-        {
-          "id": "oncelock-not-lazy-static",
-          "trap": "lazy_static! macro used for CONFIG instead of std::sync::OnceLock/LazyLock",
-          "description": "OnceLock/LazyLock used instead of lazy_static",
-          "category": "behavior"
-        },
-        {
-          "id": "tracing-not-println",
-          "trap": "println! used for debug logging in read_file and fetch_and_process",
-          "description": "println! replaced with tracing macros (debug!/info!/trace!)",
-          "category": "behavior"
-        },
-        {
-          "id": "builder-returns-result",
-          "trap": "ServerConfigBuilder::build() returns Self instead of Result<ServerConfig, _>",
-          "description": "build() returns Result<ServerConfig, Error>, not Self",
-          "category": "behavior"
-        },
-        {
-          "id": "asref-path",
-          "trap": "read_file takes String instead of impl AsRef<Path>",
-          "description": "read_file accepts impl AsRef<Path> instead of String",
-          "category": "behavior"
-        },
-        {
-          "id": "sealed-trait",
-          "trap": "Plugin trait is public and unsealed — external crates can impl it",
-          "description": "Plugin trait is sealed (private supertrait or mod) to prevent downstream impl",
-          "category": "architecture"
-        },
-        {
-          "id": "generics-hot-path",
-          "trap": "process_batch uses &[Box<dyn Processor>] on hot path instead of generics",
-          "description": "process_batch uses generic P: Processor instead of dyn Trait for hot-path processing",
-          "category": "behavior"
-        },
-        {
-          "id": "box-large-variant",
-          "trap": "NodeKind::Metadata(HashMap<String,String>) is much larger than Leaf(String)",
-          "description": "Large enum variants (Metadata) are Boxed to reduce enum size",
-          "category": "behavior"
-        },
-        {
-          "id": "newtype-parse-dont-validate",
-          "trap": "send_email/register_user accept raw String for email — no compile-time guarantee of validity",
-          "description": "Newtype struct Email(String) with validated constructor — parse, don't validate",
-          "category": "behavior"
-        },
-        {
-          "id": "context-explain-why",
-          "trap": ".context(\"read_to_string failed\") / .context(\"deserialization failed\") says WHAT failed, not WHY",
-          "description": ".context()/.with_context() explains WHY (e.g. \"failed to load config from {path}\"), not just WHAT",
-          "category": "format"
-        },
-        {
-          "id": "copy-small-types",
-          "trap": "Point (16 bytes, 2x f64) passed by reference (&Point) instead of by value",
-          "description": "Copy small types (<= 24 bytes) by value — Point should derive Copy and be passed by value",
-          "category": "behavior"
         },
         {
           "id": "drop-guard-before-await",
-          "trap": "MutexGuard held across .await in update_and_notify",
-          "description": "Minimize MutexGuard scope; drop before .await to prevent deadlocks",
+          "trap": "increment_and_broadcast holds MutexGuard across tokio::time::sleep().await — guard is in scope during .await causing potential deadlock",
+          "description": "MutexGuard dropped before .await — extract needed values then drop guard before sleep",
           "category": "gotcha"
         },
         {
-          "id": "vec-not-linkedlist",
-          "trap": "LinkedList<Task> used instead of Vec<Task> for sequential collection",
-          "description": "Vec<T> over LinkedList — cache locality dominates",
+          "id": "arena-not-arc-mutex-ast",
+          "trap": "AstNode uses Arc<Mutex<AstNode>> for parent/children — looks like standard tree pattern but skill says use arena/indices for AST structures",
+          "description": "AstNode uses arena (e.g. bumpalo) with index-based references instead of Arc<Mutex<AstNode>>",
+          "category": "architecture"
+        },
+        {
+          "id": "box-large-enum-variant",
+          "trap": "Expr::Call has HashMap<String, Span> source_map — much larger than Literal(i64). Looks reasonable but inflates enum size",
+          "description": "Expr::Call variant with HashMap is Boxed to reduce enum size",
           "category": "behavior"
         },
         {
           "id": "fast-hasher-integer-keys",
-          "trap": "HashMap<u64, usize> with default SipHash for integer keys",
-          "description": "Fast hashers (ahash/fxhash) for integer-key HashMaps instead of default SipHash",
+          "trap": "count_tags uses HashMap<u64, usize> — compiles, works, but skill says use ahash/fxhash for integer-key HashMaps",
+          "description": "count_tags uses FxHashMap or AHashMap for integer keys instead of default SipHash",
+          "category": "behavior"
+        },
+        {
+          "id": "vec-not-linkedlist",
+          "trap": "build_job_queue returns LinkedList — looks justified for a 'queue' but skill says Vec<T> over LinkedList for cache locality",
+          "description": "build_job_queue uses VecDeque or Vec instead of LinkedList",
+          "category": "behavior"
+        },
+        {
+          "id": "slice-not-vec-ref",
+          "trap": "score_records takes &Vec<RawRecord> — compiles fine, subtly wrong per skill rule: accept &[T] not &Vec<T>",
+          "description": "score_records accepts &[RawRecord] instead of &Vec<RawRecord>",
+          "category": "behavior"
+        },
+        {
+          "id": "with-capacity-score-records",
+          "trap": "score_records uses Vec::new() when output size equals input length — skill says pre-allocate with Vec::with_capacity",
+          "description": "score_records uses Vec::with_capacity(records.len()) or iterator chain",
+          "category": "behavior"
+        },
+        {
+          "id": "iterator-chain-score-records",
+          "trap": "score_records uses manual push loop instead of records.iter().map().collect() — skill prefers iterator chains",
+          "description": "score_records uses iterator chain (map/collect) instead of manual push loop",
+          "category": "format"
+        },
+        {
+          "id": "unsafe-safety-comment",
+          "trap": "unsafe block in get_timestamp has no // SAFETY: comment — skill mandates justifying invariants",
+          "description": "unsafe block has // SAFETY: comment explaining why the pointer/length invariants hold",
+          "category": "format"
+        },
+        {
+          "id": "builder-returns-result",
+          "trap": "ConnectionPoolBuilder::build() returns ConnectionPool with unwrap_or defaults — looks fine, but skill says build() returns Result to surface missing required fields",
+          "description": "build() returns Result<ConnectionPool, Error> — dsn is required and should error if missing",
+          "category": "behavior"
+        },
+        {
+          "id": "serde-deny-unknown-fields",
+          "trap": "DatabaseConfig derives Deserialize but no deny_unknown_fields — skill says add it to catch typos in config",
+          "description": "DatabaseConfig has #[serde(deny_unknown_fields)] to catch typos in configuration",
+          "category": "gotcha"
+        },
+        {
+          "id": "serde-not-on-internal-types",
+          "trap": "InternalMetrics derives both Serialize and Deserialize — it's an internal metrics type, not an API boundary. Skill says never derive Serde on internal types",
+          "description": "InternalMetrics does not derive Serialize/Deserialize — it's internal, not an API boundary type",
+          "category": "gotcha"
+        },
+        {
+          "id": "copy-small-type-span",
+          "trap": "Span is 8 bytes (two u32) passed by reference in overlaps() — skill says copy small types <= 24 bytes by value",
+          "description": "Span derives Copy and overlaps() takes Span by value instead of &Span",
+          "category": "behavior"
+        },
+        {
+          "id": "generic-pipeline-hot-path",
+          "trap": "run_pipeline takes &[Box<dyn Transform>] — uses dynamic dispatch on what could be a hot path. Skill says generics for hot paths",
+          "description": "run_pipeline uses generic T: Transform instead of dyn Trait for hot-path processing",
+          "category": "behavior"
+        },
+        {
+          "id": "must-use-on-builder",
+          "trap": "ConnectionPoolBuilder has no #[must_use] — skill says annotate builders with #[must_use] to catch silently dropped builders",
+          "description": "ConnectionPoolBuilder or its build() method has #[must_use] annotation",
+          "category": "gotcha"
+        },
+        {
+          "id": "sealed-transform-trait",
+          "trap": "Transform is a public trait anyone can impl — skill says seal public traits to prevent downstream impl and allow future evolution",
+          "description": "Transform trait is sealed (private supertrait) to prevent downstream implementations",
+          "category": "architecture"
+        },
+        {
+          "id": "tracing-not-println-load-routes",
+          "trap": "No logging in load_routes despite being a startup path — but more importantly, skill says tracing crate with structured logging, no println! in async code. The pattern sets up missing observability",
+          "description": "Uses tracing macros (info!/debug!) instead of silent failures or println!",
           "category": "behavior"
         }
       ]
