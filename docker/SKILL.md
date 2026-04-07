@@ -89,8 +89,7 @@ docker build --target production -t myapp:prod .
 
 ### Docker Compose
 
-<!-- docker-compose.yml = local dev orchestration. NOT production deployment.
-     For prod multi-container: use Kubernetes, ECS, or Docker Swarm. -->
+<!-- docker-compose.yml is typically used for local dev, but always include security defaults regardless of environment. -->
 - `depends_on` with `condition: service_healthy` — don't just depend, wait for READY.
 - `env_file: .env` for secrets. NEVER hardcode secrets in compose file. `.env` in `.gitignore`.
 - Override files: `docker-compose.override.yml` auto-loads for dev. Explicit `-f` for prod.
@@ -110,22 +109,31 @@ services:
     volumes:
       - .:/app                        # Bind mount: hot-reload source changes
       - /app/node_modules             # Anonymous volume: preserve container deps
+    env_file: .env                    # ALL secrets in .env (gitignored), NEVER inline
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/app_dev
-      - REDIS_URL=redis://redis:6379/0
       - NODE_ENV=development
     depends_on:
       db:
         condition: service_healthy
+    # Security defaults — include even in dev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
 
   db:
     image: postgres:16-alpine
     ports:
       - "127.0.0.1:5432:5432"        # localhost only — not exposed to network
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app_dev
+    env_file: .env                    # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB in .env
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -138,13 +146,19 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"        # localhost only
     volumes:
       - redisdata:/data
 
 volumes:
   pgdata:
   redisdata:
+# .env (gitignored):
+# DATABASE_URL=postgres://postgres:postgres@db:5432/app_dev
+# REDIS_URL=redis://redis:6379/0
+# POSTGRES_USER=postgres
+# POSTGRES_PASSWORD=postgres
+# POSTGRES_DB=app_dev
 ```
 
 ### Volumes & Data
@@ -241,7 +255,7 @@ tests/
      Always set memory limits in production. -->
 - Set `deploy.resources.limits` on every production service.
 - Formula: `(docker_memory * 0.6) / container_count` = safe per-container limit.
-- Dev: skip limits unless your machine is constrained (< 8GB RAM).
+- Always set limits, even in dev. Use generous values for dev (1G/1cpu), strict for prod (512M/0.5cpu).
 
 ### Debugging
 
