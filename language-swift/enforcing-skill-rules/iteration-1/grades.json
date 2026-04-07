@@ -1,0 +1,204 @@
+{
+  "skill": "language-swift",
+  "grades": {
+    "sendable-value-types": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "UserProfile changed from class to struct with Sendable conformance",
+      "with_evidence": "UserProfile changed from class to struct with Sendable conformance"
+    },
+    "unchecked-sendable-last-resort": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "APIClient changed to final class with let properties, removing @unchecked Sendable and using proper Sendable",
+      "with_evidence": "APIClient changed to actor, eliminating @unchecked Sendable entirely"
+    },
+    "structured-concurrency": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "loadProfile changed to async function, no longer uses Task.detached",
+      "with_evidence": "loadProfile changed to async function, no longer uses Task.detached"
+    },
+    "task-cancellation": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "heavyComputation loop has no Task.isCancelled check",
+      "with_evidence": "Added 'if Task.isCancelled { return acc }' inside the loop"
+    },
+    "main-thread-heavy-work": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "heavyComputation uses Task.detached to run loop off main thread",
+      "with_evidence": "heavyComputation uses Task.detached to run loop off main thread"
+    },
+    "continuation-exactly-once": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "bridgeCallback calls legacyFetch only once, resumes exactly once",
+      "with_evidence": "bridgeCallback calls legacyFetch only once, resumes exactly once"
+    },
+    "checked-continuation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed to withCheckedThrowingContinuation",
+      "with_evidence": "Changed to withCheckedThrowingContinuation"
+    },
+    "async-stream-over-combine": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "NotificationManager still uses Combine PassthroughSubject and @Published",
+      "with_evidence": "NotificationService uses @Observable with AsyncStream, no Combine"
+    },
+    "async-stream-cancellation": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No AsyncStream used, no onTermination handler",
+      "with_evidence": "streamEvents returns AsyncStream with onTermination handler for cleanup"
+    },
+    "delegate-wrap-asyncstream": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "streamEvents still uses raw callback handler, not wrapped in AsyncStream",
+      "with_evidence": "streamEvents wraps callback in AsyncStream using makeStream and continuation.yield"
+    },
+    "typed-throws": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "fetchNotifications uses plain 'throws', no typed throws",
+      "with_evidence": "fetchNotifications uses 'throws(APIError)' with structured APIError enum"
+    },
+    "observable-macro": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "ProfileViewModel still uses ObservableObject/@Published, NotificationManager uses ObservableObject/@Published",
+      "with_evidence": "ProfileViewModel and NotificationService both use @Observable macro"
+    },
+    "state-private": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "showSheet and selectedTab marked @State private",
+      "with_evidence": "showSheet marked @State private (selectedTab removed as unused)"
+    },
+    "environment-dependency-injection": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "ContentView still takes viewModel as @StateObject init param, no @Environment DI",
+      "with_evidence": "ContentView takes viewModel as @State init param, no @Environment DI"
+    },
+    "navigation-stack": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "NavigationView replaced with NavigationStack",
+      "with_evidence": "NavigationView replaced with NavigationStack"
+    },
+    "navigation-destination-typed": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "NavigationLink('Settings') { SettingsView() } still uses direct view closure",
+      "with_evidence": "NavigationLink('Settings', value: 'settings') with .navigationDestination(for: String.self)"
+    },
+    "sheet-item-over-ispresented": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Still uses .sheet(isPresented:) with conditional if-let inside",
+      "with_evidence": "Uses .sheet(item:) with Binding<UserProfile?>"
+    },
+    "dismiss-environment": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses @Environment(\\.dismiss)",
+      "with_evidence": "Uses @Environment(\\.dismiss)"
+    },
+    "task-over-onappear": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses .task modifier instead of .onAppear",
+      "with_evidence": "Uses .task modifier instead of .onAppear"
+    },
+    "accessibility-labels": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No .accessibilityLabel() on any interactive element",
+      "with_evidence": "Added .accessibilityLabel on buttons, images, progress view, text field, and .accessibilityHidden on decorative icons"
+    },
+    "view-body-extract-subviews": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "ContentView body is still massive with deeply nested VStack/List, no extraction",
+      "with_evidence": "Extracted ProfileContentView, ProfileHeaderView, FriendsListView as separate subviews"
+    },
+    "swiftdata-over-coredata": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "UserEntity still uses NSManagedObject with CoreData import",
+      "with_evidence": "UserEntity uses @Model with SwiftData import"
+    },
+    "codable-snake-case-strategy": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Uses manual CodingKeys mapping but does not use keyDecodingStrategy = .convertFromSnakeCase on decoder",
+      "with_evidence": "decoder.keyDecodingStrategy = .convertFromSnakeCase set on JSONDecoder in fetchUser"
+    },
+    "swift-testing-over-xctest": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Still uses XCTest (XCTestCase class, import XCTest)",
+      "with_evidence": "Uses import Testing, @Suite, @Test, #expect macros"
+    },
+    "noncopyable-token": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "SessionToken is a plain struct, copy() removed but no ~Copyable",
+      "with_evidence": "SessionToken declared as struct: ~Copyable"
+    },
+    "property-wrapper-simple": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed Logger and cache from Clamped wrapper",
+      "with_evidence": "Removed Logger and cache from Clamped wrapper"
+    },
+    "let-over-var": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "APIClient.baseURL and session changed to let",
+      "with_evidence": "APIClient (actor) uses let for baseURL and session"
+    },
+    "argument-labels-clarity": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No argument label clarity violations introduced; fetchUser(id:) retained",
+      "with_evidence": "No argument label clarity violations introduced; fetchUser(id:) retained"
+    },
+    "protocol-conformance-extension": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "UserProfile still declares Codable conformance inline on the struct declaration",
+      "with_evidence": "UserProfile still declares Codable conformance inline on the struct declaration (though Identifiable is in extension)"
+    },
+    "no-blanket-mainactor": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "ProfileViewModel still has blanket @MainActor; heavyComputation is async but the Task.detached inside still runs under blanket annotation",
+      "with_evidence": "ProfileViewModel still has blanket @MainActor; heavyComputation uses Task.detached to escape but class is still blanket @MainActor"
+    },
+    "preview-mock-data": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No #Preview provided for any view",
+      "with_evidence": "No #Preview provided for any view"
+    },
+    "single-source-of-truth": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "EditProfileView no longer mutates profile directly; uses let and notes callback pattern",
+      "with_evidence": "EditProfileView uses let profile, notes save via callback pattern"
+    }
+  },
+  "summary": {
+    "without_pass": 15,
+    "without_fail": 17,
+    "with_pass": 27,
+    "with_fail": 5,
+    "total": 32
+  }
+}

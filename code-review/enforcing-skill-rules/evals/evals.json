@@ -1,0 +1,168 @@
+{
+  "skill_name": "code-review",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Review this code:\n\n```typescript\nimport { Router, Request, Response } from 'express';\nimport { Pool } from 'pg';\nimport lodash from 'lodash';\nimport crypto from 'crypto';\nimport { z } from 'zod';\n\nconst pool = new Pool({ connectionString: process.env.DATABASE_URL });\nconst API_SECRET = 'sk_live_9f8a7b6c5d4e3f2a1b0c';\n\nconst UserSchema = z.object({\n  name: z.string(),\n  email: z.string(),\n  role: z.enum(['admin', 'user', 'viewer']),\n});\n\ntype User = z.infer<typeof UserSchema>;\n\ninterface CacheEntry<T> {\n  data: T;\n  ts: number;\n}\n\n// Old implementation using Redis\n// export async function getCachedUser(id: string) {\n//   const redis = await getRedisClient();\n//   return redis.get(`user:${id}`);\n// }\n\nconst cache: Map<string, CacheEntry<any>> = new Map();\n\nfunction getCache<T>(key: string, ttl: number): T | null {\n  const entry = cache.get(key);\n  if (entry && Date.now() - entry.ts < ttl) {\n    return entry.data as T;\n  }\n  return null;\n}\n\nfunction setCache<T>(key: string, data: T): void {\n  cache.set(key, { data, ts: Date.now() });\n}\n\nfunction clearExpiredCache(ttl: number): void {\n  const now = Date.now();\n  cache.forEach((entry, key) => {\n    if (now - entry.ts >= ttl) {\n      cache.delete(key);\n    }\n  });\n}\n\nexport class UserService {\n  private baseUrl: string;\n  private temp: string;\n\n  constructor(baseUrl: string) {\n    this.baseUrl = baseUrl;\n    this.temp = '';\n  }\n\n  async getUsers(req: Request, res: Response): Promise<void> {\n    const search = req.query.search as string;\n    const result = await pool.query(\n      `SELECT * FROM users WHERE name LIKE '%${search}%' OR email LIKE '%${search}%'`\n    );\n    const users = result.rows;\n\n    const enriched = [];\n    for (const user of users) {\n      const orders = await pool.query(\n        `SELECT * FROM orders WHERE user_id = $1`, [user.id]\n      );\n      const profile = await pool.query(\n        `SELECT * FROM profiles WHERE user_id = $1`, [user.id]\n      );\n      enriched.push({\n        ...user,\n        orders: orders.rows,\n        profile: profile.rows[0],\n        passwordHash: user.password_hash,\n      });\n    }\n\n    res.json({ data: enriched });\n  }\n\n  async createUser(req: Request, res: Response): Promise<void> {\n    const body = req.body;\n    const user: User = {\n      name: body.name,\n      email: body.email,\n      role: body.role || 'admin',\n    };\n\n    const result = await pool.query(\n      `INSERT INTO users (name, email, role) VALUES ($1, $2, $3) RETURNING *`,\n      [user.name, user.email, user.role]\n    );\n\n    res.json({ data: result.rows[0] });\n  }\n\n  async deleteUser(req: Request, res: Response): Promise<void> {\n    const id = req.params.id;\n    await pool.query(`DELETE FROM users WHERE id = $1`, [id]);\n    res.json({ success: true });\n  }\n\n  async updateUserRole(req: Request, res: Response): Promise<void> {\n    const id = req.params.id;\n    const role = req.body.role;\n    const result = await pool.query(\n      `UPDATE users SET role = $1 WHERE id = $2 RETURNING *`,\n      [role, id]\n    );\n    if (result.rows.length === 0) {\n      res.status(404).json({ error: 'Not found' });\n      return;\n    }\n    res.json({ data: result.rows[0] });\n  }\n\n  async exportUsers(req: Request, res: Response): Promise<void> {\n    const result = await pool.query('SELECT * FROM users');\n    const csv = result.rows.map(row =>\n      `${row.name},${row.email},${row.role}`\n    ).join('\\n');\n    res.setHeader('Content-Type', 'text/csv');\n    res.send(csv);\n  }\n\n  async getUsersByDepartment(req: Request, res: Response): Promise<void> {\n    const dept = req.params.dept;\n    const cached = getCache<any[]>(`dept:${dept}`, 60000);\n    if (cached) {\n      res.json({ data: cached });\n      return;\n    }\n\n    const result = await pool.query(\n      'SELECT * FROM users WHERE department = $1', [dept]\n    );\n\n    const grouped = lodash.groupBy(result.rows, 'team');\n    const data = Object.entries(grouped).map(([team, members]) => ({\n      team,\n      members,\n      count: members.length,\n    }));\n\n    setCache(`dept:${dept}`, data);\n    res.json({ data });\n  }\n\n  buildSearchFilter(query: string): object {\n    return query.length > 0\n      ? query.includes('@')\n        ? { type: 'email', value: query }\n        : query.match(/^\\d+$/)\n          ? { type: 'id', value: parseInt(query) }\n          : { type: 'name', value: query }\n      : { type: 'none' };\n  }\n\n  async syncExternalUsers(): Promise<void> {\n    const response = await fetch(`${this.baseUrl}/api/users`, {\n      headers: { 'Authorization': `Bearer ${API_SECRET}` },\n    });\n    const externalUsers = await response.json();\n\n    for (const ext of externalUsers) {\n      await pool.query(\n        `INSERT INTO users (name, email, role, external_id)\n         VALUES ($1, $2, $3, $4)\n         ON CONFLICT (external_id) DO UPDATE SET name = $1, email = $2`,\n        [ext.name, ext.email, 'user', ext.id]\n      );\n    }\n  }\n}\n\nexport function createRouter(): Router {\n  const router = Router();\n  const service = new UserService('https://api.partner.com');\n\n  router.get('/users', (req, res) => service.getUsers(req, res));\n  router.post('/users', (req, res) => service.createUser(req, res));\n  router.delete('/users/:id', (req, res) => service.deleteUser(req, res));\n  router.put('/users/:id/role', (req, res) => service.updateUserRole(req, res));\n  router.get('/users/export', (req, res) => service.exportUsers(req, res));\n  router.get('/users/department/:dept', (req, res) => service.getUsersByDepartment(req, res));\n  router.post('/users/sync', (req, res) => service.syncExternalUsers().then(() => res.json({ ok: true })));\n\n  return router;\n}\n```\n\nProvide your complete review.",
+      "assertions": [
+        {
+          "id": "correctness-edge-cases",
+          "trap": "createUser defaults role to 'admin' when not provided instead of a safe default like 'user'",
+          "category": "correctness",
+          "description": "Edge cases handled \u2014 null, empty, boundary values"
+        },
+        {
+          "id": "correctness-error-paths",
+          "trap": "No try/catch on any async handler \u2014 DB failures, fetch failures, and JSON parse errors crash the server",
+          "category": "correctness",
+          "description": "Error paths handled (not just the happy path)"
+        },
+        {
+          "id": "correctness-validation",
+          "trap": "UserSchema is defined with zod but never used for validation; createUser trusts req.body blindly",
+          "category": "correctness",
+          "description": "Does the code do what it claims \u2014 schema defined but not applied"
+        },
+        {
+          "id": "correctness-sync-response",
+          "trap": "syncExternalUsers has no error handling on fetch response (no response.ok check) and externalUsers could be non-iterable",
+          "category": "correctness",
+          "description": "External data source errors not handled"
+        },
+        {
+          "id": "readability-naming",
+          "trap": "'temp' field on UserService is unused and meaninglessly named",
+          "category": "readability",
+          "description": "Names descriptive and consistent \u2014 no temp, data, result without context"
+        },
+        {
+          "id": "readability-nested-ternary",
+          "trap": "buildSearchFilter uses triple-nested ternaries that are hard to follow",
+          "category": "readability",
+          "description": "Control flow straightforward \u2014 avoid nested ternaries, deep callbacks"
+        },
+        {
+          "id": "readability-dead-code-comments",
+          "trap": "Commented-out Redis implementation block is dead code left in the file",
+          "category": "readability",
+          "description": "Dead code artifacts \u2014 no-op variables, backwards-compat shims, commented-out blocks"
+        },
+        {
+          "id": "readability-simpler",
+          "trap": "lodash imported just for groupBy which is a trivial reduce; entire dependency for one utility",
+          "category": "readability",
+          "description": "Could this be done in fewer lines / with less complexity"
+        },
+        {
+          "id": "architecture-unused-code",
+          "trap": "clearExpiredCache is defined but never called anywhere",
+          "category": "architecture",
+          "description": "Dead code \u2014 unused exports or unreachable code should be removed"
+        },
+        {
+          "id": "architecture-abstraction",
+          "trap": "CacheEntry generic interface and get/setCache functions exist but cache has no expiration strategy (clearExpiredCache unused) and no size bound \u2014 in-memory cache will grow unbounded",
+          "category": "architecture",
+          "description": "Abstraction level appropriate \u2014 not over-engineered, not too coupled"
+        },
+        {
+          "id": "architecture-module-boundaries",
+          "trap": "Service class directly couples route handlers (req/res) with business logic and DB queries \u2014 no separation of concerns",
+          "category": "architecture",
+          "description": "Maintains clean module boundaries"
+        },
+        {
+          "id": "security-sql-injection",
+          "trap": "getUsers interpolates search directly into SQL string with string concatenation instead of parameterized query",
+          "category": "security",
+          "description": "SQL queries parameterized \u2014 no string concatenation"
+        },
+        {
+          "id": "security-hardcoded-secret",
+          "trap": "API_SECRET is hardcoded as a string literal in source code",
+          "category": "security",
+          "description": "Secrets kept out of code, logs, and version control"
+        },
+        {
+          "id": "security-auth-missing",
+          "trap": "No authentication or authorization on any route \u2014 delete, role update, sync, and export are fully open",
+          "category": "security",
+          "description": "Authentication/authorization checked where needed"
+        },
+        {
+          "id": "security-data-leak",
+          "trap": "getUsers returns passwordHash in the response payload to the client",
+          "category": "security",
+          "description": "Sensitive data not exposed in API responses"
+        },
+        {
+          "id": "security-input-validation",
+          "trap": "No validation on req.params.id, req.body.role, or search query \u2014 accepts arbitrary input",
+          "category": "security",
+          "description": "User input validated and sanitized"
+        },
+        {
+          "id": "security-csv-injection",
+          "trap": "exportUsers writes user-controlled data (name, email) directly into CSV without escaping \u2014 CSV injection vector",
+          "category": "security",
+          "description": "Outputs encoded to prevent injection"
+        },
+        {
+          "id": "security-external-data-untrusted",
+          "trap": "syncExternalUsers trusts external API response shape without validation before inserting into DB",
+          "category": "security",
+          "description": "Data from external sources treated as untrusted"
+        },
+        {
+          "id": "performance-n-plus-one",
+          "trap": "getUsers runs 2 additional queries per user in a loop \u2014 classic N+1 pattern",
+          "category": "performance",
+          "description": "N+1 query patterns identified"
+        },
+        {
+          "id": "performance-unbounded-fetch",
+          "trap": "getUsers and exportUsers SELECT * FROM users with no LIMIT or pagination",
+          "category": "performance",
+          "description": "Unbounded data fetching \u2014 missing pagination on list endpoints"
+        },
+        {
+          "id": "performance-sync-external",
+          "trap": "syncExternalUsers fetches all external users and upserts them one-by-one in a loop instead of batching",
+          "category": "performance",
+          "description": "Synchronous sequential operations that should be batched"
+        },
+        {
+          "id": "review-severity-labels",
+          "trap": "Review should categorize findings with severity prefixes like [BUG], [FIX], [CONSIDER], [NIT]",
+          "category": "process",
+          "description": "Every comment labeled with severity so author knows required vs optional"
+        },
+        {
+          "id": "review-tests-first",
+          "trap": "No tests exist for any of this code \u2014 reviewer should flag the complete absence of tests",
+          "category": "process",
+          "description": "Review the tests first \u2014 do tests exist for the change"
+        },
+        {
+          "id": "dependency-review",
+          "trap": "lodash is a heavy dependency used for a single groupBy call \u2014 existing JS (Object.groupBy or reduce) solves this",
+          "category": "architecture",
+          "description": "Prefer standard library over new dependencies \u2014 every dependency is a liability"
+        },
+        {
+          "id": "readability-unused-field",
+          "trap": "UserService.temp field is assigned in constructor but never read or written again",
+          "category": "readability",
+          "description": "No-op variables that serve no purpose should be removed"
+        },
+        {
+          "id": "correctness-role-validation",
+          "trap": "updateUserRole accepts any string for role without validating against the enum \u2014 could set role to arbitrary values",
+          "category": "correctness",
+          "description": "Does input match expected constraints"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "skill_name": "landing-page-copywriter",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n---\n\nHERO SECTION\n\nHeadline: Welcome To The Revolutionary Platform That Delves Into Your Comprehensive Business Needs\n\nSubheadline: Our cutting-edge, innovative, and transformative solution leverages synergy across your ecosystem to facilitate seamless workflows. Many experts believe this is the future of productivity.\n\nCTA Button: \"Submit\"\n\nTrust Bar: Trusted by many companies worldwide\n\n---\n\nPROBLEM SECTION\n\nBusinesses today face a myriad of challenges. Managing projects is hard. Communication breaks down. Teams lose track of tasks. Deadlines slip. Reports are late. Clients get frustrated. Budgets overflow. Morale drops. Turnover rises.\n\nThis is not just a problem \u2014 it's a crisis that underpins the very fabric of modern enterprise.\n\nHowever, while these challenges are significant, it's worth noting that some organizations have found ways to cope. On the other hand, many have not. The landscape of project management remains a tapestry of competing approaches.\n\n---\n\nSOLUTION SECTION\n\nOur Robust, Agile, And Dynamic Platform\n\nFeature 1: Real-time dashboard with WebSocket connections and React-based UI components\nFeature 2: Scalable microservice architecture built on Kubernetes with auto-scaling pods\nFeature 3: Comprehensive API with 200+ endpoints, GraphQL support, and OAuth2 authentication\n\nMoreover, our platform encompasses a holistic approach to project management. Furthermore, it empowers teams to unlock their potential through our groundbreaking paradigm shift in collaboration.\n\n---\n\nSOCIAL PROOF\n\n\"Great tool!\" \u2014 J.S.\n\n\"Really helped our team.\" \u2014 A user\n\n\"Pivotal for our success. A game changer that supercharged our workflows.\" \u2014 Anonymous\n\n---\n\nFINAL CTA\n\nReady to transform your business? Click here to get started or sign up for our newsletter and follow us on Twitter and check out our blog and join our community Discord.\n\nButton: \"Click Here\"\n\n---\n\nOutput fixed copy only.",
+      "assertions": [
+        {
+          "id": "rule-of-one-person",
+          "trap": "Copy addresses generic 'businesses' instead of a specific person",
+          "category": "rule-of-one",
+          "description": "Must write to a specific person, not a vague audience"
+        },
+        {
+          "id": "rule-of-one-problem",
+          "trap": "Problem section lists 9 different problems instead of one",
+          "category": "rule-of-one",
+          "description": "Must state a single problem, not scatter across many"
+        },
+        {
+          "id": "rule-of-one-action",
+          "trap": "Final CTA asks for 5 actions: sign up, newsletter, Twitter, blog, Discord",
+          "category": "rule-of-one",
+          "description": "Must end with one clear next step, not multiple competing actions"
+        },
+        {
+          "id": "framework-missing",
+          "trap": "Copy follows no recognizable framework (no PAS/AIDA/StoryBrand/BAB structure)",
+          "category": "copywriting-framework",
+          "description": "Must use a proven copywriting framework like PAS, AIDA, StoryBrand, or BAB"
+        },
+        {
+          "id": "banned-vocab",
+          "trap": "Uses banned words: delve, revolutionary, comprehensive, cutting-edge, innovative, transformative, leverage, synergy, ecosystem, facilitate, seamless, myriad, underpins, tapestry, landscape, robust, agile, dynamic, moreover, furthermore, holistic, encompasses, empowers, unlock, groundbreaking, paradigm shift, pivotal, game changer, supercharged, scalable",
+          "category": "ai-detection",
+          "description": "Must not use any word from the banned vocabulary list"
+        },
+        {
+          "id": "banned-pattern-rule-of-three",
+          "trap": "'cutting-edge, innovative, and transformative' and 'robust, agile, and dynamic' are AI-tell triple groupings",
+          "category": "ai-detection",
+          "description": "Must not group adjectives in threes, a telltale AI pattern"
+        },
+        {
+          "id": "banned-pattern-negative-parallelism",
+          "trap": "'This is not just a problem \u2014 it's a crisis' uses the 'not just X but Y' construction",
+          "category": "ai-detection",
+          "description": "Must not use 'not just X, but Y' pattern; state what it IS instead"
+        },
+        {
+          "id": "banned-pattern-vague-attribution",
+          "trap": "'Many experts believe' names no specific source",
+          "category": "ai-detection",
+          "description": "Must name specific sources or remove attribution entirely"
+        },
+        {
+          "id": "banned-pattern-setup-pivot",
+          "trap": "'However, while these challenges are significant... On the other hand' is the classic AI setup-pivot-conclusion",
+          "category": "ai-detection",
+          "description": "Must not use the setup + 'However' + balanced conclusion pattern"
+        },
+        {
+          "id": "banned-pattern-symmetrical-args",
+          "trap": "Problem section balances 'some have found ways to cope' vs 'many have not' symmetrically",
+          "category": "ai-detection",
+          "description": "Must not present symmetrical balanced arguments; real analysis is asymmetric"
+        },
+        {
+          "id": "banned-style-em-dash",
+          "trap": "Uses em dashes between words: 'problem \u2014 it's a crisis'",
+          "category": "ai-detection",
+          "description": "Must not use em dashes between words"
+        },
+        {
+          "id": "banned-style-title-case",
+          "trap": "Headings use title case: 'Welcome To The Revolutionary Platform', 'Our Robust, Agile, And Dynamic Platform'",
+          "category": "ai-detection",
+          "description": "Must use sentence case in headings, not title case"
+        },
+        {
+          "id": "benefits-over-features",
+          "trap": "Solution section lists raw technical features (WebSocket, Kubernetes, GraphQL, OAuth2) with zero user benefits",
+          "category": "copy-quality",
+          "description": "Must describe what features do FOR the user, not what they ARE technically"
+        },
+        {
+          "id": "headline-too-long",
+          "trap": "Headline is 14 words, exceeds the 10-word maximum",
+          "category": "hero-section",
+          "description": "Headline must be value proposition in 10 words or less"
+        },
+        {
+          "id": "headline-no-action-verb",
+          "trap": "Headline starts with 'Welcome To' instead of an action verb with specific outcome",
+          "category": "hero-section",
+          "description": "Headline must follow formula: action verb + specific outcome + timeframe or contrast"
+        },
+        {
+          "id": "cta-no-action-verb",
+          "trap": "CTA buttons say 'Submit' and 'Click Here' instead of starting with action verbs tied to outcomes",
+          "category": "cta",
+          "description": "Every CTA must start with an action verb and be specific about the outcome"
+        },
+        {
+          "id": "cta-missing-microcopy",
+          "trap": "No reassurance microcopy near CTAs (no 'Free', 'No credit card', 'Cancel anytime')",
+          "category": "cta",
+          "description": "Must include anxiety-reducing microcopy directly beside CTAs"
+        },
+        {
+          "id": "specificity-principle",
+          "trap": "'Trusted by many companies worldwide' uses vague quantity instead of specific numbers",
+          "category": "copy-quality",
+          "description": "Must use specific numbers and data, not vague quantities like 'many'"
+        },
+        {
+          "id": "social-proof-no-attribution",
+          "trap": "Testimonials lack full attribution: only initials, 'A user', and 'Anonymous' instead of name + role + company",
+          "category": "social-proof",
+          "description": "Testimonials must include quote + name + role + company"
+        },
+        {
+          "id": "social-proof-vague-quotes",
+          "trap": "'Great tool!' and 'Really helped our team' are generic, unspecific testimonials with no detail",
+          "category": "social-proof",
+          "description": "Social proof must include specific, detailed, credible quotes"
+        },
+        {
+          "id": "no-urgency-or-risk-reversal",
+          "trap": "Final CTA section has no urgency/scarcity element and no risk reversal (guarantee)",
+          "category": "final-cta",
+          "description": "Final CTA must include urgency or scarcity element plus risk reversal"
+        },
+        {
+          "id": "clear-takeaway-first-line",
+          "trap": "First line is a generic welcome with no clear value takeaway",
+          "category": "copy-quality",
+          "description": "Must have a clear takeaway in the first line; don't bury the lead"
+        },
+        {
+          "id": "sentence-variation",
+          "trap": "Problem section uses 9 consecutive short sentences of identical length and structure",
+          "category": "ai-detection",
+          "description": "Must vary sentence length to sound human"
+        }
+      ]
+    }
+  ]
+}

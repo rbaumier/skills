@@ -1,0 +1,192 @@
+{
+  "skill_name": "docker",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```dockerfile\nFROM node:latest\nWORKDIR /app\nCOPY . .\nRUN npm install\nRUN apt-get update && apt-get install -y curl\nENV API_KEY=sk-secret-1234567890\nENV DATABASE_URL=postgres://admin:password@db:5432/myapp\nEXPOSE 3000\nCMD node dist/server.js\n```\n\n```yaml\n# docker-compose.yml\nservices:\n  app:\n    build:\n      context: .\n    ports:\n      - \"3000:3000\"\n    volumes:\n      - .:/app\n    environment:\n      - API_KEY=sk-secret-1234567890\n      - NODE_ENV=production\n    depends_on:\n      - db\n      - redis\n\n  db:\n    image: postgres:latest\n    ports:\n      - \"5432:5432\"\n    environment:\n      POSTGRES_USER: admin\n      POSTGRES_PASSWORD: password\n      POSTGRES_DB: myapp\n\n  redis:\n    image: redis:latest\n    ports:\n      - \"6379:6379\"\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "pin-base-image-version",
+          "trap": "FROM node:latest uses :latest tag",
+          "category": "security",
+          "description": "Must pin exact base image versions, never use :latest. E.g. node:22-alpine3.20"
+        },
+        {
+          "id": "multi-stage-build",
+          "trap": "Single FROM stage with no multi-stage separation",
+          "category": "dockerfile-structure",
+          "description": "Must use multi-stage builds: deps -> build -> dev -> production stages"
+        },
+        {
+          "id": "copy-lockfile-first",
+          "trap": "COPY . . before npm install busts cache on every code change",
+          "category": "dockerfile-structure",
+          "description": "COPY package.json package-lock.json first, then npm ci, THEN COPY source"
+        },
+        {
+          "id": "npm-ci-not-install",
+          "trap": "RUN npm install instead of npm ci",
+          "category": "dockerfile-structure",
+          "description": "Use npm ci (lockfile-based) not npm install in Docker for reproducible builds"
+        },
+        {
+          "id": "layer-order-by-change-frequency",
+          "trap": "OS deps (apt-get) installed after COPY . . instead of before",
+          "category": "dockerfile-structure",
+          "description": "Order layers by change frequency: OS deps > lockfile > install > source > build"
+        },
+        {
+          "id": "exec-form-cmd",
+          "trap": "CMD node dist/server.js uses shell form instead of exec form",
+          "category": "dockerfile-structure",
+          "description": "Always use exec form [\"...\"] for CMD/ENTRYPOINT, never shell form (breaks signal handling)"
+        },
+        {
+          "id": "non-root-user",
+          "trap": "No USER directive, runs as root",
+          "category": "security",
+          "description": "Must create and switch to non-root USER in production stage"
+        },
+        {
+          "id": "no-secrets-in-dockerfile",
+          "trap": "ENV API_KEY=sk-secret-1234567890 bakes secret into image layer",
+          "category": "security",
+          "description": "Never put secrets in Dockerfile ENV/COPY. Use runtime env vars or mounted secrets"
+        },
+        {
+          "id": "no-secrets-in-compose",
+          "trap": "API_KEY=sk-secret-1234567890 hardcoded in compose environment",
+          "category": "security",
+          "description": "Never hardcode secrets in compose file. Use env_file: .env with .env in .gitignore"
+        },
+        {
+          "id": "healthcheck-dockerfile",
+          "trap": "No HEALTHCHECK instruction in Dockerfile",
+          "category": "dockerfile-structure",
+          "description": "Production stage must include HEALTHCHECK instruction"
+        },
+        {
+          "id": "alpine-base-image",
+          "trap": "FROM node:latest uses full image instead of alpine/slim variant",
+          "category": "dockerfile-structure",
+          "description": "Use Alpine for small images, or -slim if native deps have musl issues"
+        },
+        {
+          "id": "node-env-production",
+          "trap": "No NODE_ENV=production in production Dockerfile stage",
+          "category": "dockerfile-structure",
+          "description": "Set ENV NODE_ENV=production in the production stage"
+        },
+        {
+          "id": "signal-handling-tini",
+          "trap": "No tini or dumb-init for PID 1 signal forwarding",
+          "category": "dockerfile-structure",
+          "description": "Use tini or dumb-init as ENTRYPOINT for proper signal handling and zombie reaping"
+        },
+        {
+          "id": "anonymous-volume-node-modules",
+          "trap": "Bind mount .:/app overwrites container node_modules with no anonymous volume",
+          "category": "volumes",
+          "description": "Use anonymous volume /app/node_modules to prevent bind mount from overwriting container deps"
+        },
+        {
+          "id": "depends-on-condition-healthy",
+          "trap": "depends_on uses list form without condition: service_healthy",
+          "category": "compose",
+          "description": "Use depends_on with condition: service_healthy, not just container start"
+        },
+        {
+          "id": "healthcheck-every-service",
+          "trap": "db and redis services have no healthcheck defined",
+          "category": "compose",
+          "description": "Healthchecks on every service in compose for proper dependency ordering"
+        },
+        {
+          "id": "pin-compose-image-versions",
+          "trap": "postgres:latest and redis:latest use :latest tag",
+          "category": "security",
+          "description": "Pin exact image versions in compose, never :latest"
+        },
+        {
+          "id": "bind-localhost-dev-ports",
+          "trap": "db ports: 5432:5432 exposes to all interfaces instead of 127.0.0.1",
+          "category": "networking",
+          "description": "Bind dev-only ports to 127.0.0.1 to prevent external access"
+        },
+        {
+          "id": "named-volumes-persistent-data",
+          "trap": "db has no named volume for /var/lib/postgresql/data, data lost on restart",
+          "category": "volumes",
+          "description": "Use named volumes for persistent data (postgres, redis). Containers are ephemeral"
+        },
+        {
+          "id": "security-opt-no-new-privileges",
+          "trap": "No security_opt: no-new-privileges on app service",
+          "category": "security",
+          "description": "Set security_opt: [no-new-privileges:true] to prevent privilege escalation"
+        },
+        {
+          "id": "cap-drop-all",
+          "trap": "No cap_drop: [ALL] on services",
+          "category": "security",
+          "description": "Drop all capabilities with cap_drop: [ALL], then add back only what is needed"
+        },
+        {
+          "id": "resource-limits",
+          "trap": "No deploy.resources.limits on any service",
+          "category": "compose",
+          "description": "Set deploy.resources.limits (memory, cpus) on every production service"
+        },
+        {
+          "id": "oci-labels",
+          "trap": "No LABEL org.opencontainers.image.* metadata in Dockerfile",
+          "category": "dockerfile-structure",
+          "description": "Add OCI labels for traceability: source, version, revision"
+        },
+        {
+          "id": "cache-mount-package-manager",
+          "trap": "RUN npm install without --mount=type=cache for npm cache",
+          "category": "dockerfile-structure",
+          "description": "Use cache mounts for package managers: RUN --mount=type=cache,target=/root/.npm npm ci"
+        },
+        {
+          "id": "combine-run-commands",
+          "trap": "Separate RUN for npm install and apt-get creates unnecessary layers",
+          "category": "dockerfile-structure",
+          "description": "Combine related commands with && to reduce layers while keeping readability"
+        },
+        {
+          "id": "entrypoint-cmd-separation",
+          "trap": "No ENTRYPOINT defined, CMD used alone for binary and args",
+          "category": "dockerfile-structure",
+          "description": "Use ENTRYPOINT for the binary and CMD for default args, allowing runtime override"
+        },
+        {
+          "id": "read-only-filesystem",
+          "trap": "No read_only: true with tmpfs on app service",
+          "category": "security",
+          "description": "Use read_only: true with explicit tmpfs for writable dirs to minimize attack surface"
+        },
+        {
+          "id": "chown-copied-files",
+          "trap": "No --chown on COPY means files owned by root",
+          "category": "security",
+          "description": "Use COPY --chown=appuser:appgroup to ensure copied files are owned by non-root user"
+        },
+        {
+          "id": "redis-named-volume",
+          "trap": "redis has no volume for /data, data lost on restart",
+          "category": "volumes",
+          "description": "Redis needs a named volume for /data to persist data across restarts"
+        },
+        {
+          "id": "compose-build-target",
+          "trap": "build has no target specified, builds entire Dockerfile",
+          "category": "compose",
+          "description": "Specify build target (e.g. target: dev) to build only the intended stage"
+        }
+      ]
+    }
+  ]
+}

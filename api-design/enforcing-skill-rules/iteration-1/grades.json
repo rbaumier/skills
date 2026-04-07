@@ -1,0 +1,144 @@
+{
+  "skill": "api-design",
+  "grades": {
+    "minimize-observable-surface": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Order type has no internalDbRowId or _sequelizeTimestamp. Comment: '// No internalDbRowId, no _sequelizeTimestamp \u2014 never leak internals'",
+      "with_evidence": "Order type has no internalDbRowId or _sequelizeTimestamp. Only id, userId, items, shippingAddress, state, priority, createdAt, updatedAt, total."
+    },
+    "never-leak-implementation-details": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Error handler uses 'errorResponse(res, 400, \"VALIDATION_ERROR\", message)' with no stack trace. Ship endpoint returns only '{ status: \"shipped\" }' with no internalDbRowId or queryPlan.",
+      "with_evidence": "Error handler uses 'apiError()' with no stack trace. Ship endpoint returns full Order object with no internalDbRowId or queryPlan. No ?internal=true branching."
+    },
+    "plan-deprecation-at-design-time": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No Deprecation or Sunset headers added to any v1 endpoints. The v2 endpoints were simply removed/merged.",
+      "with_evidence": "No Deprecation or Sunset headers added. V2 endpoints were removed entirely with no deprecation mechanism."
+    },
+    "one-version-extend-not-fork": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "OrderV2 is eliminated. Single Order type with additive optional fields: 'trackingNumber?: string | null; cancelledReason?: string | null; shippedAt?: string | null'",
+      "with_evidence": "OrderV2 is eliminated. Single Order type uses discriminated union OrderState instead of forked type."
+    },
+    "contract-first": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Defined CreateOrderInput and UpdateOrderInput as separate input types. Order is the output type with server-generated fields (id, createdAt, etc.).",
+      "with_evidence": "Defined CreateOrderInput, UpdateOrderInput, ShipOrderInput, CancelOrderInput as input types. Order is output type with server-generated fields."
+    },
+    "consistent-error-shape": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Single APIError interface { error: { code, message, details? } } used via errorResponse() helper in all endpoints (create, get, patch, cancel, ship).",
+      "with_evidence": "Single APIError interface { error: { code, message, details? } } used via apiError() helper in all endpoints."
+    },
+    "correct-http-status-codes": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "res.status(201).json(order) for creation. Validation errors return 400. Not found returns 404.",
+      "with_evidence": "res.status(201).json(order) for creation. 400 for validation, 404 for not found, 409 for conflicts, 422 for invalid webhook."
+    },
+    "no-mixed-error-patterns": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All endpoints use the errorResponse() helper consistently. No mix of throw/json/boolean patterns.",
+      "with_evidence": "All endpoints use the apiError() helper consistently. No mix of throw/json/boolean patterns."
+    },
+    "url-versioning-default": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All endpoints use /api/v1/ prefix: POST /api/v1/orders, GET /api/v1/orders, etc. No unversioned endpoints.",
+      "with_evidence": "All endpoints use /api/v1/ prefix: POST /api/v1/orders, GET /api/v1/orders, POST /api/v1/webhooks/third-party, etc."
+    },
+    "always-paginate-lists": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "GET /api/v1/orders returns { data: orders, pagination: { page, pageSize, totalItems, totalPages } }",
+      "with_evidence": "GET /api/v1/orders returns PaginatedResult<Order> with { data: orders, pagination: { nextCursor, hasMore } }"
+    },
+    "pagination-response-shape": {
+      "without": "PASS",
+      "with": "FAIL",
+      "without_evidence": "Uses 'data' as collection key. Includes totalItems and totalPages in pagination object: '{ data: orders, pagination: { page, pageSize, totalItems, totalPages } }'",
+      "with_evidence": "Uses cursor-based pagination with { data, pagination: { nextCursor, hasMore } }. While cursor-based is valid, it switched away from offset pagination without providing totalItems/totalPages. The assertion specifically requires offset pagination metadata. However the 'data' key is used correctly. Missing totalItems and totalPages."
+    },
+    "add-never-remove-fields": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Order type removed internalDbRowId and _sequelizeTimestamp entirely. While these were internal fields, the assertion is about fields present in Order being removed in OrderV2. The merged type does not include them.",
+      "with_evidence": "Order type removed internalDbRowId and _sequelizeTimestamp entirely. The merged type does not preserve these fields."
+    },
+    "never-change-field-types": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "priority stays as string in the merged Order type: 'priority: string'",
+      "with_evidence": "priority stays as string in the merged Order type: 'priority: string'"
+    },
+    "discriminated-unions-for-variants": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Uses nullable optional fields: 'trackingNumber?: string | null; cancelledReason?: string | null; shippedAt?: string | null' \u2014 not discriminated unions.",
+      "with_evidence": "Uses discriminated union: 'type OrderState = | { status: \"pending\" } | { status: \"shipped\"; shippedAt: Date; trackingNumber: string } | { status: \"cancelled\"; cancelledReason: string }'"
+    },
+    "branded-types-for-ids": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "type UserId = string & { readonly __brand: \"UserId\" }; type OrderId = string & { readonly __brand: \"OrderId\" }; Order uses id: OrderId, userId: UserId.",
+      "with_evidence": "type UserId = string & { readonly __brand: \"UserId\" }; type OrderId = string & { readonly __brand: \"OrderId\" }; Order uses id: OrderId, userId: UserId."
+    },
+    "validate-at-boundaries-only": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "calculateTotal no longer calls validateOrder. It takes items: OrderItem[] directly. Validation is done in validateCreateOrderInput at the API boundary.",
+      "with_evidence": "calculateTotal takes items: OrderItem[] directly with no validateOrder call. Validation done in validateCreateOrderInput at API boundary."
+    },
+    "no-verbs-in-rest-urls": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed to POST /api/v1/orders. Comment: '// POST /api/v1/orders  (not /api/createOrder \u2014 no verbs in REST URLs)'",
+      "with_evidence": "Changed to POST /api/v1/orders. Comment: '// Create order: POST /v1/orders (no verbs in URL)'"
+    },
+    "no-get-for-mutations": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "app.post(\"/api/v1/orders/:id/cancel\", ...) \u2014 changed from GET to POST.",
+      "with_evidence": "app.post(\"/api/v1/orders/:id/cancel\", ...) \u2014 changed from GET to POST."
+    },
+    "patch-not-put-for-partial": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "app.patch(\"/api/v1/orders/:id\", ...) \u2014 changed from PUT to PATCH.",
+      "with_evidence": "app.patch(\"/api/v1/orders/:id\", ...) \u2014 changed from PUT to PATCH with UpdateOrderInput (all fields optional)."
+    },
+    "no-boolean-branching-params": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Ship endpoint has no ?internal=true query param. Returns only '{ status: \"shipped\" }'.",
+      "with_evidence": "Ship endpoint has no ?internal=true query param. Returns full Order object with consistent shape."
+    },
+    "validate-third-party-responses": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "processThirdPartyWebhook takes 'payload: unknown' and validates: 'if (typeof orderId !== \"string\") throw new Error(\"order_id must be a string\")'",
+      "with_evidence": "validateThirdPartyWebhook takes 'payload: unknown' and validates: 'if (typeof p.order_id !== \"string\" || typeof p.amount !== \"number\") return null'"
+    },
+    "endpoint-consistent-response-shape": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Ship endpoint returns only '{ status: \"shipped\" }' \u2014 single shape, no conditional branching.",
+      "with_evidence": "Ship endpoint returns full Order object \u2014 single shape, no conditional branching based on query params."
+    }
+  },
+  "summary": {
+    "without_pass": 19,
+    "without_fail": 3,
+    "with_pass": 19,
+    "with_fail": 3,
+    "total": 22
+  }
+}

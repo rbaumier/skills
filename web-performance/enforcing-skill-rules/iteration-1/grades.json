@@ -1,0 +1,216 @@
+{
+  "skill": "web-performance",
+  "grades": {
+    "replace-moment": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed moment entirely, replaced with native Date/Intl helpers (formatRelativeTime, formatDate functions)",
+      "with_evidence": "Replaced moment with date-fns imports (formatDistanceToNow, format) which are tree-shakeable"
+    },
+    "replace-lodash": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed lodash entirely, replaced with native Set, filter, includes, sort, reduce",
+      "with_evidence": "Removed lodash entirely, replaced with native Set, filter, includes, sort, reduce"
+    },
+    "barrel-import": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Still imports Header, Footer, Sidebar, Card, Badge, Tooltip, Accordion, Tabs, Breadcrumb from '@/components' barrel file",
+      "with_evidence": "Still imports Header, Footer, Sidebar from '@/components' barrel file instead of individual paths like '@/components/Header'"
+    },
+    "hero-image-format": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Hero image still uses /images/hero-banner.png (next/image may auto-optimize but source is still .png)",
+      "with_evidence": "Changed hero image to /images/hero-banner.webp"
+    },
+    "hero-image-dimensions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses next/image with fill prop which handles dimensions via parent container",
+      "with_evidence": "Uses next/image with explicit width={1200} height={600}"
+    },
+    "hero-image-fetchpriority": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Uses priority prop on next/image but no explicit fetchPriority=\"high\" attribute",
+      "with_evidence": "Explicit fetchPriority=\"high\" on hero Image component"
+    },
+    "hero-image-preload": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No <link rel=\"preload\"> for hero image in Head",
+      "with_evidence": "Added <link rel=\"preload\" as=\"image\" href=\"/images/hero-banner.webp\" fetchPriority=\"high\" />"
+    },
+    "product-image-dimensions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Product images use next/image with width={300} height={300}",
+      "with_evidence": "Product images use next/image with width={280} height={280}"
+    },
+    "product-image-lazy": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Product images have loading=\"lazy\"",
+      "with_evidence": "Product images have loading=\"lazy\""
+    },
+    "product-image-format": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Product images still reference .png source paths",
+      "with_evidence": "Changed product images to .webp format"
+    },
+    "responsive-images": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses next/image with sizes=\"(max-width: 768px) 100vw, 25vw\" which generates srcset",
+      "with_evidence": "Uses next/image with sizes=\"(max-width: 768px) 100vw, 25vw\" which generates srcset"
+    },
+    "avatar-image-dimensions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Avatar images use next/image with width={48} height={48}",
+      "with_evidence": "Avatar images use next/image with width={48} height={48}"
+    },
+    "avatar-image-lazy": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Avatar images have loading=\"lazy\"",
+      "with_evidence": "Avatar images have loading=\"lazy\""
+    },
+    "brand-image-dimensions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Brand images use next/image with width={120} height={60}",
+      "with_evidence": "Brand images use next/image with width={120} height={60}"
+    },
+    "brand-image-lazy": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Brand images have loading=\"lazy\"",
+      "with_evidence": "Brand images have loading=\"lazy\""
+    },
+    "footer-image-dimensions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Footer image uses next/image with width={1200} height={400}",
+      "with_evidence": "Footer image uses next/image with width={1200} height={300}"
+    },
+    "footer-image-lazy": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Footer image has loading=\"lazy\"",
+      "with_evidence": "Footer image has loading=\"lazy\""
+    },
+    "script-defer": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Scripts have async defer attributes",
+      "with_evidence": "Scripts have defer attribute"
+    },
+    "font-display-swap": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed Google Fonts URL from display=block to display=swap",
+      "with_evidence": "Self-hosted @font-face declarations use font-display: swap"
+    },
+    "font-self-host": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Still loads from fonts.googleapis.com",
+      "with_evidence": "Removed Google Fonts link, self-hosted with @font-face pointing to /fonts/Inter-Regular.woff2 and Inter-Bold.woff2"
+    },
+    "font-preload": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No <link rel=\"preload\" as=\"font\"> in Head",
+      "with_evidence": "Added <link rel=\"preload\" as=\"font\" type=\"font/woff2\" href=\"/fonts/Inter-Regular.woff2\" crossOrigin=\"anonymous\" /> for both weights"
+    },
+    "preconnect": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No preconnect hints for third-party origins",
+      "with_evidence": "Added <link rel=\"preconnect\" href=\"https://cdn.analytics.com\" /> and for chat-widget"
+    },
+    "scroll-listener-passive": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed scroll listener entirely (scrollY state was unused)",
+      "with_evidence": "Added { passive: true } to scroll addEventListener"
+    },
+    "scroll-listener-throttle": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed scroll listener entirely",
+      "with_evidence": "Throttled with requestAnimationFrame"
+    },
+    "scroll-listener-cleanup": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed scroll listener entirely, no cleanup needed",
+      "with_evidence": "Added return () => window.removeEventListener cleanup"
+    },
+    "localstorage-render": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Still reads localStorage synchronously in useEffect - the assertion says 'no synchronous localStorage reads in render path' and useEffect on mount is still in the render path",
+      "with_evidence": "Still reads localStorage synchronously in useEffect - wrapped in try/catch but still synchronous blocking read"
+    },
+    "code-split-components": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Modal dynamically imported with next/dynamic, ssr: false",
+      "with_evidence": "Modal lazy loaded with React.lazy + Suspense"
+    },
+    "inline-critical-css": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Still has all CSS inlined including non-critical footer-images and sidebar styles",
+      "with_evidence": "Still has all CSS inlined including animation keyframes, footer-images, and sidebar styles in the same block"
+    },
+    "css-containment": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No CSS containment on product grid or sections",
+      "with_evidence": "Added contain: layout style paint on .product-card"
+    },
+    "reduced-motion": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Removed the animation entirely instead of respecting prefers-reduced-motion media query",
+      "with_evidence": "Added @media (prefers-reduced-motion: reduce) { .floating { animation: none; } }"
+    },
+    "emdash-overuse": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Reduced promo banner to single em-dash: 'Free shipping on all orders &mdash; today only!'",
+      "with_evidence": "Replaced all em-dashes with commas/periods/parentheses: 'Free shipping on all orders, today only. Don't miss out (limited time). Order now!'"
+    },
+    "image-cdn": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "All images still served from local /images/ paths",
+      "with_evidence": "All images still served from local /images/ paths"
+    },
+    "cache-headers-static": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No cache headers or hashed filenames configured",
+      "with_evidence": "No cache headers or hashed filenames configured"
+    },
+    "lazy-load-everything-upfront": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Reviews, brands, and footer sections all rendered eagerly in the same component",
+      "with_evidence": "Reviews, brands, and footer sections all rendered eagerly in the same component"
+    }
+  },
+  "summary": {
+    "without_pass": 20,
+    "without_fail": 13,
+    "with_pass": 27,
+    "with_fail": 6,
+    "total": 33
+  }
+}

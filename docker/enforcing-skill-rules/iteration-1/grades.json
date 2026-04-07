@@ -1,0 +1,192 @@
+{
+  "skill": "docker",
+  "grades": {
+    "pin-base-image-version": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Uses node:22-alpine \u2014 pinned major but no minor/patch. Not exact (e.g. node:22.12-alpine3.20).",
+      "with_evidence": "Uses node:22.12-alpine3.20 \u2014 exact version pinned for both node and alpine."
+    },
+    "multi-stage-build": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Three stages: deps, build, production.",
+      "with_evidence": "Four stages: deps, dev, build, production."
+    },
+    "copy-lockfile-first": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "COPY package.json package-lock.json before npm ci, then COPY . . later.",
+      "with_evidence": "COPY package.json package-lock.json before npm ci, then COPY . . later."
+    },
+    "npm-ci-not-install": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses npm ci instead of npm install.",
+      "with_evidence": "Uses npm ci instead of npm install."
+    },
+    "layer-order-by-change-frequency": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "OS deps (apk add) in production stage before COPY source. Lockfile before source in deps stage.",
+      "with_evidence": "OS deps (apk add) before COPY. Lockfile before source in deps stage."
+    },
+    "exec-form-cmd": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "CMD [\"node\", \"dist/server.js\"] \u2014 exec form.",
+      "with_evidence": "CMD [\"node\", \"dist/server.js\"] \u2014 exec form."
+    },
+    "non-root-user": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "adduser appuser + USER appuser in production stage.",
+      "with_evidence": "adduser appuser + USER appuser in production stage."
+    },
+    "no-secrets-in-dockerfile": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "API_KEY and DATABASE_URL ENV lines removed entirely.",
+      "with_evidence": "API_KEY and DATABASE_URL ENV lines removed entirely."
+    },
+    "no-secrets-in-compose": {
+      "without": "PASS",
+      "with": "FAIL",
+      "without_evidence": "API_KEY removed, uses env_file: .env.",
+      "with_evidence": "API_KEY removed and uses env_file: .env, BUT DATABASE_URL with password is hardcoded in environment: DATABASE_URL=postgres://admin:admin@db:5432/myapp. Still has secrets in compose."
+    },
+    "healthcheck-dockerfile": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "HEALTHCHECK instruction present in production stage.",
+      "with_evidence": "HEALTHCHECK instruction present in production stage."
+    },
+    "alpine-base-image": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses node:22-alpine.",
+      "with_evidence": "Uses node:22.12-alpine3.20."
+    },
+    "node-env-production": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "ENV NODE_ENV=production in production stage.",
+      "with_evidence": "ENV NODE_ENV=production in production stage."
+    },
+    "signal-handling-tini": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "apk add tini + ENTRYPOINT [\"tini\", \"--\"].",
+      "with_evidence": "apk add tini + ENTRYPOINT [\"tini\", \"--\"]."
+    },
+    "anonymous-volume-node-modules": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Bind mount .:/app removed entirely. No anonymous volume for node_modules. Assertion requires the anonymous volume pattern for dev scenarios.",
+      "with_evidence": "volumes includes - /app/node_modules as anonymous volume."
+    },
+    "depends-on-condition-healthy": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "depends_on with condition: service_healthy for both db and redis.",
+      "with_evidence": "depends_on with condition: service_healthy for both db and redis."
+    },
+    "healthcheck-every-service": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Healthchecks on db and redis services.",
+      "with_evidence": "Healthchecks on db and redis services."
+    },
+    "pin-compose-image-versions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "postgres:16-alpine and redis:7-alpine \u2014 no :latest.",
+      "with_evidence": "postgres:16-alpine and redis:7-alpine \u2014 no :latest."
+    },
+    "bind-localhost-dev-ports": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "127.0.0.1:5432:5432 and 127.0.0.1:6379:6379.",
+      "with_evidence": "127.0.0.1:5432:5432 and 127.0.0.1:6379:6379."
+    },
+    "named-volumes-persistent-data": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "pgdata:/var/lib/postgresql/data with named volume declared.",
+      "with_evidence": "pgdata:/var/lib/postgresql/data with named volume declared."
+    },
+    "security-opt-no-new-privileges": {
+      "without": "PASS",
+      "with": "FAIL",
+      "without_evidence": "security_opt: - no-new-privileges:true on app service.",
+      "with_evidence": "No security_opt on any service in compose output."
+    },
+    "cap-drop-all": {
+      "without": "PASS",
+      "with": "FAIL",
+      "without_evidence": "cap_drop: - ALL on app service.",
+      "with_evidence": "No cap_drop on any service in compose output."
+    },
+    "resource-limits": {
+      "without": "PASS",
+      "with": "FAIL",
+      "without_evidence": "deploy.resources.limits with memory: 512M and cpus: 0.5 on app.",
+      "with_evidence": "No deploy.resources.limits on any service in compose output."
+    },
+    "oci-labels": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No LABEL instruction anywhere in Dockerfile.",
+      "with_evidence": "No LABEL instruction anywhere in Dockerfile."
+    },
+    "cache-mount-package-manager": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "RUN --mount=type=cache,target=/root/.npm npm ci.",
+      "with_evidence": "RUN --mount=type=cache,target=/root/.npm npm ci."
+    },
+    "combine-run-commands": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Separate RUN for apk add and adduser. Not combined.",
+      "with_evidence": "Separate RUN for apk add and adduser. Not combined."
+    },
+    "entrypoint-cmd-separation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "ENTRYPOINT [\"tini\", \"--\"] and CMD [\"node\", \"dist/server.js\"] separated.",
+      "with_evidence": "ENTRYPOINT [\"tini\", \"--\"] and CMD [\"node\", \"dist/server.js\"] separated."
+    },
+    "read-only-filesystem": {
+      "without": "PASS",
+      "with": "FAIL",
+      "without_evidence": "read_only: true with tmpfs: - /tmp on app service.",
+      "with_evidence": "No read_only or tmpfs on any service in compose output."
+    },
+    "chown-copied-files": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "COPY --chown=appuser:appgroup on all COPY --from=build lines.",
+      "with_evidence": "COPY --chown=appuser:appgroup on all COPY --from=build lines."
+    },
+    "redis-named-volume": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "redisdata:/data volume on redis service.",
+      "with_evidence": "redisdata:/data volume on redis service."
+    },
+    "compose-build-target": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "target: production in build config.",
+      "with_evidence": "target: dev in build config."
+    }
+  },
+  "summary": {
+    "without_pass": 26,
+    "without_fail": 4,
+    "with_pass": 22,
+    "with_fail": 8,
+    "total": 30
+  }
+}

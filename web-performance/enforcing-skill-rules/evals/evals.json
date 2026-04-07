@@ -1,0 +1,216 @@
+{
+  "skill_name": "web-performance",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\nimport React from 'react';\nimport Head from 'next/head';\nimport moment from 'moment';\nimport _ from 'lodash';\nimport { Header, Footer, Sidebar, Card, Badge, Modal, Tooltip, Accordion, Tabs, Breadcrumb } from '@/components';\n\nconst PRODUCTS_CACHE = new Map();\n\nasync function fetchProducts() {\n  const res = await fetch('/api/products');\n  return res.json();\n}\n\nexport async function getServerSideProps() {\n  const products = await fetchProducts();\n  return { props: { products } };\n}\n\nexport default function StorePage({ products }: { products: any[] }) {\n  const [cart, setCart] = React.useState([]);\n  const [isModalOpen, setModalOpen] = React.useState(false);\n  const [scrollY, setScrollY] = React.useState(0);\n  const [query, setQuery] = React.useState('');\n  const [selectedCategory, setSelectedCategory] = React.useState('all');\n\n  React.useEffect(() => {\n    const saved = localStorage.getItem('cart');\n    if (saved) setCart(JSON.parse(saved));\n  }, []);\n\n  React.useEffect(() => {\n    window.addEventListener('scroll', () => {\n      setScrollY(window.scrollY);\n    });\n  }, []);\n\n  const categories = _.uniq(products.map((p: any) => p.category));\n  const filtered = _.filter(products, (p: any) => {\n    const matchesQuery = _.includes(p.name.toLowerCase(), query.toLowerCase());\n    const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;\n    return matchesQuery && matchesCat;\n  });\n  const sortedProducts = _.sortBy(filtered, 'price');\n  const totalValue = _.sumBy(sortedProducts, 'price');\n  const formattedDate = moment().format('MMMM Do YYYY, h:mm:ss a');\n\n  return (\n    <>\n      <Head>\n        <title>Our Store</title>\n        <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=block\" rel=\"stylesheet\" />\n        <script src=\"https://cdn.analytics.com/tracker.js\"></script>\n        <script src=\"https://cdn.chat-widget.com/widget.js\"></script>\n        <style>{`\n          body { font-family: 'Inter', sans-serif; margin: 0; }\n          .container { max-width: 1200px; margin: 0 auto; padding: 20px; }\n          .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }\n          .product-card { border: 1px solid #eee; padding: 16px; border-radius: 8px; }\n          .product-card img { width: 100%; }\n          .hero { position: relative; height: 600px; overflow: hidden; }\n          .hero img { width: 100%; height: 100%; object-fit: cover; }\n          .sidebar { width: 250px; }\n          .promo-banner { background: #f00; color: #fff; padding: 10px; text-align: center; }\n          .footer-images img { width: 100%; }\n          @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }\n          .floating { animation: float 3s ease-in-out infinite; }\n        `}</style>\n      </Head>\n\n      <Header />\n      <Sidebar />\n\n      <div className=\"promo-banner floating\">\n        <p>Free shipping on all orders &mdash; today only &mdash; don&rsquo;t miss out &mdash; limited time &mdash; order now!</p>\n      </div>\n\n      <section className=\"hero\">\n        <img src=\"/images/hero-banner.png\" alt=\"Store hero\" />\n        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>\n          <h1>Welcome to Our Store</h1>\n          <p>Updated: {formattedDate}</p>\n        </div>\n      </section>\n\n      <main className=\"container\">\n        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>\n          <input\n            type=\"text\"\n            placeholder=\"Search products...\"\n            value={query}\n            onChange={(e) => setQuery(e.target.value)}\n          />\n          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>\n            <option value=\"all\">All</option>\n            {categories.map((cat: string) => (\n              <option key={cat} value={cat}>{cat}</option>\n            ))}\n          </select>\n        </div>\n\n        <p>Showing {sortedProducts.length} products (Total value: ${totalValue.toFixed(2)})</p>\n\n        <div className=\"product-grid\">\n          {sortedProducts.map((product: any) => (\n            <div key={product.id} className=\"product-card\">\n              <img src={`/images/products/${product.slug}.png`} alt={product.name} />\n              <h3>{product.name}</h3>\n              <p>${product.price.toFixed(2)}</p>\n              <p>Added: {moment(product.createdAt).fromNow()}</p>\n              <button onClick={() => {\n                const newCart = [...cart, product];\n                setCart(newCart);\n                localStorage.setItem('cart', JSON.stringify(newCart));\n              }}>\n                Add to Cart\n              </button>\n            </div>\n          ))}\n        </div>\n\n        <section style={{ marginTop: '40px' }}>\n          <h2>Customer Reviews</h2>\n          {products.slice(0, 20).map((product: any) => (\n            <div key={`review-${product.id}`}>\n              <img src={`/images/avatars/${product.reviewerAvatar}.jpg`} alt=\"\" />\n              <p>{product.reviewText}</p>\n              <p>Reviewed: {moment(product.reviewDate).format('LL')}</p>\n            </div>\n          ))}\n        </section>\n\n        <section style={{ marginTop: '40px' }}>\n          <h2>Brand Partners</h2>\n          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>\n            {Array.from({ length: 12 }).map((_, i) => (\n              <img key={i} src={`/images/brands/brand-${i}.png`} alt={`Brand ${i}`} style={{ width: '120px' }} />\n            ))}\n          </div>\n        </section>\n      </main>\n\n      {isModalOpen && <Modal onClose={() => setModalOpen(false)} />}\n      <Footer />\n\n      <div className=\"footer-images\">\n        <img src=\"/images/footer-cta.png\" alt=\"Call to action\" />\n      </div>\n    </>\n  );\n}\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "replace-moment",
+          "trap": "Uses moment (heavy lib) for date formatting and relative time",
+          "category": "bundle-size",
+          "description": "Replace heavy libs: moment -> date-fns or Intl"
+        },
+        {
+          "id": "replace-lodash",
+          "trap": "Imports entire lodash library instead of specific functions",
+          "category": "bundle-size",
+          "description": "Replace heavy libs: lodash -> specific imports or native methods"
+        },
+        {
+          "id": "barrel-import",
+          "trap": "Barrel import from @/components imports all components, bloating bundle",
+          "category": "bundle-size",
+          "description": "Avoid barrel file imports; import components individually for tree-shaking"
+        },
+        {
+          "id": "hero-image-format",
+          "trap": "Hero image is .png, not WebP/AVIF",
+          "category": "images",
+          "description": "Use WebP/AVIF formats for images (70% savings AVIF, 50% WebP)"
+        },
+        {
+          "id": "hero-image-dimensions",
+          "trap": "Hero img has no width/height attributes, causes CLS",
+          "category": "cls",
+          "description": "Always set width/height or aspect-ratio on images to prevent CLS"
+        },
+        {
+          "id": "hero-image-fetchpriority",
+          "trap": "Hero image (LCP element) missing fetchpriority=\"high\"",
+          "category": "lcp",
+          "description": "Eager load hero image with fetchpriority=\"high\""
+        },
+        {
+          "id": "hero-image-preload",
+          "trap": "Critical hero image is not preloaded via link rel=\"preload\"",
+          "category": "lcp",
+          "description": "Preload critical LCP image via <link rel=\"preload\">"
+        },
+        {
+          "id": "product-image-dimensions",
+          "trap": "Product card images have no width/height attributes",
+          "category": "cls",
+          "description": "Every image must have explicit width/height or aspect-ratio to prevent CLS"
+        },
+        {
+          "id": "product-image-lazy",
+          "trap": "Product grid images (below fold) missing loading=\"lazy\"",
+          "category": "lazy-loading",
+          "description": "Lazy load below-fold images with loading=\"lazy\""
+        },
+        {
+          "id": "product-image-format",
+          "trap": "Product images use .png instead of WebP/AVIF",
+          "category": "images",
+          "description": "Use WebP/AVIF for product images with fallbacks"
+        },
+        {
+          "id": "responsive-images",
+          "trap": "No srcset/sizes or <picture> element for responsive images",
+          "category": "images",
+          "description": "Use responsive images with <picture> and srcset with width descriptors"
+        },
+        {
+          "id": "avatar-image-dimensions",
+          "trap": "Review avatar images have no width/height",
+          "category": "cls",
+          "description": "All images including avatars must have explicit dimensions"
+        },
+        {
+          "id": "avatar-image-lazy",
+          "trap": "Review avatar images (far below fold) not lazy loaded",
+          "category": "lazy-loading",
+          "description": "Lazy load below-fold images"
+        },
+        {
+          "id": "brand-image-dimensions",
+          "trap": "Brand partner images have no height attribute",
+          "category": "cls",
+          "description": "Brand images need explicit width and height to prevent CLS"
+        },
+        {
+          "id": "brand-image-lazy",
+          "trap": "Brand partner images (far below fold) not lazy loaded",
+          "category": "lazy-loading",
+          "description": "Lazy load all below-fold images"
+        },
+        {
+          "id": "footer-image-dimensions",
+          "trap": "Footer CTA image has no width/height",
+          "category": "cls",
+          "description": "Footer images must have explicit dimensions"
+        },
+        {
+          "id": "footer-image-lazy",
+          "trap": "Footer CTA image not lazy loaded",
+          "category": "lazy-loading",
+          "description": "Lazy load below-fold images including footer images"
+        },
+        {
+          "id": "script-defer",
+          "trap": "Third-party scripts loaded synchronously without async/defer",
+          "category": "render-blocking",
+          "description": "Defer third-party scripts, use async/defer on all scripts"
+        },
+        {
+          "id": "font-display-swap",
+          "trap": "Google Fonts loaded with display=block (render-blocking), should be swap",
+          "category": "font-optimization",
+          "description": "Use font-display: swap on all @font-face; Google Fonts link should use display=swap"
+        },
+        {
+          "id": "font-self-host",
+          "trap": "Google Fonts loaded from external CDN instead of self-hosted",
+          "category": "font-optimization",
+          "description": "Self-host fonts over Google Fonts to eliminate extra DNS+connection"
+        },
+        {
+          "id": "font-preload",
+          "trap": "Primary font not preloaded with link rel=\"preload\"",
+          "category": "font-optimization",
+          "description": "Preload primary font with <link rel=\"preload\" as=\"font\" type=\"font/woff2\" crossorigin>"
+        },
+        {
+          "id": "preconnect",
+          "trap": "No preconnect hints for critical third-party origins",
+          "category": "network",
+          "description": "Preconnect to critical origins"
+        },
+        {
+          "id": "scroll-listener-passive",
+          "trap": "Scroll listener added without passive:true option",
+          "category": "inp",
+          "description": "Unthrottled scroll listeners without passive:true are INP killers"
+        },
+        {
+          "id": "scroll-listener-throttle",
+          "trap": "Scroll listener fires on every scroll event with no throttle/rAF",
+          "category": "inp",
+          "description": "Throttle scroll/resize handlers with requestAnimationFrame"
+        },
+        {
+          "id": "scroll-listener-cleanup",
+          "trap": "Scroll event listener never cleaned up (missing useEffect return)",
+          "category": "memory",
+          "description": "Always clean up event listeners to prevent memory leaks"
+        },
+        {
+          "id": "localstorage-render",
+          "trap": "Synchronous localStorage read in useEffect during initial render path",
+          "category": "main-thread",
+          "description": "No synchronous localStorage/sessionStorage reads in render path"
+        },
+        {
+          "id": "code-split-components",
+          "trap": "Modal, Sidebar, and other non-critical components not lazy loaded",
+          "category": "bundle-size",
+          "description": "Code split by route, lazy load non-critical components"
+        },
+        {
+          "id": "inline-critical-css",
+          "trap": "Large inline style block includes non-critical CSS like animations and footer styles",
+          "category": "css",
+          "description": "Inline critical CSS only, defer non-critical, purge unused"
+        },
+        {
+          "id": "css-containment",
+          "trap": "No CSS containment used on product grid or sections for layout isolation",
+          "category": "css",
+          "description": "Use CSS containment for layout isolation on repeating elements"
+        },
+        {
+          "id": "reduced-motion",
+          "trap": "Float animation runs unconditionally, no prefers-reduced-motion check",
+          "category": "accessibility-performance",
+          "description": "Respect prefers-reduced-motion: reduce \u2014 disable animations"
+        },
+        {
+          "id": "emdash-overuse",
+          "trap": "Promo banner has 4 em-dashes in one paragraph",
+          "category": "copy",
+          "description": "Ban em-dash overuse: max 1 per paragraph, replace with commas/periods"
+        },
+        {
+          "id": "image-cdn",
+          "trap": "All images served from local /images/ path instead of CDN",
+          "category": "network",
+          "description": "Deliver images via CDN"
+        },
+        {
+          "id": "cache-headers-static",
+          "trap": "No cache headers configured for static image/font assets",
+          "category": "caching",
+          "description": "Cache immutable static assets 1yr with hashed filenames"
+        },
+        {
+          "id": "lazy-load-everything-upfront",
+          "trap": "All sections (reviews, brands, footer CTA) rendered eagerly upfront",
+          "category": "lazy-loading",
+          "description": "Never load everything upfront; lazy load non-critical resources"
+        }
+      ]
+    }
+  ]
+}

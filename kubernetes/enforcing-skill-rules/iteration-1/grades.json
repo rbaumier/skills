@@ -1,0 +1,168 @@
+{
+  "skill": "kubernetes",
+  "grades": {
+    "pin-image-tags": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "image: mycompany/api-server:v1.0.0",
+      "with_evidence": "image: mycompany/api-server:1.0.0"
+    },
+    "non-root-port": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "containerPort: 8080, Service port: 80 targetPort: 8080, runAsNonRoot: true",
+      "with_evidence": "containerPort: 8080, Service port: 80 targetPort: 8080, runAsNonRoot: true"
+    },
+    "lightweight-liveness": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "path: /healthz",
+      "with_evidence": "path: /healthz"
+    },
+    "resource-limits": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "requests: cpu: 250m, memory: 256Mi; limits: cpu: 500m, memory: 512Mi",
+      "with_evidence": "requests: cpu: 250m, memory: 256Mi; limits: cpu: 500m, memory: 512Mi"
+    },
+    "selector-mismatch": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Service selector app.kubernetes.io/name: api-server matches pod labels",
+      "with_evidence": "Service selector app.kubernetes.io/name: api-server matches pod labels"
+    },
+    "secrets-in-configmap": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "DATABASE_URL moved to Secret with secretKeyRef, removed from ConfigMap",
+      "with_evidence": "DATABASE_URL moved to Secret with secretKeyRef, removed from ConfigMap"
+    },
+    "min-two-replicas": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "replicas: 2",
+      "with_evidence": "replicas: 2"
+    },
+    "termination-grace-period": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "terminationGracePeriodSeconds: 30 with preStop sleep 5",
+      "with_evidence": "terminationGracePeriodSeconds: 30 with preStop sleep 5"
+    },
+    "max-unavailable-zero": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "maxUnavailable: 0",
+      "with_evidence": "maxUnavailable: 0"
+    },
+    "standard-labels": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "app.kubernetes.io/name: api-server, app.kubernetes.io/component: backend",
+      "with_evidence": "app.kubernetes.io/name: api-server, app.kubernetes.io/component: backend"
+    },
+    "readiness-probe": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "readinessProbe: httpGet: path: /ready port: 8080",
+      "with_evidence": "readinessProbe: httpGet: path: /ready port: 8080"
+    },
+    "startup-probe": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "startupProbe: httpGet: path: /healthz port: 8080 failureThreshold: 30",
+      "with_evidence": "startupProbe: httpGet: path: /healthz port: 8080 failureThreshold: 30"
+    },
+    "security-context-pod": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "runAsNonRoot: true, runAsUser: 1000, seccompProfile: type: RuntimeDefault",
+      "with_evidence": "runAsNonRoot: true, runAsUser: 1000, seccompProfile: type: RuntimeDefault"
+    },
+    "security-context-container": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, drop: [\"ALL\"]",
+      "with_evidence": "allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, drop: [\"ALL\"]"
+    },
+    "prestop-hook": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "lifecycle: preStop: exec: command: [\"sh\", \"-c\", \"sleep 5\"]",
+      "with_evidence": "lifecycle: preStop: exec: command: [\"sh\", \"-c\", \"sleep 5\"]"
+    },
+    "dedicated-service-account": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "ServiceAccount api-server-sa created, serviceAccountName: api-server-sa on pod spec",
+      "with_evidence": "ServiceAccount api-server-sa created, serviceAccountName: api-server-sa on pod spec"
+    },
+    "least-privilege-rbac": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Namespaced Role with rules: get/list/watch on configmaps, RoleBinding instead of ClusterRoleBinding",
+      "with_evidence": "Namespaced Role with rules: get/list/watch on configmaps/secrets, RoleBinding instead of ClusterRoleBinding"
+    },
+    "hpa-min-replicas": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "minReplicas: 2",
+      "with_evidence": "minReplicas: 2"
+    },
+    "hpa-needs-requests": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Container has resource requests (cpu: 250m, memory: 256Mi) so HPA can compute utilization",
+      "with_evidence": "Container has resource requests (cpu: 250m, memory: 256Mi) so HPA can compute utilization"
+    },
+    "hpa-scaledown-stabilization": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "behavior: scaleDown: stabilizationWindowSeconds: 300",
+      "with_evidence": "behavior: scaleDown: stabilizationWindowSeconds: 300"
+    },
+    "netpol-egress-missing": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "policyTypes: - Ingress - Egress, with explicit egress rules to postgres:5432",
+      "with_evidence": "policyTypes: - Ingress - Egress, with explicit egress rules to postgres:5432"
+    },
+    "netpol-allow-all-ingress": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "ingress restricted to podSelector matchLabels role: frontend on port 8080",
+      "with_evidence": "ingress restricted to podSelector matchLabels app.kubernetes.io/component: frontend on port 8080"
+    },
+    "ingress-tls": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Ingress has no tls block and no cert-manager annotation",
+      "with_evidence": "annotations: cert-manager.io/cluster-issuer: letsencrypt-prod, tls: hosts: api.example.com secretName: api-tls"
+    },
+    "pod-disruption-budget": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "PodDisruptionBudget api-server-pdb with minAvailable: 50%",
+      "with_evidence": "PodDisruptionBudget api-server-pdb with minAvailable: 50%"
+    },
+    "topology-spread": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No topologySpreadConstraints in pod spec",
+      "with_evidence": "No topologySpreadConstraints in pod spec"
+    },
+    "default-namespace": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "All resources still use namespace: default",
+      "with_evidence": "All resources use namespace: production"
+    }
+  },
+  "summary": {
+    "without_pass": 23,
+    "without_fail": 3,
+    "with_pass": 25,
+    "with_fail": 1,
+    "total": 26
+  }
+}

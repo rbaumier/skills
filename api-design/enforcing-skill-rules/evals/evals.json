@@ -1,0 +1,144 @@
+{
+  "skill_name": "api-design",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\nimport express from \"express\";\n\nconst app = express();\n\ntype UserId = string;\ntype OrderId = string;\n\ninterface Order {\n  id: string;\n  userId: string;\n  items: { sku: string; qty: number }[];\n  shippingAddress: { street: string; city: string; zip: string };\n  status: \"pending\" | \"shipped\" | \"cancelled\";\n  priority: string;\n  createdAt: Date;\n  updatedAt: Date;\n  total: number;\n  internalDbRowId: number;\n  _sequelizeTimestamp: string;\n}\n\ninterface OrderV2 {\n  id: string;\n  userId: string;\n  items: { sku: string; qty: number }[];\n  shippingAddress: { street: string; city: string; zip: string };\n  status: \"pending\" | \"shipped\" | \"cancelled\";\n  priority: number;\n  createdAt: Date;\n  updatedAt: Date;\n  total: number;\n  trackingNumber: string | null;\n  cancelledReason: string | null;\n  shippedAt: Date | null;\n}\n\nfunction validateOrder(order: Order) {\n  if (!order.items.length) throw new Error(\"Items required\");\n  if (!order.shippingAddress.city) throw new Error(\"City required\");\n}\n\nfunction calculateTotal(order: Order) {\n  validateOrder(order);\n  return order.items.reduce((sum, i) => sum + i.qty * 10, 0);\n}\n\napp.post(\"/api/createOrder\", async (req, res) => {\n  try {\n    const body = req.body;\n    const order: Order = {\n      id: Math.random().toString(36).slice(2),\n      userId: body.userId,\n      items: body.items,\n      shippingAddress: body.shippingAddress,\n      status: \"pending\",\n      priority: body.priority,\n      createdAt: new Date(),\n      updatedAt: new Date(),\n      total: calculateTotal(body),\n      internalDbRowId: 42,\n      _sequelizeTimestamp: new Date().toISOString(),\n    };\n    res.status(200).json(order);\n  } catch (err: any) {\n    res.status(500).json({ message: err.message, stack: err.stack });\n  }\n});\n\napp.get(\"/api/v1/orders\", async (req, res) => {\n  const orders: Order[] = [];\n  res.json(orders);\n});\n\napp.get(\"/api/v1/orders/:id\", async (req, res) => {\n  const order = null;\n  if (!order) {\n    res.status(404).json({ msg: \"not found\" });\n    return;\n  }\n  res.json(order);\n});\n\napp.put(\"/api/v1/orders/:id\", async (req, res) => {\n  const order: Order = req.body;\n  validateOrder(order);\n  res.json(order);\n});\n\napp.get(\"/api/v1/orders/:id/cancel\", async (req, res) => {\n  res.json({ success: true });\n});\n\napp.get(\"/api/v2/orders\", async (req, res) => {\n  const page = parseInt(req.query.page as string) || 1;\n  const size = parseInt(req.query.size as string) || 50;\n  const orders: OrderV2[] = [];\n  res.json({\n    items: orders,\n    page,\n    size,\n  });\n});\n\napp.post(\"/api/v1/orders/:id/ship\", async (req, res) => {\n  const includeInternal = req.query.internal === \"true\";\n  if (includeInternal) {\n    res.json({ shipped: true, internalDbRowId: 42, queryPlan: \"seq scan\" });\n  } else {\n    res.json({ shipped: true });\n  }\n});\n\nfunction processThirdPartyWebhook(payload: any) {\n  const orderId = payload.order_id;\n  const amount = payload.amount;\n  return { orderId, amount };\n}\n\napp.listen(3000);\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "minimize-observable-surface",
+          "trap": "Order exposes internalDbRowId and _sequelizeTimestamp to clients",
+          "category": "architecture",
+          "description": "Minimize observable surface \u2014 every field exposed is a commitment that cannot be safely removed"
+        },
+        {
+          "id": "never-leak-implementation-details",
+          "trap": "Error handler returns err.stack; ship endpoint returns queryPlan and internalDbRowId when internal=true",
+          "category": "security",
+          "description": "Never leak implementation details like stack traces, internal IDs, or query plans to clients"
+        },
+        {
+          "id": "plan-deprecation-at-design-time",
+          "trap": "v2 exists alongside v1 with no deprecation headers on v1 endpoints",
+          "category": "architecture",
+          "description": "Plan deprecation at design time \u2014 add Deprecation and Sunset response headers before removing anything"
+        },
+        {
+          "id": "one-version-extend-not-fork",
+          "trap": "OrderV2 is a forked copy of Order instead of extending the original with optional fields",
+          "category": "architecture",
+          "description": "Avoid parallel versions \u2014 extend with optional fields instead of creating v2 types"
+        },
+        {
+          "id": "contract-first",
+          "trap": "No typed input/output interfaces exist; handlers use raw req.body with no contract separating input from output",
+          "category": "architecture",
+          "description": "Define TypeScript interfaces for input and output before implementation \u2014 separate input from output, server-generated fields only in output"
+        },
+        {
+          "id": "consistent-error-shape",
+          "trap": "createOrder returns { message, stack }, getOrder returns { msg }, other endpoints have no error handling",
+          "category": "behavior",
+          "description": "One error shape everywhere \u2014 { error: { code, message, details? } } with no exceptions across endpoints"
+        },
+        {
+          "id": "correct-http-status-codes",
+          "trap": "createOrder returns 200 instead of 201; all errors in createOrder return 500 even for validation failures (400/422)",
+          "category": "behavior",
+          "description": "Use correct HTTP status codes \u2014 201 for creation, 400 for bad request, 422 for semantic errors, 500 only for unexpected server errors"
+        },
+        {
+          "id": "no-mixed-error-patterns",
+          "trap": "createOrder throws exceptions, getOrder returns a JSON error, put handler throws unhandled, ship returns a success boolean",
+          "category": "behavior",
+          "description": "Never mix error handling patterns \u2014 pick one strategy and enforce it everywhere"
+        },
+        {
+          "id": "url-versioning-default",
+          "trap": "createOrder is at /api/createOrder with no version prefix while other endpoints use /v1/",
+          "category": "architecture",
+          "description": "Default to URL versioning (/v1/) consistently across all endpoints"
+        },
+        {
+          "id": "always-paginate-lists",
+          "trap": "GET /api/v1/orders returns a raw array with no pagination metadata",
+          "category": "behavior",
+          "description": "Always paginate list endpoints with proper pagination metadata (cursor or offset-based)"
+        },
+        {
+          "id": "pagination-response-shape",
+          "trap": "v2 orders returns { items, page, size } missing totalItems and totalPages for offset pagination",
+          "category": "format",
+          "description": "Offset pagination must include totalItems and totalPages; use 'data' as the collection key for consistency"
+        },
+        {
+          "id": "add-never-remove-fields",
+          "trap": "OrderV2 removes internalDbRowId and _sequelizeTimestamp fields present in Order",
+          "category": "architecture",
+          "description": "Add, never remove \u2014 removed fields break consumers (Hyrum's Law)"
+        },
+        {
+          "id": "never-change-field-types",
+          "trap": "priority is string in Order but number in OrderV2",
+          "category": "architecture",
+          "description": "Never change field types \u2014 changing priority from string to number is a breaking change"
+        },
+        {
+          "id": "discriminated-unions-for-variants",
+          "trap": "OrderV2 uses nullable trackingNumber, cancelledReason, shippedAt instead of discriminated unions per status",
+          "category": "architecture",
+          "description": "Use discriminated unions for variants \u2014 each state carries exactly the fields it needs, no nullable fields that only exist in certain statuses"
+        },
+        {
+          "id": "branded-types-for-ids",
+          "trap": "Order uses plain string for id and userId instead of branded OrderId and UserId types",
+          "category": "architecture",
+          "description": "Use branded types for IDs \u2014 OrderId and UserId must be distinct types to prevent misuse"
+        },
+        {
+          "id": "validate-at-boundaries-only",
+          "trap": "calculateTotal calls validateOrder internally \u2014 validation between internal functions sharing type contracts",
+          "category": "architecture",
+          "description": "Validate at boundaries only \u2014 trust internal code, validate only where external input enters (API handlers)"
+        },
+        {
+          "id": "no-verbs-in-rest-urls",
+          "trap": "/api/createOrder uses a verb in the URL instead of POST /api/v1/orders",
+          "category": "format",
+          "description": "No verbs in REST URLs \u2014 use HTTP methods with noun resources (POST /api/v1/orders, not /api/createOrder)"
+        },
+        {
+          "id": "no-get-for-mutations",
+          "trap": "GET /api/v1/orders/:id/cancel uses GET for a state-changing operation instead of POST or DELETE",
+          "category": "behavior",
+          "description": "Do not use GET for state-changing operations \u2014 cancel should be POST or DELETE"
+        },
+        {
+          "id": "patch-not-put-for-partial",
+          "trap": "PUT /api/v1/orders/:id is used for what clients actually want as partial update",
+          "category": "behavior",
+          "description": "Use PATCH where clients want partial updates \u2014 PUT implies full replacement"
+        },
+        {
+          "id": "no-boolean-branching-params",
+          "trap": "Ship endpoint uses ?internal=true query param to branch response shape",
+          "category": "gotcha",
+          "description": "Boolean params that control branching are a red flag \u2014 split into named endpoints instead"
+        },
+        {
+          "id": "validate-third-party-responses",
+          "trap": "processThirdPartyWebhook uses payload as any with no runtime validation",
+          "category": "security",
+          "description": "Third-party API responses and webhooks must be validated at the boundary \u2014 never trust external input"
+        },
+        {
+          "id": "endpoint-consistent-response-shape",
+          "trap": "Ship endpoint returns { shipped: true } or { shipped: true, internalDbRowId, queryPlan } depending on query param",
+          "category": "behavior",
+          "description": "Endpoints must not return different shapes depending on conditions \u2014 response schema must be stable"
+        }
+      ]
+    }
+  ]
+}

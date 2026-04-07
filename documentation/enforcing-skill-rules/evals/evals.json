@@ -1,0 +1,204 @@
+{
+  "skill_name": "documentation",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```markdown\n# paygate\n\nPaygate is a payment gateway API. It handles payments.\n\n## Getting Started\n\nClone the repo and run it.\n\n## API Reference\n\n### POST /payments\n\nCreates a payment.\n\n**Request body:**\n\n```json\n{\n  \"amount\": 100,\n  \"currency\": \"usd\"\n}\n```\n\n**Response:**\n\n```json\n{\n  \"id\": \"pay_123\"\n}\n```\n\n### GET /payments/:id\n\nIt is believed that this endpoint retrieves a payment by ID. The handler probably calls the database layer somewhere in the service folder.\n\n**Response:**\n\n```json\n{\n  \"id\": \"pay_123\",\n  \"amount\": 100\n}\n```\n\n### POST /refunds\n\nCreates a refund. This was added because the product team wanted refund support and we thought it would be nice to have for the future when customers start asking for it.\n\n```json\n{\n  \"payment_id\": \"pay_123\"\n}\n```\n\n### Webhook Architecture\n\nWebhooks are sent when events occur. The system processes events and sends them to registered URLs.\n\nHere's a tutorial on how webhooks work conceptually: when an event fires, the webhook dispatcher picks it up from the queue, formats it, and sends an HTTP POST to your endpoint. If it fails, it retries with exponential backoff. The retry intervals are 1s, 5s, 30s, 2min, 10min. You should understand this deeply before setting up webhooks.\n\nTo register a webhook:\n1. Go to the dashboard\n2. Click \"Webhooks\"\n3. Enter your URL\n4. Select events\n5. Save\n\n## Changelog\n\n### v2.1.0\n- Added refund endpoint\n- Updated payment response\n- Fixed bug in currency validation\n- Internal: migrated to new ORM\n- Internal: updated CI pipeline\n- Fixed another bug in currency validation\n- Tweaked currency validation error message\n\n### v2.0.0\n- Rewrote the whole API\n- Changed authentication from API keys to OAuth2\n- Removed XML support\n- Added batch payments\n\n## Architecture\n\nThe system uses microservices. There are several services that communicate with each other. The payment service is the main one.\n\n```mermaid\nsequenceDiagram\n    Client->>API: POST /payments\n    API->>PaymentService: process\n    PaymentService->>DB: insert\n```\n\n## ADR: Use PostgreSQL\n\nWe decided to use PostgreSQL because it's a good database.\n\n## Environment Variables\n\nSet these:\n- `DB_URL` - database\n- `API_KEY` - your key: `sk_live_abc123xyz789`\n- `STRIPE_SECRET` - stripe: `sk_test_51ABC123`\n- `REDIS_URL` - cache\n\n## FAQ\n\nThese are quite complex implementation details that most people find confusing at first, but once you get the hang of it and understand all the interconnected pieces and the way they interact with each other across service boundaries, it becomes more intuitive.\n\n**Q: How do I handle idempotency?**\n\nPass an idempotency key header.\n\n**Q: Quelle est la limite de requ\u00eates?**\n\nThe rate limit is 100 requests per minute.\n```\n\nOutput fixed documentation only.",
+      "assertions": [
+        {
+          "id": "cite-sources",
+          "trap": "GET /payments/:id uses 'it is believed' and 'probably' with no file path or line number citation",
+          "category": "accuracy",
+          "description": "Cite sources as (file_path:line_number) for every claim"
+        },
+        {
+          "id": "fact-vs-inference",
+          "trap": "GET /payments/:id mixes guesses ('probably calls the database layer') as if they were facts",
+          "category": "accuracy",
+          "description": "Distinguish fact vs inference explicitly"
+        },
+        {
+          "id": "no-hand-waving",
+          "trap": "GET /payments/:id guesses behavior from folder names ('somewhere in the service folder') without reading code",
+          "category": "accuracy",
+          "description": "No hand-waving; read code before claiming behavior"
+        },
+        {
+          "id": "claims-need-path",
+          "trap": "Webhook section claims dispatcher picks from queue with no file path or function name",
+          "category": "accuracy",
+          "description": "Claims like 'X calls Y' need file path + function name"
+        },
+        {
+          "id": "why-before-what",
+          "trap": "All endpoints describe WHAT they do but never WHY they exist or what problem they solve",
+          "category": "structure",
+          "description": "Explain WHY before WHAT"
+        },
+        {
+          "id": "no-mixed-doc-types",
+          "trap": "Webhook section mixes reference (endpoint docs) with tutorial ('here is how webhooks work conceptually') and how-to (registration steps)",
+          "category": "diataxis",
+          "description": "Do not mix Diataxis doc types in one document"
+        },
+        {
+          "id": "multi-language-examples",
+          "trap": "API docs only show JSON request/response, no cURL, JS, or Python examples",
+          "category": "api-docs",
+          "description": "API docs: multi-language examples (cURL, JS, Python minimum)"
+        },
+        {
+          "id": "openapi-refs-examples",
+          "trap": "No OpenAPI 3.1+ spec, no $ref reuse, examples are inline JSON without schema",
+          "category": "api-docs",
+          "description": "OpenAPI 3.1+, $ref for reuse, examples on every req/res"
+        },
+        {
+          "id": "readme-copy-pasteable",
+          "trap": "Getting Started says 'clone the repo and run it' with no copy-pasteable commands",
+          "category": "readme",
+          "description": "README: assume fresh machine, every command copy-pasteable"
+        },
+        {
+          "id": "readme-show-output",
+          "trap": "No expected output shown for any setup step or API call",
+          "category": "readme",
+          "description": "README: show expected output, explain why not just how"
+        },
+        {
+          "id": "readme-sections",
+          "trap": "README missing features, stack, prereqs, setup, scripts, tests, deploy, troubleshooting sections",
+          "category": "readme",
+          "description": "README sections: title, features, stack, prereqs, setup, arch, env vars, scripts, tests, deploy, troubleshooting"
+        },
+        {
+          "id": "arch-exec-summary",
+          "trap": "Architecture section is one vague sentence with no exec summary, component list, decisions, rationale, or trade-offs",
+          "category": "architecture",
+          "description": "Architecture docs: exec summary, components, decisions, rationale, trade-offs"
+        },
+        {
+          "id": "code-examples-runnable",
+          "trap": "JSON examples are fragments, not runnable, and have no error handling or expected output",
+          "category": "examples",
+          "description": "Code examples: realistic, runnable, with error handling and expected output"
+        },
+        {
+          "id": "no-secrets",
+          "trap": "Environment Variables section exposes live API key 'sk_live_abc123xyz789' and Stripe secret 'sk_test_51ABC123'",
+          "category": "security",
+          "description": "No secrets or sensitive data in docs"
+        },
+        {
+          "id": "changelog-conventional",
+          "trap": "Changelog entries are hand-written prose without conventional commit prefixes (feat:/fix:/chore:) and no auto-generation note",
+          "category": "changelog",
+          "description": "Use conventional commits as source of truth; never hand-write what can be generated"
+        },
+        {
+          "id": "changelog-merge-related",
+          "trap": "Three separate currency validation entries (fixed bug, fixed another bug, tweaked message) should be merged into one",
+          "category": "changelog",
+          "description": "Merge related commits into single entries"
+        },
+        {
+          "id": "changelog-breaking-migration",
+          "trap": "v2.0.0 has breaking changes (removed XML, changed auth to OAuth2) but no migration notes",
+          "category": "changelog",
+          "description": "Highlight breaking changes with migration notes at the top of each version"
+        },
+        {
+          "id": "changelog-user-facing",
+          "trap": "Changelog includes internal items (migrated ORM, updated CI) that are not user-facing",
+          "category": "changelog",
+          "description": "Group by version and date, classify by type, focus on user-facing changes"
+        },
+        {
+          "id": "adr-format",
+          "trap": "ADR has no Status, Date, Context, Decision, Consequences fields \u2014 just a one-liner",
+          "category": "adr",
+          "description": "ADRs: Status, Context, Decision, Consequences format"
+        },
+        {
+          "id": "adr-alternatives",
+          "trap": "ADR lists no alternatives considered with Pros/Cons/Rejected reason",
+          "category": "adr",
+          "description": "ADRs: always include Alternatives Considered with Pros/Cons/Rejected reason"
+        },
+        {
+          "id": "short-sentences",
+          "trap": "FAQ intro is a single 40+ word sentence with weasel words ('quite complex', 'most people')",
+          "category": "prose",
+          "description": "Short sentences (15-20 words), active voice, define jargon first use"
+        },
+        {
+          "id": "numbered-vs-bullets",
+          "trap": "Changelog uses bullets for classified types that should be in a table or grouped headings; webhook steps are correctly numbered but lack context",
+          "category": "formatting",
+          "description": "Numbered lists for sequences, bullets for unordered, tables for reference"
+        },
+        {
+          "id": "mermaid-autonumber",
+          "trap": "Sequence diagram is missing autonumber directive",
+          "category": "mermaid",
+          "description": "Mermaid: use autonumber in sequence diagrams"
+        },
+        {
+          "id": "mermaid-dark-mode",
+          "trap": "Mermaid diagram has no dark-mode styling (node #2d333b, borders #6d5dfc, text #e6edf3)",
+          "category": "mermaid",
+          "description": "Mermaid dark-mode: node #2d333b, borders #6d5dfc, text #e6edf3"
+        },
+        {
+          "id": "mermaid-basic-and-styled",
+          "trap": "Only one version of the Mermaid diagram provided, no basic + styled versions",
+          "category": "mermaid",
+          "description": "Mermaid: provide basic + styled versions"
+        },
+        {
+          "id": "qa-same-language",
+          "trap": "French question 'Quelle est la limite de requ\u00eates?' is answered in English",
+          "category": "qa",
+          "description": "Q&A: detect question language, respond in same language"
+        },
+        {
+          "id": "qa-citations",
+          "trap": "Q&A answers have no inline citations to source files",
+          "category": "qa",
+          "description": "Q&A: only use information from actual source files with inline citations"
+        },
+        {
+          "id": "doc-freshness",
+          "trap": "No last-reviewed: YYYY-MM-DD frontmatter anywhere in the document",
+          "category": "maintenance",
+          "description": "Add last-reviewed: YYYY-MM-DD frontmatter to every doc"
+        },
+        {
+          "id": "no-yagni",
+          "trap": "POST /refunds justification is speculative ('for the future when customers start asking') rather than solving a current problem",
+          "category": "accuracy",
+          "description": "Trace actual code paths, never guess from file names; no speculative justifications"
+        },
+        {
+          "id": "deprecation-migration",
+          "trap": "v2.0.0 removed XML support and changed auth with no deprecation notice or migration guide",
+          "category": "breaking-changes",
+          "description": "Deprecation notices + migration guides for breaking changes"
+        },
+        {
+          "id": "c4-architecture",
+          "trap": "Architecture jumps from vague overview ('uses microservices') to a code-level sequence diagram with no C4 levels (Context, Containers, Components)",
+          "category": "architecture",
+          "description": "Use C4 model (Context, Containers, Components, Code) for architecture at increasing detail levels"
+        },
+        {
+          "id": "data-flow-claims",
+          "trap": "Webhook section describes a data flow (event -> queue -> dispatcher -> HTTP POST) with no entry/transforms/destination structure",
+          "category": "accuracy",
+          "description": "Data flow claims need entry -> transforms -> destination"
+        }
+      ]
+    }
+  ]
+}

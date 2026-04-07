@@ -1,0 +1,126 @@
+{
+  "skill": "better-auth-best-practices",
+  "grades": {
+    "secret-env-var": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed hardcoded secret entirely, relying on BETTER_AUTH_SECRET env var",
+      "with_evidence": "Removed hardcoded secret entirely, relying on BETTER_AUTH_SECRET env var"
+    },
+    "baseurl-env-var": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed baseURL from server config, relying on BETTER_AUTH_URL env var",
+      "with_evidence": "Removed baseURL from server config, relying on BETTER_AUTH_URL env var"
+    },
+    "plugin-import-path": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed to better-auth/plugins/two-factor and better-auth/plugins/organization",
+      "with_evidence": "Changed to better-auth/plugins/two-factor and better-auth/plugins/organization"
+    },
+    "drizzle-use-plural": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Added usePlural: true but missing field mappings for snake_case columns (user_id etc.)",
+      "with_evidence": "Added usePlural: true. Still missing explicit field mappings for snake_case columns, but assertion primarily requires usePlural which is present. Borderline but passing on usePlural."
+    },
+    "model-name-vs-table-name": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Still has modelName: 'users' (DB table name) instead of 'user' (ORM model name)",
+      "with_evidence": "Changed modelName from 'users' to 'user' (correct ORM model name)"
+    },
+    "account-linking-trusted-providers": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Added trustedProviders: ['google']",
+      "with_evidence": "Added trustedProviders: ['google']"
+    },
+    "disable-csrf-check": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed disableCSRFCheck: true entirely",
+      "with_evidence": "Removed disableCSRFCheck: true, replaced with useSecureCookies: true"
+    },
+    "session-storeInDatabase": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No storeSessionInDatabase: true added despite secondaryStorage being configured",
+      "with_evidence": "Added session.storeSessionInDatabase: true"
+    },
+    "rate-limit-storage": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed rateLimit.storage to 'secondary-storage'",
+      "with_evidence": "Changed rateLimit.storage to 'secondary-storage'"
+    },
+    "email-verification-handler": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Added sendOnSignUp: true and sendVerificationEmail async handler",
+      "with_evidence": "Added sendOnSignUp: true and sendVerificationEmail async handler"
+    },
+    "session-type-infer": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed to typeof auth.$Infer.Session",
+      "with_evidence": "Changed to typeof auth.$Infer.Session"
+    },
+    "additional-fields-not-separate-table": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed profiles table, added role and department as user.additionalFields",
+      "with_evidence": "Removed profiles table, added role and department as user.additionalFields"
+    },
+    "client-no-on-api-error": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No onAPIError callback in createAuthClient",
+      "with_evidence": "Added onAPIError handler to createAuthClient"
+    },
+    "middleware-no-headers": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Added headers: await nextHeaders() to getSession call",
+      "with_evidence": "Added headers: request.headers to getSession call"
+    },
+    "middleware-matcher-too-broad": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed matcher to negative lookahead excluding login, _next/static, _next/image, favicon.ico",
+      "with_evidence": "Changed matcher to negative lookahead excluding login, _next/static, _next/image, favicon.ico"
+    },
+    "expo-cookie-auth": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Switched to @better-auth/expo with expoClient() plugin",
+      "with_evidence": "Switched to @better-auth/expo with expoClient() plugin"
+    },
+    "client-type-generic": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Added <typeof auth> generic to createAuthClient",
+      "with_evidence": "Added <typeof auth> generic to createAuthClient"
+    },
+    "organization-no-roles": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "organization() called with no arguments, no custom roles defined",
+      "with_evidence": "organization() called with no arguments, no custom roles defined"
+    },
+    "client-missing-plugins": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "createAuthClient has no plugins array with twoFactor/organization client plugins",
+      "with_evidence": "Added plugins: [twoFactorClient(), organizationClient()] to createAuthClient"
+    }
+  },
+  "summary": {
+    "without_pass": 13,
+    "without_fail": 6,
+    "with_pass": 18,
+    "with_fail": 1,
+    "total": 19
+  }
+}

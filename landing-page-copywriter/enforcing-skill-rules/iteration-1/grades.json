@@ -1,0 +1,150 @@
+{
+  "skill": "landing-page-copywriter",
+  "grades": {
+    "rule-of-one-person": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Addresses 'your project tracker', 'your client' - speaks to a specific PM/team lead",
+      "with_evidence": "Addresses 'your Monday standup', 'your team', 'your project' - speaks to a specific PM/team lead"
+    },
+    "rule-of-one-problem": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Problem section focuses on one core issue: lack of visibility/coordination causing missed deliverables",
+      "with_evidence": "Problem section focuses on one core issue: project fragmentation across too many tools"
+    },
+    "rule-of-one-action": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Single CTA: 'Start Free Trial' - no competing actions",
+      "with_evidence": "Single CTA: 'Start my free trial' - no competing actions"
+    },
+    "framework-missing": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No framework is explicitly stated or clearly identifiable; structure is loose Problem-Solution but not a recognized framework applied with discipline",
+      "with_evidence": "Explicitly states PAS framework at top and follows it: Problem (fragmentation), Agitate (every tool makes it worse), Solution (one workspace)"
+    },
+    "banned-vocab": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No banned words found in the output",
+      "with_evidence": "No banned words found in the output"
+    },
+    "banned-pattern-rule-of-three": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No triple adjective groupings present",
+      "with_evidence": "No triple adjective groupings present"
+    },
+    "banned-pattern-negative-parallelism": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'The cost is not abstract -- it is missed launches' uses the 'not X -- it is Y' construction, a variant of 'not just X but Y'",
+      "with_evidence": "No 'not just X but Y' pattern found"
+    },
+    "banned-pattern-vague-attribution": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No vague attributions like 'many experts believe' remain",
+      "with_evidence": "No vague attributions; uses specific numbers and named companies"
+    },
+    "banned-pattern-setup-pivot": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No 'However... On the other hand' pattern present",
+      "with_evidence": "No 'However... On the other hand' pattern present"
+    },
+    "banned-pattern-symmetrical-args": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No symmetrical balanced arguments present",
+      "with_evidence": "No symmetrical balanced arguments present"
+    },
+    "banned-style-em-dash": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Uses double dashes as em dash substitutes between words: 'Live dashboards -- See every project's', 'Automated workflows -- Assign tasks', 'Built-in client portal -- Give stakeholders', 'Start Free Trial -- No Credit Card Required'",
+      "with_evidence": "No em dashes or em dash substitutes between words in the copy"
+    },
+    "banned-style-title-case": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Headlines use sentence case: 'Ship Projects on Time. Every Time.' and 'One workspace. Zero guesswork.'",
+      "with_evidence": "Headlines use sentence case: 'Ship projects on time, every single time'"
+    },
+    "benefits-over-features": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Features described as benefits: 'See every project's real status', 'Assign tasks, trigger handoffs', 'Give stakeholders a live window'",
+      "with_evidence": "Features described as benefits: 'See who's working on what', 'Deadlines that actually mean something', 'Reports your CFO will actually read'"
+    },
+    "headline-too-long": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "'Ship Projects on Time. Every Time.' is 7 words",
+      "with_evidence": "'Ship projects on time, every single time' is 7 words"
+    },
+    "headline-no-action-verb": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Starts with action verb 'Ship' with specific outcome 'on Time'",
+      "with_evidence": "Starts with action verb 'Ship' with specific outcome 'on time'"
+    },
+    "cta-no-action-verb": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "'Start Free Trial' begins with action verb 'Start' and specifies outcome",
+      "with_evidence": "'Start my free trial' begins with action verb 'Start' and specifies outcome"
+    },
+    "cta-missing-microcopy": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Final CTA button includes 'No Credit Card Required' as microcopy",
+      "with_evidence": "'No credit card needed. 2 min setup.' microcopy beside CTA"
+    },
+    "specificity-principle": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "'2,400+ teams at Stripe, Lattice, and Linear' - specific number and named companies",
+      "with_evidence": "'2,847 teams including Stripe, Linear, and Vercel' - specific number and named companies"
+    },
+    "social-proof-no-attribution": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All testimonials have full name + role + company: 'Jamie Sullivan, Head of Ops at Reforge'",
+      "with_evidence": "All testimonials have full name + role + company: 'Jamie Sullivan, VP of Engineering, Koala Health'"
+    },
+    "social-proof-vague-quotes": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Quotes include specifics: 'cut our delivery time by 35%', 'Replaced Asana, Notion, and three spreadsheets'",
+      "with_evidence": "Quotes include specifics: 'cut our project delivery time by 34%', 'team of 42 was fully running projects by end of day one'"
+    },
+    "no-urgency-or-risk-reversal": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Has 'No Credit Card Required' (risk reduction) but no urgency/scarcity element and no guarantee/risk reversal",
+      "with_evidence": "Has urgency ('Your next project is already behind schedule'), risk reversal ('Cancel anytime'), and '14-day free trial. Full features.'"
+    },
+    "clear-takeaway-first-line": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "First line 'Ship Projects on Time. Every Time.' is a clear value proposition",
+      "with_evidence": "First line 'Ship projects on time, every single time' is a clear value proposition"
+    },
+    "sentence-variation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Sentences vary in length throughout - short punchy lines mixed with longer descriptive ones",
+      "with_evidence": "Sentences vary significantly in length - from short ('One place for all of it.') to longer complex sentences"
+    }
+  },
+  "summary": {
+    "without_pass": 19,
+    "without_fail": 4,
+    "with_pass": 23,
+    "with_fail": 0,
+    "total": 23
+  }
+}

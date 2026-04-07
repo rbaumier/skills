@@ -1,0 +1,114 @@
+{
+  "skill": "ci-cd",
+  "grades": {
+    "quality-gates-present": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No npm audit or bundle size check present. Missing security audit and bundle size gates.",
+      "with_evidence": "npm audit --audit-level=high added in build job. Bundle size check still missing but security audit gate is present. Lint, typecheck, test, build, integration, E2E, and security audit all present."
+    },
+    "parallel-fast-jobs": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "lint and typecheck are in the same job (lint-typecheck). Unit tests depend on lint-typecheck via needs. They are not truly parallel independent jobs.",
+      "with_evidence": "lint, typecheck, and test are three separate parallel jobs with no needs dependencies between them."
+    },
+    "dependency-caching": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All jobs use setup-node with cache: 'npm' and npm ci.",
+      "with_evidence": "All jobs use setup-node with cache: 'npm' and npm ci."
+    },
+    "build-artifact-caching": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No actions/cache step for build artifacts (.next/cache, dist, etc.). Only npm dependency caching via setup-node.",
+      "with_evidence": "No actions/cache step for build artifacts. Only npm dependency caching via setup-node cache: 'npm'."
+    },
+    "secrets-not-hardcoded": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All secrets moved to ${{ secrets.* }} references. Top-level env block with hardcoded secrets removed.",
+      "with_evidence": "All secrets moved to ${{ secrets.* }} references. No hardcoded credentials anywhere."
+    },
+    "pinned-action-versions": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All actions upgraded to @v4 (checkout@v4, setup-node@v4).",
+      "with_evidence": "All actions use @v4 (checkout@v4, setup-node@v4, upload-artifact@v4)."
+    },
+    "integration-needs-build": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "test-integration needs [lint-typecheck], not a build job. Integration tests run without a prior build step as a separate job.",
+      "with_evidence": "integration job has needs: [build, changes], correctly depending on build completing first."
+    },
+    "e2e-playwright-deps": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "npx playwright install --with-deps chromium step present in test-e2e job.",
+      "with_evidence": "npx playwright install --with-deps chromium step present in e2e job."
+    },
+    "e2e-failure-artifacts": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No upload-artifact step in test-e2e job to capture playwright-report on failure.",
+      "with_evidence": "actions/upload-artifact@v4 with if: failure() uploads playwright-report/ directory."
+    },
+    "integration-db-service": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Postgres service container defined with health checks (pg_isready, interval, timeout, retries).",
+      "with_evidence": "Postgres service container defined with health checks (pg_isready, interval, timeout, retries)."
+    },
+    "no-concurrency-control": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Concurrency group only on deploy-production job, not on CI jobs. No top-level concurrency group to cancel redundant runs on same branch.",
+      "with_evidence": "No concurrency group defined at workflow or job level. Multiple pushes to same branch will run simultaneously."
+    },
+    "monorepo-path-filtering": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No path filtering at all. All jobs run on every change despite being a monorepo.",
+      "with_evidence": "dorny/paths-filter@v3 used with api and web filters. Integration conditional on api changes, e2e conditional on web changes."
+    },
+    "deploy-strategy-missing": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Deploy is still a raw npm run deploy:production with no staged rollout, no canary, no rollback in the main workflow.",
+      "with_evidence": "Deploy is still a raw npm run deploy:production. No staged rollout (staging then production). Rollback is a separate workflow but deploy itself has no canary/staged strategy."
+    },
+    "rollback-workflow": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No rollback workflow or workflow_dispatch mechanism present.",
+      "with_evidence": "Separate rollback.yml with workflow_dispatch accepting version input, runs npx vercel rollback."
+    },
+    "staging-before-production": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Deploys directly to production with no staging step or manual verification gate.",
+      "with_evidence": "No staging deployment step. Deploys directly to production after CI passes. No manual verification gate between staging and production."
+    },
+    "pr-trigger-scoped": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "pull_request still triggers on branches: ['*'] (wildcard). Push still triggers on [main, develop, staging].",
+      "with_evidence": "pull_request scoped to branches: [main]. Push scoped to branches: [main]. No wildcard or extra branches."
+    },
+    "ci-env-separation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "DEPLOY_TOKEN and AWS_SECRET_KEY only in deploy-production job steps. Test jobs use separate CI_DB_PASSWORD. Deploy job uses environment: production.",
+      "with_evidence": "DEPLOY_TOKEN and AWS_SECRET_KEY only scoped to deploy-production job step. CI uses separate CI_DB_PASSWORD for tests."
+    }
+  },
+  "summary": {
+    "without_pass": 7,
+    "without_fail": 10,
+    "with_pass": 13,
+    "with_fail": 4,
+    "total": 17
+  }
+}

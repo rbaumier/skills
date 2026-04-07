@@ -1,0 +1,168 @@
+{
+  "skill": "code-review",
+  "grades": {
+    "correctness-edge-cases": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #5: 'If no role is provided, the user becomes an admin. This is a privilege-escalation bug. Default should be the least-privileged role.'",
+      "with_evidence": "Finding: '[BUG] Default Role is admin in createUser' \u2014 'If the client omits role, the new user becomes an admin. This should default to the least-privileged role.'"
+    },
+    "correctness-error-paths": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #8: 'Every async handler will throw an unhandled promise rejection on any DB or network error, crashing the process or hanging the request. There are no try/catch blocks.'",
+      "with_evidence": "Finding: '[FIX] No Error Handling' \u2014 'None of the handlers have try/catch. Any database error, network failure, or invalid JSON will crash with an unhandled promise rejection.'"
+    },
+    "correctness-validation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #6: 'The UserSchema Zod schema is defined but never used. body is passed through without validation. Call UserSchema.parse(req.body).'",
+      "with_evidence": "Finding: '[BUG] Zod Schema Defined But Never Used for Validation' \u2014 'UserSchema is declared but createUser never calls .parse() or .safeParse().'"
+    },
+    "correctness-sync-response": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #15: 'No check on response.ok, no try/catch. A 500 from the partner API will produce garbage data from .json().'",
+      "with_evidence": "Finding: '[FIX] syncExternalUsers Has No Error Handling for External API' \u2014 'No check on response.ok or status code.'"
+    },
+    "readability-naming": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #18: 'private temp: string; Set in the constructor, never read. Dead code -- remove it.'",
+      "with_evidence": "Finding: '[AUTO] temp Property on UserService Is Unused' \u2014 'Assigned to empty string in the constructor, never read or written anywhere else.'"
+    },
+    "readability-nested-ternary": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #20: 'The triple-nested ternary is hard to read. Refactor to an if/else if chain.'",
+      "with_evidence": "Finding: '[NIT] buildSearchFilter Uses Nested Ternaries' \u2014 'Three levels of nested ternaries. An if/else chain or early returns would be clearer.'"
+    },
+    "readability-dead-code-comments": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #19: 'The Redis cache block is commented out with no tracking reference. Remove it or link to a ticket.'",
+      "with_evidence": "Finding: '[AUTO] Commented-Out Redis Implementation' \u2014 'Dead code artifact. Remove it -- version control preserves history.'"
+    },
+    "readability-simpler": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #17: 'lodash is imported for a single groupBy call. Use Object.groupBy() (ES2024) or a 3-line reduce. The full lodash bundle is ~70KB minified.'",
+      "with_evidence": "Finding: '[CONSIDER] lodash Imported for a Single groupBy Call' \u2014 'A native implementation is trivial: Object.groupBy or reduce.'"
+    },
+    "architecture-unused-code": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #13: 'clearExpiredCache exists but is never called. This is a memory leak.'",
+      "with_evidence": "Finding: '[CONSIDER] clearExpiredCache Is Defined But Never Called' \u2014 'Dead code. Either wire it up on an interval or remove it.'"
+    },
+    "architecture-abstraction": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #13: 'cache is a Map that grows without limit. clearExpiredCache exists but is never called. This is a memory leak in any long-running process.'",
+      "with_evidence": "Finding: '[FIX] Unbounded In-Memory Cache' \u2014 'cache is a Map that grows without bound. clearExpiredCache is defined but never called. Over time, this leaks memory.'"
+    },
+    "architecture-module-boundaries": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No explicit mention of separation of concerns or coupling between HTTP layer (req/res) and business logic/DB access.",
+      "with_evidence": "Summary table: 'Architecture \u2014 Service mixes HTTP concerns (req/res) with business logic and direct DB access. No repository layer, no separation of concerns.'"
+    },
+    "security-sql-injection": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #1: 'The search query parameter is interpolated directly into SQL. An attacker can exfiltrate or destroy the entire database.'",
+      "with_evidence": "Finding: '[BUG] SQL Injection in getUsers' \u2014 'search is interpolated directly from req.query into the SQL string.'"
+    },
+    "security-hardcoded-secret": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #2: 'A live API key is committed in source code. This must be loaded from an environment variable. Rotate this key immediately.'",
+      "with_evidence": "Finding: '[BUG] Hardcoded API Secret' \u2014 'A live secret key is hardcoded in source code. This will be committed to version control.'"
+    },
+    "security-auth-missing": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #4: 'None of the routes are protected. DELETE, PUT role, and POST sync are publicly accessible.'",
+      "with_evidence": "Finding: '[BUG] No Authentication or Authorization on Any Endpoint' \u2014 'deleteUser, updateUserRole, createUser, and syncExternalUsers have no auth checks.'"
+    },
+    "security-data-leak": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #3: 'getUsers sends the password hash to the client in the JSON response. This is a severe data exposure vulnerability.'",
+      "with_evidence": "Finding: '[BUG] Password Hash Leaked in API Response' \u2014 'The getUsers endpoint returns the user's password hash to the client.'"
+    },
+    "security-input-validation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #7: 'updateUserRole accepts any string for role without checking it against the allowed enum.' Also Finding #6 covers createUser validation.",
+      "with_evidence": "Finding: '[FIX] No Input Validation on deleteUser and updateUserRole' \u2014 'id from req.params.id is not validated. role from req.body.role is not validated against the enum.'"
+    },
+    "security-csv-injection": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #12: 'Values containing =, +, -, @ enable CSV formula injection in spreadsheet software. Use proper CSV escaping or a library.'",
+      "with_evidence": "Finding: '[FIX] exportUsers Has No Pagination and Unsafe CSV Generation' \u2014 'CSV values are not escaped. A user name containing a comma or newline breaks the output.'"
+    },
+    "security-external-data-untrusted": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "syncExternalUsers issues are mentioned (no response.ok check, sequential inserts) but the review does NOT flag that the external API response data shape is trusted without validation before DB insert.",
+      "with_evidence": "syncExternalUsers findings mention no response.ok check and sequential inserts, but do NOT explicitly flag that the external data fields (name, email, id) are trusted without schema validation before being inserted into the database."
+    },
+    "performance-n-plus-one": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #9: 'For every user row, two additional queries are issued sequentially inside a loop. For 100 users this is 201 queries.'",
+      "with_evidence": "Finding: '[FIX] N+1 Query in getUsers' \u2014 'For N users, this issues 2N+1 queries. If the search returns 100 users, that is 201 database round-trips.'"
+    },
+    "performance-unbounded-fetch": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #11: 'getUsers and exportUsers have no LIMIT or pagination. A table with millions of rows will exhaust memory.'",
+      "with_evidence": "Finding: '[FIX] exportUsers Has No Pagination' \u2014 'Fetches all users at once with no limit -- unbounded data fetch.'"
+    },
+    "performance-sync-external": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #14: 'Each external user triggers a separate INSERT...ON CONFLICT query. For large sets, batch these into a single query or use a transaction with bulk insert.'",
+      "with_evidence": "Finding: '[FIX] syncExternalUsers' \u2014 'Runs all inserts sequentially in a loop (should use a transaction for atomicity, and could batch).'"
+    },
+    "review-severity-labels": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses severity headers: CRITICAL, HIGH, MEDIUM, LOW \u2014 each finding is categorized under a severity level.",
+      "with_evidence": "Uses explicit severity prefixes on every finding: [BUG], [FIX], [CONSIDER], [AUTO], [NIT]."
+    },
+    "review-tests-first": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No mention of tests or absence of tests anywhere in the review.",
+      "with_evidence": "Dedicated section at the top: 'Tests \u2014 No tests are included or referenced. This is a significant gap for a service handling user data.'"
+    },
+    "dependency-review": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #17: 'lodash is imported for a single groupBy call. Use Object.groupBy() (ES2024) or a 3-line reduce.'",
+      "with_evidence": "Finding: '[CONSIDER] lodash Imported for a Single groupBy Call' \u2014 'lodash is a large dependency pulled in for one groupBy call.'"
+    },
+    "readability-unused-field": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #18: 'private temp: string; Set in the constructor, never read. Dead code -- remove it.'",
+      "with_evidence": "Finding: '[AUTO] temp Property on UserService Is Unused' \u2014 'Assigned to empty string in the constructor, never read or written anywhere else. Remove it.'"
+    },
+    "correctness-role-validation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Finding #7: 'req.body.role is inserted without checking it against the allowed enum. An attacker can set an arbitrary string as the role.'",
+      "with_evidence": "Finding: '[FIX] No Input Validation on deleteUser and updateUserRole' \u2014 'role from req.body.role in updateUserRole is not validated against the enum. A caller could set role to any arbitrary string.'"
+    }
+  },
+  "summary": {
+    "without_pass": 23,
+    "without_fail": 3,
+    "with_pass": 25,
+    "with_fail": 1,
+    "total": 26
+  }
+}

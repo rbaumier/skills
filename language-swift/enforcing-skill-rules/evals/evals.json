@@ -1,0 +1,204 @@
+{
+  "skill_name": "language-swift",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```swift\nimport SwiftUI\nimport Combine\nimport CoreData\n\n// MARK: - Models\n\nclass UserProfile: Codable {\n    var id: Int\n    var user_name: String\n    var email: String\n    var avatarURL: String\n    var syncToken: String\n    \n    enum CodingKeys: String, CodingKey {\n        case id, user_name, email, avatarURL, syncToken\n    }\n}\n\nclass SessionToken {\n    var value: String\n    var expiresAt: Date\n    \n    init(value: String, expiresAt: Date) {\n        self.value = value\n        self.expiresAt = expiresAt\n    }\n    \n    func copy() -> SessionToken {\n        SessionToken(value: value, expiresAt: expiresAt)\n    }\n}\n\n// MARK: - Data Layer\n\nclass UserEntity: NSManagedObject {\n    @NSManaged var id: Int64\n    @NSManaged var name: String\n}\n\n// MARK: - Networking\n\nclass APIClient: @unchecked Sendable {\n    var baseURL: String\n    var session: URLSession\n    \n    init(baseURL: String) {\n        self.baseURL = baseURL\n        self.session = .shared\n    }\n    \n    func fetchUser(id: Int) async throws -> UserProfile {\n        let url = URL(string: \"\\(baseURL)/users/\\(id)\")!\n        let (data, _) = try await session.data(from: url)\n        let decoder = JSONDecoder()\n        return try decoder.decode(UserProfile.self, from: data)\n    }\n    \n    func fetchNotifications() throws -> [String] {\n        return []\n    }\n    \n    func streamEvents(handler: @escaping (String) -> Void) {\n        let source = EventSource(url: URL(string: \"\\(baseURL)/events\")!)\n        source.onMessage { event in\n            handler(event)\n        }\n    }\n    \n    func bridgeCallback(completion: @escaping (Result<Data, Error>) -> Void) async -> Data {\n        return try! await withUnsafeContinuation { continuation in\n            legacyFetch { result in\n                switch result {\n                case .success(let data):\n                    continuation.resume(returning: data)\n                case .failure(let error):\n                    continuation.resume(returning: Data())\n                }\n            }\n            legacyFetch { result in\n                if case .success(let data) = result {\n                    continuation.resume(returning: data)\n                }\n            }\n        }\n    }\n    \n    func legacyFetch(completion: @escaping (Result<Data, Error>) -> Void) {\n        // legacy callback API\n    }\n}\n\n// MARK: - Publishers\n\nclass NotificationCenter: ObservableObject {\n    @Published var notifications: [String] = []\n    let publisher = PassthroughSubject<String, Never>()\n    \n    func startListening() {\n        publisher.sink { [weak self] value in\n            self?.notifications.append(value)\n        }\n    }\n}\n\n// MARK: - ViewModel\n\n@MainActor\nclass ProfileViewModel: ObservableObject {\n    @Published var profile: UserProfile?\n    @Published var isLoading = false\n    @Published var errorMessage: String?\n    \n    private let client: APIClient\n    \n    init(client: APIClient) {\n        self.client = client\n    }\n    \n    func loadProfile() {\n        isLoading = true\n        Task.detached {\n            do {\n                let user = try await self.client.fetchUser(id: 1)\n                self.profile = user\n                self.isLoading = false\n            } catch {\n                self.errorMessage = error.localizedDescription\n                self.isLoading = false\n            }\n        }\n    }\n    \n    func heavyComputation() {\n        var result = 0\n        for i in 0..<10_000_000 {\n            result += i\n        }\n        profile?.syncToken = \"\\(result)\"\n    }\n}\n\n// MARK: - Views\n\nstruct ContentView: View {\n    @StateObject var viewModel: ProfileViewModel\n    @State var showSheet = false\n    @State var selectedTab = 0\n    \n    var body: some View {\n        NavigationView {\n            VStack {\n                if viewModel.isLoading {\n                    ProgressView()\n                } else if let profile = viewModel.profile {\n                    VStack(spacing: 16) {\n                        AsyncImage(url: URL(string: profile.avatarURL)) { image in\n                            image.resizable().frame(width: 80, height: 80).clipShape(Circle())\n                        } placeholder: {\n                            Circle().fill(.gray).frame(width: 80, height: 80)\n                        }\n                        Text(profile.user_name)\n                            .font(.title)\n                        Text(profile.email)\n                            .font(.subheadline)\n                            .foregroundColor(.secondary)\n                        \n                        Button(\"Edit Profile\") {\n                            showSheet = true\n                        }\n                        \n                        NavigationLink(\"Settings\") {\n                            SettingsView()\n                        }\n                        \n                        Button(\"Refresh\") {\n                            viewModel.loadProfile()\n                        }\n                        \n                        Button(\"Compute\") {\n                            viewModel.heavyComputation()\n                        }\n                        \n                        List {\n                            ForEach(0..<50) { i in\n                                HStack {\n                                    Image(systemName: \"person\")\n                                    VStack(alignment: .leading) {\n                                        Text(\"Friend \\(i)\")\n                                            .font(.headline)\n                                        Text(\"Last seen recently\")\n                                            .font(.caption)\n                                    }\n                                    Spacer()\n                                    Image(systemName: \"chevron.right\")\n                                }\n                            }\n                        }\n                    }\n                } else if let error = viewModel.errorMessage {\n                    Text(error)\n                        .foregroundColor(.red)\n                }\n            }\n            .onAppear {\n                Task {\n                    await viewModel.loadProfile()\n                }\n            }\n            .sheet(isPresented: $showSheet) {\n                EditProfileView(profile: viewModel.profile!)\n            }\n            .navigationTitle(\"Profile\")\n        }\n    }\n}\n\nstruct EditProfileView: View {\n    var profile: UserProfile\n    @State var name: String = \"\"\n    @Environment(\\.presentationMode) var presentationMode\n    \n    var body: some View {\n        Form {\n            TextField(\"Name\", text: $name)\n            Button(\"Save\") {\n                profile.user_name = name\n                presentationMode.wrappedValue.dismiss()\n            }\n        }\n        .onAppear {\n            name = profile.user_name\n        }\n    }\n}\n\nstruct SettingsView: View {\n    var body: some View {\n        List {\n            Toggle(\"Dark Mode\", isOn: .constant(false))\n            Toggle(\"Notifications\", isOn: .constant(true))\n        }\n    }\n}\n\n// MARK: - Testing\n\nimport XCTest\n\nclass ProfileViewModelTests: XCTestCase {\n    func testLoadProfile() async throws {\n        let client = APIClient(baseURL: \"https://api.example.com\")\n        let vm = await ProfileViewModel(client: client)\n        await vm.loadProfile()\n        \n        let expectation = XCTestExpectation(description: \"Profile loaded\")\n        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {\n            XCTAssertNotNil(vm.profile)\n            expectation.fulfill()\n        }\n        await fulfillment(of: [expectation], timeout: 5)\n    }\n}\n\n// MARK: - Validated Property Wrapper\n\n@propertyWrapper\nstruct Clamped {\n    var wrappedValue: Int {\n        didSet {\n            wrappedValue = max(min(wrappedValue, maximum), minimum)\n        }\n    }\n    var projectedValue: Bool {\n        wrappedValue == maximum || wrappedValue == minimum\n    }\n    private let minimum: Int\n    private let maximum: Int\n    private var logger = Logger()\n    private var cache: [String: Any] = [:]\n    \n    init(wrappedValue: Int, min minimum: Int, max maximum: Int) {\n        self.minimum = minimum\n        self.maximum = maximum\n        self.wrappedValue = Swift.max(Swift.min(wrappedValue, maximum), minimum)\n    }\n}\n\nclass Logger {\n    var entries: [String] = []\n    func log(_ msg: String) { entries.append(msg) }\n}\n\n// MARK: - App\n\n@main\nstruct MyApp: App {\n    var body: some Scene {\n        WindowGroup {\n            ContentView(viewModel: ProfileViewModel(client: APIClient(baseURL: \"https://api.example.com\")))\n        }\n    }\n}\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "sendable-value-types",
+          "trap": "UserProfile is a class crossing concurrency boundaries; should be a struct for Sendable compliance",
+          "category": "concurrency",
+          "description": "Prefer value types (struct) for cross-boundary data; mark types Sendable explicitly"
+        },
+        {
+          "id": "unchecked-sendable-last-resort",
+          "trap": "APIClient uses @unchecked Sendable with mutable var properties and no documented safety invariant",
+          "category": "concurrency",
+          "description": "@unchecked Sendable is last resort only; must document safety invariant; prefer actor or proper isolation"
+        },
+        {
+          "id": "structured-concurrency",
+          "trap": "loadProfile uses Task.detached breaking actor inheritance instead of structured concurrency",
+          "category": "concurrency",
+          "description": "Prefer structured concurrency (async let, TaskGroup) over Task {}; avoid Task.detached unless explicitly breaking actor inheritance"
+        },
+        {
+          "id": "task-cancellation",
+          "trap": "heavyComputation has a long loop with no Task.isCancelled check",
+          "category": "concurrency",
+          "description": "Support cancellation \u2014 check Task.isCancelled in loops/heavy ops"
+        },
+        {
+          "id": "main-thread-heavy-work",
+          "trap": "heavyComputation runs a 10M iteration loop on @MainActor",
+          "category": "concurrency",
+          "description": "Main thread = UI only; heavy work on background actors/tasks"
+        },
+        {
+          "id": "continuation-exactly-once",
+          "trap": "bridgeCallback calls legacyFetch twice, risking double-resume which crashes",
+          "category": "concurrency",
+          "description": "Continuations MUST resume exactly once \u2014 double-resume = crash, never-resume = leaked task"
+        },
+        {
+          "id": "checked-continuation",
+          "trap": "bridgeCallback uses withUnsafeContinuation instead of withCheckedThrowingContinuation for non-perf-critical bridging",
+          "category": "concurrency",
+          "description": "Use withCheckedThrowingContinuation (debug checks) for bridging callback APIs; unsafe only for perf-critical"
+        },
+        {
+          "id": "async-stream-over-combine",
+          "trap": "NotificationCenter uses Combine PassthroughSubject instead of AsyncStream for new event stream code",
+          "category": "concurrency",
+          "description": "Prefer AsyncStream over Combine publishers for new code"
+        },
+        {
+          "id": "async-stream-cancellation",
+          "trap": "Event streaming via callback handler has no cancellation support via onTermination",
+          "category": "concurrency",
+          "description": "AsyncStream: support cancellation via onTermination handler"
+        },
+        {
+          "id": "delegate-wrap-asyncstream",
+          "trap": "streamEvents uses raw callback handler instead of wrapping in AsyncStream",
+          "category": "concurrency",
+          "description": "Wrap Delegate/callback-based APIs in AsyncStream, not raw continuations or closures"
+        },
+        {
+          "id": "typed-throws",
+          "trap": "fetchNotifications uses untyped throws for a library-style API where callers need structured error handling",
+          "category": "concurrency",
+          "description": "Use typed throws (throws(ErrorType)) for library APIs where callers need structured error handling"
+        },
+        {
+          "id": "observable-macro",
+          "trap": "ProfileViewModel and NotificationCenter use ObservableObject/@Published instead of @Observable macro",
+          "category": "swiftui-architecture",
+          "description": "@Observable macro over legacy ObservableObject for state management"
+        },
+        {
+          "id": "state-private",
+          "trap": "ContentView @State properties showSheet and selectedTab are not private",
+          "category": "swiftui-architecture",
+          "description": "@State for view-local private state \u2014 should be private"
+        },
+        {
+          "id": "environment-dependency-injection",
+          "trap": "ContentView takes viewModel as @StateObject init param instead of using @Environment for DI",
+          "category": "swiftui-architecture",
+          "description": "@Environment for dependency injection"
+        },
+        {
+          "id": "navigation-stack",
+          "trap": "Uses deprecated NavigationView instead of NavigationStack",
+          "category": "swiftui-architecture",
+          "description": "NavigationStack + typed .navigationDestination(for:) \u2014 avoid NavigationLink with direct views"
+        },
+        {
+          "id": "navigation-destination-typed",
+          "trap": "NavigationLink with direct view closure instead of typed .navigationDestination(for:)",
+          "category": "swiftui-architecture",
+          "description": "NavigationStack + typed .navigationDestination(for:) \u2014 avoid NavigationLink with direct views"
+        },
+        {
+          "id": "sheet-item-over-ispresented",
+          "trap": "Uses .sheet(isPresented:) instead of .sheet(item:) to ensure data availability",
+          "category": "ui-patterns",
+          "description": "Use .sheet(item:) over .sheet(isPresented:) \u2014 ensures data availability"
+        },
+        {
+          "id": "dismiss-environment",
+          "trap": "EditProfileView uses deprecated @Environment(\\.presentationMode) instead of @Environment(\\.dismiss)",
+          "category": "ui-patterns",
+          "description": "Dismissal via @Environment(\\.dismiss) owned by sheet"
+        },
+        {
+          "id": "task-over-onappear",
+          "trap": "Uses .onAppear with nested Task instead of .task modifier for async work",
+          "category": "ui-patterns",
+          "description": ".task over .onAppear for async work \u2014 auto-cancels on disappear"
+        },
+        {
+          "id": "accessibility-labels",
+          "trap": "Interactive buttons, images, and list rows have no .accessibilityLabel()",
+          "category": "ui-patterns",
+          "description": "Every interactive element needs .accessibilityLabel(); missing accessibility = incomplete feature"
+        },
+        {
+          "id": "view-body-extract-subviews",
+          "trap": "ContentView body is massive with deeply nested VStack/List \u2014 needs scrolling to read",
+          "category": "swiftui-architecture",
+          "description": "If body needs scrolling to read \u2014 extract subviews; massive Views = anti-pattern"
+        },
+        {
+          "id": "swiftdata-over-coredata",
+          "trap": "Uses Core Data (NSManagedObject) instead of SwiftData @Model for new project",
+          "category": "data-persistence",
+          "description": "SwiftData over Core Data for new projects \u2014 use @Model macro"
+        },
+        {
+          "id": "codable-snake-case-strategy",
+          "trap": "UserProfile has user_name as snake_case property matching JSON instead of using keyDecodingStrategy = .convertFromSnakeCase",
+          "category": "data-persistence",
+          "description": "Use JSONDecoder.keyDecodingStrategy = .convertFromSnakeCase for snake_case APIs; decouple JSON keys from property names"
+        },
+        {
+          "id": "swift-testing-over-xctest",
+          "trap": "Tests use XCTest (XCTestCase, XCTAssertNotNil, XCTestExpectation) instead of Swift Testing (@Test, #expect, #require)",
+          "category": "testing",
+          "description": "Swift Testing framework over XCTest \u2014 use @Test with #expect() and #require() macros; async tests await directly, no XCTestExpectation"
+        },
+        {
+          "id": "noncopyable-token",
+          "trap": "SessionToken is a class with a copy() method for a single-use token; should be ~Copyable struct",
+          "category": "type-system",
+          "description": "Use ~Copyable for resources that must not be duplicated (tokens, one-shot operations); enforces single-use at compile time"
+        },
+        {
+          "id": "property-wrapper-simple",
+          "trap": "Clamped property wrapper has Logger and cache dict \u2014 complex logic belongs in the type, not the wrapper",
+          "category": "type-system",
+          "description": "Keep property wrappers simple \u2014 complex logic belongs in the type, not the wrapper"
+        },
+        {
+          "id": "let-over-var",
+          "trap": "APIClient.baseURL and session are var but never mutated; should be let",
+          "category": "naming-style",
+          "description": "Immutability: let by default; var only when mutation required"
+        },
+        {
+          "id": "argument-labels-clarity",
+          "trap": "fetchUser(id:) is fine but remove(index) style would be unclear \u2014 general check that API arg labels are present",
+          "category": "naming-style",
+          "description": "Clarity: remove(at: index) over remove(index) \u2014 Swift is verbose by design"
+        },
+        {
+          "id": "protocol-conformance-extension",
+          "trap": "UserProfile implements Codable inline on the class declaration instead of in a separate extension",
+          "category": "naming-style",
+          "description": "Protocol conformance: extension MyType: MyProtocol to group methods separately"
+        },
+        {
+          "id": "no-blanket-mainactor",
+          "trap": "ProfileViewModel is blanket @MainActor but contains heavyComputation which should not be on MainActor",
+          "category": "concurrency",
+          "description": "Do NOT blanket @MainActor to silence errors; identify correct isolation per function"
+        },
+        {
+          "id": "preview-mock-data",
+          "trap": "No #Preview provided with mock data for any view",
+          "category": "ui-patterns",
+          "description": "Provide #Preview with mock data; keep instant & reliable"
+        },
+        {
+          "id": "single-source-of-truth",
+          "trap": "EditProfileView mutates profile.user_name directly from the view instead of flowing state changes through model",
+          "category": "architecture",
+          "description": "Single source of truth \u2014 state in one place, flows down"
+        }
+      ]
+    }
+  ]
+}

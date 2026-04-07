@@ -1,0 +1,168 @@
+{
+  "skill_name": "i18n",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\n// src/i18n/en.json\n{\n  \"Welcome to the app\": \"Welcome to the app\",\n  \"Sign in\": \"Sign in\",\n  \"diffs.header.actions.delete.confirm\": \"Are you sure you want to delete?\",\n  \"items\": \"item\",\n  \"items_plural\": \"items\",\n  \"validation\": {\n    \"tooShort\": \"Too short (min {{min}})\",\n    \"required\": \"Required\",\n    \"invalidEmail\": \"Invalid email\"\n  },\n  \"errors\": {\n    \"repo_not_found\": \"Repository not found\",\n    \"unauthorized\": \"Unauthorized\"\n  },\n  \"seo\": {\n    \"settingsPage\": \"Settings\"\n  }\n}\n\n// src/i18n/config.ts\nimport i18n from 'i18next';\nimport { initReactI18next } from 'react-i18next';\nimport en from './en.json';\nimport pt_BR from './pt-BR.json';\n\ni18n.use(initReactI18next).init({\n  resources: { en: { translation: en }, 'pt-BR': { translation: pt_BR } },\n  lng: navigator.language,\n  fallbackLng: 'en',\n  interpolation: { escapeValue: false },\n});\n\nexport default i18n;\n\n// src/schemas/settingsSchema.ts\nimport { z } from 'zod';\n\nexport const settingsSchema = z.object({\n  displayName: z.string().min(2, 'Name must be at least 2 characters'),\n  email: z.string().email('Please enter a valid email'),\n  bio: z.string().max(500, 'Bio is too long'),\n  password: z.string().min(8),\n  confirmPassword: z.string().min(8),\n}).refine((data) => data.password === data.confirmPassword, {\n  message: 'Passwords do not match',\n  path: ['confirmPassword'],\n});\n\n// src/utils/errors.ts\nimport { ProblemDetail } from '../types';\n\nexport function getErrorMessage(error: unknown): string {\n  if (error instanceof Error) {\n    return error.message;\n  }\n  return 'An unexpected error occurred';\n}\n\n// src/routes/settings.tsx\nimport { createFileRoute } from '@tanstack/react-router';\n\nexport const Route = createFileRoute('/settings')({\n  component: SettingsPage,\n  head: () => ({\n    meta: [{ title: 'Settings - MyApp' }],\n  }),\n});\n\n// src/components/SettingsPage.tsx\nimport React from 'react';\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { Trans, useTranslation } from 'react-i18next';\nimport { settingsSchema } from '../schemas/settingsSchema';\nimport { getErrorMessage } from '../utils/errors';\nimport { useMutation } from '@tanstack/react-query';\n\nfunction SettingsPage() {\n  const { t } = useTranslation();\n  const form = useForm({\n    resolver: zodResolver(settingsSchema),\n  });\n\n  const mutation = useMutation({\n    mutationFn: saveSettings,\n    onError: (error) => {\n      alert(getErrorMessage(error));\n    },\n  });\n\n  const lastSaved = new Date(form.getValues('lastSaved'));\n  const fileCount = 3;\n  const collaborators = ['Alice', 'Bob', 'Charlie'];\n\n  return (\n    <div>\n      <html lang=\"en\">\n        <head>\n          <title>Settings - MyApp</title>\n        </head>\n      </html>\n      <h1>Settings</h1>\n      <p style={{ marginLeft: '16px', paddingRight: '8px', textAlign: 'left', borderLeft: '2px solid gray' }}>\n        Last saved: {lastSaved.toLocaleDateString()}\n      </p>\n      <p>{fileCount === 1 ? '1 file' : `${fileCount} files`}</p>\n      <p>Collaborators: {collaborators.join(', ')}</p>\n      <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))}>\n        <label>\n          Display Name\n          <input {...form.register('displayName')} />\n          {form.formState.errors.displayName && (\n            <span>{form.formState.errors.displayName.message}</span>\n          )}\n        </label>\n        <label>\n          Email\n          <input {...form.register('email')} />\n        </label>\n        <label>\n          Bio\n          <input {...form.register('bio')} />\n        </label>\n        <label>\n          Password\n          <input type=\"password\" {...form.register('password')} />\n        </label>\n        <label>\n          Confirm Password\n          <input type=\"password\" {...form.register('confirmPassword')} />\n        </label>\n        <button type=\"submit\">Save changes</button>\n        <Trans i18nKey=\"Welcome to the app\">\n          Welcome to the <strong>app</strong>\n        </Trans>\n      </form>\n    </div>\n  );\n}\n\nexport default SettingsPage;\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "zero-hardcoded-text",
+          "trap": "Hardcoded strings: 'Settings', 'Display Name', 'Email', 'Bio', 'Password', 'Confirm Password', 'Save changes', 'Last saved:', title tag",
+          "category": "golden-rule",
+          "description": "ZERO hardcoded user-visible text. Every string the user sees goes through t(). No exceptions."
+        },
+        {
+          "id": "rtl-logical-properties",
+          "trap": "marginLeft, paddingRight, textAlign: 'left', borderLeft used instead of CSS logical properties",
+          "category": "rtl-support",
+          "description": "Replace directional CSS (margin-left, padding-right, text-align: left, border-left) with logical equivalents (margin-inline-start, padding-inline-end, text-align: start, border-inline-start)."
+        },
+        {
+          "id": "locale-detection-chain",
+          "trap": "Config uses only navigator.language with no user preference or URL-based detection priority",
+          "category": "locale-detection",
+          "description": "Locale detection priority chain: user preference first, then URL, subdomain, Accept-Language header, navigator.language, then default fallback."
+        },
+        {
+          "id": "ts-file-as-const",
+          "trap": "Translation file is JSON instead of TypeScript exported as const",
+          "category": "translation-file-structure",
+          "description": "Single TypeScript file per locale exported as const for type inference, no JSON parsing."
+        },
+        {
+          "id": "flat-keys-domain-prefix",
+          "trap": "Keys like 'Welcome to the app' and 'Sign in' lack domain prefix; validation/errors are nested objects",
+          "category": "translation-file-structure",
+          "description": "Flat keys with domain prefix (domain.key). Never nest more than 2 levels."
+        },
+        {
+          "id": "key-describes-element-not-content",
+          "trap": "'Welcome to the app' and 'Sign in' use English content as keys instead of element-descriptive keys",
+          "category": "translation-file-structure",
+          "description": "Translation key naming: keys describe the element, not the content. Keys must survive renaming of the English string."
+        },
+        {
+          "id": "deeply-nested-key",
+          "trap": "'diffs.header.actions.delete.confirm' is nested 5 levels deep",
+          "category": "translation-file-structure",
+          "description": "Never nest more than 2 levels: 'diffs.files' is fine, 'diffs.header.actions.delete.confirm' is not."
+        },
+        {
+          "id": "no-trans-component",
+          "trap": "<Trans> used for simple text that doesn't require JSX interpolation",
+          "category": "using-translations",
+          "description": "Never use <Trans> component unless interpolation requires JSX elements. t() is simpler and sufficient for 99% of cases."
+        },
+        {
+          "id": "singleton-outside-react",
+          "trap": "Route head() function needs i18n.t() singleton but uses hardcoded string instead",
+          "category": "using-translations",
+          "description": "Outside React render (route head(), Zod error maps, utilities), use i18n.t() singleton, not the hook."
+        },
+        {
+          "id": "fallback-chain-not-single",
+          "trap": "fallbackLng: 'en' is a single fallback, not a chain (e.g. pt-BR -> pt -> en)",
+          "category": "using-translations",
+          "description": "Configure i18next with a fallback chain, not just a single fallback. Example: pt-BR -> pt -> en."
+        },
+        {
+          "id": "plural-suffix-convention",
+          "trap": "'items' / 'items_plural' uses wrong suffix; i18next requires base key + '_other' suffix",
+          "category": "pluralization",
+          "description": "i18next suffix convention: base key + _other suffix for plural. Not _plural."
+        },
+        {
+          "id": "no-manual-plural-if",
+          "trap": "fileCount === 1 ? '1 file' : `${fileCount} files` is manual pluralization instead of using t() with count",
+          "category": "pluralization",
+          "description": "Never assume two forms (singular/plural) with if count === 1. Use the framework's CLDR-aware pluralization system with t(key, { count })."
+        },
+        {
+          "id": "no-string-concatenation",
+          "trap": "collaborators.join(', ') manually concatenates a list instead of using interpolation or Intl.ListFormat",
+          "category": "interpolation",
+          "description": "Never concatenate strings. Use interpolation: t(key, { variable }) not t(key) + value. Use Intl.ListFormat for locale-aware lists."
+        },
+        {
+          "id": "intl-list-format",
+          "trap": "Array.join(', ') instead of Intl.ListFormat for locale-aware conjunction",
+          "category": "date-number-formatting",
+          "description": "Use Intl.ListFormat for locale-aware lists. Never manually join strings with commas \u2014 conjunction rules differ by language."
+        },
+        {
+          "id": "date-explicit-locale",
+          "trap": "toLocaleDateString() called without explicit locale argument",
+          "category": "date-number-formatting",
+          "description": "Never new Date().toLocaleDateString() without explicit locale. Use Intl.DateTimeFormat with i18n.language."
+        },
+        {
+          "id": "zod-hardcoded-messages",
+          "trap": "Zod schema uses hardcoded English strings ('Name must be at least 2 characters', 'Please enter a valid email', etc.) instead of i18n keys",
+          "category": "zod-validation",
+          "description": "Custom formErrorMap maps Zod issue codes to i18n keys. Pass to zodResolver. Never hardcode validation messages."
+        },
+        {
+          "id": "zod-refine-key-fragment",
+          "trap": ".refine() message is hardcoded 'Passwords do not match' instead of a bare key fragment for translation",
+          "category": "zod-validation",
+          "description": "For .refine() messages, use bare key fragments (message: 'passwordsMismatch') and a translation utility, not hardcoded strings."
+        },
+        {
+          "id": "zod-error-map-resolver",
+          "trap": "zodResolver(settingsSchema) called without errorMap option",
+          "category": "zod-validation",
+          "description": "Pass formErrorMap to resolver: zodResolver(Schema, { errorMap: formErrorMap })."
+        },
+        {
+          "id": "api-error-translation",
+          "trap": "getErrorMessage() returns raw error.message or hardcoded fallback instead of checking ProblemDetail and using i18n.t()",
+          "category": "api-error-translation",
+          "description": "getErrorMessage() must check isProblemDetail(error) -> i18n.t('errors.${error.code}') -> fallback to error.detail -> fallback to i18n.t('common.error')."
+        },
+        {
+          "id": "global-toast-handler",
+          "trap": "Mutation uses alert() for error handling instead of global QueryCache/MutationCache onError toast handler",
+          "category": "api-error-translation",
+          "description": "Global toast handler in QueryCache.onError / MutationCache.onError to auto-translate and toast errors. Opt-out via meta: { skipGlobalToast: true }."
+        },
+        {
+          "id": "route-static-data-title-key",
+          "trap": "Route has no staticData.titleKey; title is hardcoded in head()",
+          "category": "route-metadata",
+          "description": "Use staticData: { titleKey: 'domain.title' } on route definitions. In head(), use i18n.t('seo.pageName') singleton."
+        },
+        {
+          "id": "seo-hreflang-tags",
+          "trap": "No hreflang alternate links in head for multi-language support",
+          "category": "route-metadata",
+          "description": "Add <link rel='alternate' hreflang='xx' href='...' /> for each language version plus hreflang='x-default' for fallback."
+        },
+        {
+          "id": "html-lang-dynamic",
+          "trap": "<html lang='en'> is hardcoded instead of dynamic i18n.language",
+          "category": "ssr",
+          "description": "Set <html lang={i18n.language}> dynamically in root route, not hardcoded."
+        },
+        {
+          "id": "ssr-sync-init",
+          "trap": "i18n.init() is async (returns promise) with no synchronous initialization for SSR",
+          "category": "ssr",
+          "description": "Initialize i18n synchronously (static imports, no async loading) \u2014 must be available during SSR."
+        },
+        {
+          "id": "suppress-hydration-warning",
+          "trap": "Date display element has no suppressHydrationWarning for client-dependent value",
+          "category": "ssr",
+          "description": "Use suppressHydrationWarning on elements with client-dependent values (dates, relative times)."
+        },
+        {
+          "id": "html-dir-rtl",
+          "trap": "No dir attribute on <html> element for RTL language support",
+          "category": "rtl-support",
+          "description": "Set dir='rtl' on <html> alongside lang. Test with Arabic/Hebrew content."
+        }
+      ]
+    }
+  ]
+}

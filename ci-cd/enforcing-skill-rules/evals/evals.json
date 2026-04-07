@@ -1,0 +1,114 @@
+{
+  "skill_name": "ci-cd",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```yaml\nname: CI/CD\non:\n  push:\n    branches: [main, develop, staging]\n  pull_request:\n    branches: ['*']\n\nenv:\n  DATABASE_URL: postgresql://admin:supersecret123@localhost:5432/mydb\n  DEPLOY_TOKEN: ghp_abc123secrettoken456\n  AWS_SECRET_KEY: AKIAIOSFODNN7EXAMPLE\n\njobs:\n  pipeline:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: '18'\n      - run: npm install\n      - run: npm run lint\n      - run: npx tsc --noEmit\n      - run: npm test\n      - run: npm run build\n      - run: npm run test:integration\n        env:\n          DATABASE_URL: postgresql://admin:supersecret123@localhost:5432/mydb\n      - run: npx playwright test\n      - run: |\n          if [ \"${{ github.ref }}\" = \"refs/heads/main\" ]; then\n            npm run deploy:production\n          fi\n\n  deploy-production:\n    runs-on: ubuntu-latest\n    needs: [pipeline]\n    if: github.ref == 'refs/heads/main'\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: '18'\n      - run: npm install\n      - run: npm run build\n      - run: npm run deploy:production\n```\n\nThis is a TypeScript monorepo with packages/api and packages/web. Output fixed code only.",
+      "assertions": [
+        {
+          "id": "quality-gates-present",
+          "trap": "Missing security audit (npm audit) and bundle size check from the gate sequence",
+          "category": "quality",
+          "description": "Every PR must pass all gates: lint, type-check, unit tests, build, integration, E2E, security audit, bundle size"
+        },
+        {
+          "id": "parallel-fast-jobs",
+          "trap": "All steps run sequentially in a single job instead of lint/typecheck/test as parallel independent jobs",
+          "category": "performance",
+          "description": "Lint, type-check, unit tests, and build should run as parallel independent jobs, not sequential steps"
+        },
+        {
+          "id": "dependency-caching",
+          "trap": "Uses npm install instead of npm ci, and setup-node has no cache option",
+          "category": "performance",
+          "description": "Use setup-node with cache: npm for dependency caching; use npm ci for reproducible installs"
+        },
+        {
+          "id": "build-artifact-caching",
+          "trap": "No actions/cache for build artifacts (.next/cache, dist, etc.)",
+          "category": "performance",
+          "description": "Cache build artifacts using actions/cache with content-aware keys (hashFiles for lockfile + source)"
+        },
+        {
+          "id": "secrets-not-hardcoded",
+          "trap": "DATABASE_URL, DEPLOY_TOKEN, and AWS_SECRET_KEY are hardcoded plaintext in the workflow env block",
+          "category": "security",
+          "description": "All credentials must be stored in GitHub Secrets, never hardcoded in workflow files"
+        },
+        {
+          "id": "pinned-action-versions",
+          "trap": "Uses actions/checkout@v3 and actions/setup-node@v3 instead of @v4",
+          "category": "security",
+          "description": "Pin actions to current major versions (v4 for checkout, setup-node, cache, upload-artifact)"
+        },
+        {
+          "id": "integration-needs-build",
+          "trap": "Integration and E2E tests run in the same job as build instead of as separate jobs with needs: [build]",
+          "category": "quality",
+          "description": "Integration and E2E tests must run after build succeeds, as separate jobs with needs dependency"
+        },
+        {
+          "id": "e2e-playwright-deps",
+          "trap": "Playwright runs without installing browser dependencies (npx playwright install --with-deps chromium)",
+          "category": "quality",
+          "description": "E2E jobs must install Playwright browser dependencies before running tests"
+        },
+        {
+          "id": "e2e-failure-artifacts",
+          "trap": "No upload-artifact step to capture Playwright report on failure",
+          "category": "quality",
+          "description": "E2E tests should upload artifacts (playwright-report) on failure for debugging"
+        },
+        {
+          "id": "integration-db-service",
+          "trap": "Integration tests reference localhost DB but no services container (postgres) is defined",
+          "category": "quality",
+          "description": "Database integration tests must use a services container with health checks"
+        },
+        {
+          "id": "no-concurrency-control",
+          "trap": "No concurrency group defined; multiple pushes to same branch run simultaneously",
+          "category": "performance",
+          "description": "Use concurrency groups to cancel redundant runs on the same branch"
+        },
+        {
+          "id": "monorepo-path-filtering",
+          "trap": "All jobs run on every change with no path filters despite being a monorepo with packages/api and packages/web",
+          "category": "performance",
+          "description": "Monorepo CI must use path filtering (dorny/paths-filter or on.pull_request.paths) to skip unrelated jobs"
+        },
+        {
+          "id": "deploy-strategy-missing",
+          "trap": "Production deploy is a raw npm run deploy with no staged rollout, no canary, no rollback mechanism",
+          "category": "deployment",
+          "description": "Deployments must use a staged rollout (staging first, then production) with a rollback mechanism"
+        },
+        {
+          "id": "rollback-workflow",
+          "trap": "No rollback workflow or workflow_dispatch mechanism exists to revert a bad deploy",
+          "category": "deployment",
+          "description": "Every deployment must be reversible; ship a rollback workflow with workflow_dispatch"
+        },
+        {
+          "id": "staging-before-production",
+          "trap": "Deploys directly to production with no staging step or manual verification gate",
+          "category": "deployment",
+          "description": "Follow staged rollout: staging deploy (auto) then manual verify then production deploy"
+        },
+        {
+          "id": "pr-trigger-scoped",
+          "trap": "pull_request triggers on all branches ('*') instead of scoped to main",
+          "category": "quality",
+          "description": "CI should trigger on pull_request to main and push to main, not wildcard branches"
+        },
+        {
+          "id": "ci-env-separation",
+          "trap": "CI has production secrets (DEPLOY_TOKEN, AWS_SECRET_KEY) available to all jobs including tests",
+          "category": "security",
+          "description": "CI never has production secrets; separate secrets per environment with minimal scope"
+        }
+      ]
+    }
+  ]
+}

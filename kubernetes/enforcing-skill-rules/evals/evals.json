@@ -1,0 +1,168 @@
+{
+  "skill_name": "kubernetes",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api-server\n  namespace: default\n  labels:\n    app: api-server\n    tier: backend\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: api-server\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxSurge: 1\n      maxUnavailable: 1\n  template:\n    metadata:\n      labels:\n        app: api-server\n        tier: backend\n    spec:\n      terminationGracePeriodSeconds: 0\n      containers:\n        - name: api\n          image: mycompany/api-server:latest\n          ports:\n            - containerPort: 80\n          livenessProbe:\n            httpGet:\n              path: /api/v1/orders\n              port: 80\n            initialDelaySeconds: 5\n            periodSeconds: 10\n          env:\n            - name: DATABASE_URL\n              valueFrom:\n                configMapKeyRef:\n                  name: app-config\n                  key: DATABASE_URL\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\n  namespace: default\ndata:\n  DATABASE_URL: \"postgresql://admin:s3cret@postgres:5432/mydb\"\n  LOG_LEVEL: \"info\"\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: api-service\n  namespace: default\nspec:\n  type: ClusterIP\n  ports:\n    - port: 80\n      targetPort: 80\n  selector:\n    app: api-svc\n---\napiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: api-ingress\n  namespace: default\nspec:\n  rules:\n    - host: api.example.com\n      http:\n        paths:\n          - path: /\n            pathType: Prefix\n            backend:\n              service:\n                name: api-service\n                port:\n                  number: 80\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nmetadata:\n  name: api-server-binding\nsubjects:\n  - kind: ServiceAccount\n    name: default\n    namespace: default\nroleRef:\n  kind: ClusterRole\n  name: cluster-admin\n  apiGroup: rbac.authorization.k8s.io\n---\napiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata:\n  name: api-hpa\n  namespace: default\nspec:\n  scaleTargetRef:\n    apiVersion: apps/v1\n    kind: Deployment\n    name: api-server\n  minReplicas: 1\n  maxReplicas: 50\n  metrics:\n    - type: Resource\n      resource:\n        name: cpu\n        target:\n          type: Utilization\n          averageUtilization: 70\n---\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: api-network-policy\n  namespace: default\nspec:\n  podSelector:\n    matchLabels:\n      app: api-server\n  policyTypes:\n    - Ingress\n  ingress:\n    - from: []\n      ports:\n        - port: 80\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "pin-image-tags",
+          "trap": "image: mycompany/api-server:latest",
+          "category": "gotcha",
+          "description": "Always pin image versions (SHA or semver), never use latest tag"
+        },
+        {
+          "id": "non-root-port",
+          "trap": "containerPort: 80 with no security context",
+          "category": "security",
+          "description": "Use containerPort >= 1024 with runAsNonRoot: true, remap via Service port:80 -> targetPort:8080"
+        },
+        {
+          "id": "lightweight-liveness",
+          "trap": "livenessProbe path: /api/v1/orders (heavy business endpoint)",
+          "category": "gotcha",
+          "description": "Liveness probe must use a dedicated lightweight /healthz endpoint, not a heavy business endpoint"
+        },
+        {
+          "id": "resource-limits",
+          "trap": "Container has no resources block at all",
+          "category": "behavior",
+          "description": "Always set both resource requests AND limits on every container"
+        },
+        {
+          "id": "selector-mismatch",
+          "trap": "Service selector app: api-svc vs pod label app: api-server",
+          "category": "gotcha",
+          "description": "Service selector must exactly match pod template labels, mismatch causes silent failure"
+        },
+        {
+          "id": "secrets-in-configmap",
+          "trap": "DATABASE_URL with password stored in ConfigMap",
+          "category": "security",
+          "description": "Sensitive data (passwords, credentials) must use Secret (with stringData), not ConfigMap"
+        },
+        {
+          "id": "min-two-replicas",
+          "trap": "replicas: 1",
+          "category": "architecture",
+          "description": "Minimum 2 replicas for availability during rolling updates (zero-downtime)"
+        },
+        {
+          "id": "termination-grace-period",
+          "trap": "terminationGracePeriodSeconds: 0",
+          "category": "behavior",
+          "description": "Set terminationGracePeriodSeconds appropriately (e.g. 30) with preStop hook for graceful drain"
+        },
+        {
+          "id": "max-unavailable-zero",
+          "trap": "maxUnavailable: 1",
+          "category": "behavior",
+          "description": "Use maxUnavailable: 0 for zero-downtime rolling updates"
+        },
+        {
+          "id": "standard-labels",
+          "trap": "Labels use app: api-server instead of app.kubernetes.io/* convention",
+          "category": "format",
+          "description": "Labels must follow app.kubernetes.io/* standard convention for tooling compatibility"
+        },
+        {
+          "id": "readiness-probe",
+          "trap": "No readinessProbe defined on container",
+          "category": "behavior",
+          "description": "Configure readiness probe to control traffic routing (removed from Service endpoints on failure)"
+        },
+        {
+          "id": "startup-probe",
+          "trap": "No startupProbe defined on container",
+          "category": "behavior",
+          "description": "Configure startup probe to disable liveness/readiness checks during boot"
+        },
+        {
+          "id": "security-context-pod",
+          "trap": "No pod-level securityContext (runAsNonRoot, runAsUser, seccompProfile)",
+          "category": "security",
+          "description": "Pod must set runAsNonRoot: true, runAsUser: 1000, seccompProfile: RuntimeDefault"
+        },
+        {
+          "id": "security-context-container",
+          "trap": "No container-level securityContext",
+          "category": "security",
+          "description": "Container must set allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, drop: [ALL]"
+        },
+        {
+          "id": "prestop-hook",
+          "trap": "No preStop lifecycle hook defined",
+          "category": "behavior",
+          "description": "Add preStop hook with sleep for graceful connection draining during rolling updates"
+        },
+        {
+          "id": "dedicated-service-account",
+          "trap": "ClusterRoleBinding uses default ServiceAccount",
+          "category": "security",
+          "description": "Create a dedicated ServiceAccount per app, never use default SA in production"
+        },
+        {
+          "id": "least-privilege-rbac",
+          "trap": "ClusterRoleBinding grants cluster-admin to the app",
+          "category": "security",
+          "description": "Use namespaced Role with least privilege (only needed verbs/resources), not ClusterRole cluster-admin"
+        },
+        {
+          "id": "hpa-min-replicas",
+          "trap": "HPA minReplicas: 1",
+          "category": "architecture",
+          "description": "HPA minReplicas must be >= 2 for availability"
+        },
+        {
+          "id": "hpa-needs-requests",
+          "trap": "HPA targets a Deployment whose containers have no resource requests",
+          "category": "behavior",
+          "description": "HPA requires resource requests set on containers to compute utilization ratios"
+        },
+        {
+          "id": "hpa-scaledown-stabilization",
+          "trap": "HPA has no behavior.scaleDown.stabilizationWindowSeconds",
+          "category": "behavior",
+          "description": "HPA must configure scale-down stabilization window to prevent flapping"
+        },
+        {
+          "id": "netpol-egress-missing",
+          "trap": "NetworkPolicy only has Ingress policyType, no Egress restriction",
+          "category": "security",
+          "description": "Default deny all ingress AND egress, then allowlist specific paths"
+        },
+        {
+          "id": "netpol-allow-all-ingress",
+          "trap": "ingress from: [] allows all sources",
+          "category": "security",
+          "description": "NetworkPolicy ingress must restrict to specific podSelector/namespaceSelector, not allow all"
+        },
+        {
+          "id": "ingress-tls",
+          "trap": "Ingress has no TLS configuration or cert-manager annotation",
+          "category": "security",
+          "description": "Ingress should have TLS termination with cert-manager for automatic certificates"
+        },
+        {
+          "id": "pod-disruption-budget",
+          "trap": "No PodDisruptionBudget defined for the Deployment",
+          "category": "architecture",
+          "description": "Every production Deployment needs a PDB (minAvailable: 50%) to survive node drains"
+        },
+        {
+          "id": "topology-spread",
+          "trap": "No topologySpreadConstraints on pod spec",
+          "category": "architecture",
+          "description": "Use topologySpreadConstraints to spread pods across zones/nodes and prevent single-point-of-failure"
+        },
+        {
+          "id": "default-namespace",
+          "trap": "All resources deployed to namespace: default",
+          "category": "gotcha",
+          "description": "Never deploy to default namespace; use an explicit application namespace"
+        }
+      ]
+    }
+  ]
+}

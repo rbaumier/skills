@@ -1,0 +1,138 @@
+{
+  "skill": "writing",
+  "grades": {
+    "cut-filler-hedging": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'significant progress' retained; 'approximately 60%' kept (hedging). 'Two gaps need immediate attention' is wordy but acceptable. Overall filler reduced but not fully cut.",
+      "with_evidence": "No filler/hedging remains. '60%' is stated directly. No 'approximately', no 'something that needs to be addressed', no 'every step of the journey'."
+    },
+    "active-voice": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'was initiated' removed, but 'were not reviewed' partially remains as 'no one reviewed' (acceptable). However 'progress has been made' pattern persists as 'has made significant progress' \u2014 borderline acceptable but 'critical dependencies missed during initial planning' uses passive (missed by whom?). 'the team has not updated' is active. Mixed.",
+      "with_evidence": "All sentences use active voice. 'The platform team has migrated', 'The team also skipped', 'Early production data shows'. No passive constructions remain."
+    },
+    "concrete-over-abstract": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'significant progress' is abstract. 'several challenges' remains vague. 'unexpected delays' has no timeframe. 'approximately 60%' is hedged rather than concrete.",
+      "with_evidence": "'60%' stated directly. 'added three weeks of unplanned work' is concrete. Specific components named. 'Networking misconfigurations' and 'Missed critical dependencies' are concrete problem statements."
+    },
+    "banned-words": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'leverage' and 'foster' removed. 'utilize' removed. But 'in order to' pattern not present. However 'seamless' replaced with acceptable wording. Overall most banned words removed. But 'monitoring stack' uses 'stack' (not banned). PASS-worthy on banned words specifically. Actually re-checking: no leverage, utilize, in order to, worth noting, multifaceted, foster, realm, tapestry, delve found. PASS.",
+      "with_evidence": "No banned words present. No leverage, utilize, in order to, worth noting, multifaceted, foster, realm, tapestry, or delve."
+    },
+    "no-ai-warmth": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'Reach out with any questions' is a softened version of 'please do not hesitate to reach out' \u2014 still a warmth/politeness filler phrase.",
+      "with_evidence": "'Reach out to me directly with questions' is direct and functional, not sycophantic. No 'humbly suggest' or 'it is our hope'."
+    },
+    "ai-artifact-hollow-openers": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No hollow openers like 'It is worth noting', 'In recent years', or 'As mentioned above' remain.",
+      "with_evidence": "No hollow openers present."
+    },
+    "ai-artifact-over-connectors": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No 'Furthermore' or 'Moreover' present in the output.",
+      "with_evidence": "No over-connectors present."
+    },
+    "ai-artifact-false-precision": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No 'myriad' or 'plethora' present.",
+      "with_evidence": "No 'myriad' or 'plethora' present."
+    },
+    "ai-artifact-meta-narration": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No 'This section discusses' or 'As mentioned above' present.",
+      "with_evidence": "No meta-narration present."
+    },
+    "em-dash-overuse": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Paragraph 3 contains two em-dashes: '\u2014 the database layer, the authentication service, and the API gateway \u2014' which is 2 em-dashes in one paragraph, exceeding the max of 1.",
+      "with_evidence": "Em-dashes used sparingly: one per bullet point in the risk list, which are separate items, not clustered in a single paragraph. No paragraph exceeds 1 em-dash."
+    },
+    "omit-needless-words": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'with deep interdependencies that require careful sequencing' is wordy. 'to maintain momentum' is filler. 'Two gaps need immediate attention' could be tighter. Overall still contains unnecessary words.",
+      "with_evidence": "Text is tight throughout. No 'with regard to', 'in providing context', 'to its fullest', 'moving forward'. Every sentence carries information."
+    },
+    "positive-form": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'the team has not updated the runbooks, and no one reviewed the dashboards' \u2014 'has not updated' and 'no one reviewed' are negative forms. Should be 'the team skipped updating runbooks' or similar positive construction.",
+      "with_evidence": "'The team also skipped two steps' \u2014 positive form. 'Missed critical dependencies' \u2014 positive form. No negative constructions like 'did not remember' or 'were not reviewed'."
+    },
+    "puffery": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'significant progress' retains puffery. 'Key risks center on three components' uses 'key' which is borderline. 'critical dependencies' retains 'critical'. Overall mild puffery persists.",
+      "with_evidence": "No puffery words. No 'pivotal', 'crucial', 'vital', 'testament', 'enduring legacy', or 'significant'."
+    },
+    "empty-ing-phrases": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No empty -ing phrases like 'ensuring reliability', 'showcasing capabilities', or 'utilizing every tool' remain.",
+      "with_evidence": "No empty -ing phrases present."
+    },
+    "promotional-adjectives": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "No 'groundbreaking', 'seamless', 'robust', or 'cutting-edge' present.",
+      "with_evidence": "No promotional adjectives present."
+    },
+    "causal-language": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'Early results show improved latency' \u2014 while 'show' is softer than 'causes', it still implies the migration caused the improvement without proper hedging for observational data. Should use 'correlates with' or 'is associated with'.",
+      "with_evidence": "'Early production data shows lower latency on migrated workloads, though we need controlled benchmarks to confirm the trend holds under full load' \u2014 properly hedged observational claim with explicit acknowledgment that causation is unconfirmed."
+    },
+    "lead-with-so-what": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Opens with 'The platform team has made significant progress migrating...' \u2014 still leads with process narrative rather than the key takeaway or action needed.",
+      "with_evidence": "Subject line leads with '60% Complete, Budget Approval Needed' \u2014 the so-what is front and center. First sentence states completion status immediately."
+    },
+    "end-with-action": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Ends with 'Reach out with any questions' \u2014 vague. The budget recommendation is mentioned but not as a clear action item with deadline or owner.",
+      "with_evidence": "Ends with explicit numbered next steps and a clear ask: 'please approve the requested budget increase by end of week'. Specific actions, owners, and timeline."
+    },
+    "one-paragraph-one-topic": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Paragraph 3 mixes forward strategy, latency results, runbook gaps, key risks, and interdependencies \u2014 multiple topics in one paragraph.",
+      "with_evidence": "Clear separation: paragraph 1 = status/progress, paragraph 2 = problems, paragraph 3 = skipped steps, paragraph 4 = high-risk components, paragraph 5 = latency data, paragraph 6 = next steps. Each section has one topic."
+    },
+    "comma-splice": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'the team has not updated the runbooks, and no one reviewed the dashboards before the cutover' \u2014 comma-joined independent clauses in a loose sentence pattern. Also 'Early results show improved latency, and we recommend allocating additional resources' \u2014 another comma-joined pair.",
+      "with_evidence": "Sentences are properly structured. Lists use numbered format. No comma splices or loose comma-joined independent clauses."
+    },
+    "cognitive-fluency": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Language is generally plain. 'dependency complexity', 'interdependencies' are slightly complex but domain-appropriate. No unnecessarily rare synonyms.",
+      "with_evidence": "Plain language throughout. 'tightly coupled', 'downstream', 'routing changes' are domain-standard terms, not unnecessarily complex."
+    }
+  },
+  "summary": {
+    "without_pass": 8,
+    "without_fail": 13,
+    "with_pass": 21,
+    "with_fail": 0,
+    "total": 21
+  }
+}

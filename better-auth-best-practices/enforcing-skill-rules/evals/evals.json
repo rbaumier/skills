@@ -1,0 +1,126 @@
+{
+  "skill_name": "better-auth-best-practices",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```typescript\n// auth.ts - Server config\nimport { betterAuth } from \"better-auth\";\nimport { twoFactor, organization } from \"better-auth/plugins\";\nimport { drizzleAdapter } from \"better-auth/adapters/drizzle\";\nimport { db } from \"./db\";\nimport { createClient } from \"redis\";\n\nconst redis = createClient({ url: process.env.REDIS_URL });\nawait redis.connect();\n\nexport const auth = betterAuth({\n  secret: \"my-super-secret-key\",\n  baseURL: \"https://myapp.com\",\n  database: drizzleAdapter(db),\n  emailAndPassword: { enabled: true },\n  socialProviders: {\n    google: {\n      clientId: process.env.GOOGLE_CLIENT_ID!,\n      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,\n    },\n  },\n  account: {\n    accountLinking: {\n      enabled: true,\n    },\n  },\n  secondaryStorage: redis,\n  session: {\n    expiresIn: 60 * 60 * 24 * 7,\n    cookieCache: {\n      maxAge: 60 * 5,\n    },\n  },\n  user: {\n    modelName: \"users\",\n  },\n  plugins: [\n    twoFactor(),\n    organization(),\n  ],\n  rateLimit: {\n    enabled: true,\n    storage: \"memory\",\n  },\n  emailVerification: {},\n  advanced: {\n    disableCSRFCheck: true,\n  },\n});\n\n// Session type\ntype Session = { user: { id: string; email: string; name: string } };\n\n// profiles.ts - Separate profile table\nimport { pgTable, text } from \"drizzle-orm/pg-core\";\nexport const profiles = pgTable(\"profiles\", {\n  userId: text(\"user_id\").primaryKey(),\n  role: text(\"role\").default(\"user\"),\n  department: text(\"department\"),\n});\n\n// client.ts\nimport { createAuthClient } from \"better-auth/client\";\n\nexport const authClient = createAuthClient({\n  baseURL: \"https://myapp.com/api/auth\",\n});\n\n// middleware.ts (Next.js)\nimport { NextResponse } from \"next/server\";\nimport type { NextRequest } from \"next/server\";\nimport { auth } from \"./auth\";\n\nexport async function middleware(request: NextRequest) {\n  const session = await auth.api.getSession();\n  if (!session) {\n    return NextResponse.redirect(new URL(\"/login\", request.url));\n  }\n  return NextResponse.next();\n}\n\nexport const config = {\n  matcher: [\"/(.*)\"],\n};\n\n// mobile.ts (React Native / Expo)\nimport { createAuthClient } from \"better-auth/react\";\n\nexport const mobileAuth = createAuthClient({\n  baseURL: \"https://api.myapp.com\",\n});\n```\n\nOutput fixed code only.",
+      "assertions": [
+        {
+          "id": "secret-env-var",
+          "trap": "secret is hardcoded as a short string instead of using BETTER_AUTH_SECRET env var (and must be min 32 chars)",
+          "category": "security",
+          "description": "Only define secret in config if BETTER_AUTH_SECRET env var is NOT set; secret must be min 32 chars"
+        },
+        {
+          "id": "baseurl-env-var",
+          "trap": "baseURL is hardcoded instead of using BETTER_AUTH_URL env var",
+          "category": "config",
+          "description": "Only define baseURL in config if BETTER_AUTH_URL env var is NOT set"
+        },
+        {
+          "id": "plugin-import-path",
+          "trap": "twoFactor and organization imported from 'better-auth/plugins' barrel instead of dedicated paths",
+          "category": "imports",
+          "description": "Import plugins from dedicated paths for tree-shaking (e.g. better-auth/plugins/two-factor), NOT from better-auth/plugins"
+        },
+        {
+          "id": "drizzle-use-plural",
+          "trap": "drizzleAdapter(db) missing usePlural and field mappings for snake_case columns",
+          "category": "database",
+          "description": "Drizzle adapter needs usePlural and field mappings when tables are plural or columns are snake_case"
+        },
+        {
+          "id": "model-name-vs-table-name",
+          "trap": "user.modelName set to 'users' (DB table name) instead of ORM model name 'user'",
+          "category": "database",
+          "description": "Config uses ORM model name, not underlying DB table name"
+        },
+        {
+          "id": "account-linking-trusted-providers",
+          "trap": "accountLinking enabled without specifying trustedProviders",
+          "category": "security",
+          "description": "Must set account.accountLinking.trustedProviders to control which providers can auto-link; unverified providers should not be trusted"
+        },
+        {
+          "id": "disable-csrf-check",
+          "trap": "advanced.disableCSRFCheck set to true, which is a security risk",
+          "category": "security",
+          "description": "disableCSRFCheck is a security risk and should not be enabled"
+        },
+        {
+          "id": "session-storeInDatabase",
+          "trap": "secondaryStorage is set but session.storeSessionInDatabase is not set to also persist sessions to DB",
+          "category": "session",
+          "description": "When secondaryStorage is defined, sessions go there by default; set session.storeSessionInDatabase: true to also persist to DB"
+        },
+        {
+          "id": "rate-limit-storage",
+          "trap": "rateLimit.storage is 'memory' despite having secondaryStorage (Redis) available",
+          "category": "config",
+          "description": "Rate limit storage should use 'secondary-storage' when Redis/KV secondaryStorage is configured"
+        },
+        {
+          "id": "email-verification-handler",
+          "trap": "emailVerification is empty object with no sendVerificationEmail handler defined",
+          "category": "email",
+          "description": "emailVerification.sendVerificationEmail must be defined for verification to work; sendOnSignUp should be set"
+        },
+        {
+          "id": "session-type-infer",
+          "trap": "Session type is manually defined instead of using typeof auth.$Infer.Session",
+          "category": "types",
+          "description": "Infer session types via typeof auth.$Infer.Session to include plugin fields (organization, twoFactor, etc.)"
+        },
+        {
+          "id": "additional-fields-not-separate-table",
+          "trap": "Separate profiles table created for simple role/department fields instead of using user.additionalFields",
+          "category": "schema",
+          "description": "Do NOT create a separate profile table for simple fields \u2014 use user.additionalFields first"
+        },
+        {
+          "id": "client-no-on-api-error",
+          "trap": "createAuthClient has no onAPIError callback configured",
+          "category": "client",
+          "description": "Configure onAPIError on createAuthClient to handle auth errors globally (expired sessions, rate limits)"
+        },
+        {
+          "id": "middleware-no-headers",
+          "trap": "getSession called in Next.js middleware without forwarding request headers",
+          "category": "middleware",
+          "description": "NEVER call getSession without forwarding the request headers \u2014 it returns null in middleware without them"
+        },
+        {
+          "id": "middleware-matcher-too-broad",
+          "trap": "Middleware matcher catches all routes including static assets and public routes",
+          "category": "middleware",
+          "description": "Set matcher to exclude public routes and static assets"
+        },
+        {
+          "id": "expo-cookie-auth",
+          "trap": "Mobile/Expo client uses createAuthClient from better-auth/react with cookie-based auth instead of @better-auth/expo plugin",
+          "category": "mobile",
+          "description": "NEVER use cookie-based auth on mobile \u2014 use @better-auth/expo with expoClient() plugin and expo-secure-store"
+        },
+        {
+          "id": "client-type-generic",
+          "trap": "createAuthClient not parameterized with server auth type for type safety",
+          "category": "types",
+          "description": "For type safety use createAuthClient<typeof auth>() to infer server types on client"
+        },
+        {
+          "id": "organization-no-roles",
+          "trap": "organization() plugin used without defining custom roles or permissions",
+          "category": "plugins",
+          "description": "When using organization plugin, define custom roles: organization({ roles: { admin: [...], member: [...] } })"
+        },
+        {
+          "id": "client-missing-plugins",
+          "trap": "Client createAuthClient missing client-side plugins for twoFactor and organization",
+          "category": "client",
+          "description": "Client plugins must be added in createAuthClient({ plugins: [...] }) to match server plugins"
+        }
+      ]
+    }
+  ]
+}

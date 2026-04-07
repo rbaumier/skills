@@ -1,0 +1,204 @@
+{
+  "skill": "documentation",
+  "grades": {
+    "cite-sources": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No file path or line number citations anywhere in the output. GET /payments/:id just says 'Retrieves a payment by ID' with no source citation.",
+      "with_evidence": "No (file_path:line_number) citations anywhere in the output. Endpoints are documented without any source file references."
+    },
+    "fact-vs-inference": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed 'it is believed' and 'probably' hedging language. GET /payments/:id now states 'Retrieves a payment by ID' as a plain factual statement.",
+      "with_evidence": "All speculative language removed. GET /payments/:id is stated as fact without hedging."
+    },
+    "no-hand-waving": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Removed 'somewhere in the service folder' guessing. Description is now a clean factual statement.",
+      "with_evidence": "Removed all guessing from folder names. No hand-waving present."
+    },
+    "claims-need-path": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Webhook section says 'publishes events to the webhook dispatcher via a Redis-backed queue' with no file path or function name cited.",
+      "with_evidence": "Architecture section describes data flow (API -> PaymentService -> DB -> EventQueue -> WebhookDispatcher) but no file paths or function names are cited."
+    },
+    "why-before-what": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Endpoints still only describe WHAT: 'Creates a payment', 'Retrieves a payment by ID', 'Creates a refund'. No WHY explaining what problem they solve.",
+      "with_evidence": "Endpoints still lead with WHAT: 'Creates a payment', 'Retrieves a payment by ID', 'Creates a full refund'. No WHY before the WHAT."
+    },
+    "no-mixed-doc-types": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Tutorial bloat removed from webhook section. Only operational facts and registration steps remain.",
+      "with_evidence": "Webhook section split into 'How to register a webhook' (how-to) and 'Retry policy' (reference). Tutorial content removed from reference doc."
+    },
+    "multi-language-examples": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "API docs only show JSON request/response blocks. No cURL, JavaScript, or Python examples.",
+      "with_evidence": "Every endpoint includes cURL, JavaScript, and Python examples."
+    },
+    "openapi-refs-examples": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No OpenAPI 3.1+ spec, no $ref reuse, no schema definitions. Examples are still inline JSON.",
+      "with_evidence": "No OpenAPI 3.1+ spec provided. No $ref reuse. Request bodies use tables but no formal schema."
+    },
+    "readme-copy-pasteable": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Getting Started now has copy-pasteable commands: git clone, npm install, npm start.",
+      "with_evidence": "Setup section has copy-pasteable commands: git clone, cd, cp .env.example, npm install, npm run db:migrate, npm run dev."
+    },
+    "readme-show-output": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "No expected output shown for any setup step or API call.",
+      "with_evidence": "Expected output shown after setup commands (Listening on localhost:3000...) and after test commands."
+    },
+    "readme-sections": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Missing: features, stack, prereqs, scripts, tests, deploy, troubleshooting sections.",
+      "with_evidence": "All required sections present: title, Features, Stack, Prerequisites, Setup, Architecture, Environment Variables, Scripts, Testing, Deployment, Troubleshooting."
+    },
+    "arch-exec-summary": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Architecture is one sentence plus a diagram. No exec summary, no component list with responsibilities, no decisions/rationale/trade-offs.",
+      "with_evidence": "Architecture has a brief description and expanded diagram but lacks a formal exec summary, component responsibility list, decisions, rationale, and trade-offs."
+    },
+    "code-examples-runnable": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "JSON examples are still fragments. No error handling, no expected output annotations on API calls.",
+      "with_evidence": "Examples include cURL/JS/Python with expected output comments, but none include error handling (no try/catch, no status code checking, no error response examples)."
+    },
+    "no-secrets": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Hardcoded secrets removed. Security warning added about not committing secrets.",
+      "with_evidence": "Hardcoded secrets removed. Warning added about using .env file."
+    },
+    "changelog-conventional": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Changelog entries are plain prose bullets without conventional commit prefixes (feat:/fix:/chore:).",
+      "with_evidence": "Changelog uses conventional commit prefixes: feat:, fix:, BREAKING:."
+    },
+    "changelog-merge-related": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Three currency validation entries merged into single 'Fixed currency validation bug' entry.",
+      "with_evidence": "Three currency validation entries merged into single 'Correct currency code validation to reject non-ISO-4217 codes' entry."
+    },
+    "changelog-breaking-migration": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "v2.0.0 lists breaking changes but has no migration notes or instructions for upgrading.",
+      "with_evidence": "v2.0.0 entries marked BREAKING with migration instructions: 'Migrate by replacing X-API-Key headers with Authorization: Bearer <token>. See the OAuth2 migration guide.'"
+    },
+    "changelog-user-facing": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Internal items (ORM migration, CI pipeline) removed from changelog.",
+      "with_evidence": "Internal items removed. Only user-facing changes remain."
+    },
+    "adr-format": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "ADR has Context/Decision/Consequences but missing Status and Date fields.",
+      "with_evidence": "ADR removed from README entirely. No ADR with proper format provided (Status, Date, Context, Decision, Consequences)."
+    },
+    "adr-alternatives": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "ADR lists no alternatives considered with Pros/Cons/Rejected reason.",
+      "with_evidence": "ADR removed entirely. No alternatives considered section provided anywhere."
+    },
+    "short-sentences": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "FAQ intro filler paragraph removed. Remaining prose uses short, direct sentences.",
+      "with_evidence": "Weasel-word FAQ intro removed. Sentences are short and use active voice."
+    },
+    "numbered-vs-bullets": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Changelog still uses plain bullets for classified types. No tables or grouped headings used for reference data.",
+      "with_evidence": "Retry policy uses a table for reference data. Webhook steps use numbered list for sequence. Changelog uses grouped headings by version with typed bullets."
+    },
+    "mermaid-autonumber": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Sequence diagram has no autonumber directive.",
+      "with_evidence": "Sequence diagram includes 'autonumber' directive."
+    },
+    "mermaid-dark-mode": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No dark-mode styling on the Mermaid diagram.",
+      "with_evidence": "No dark-mode styling (node #2d333b, borders #6d5dfc, text #e6edf3) applied to the Mermaid diagram."
+    },
+    "mermaid-basic-and-styled": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Only one version of the Mermaid diagram provided.",
+      "with_evidence": "Only one version of the Mermaid diagram provided. No basic + styled versions."
+    },
+    "qa-same-language": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "French question translated to English instead of answering in French.",
+      "with_evidence": "French question replaced with English 'Rate Limits' section. Not answered in French."
+    },
+    "qa-citations": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "FAQ answers have no inline citations to source files.",
+      "with_evidence": "No Q&A section with inline citations. Idempotency and Rate Limits sections have no source file citations."
+    },
+    "doc-freshness": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No last-reviewed: YYYY-MM-DD frontmatter anywhere in the document.",
+      "with_evidence": "No last-reviewed: YYYY-MM-DD frontmatter anywhere in the document."
+    },
+    "no-yagni": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Speculative justification ('for the future when customers start asking') removed from POST /refunds.",
+      "with_evidence": "Speculative justification removed. Refund endpoint described factually without future speculation."
+    },
+    "deprecation-migration": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "v2.0.0 lists 'Removed XML support' and 'Changed authentication' with no deprecation notice or migration guide.",
+      "with_evidence": "v2.0.0 includes BREAKING labels with migration instructions and link to migration guide for OAuth2 change."
+    },
+    "c4-architecture": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Architecture has one vague sentence and a code-level sequence diagram. No C4 levels (Context, Containers, Components).",
+      "with_evidence": "Architecture has a description and expanded sequence diagram but no C4 model levels (Context, Containers, Components, Code)."
+    },
+    "data-flow-claims": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Architecture mentions 'publishes events to the webhook dispatcher via a Redis-backed queue' but no structured entry -> transforms -> destination flow.",
+      "with_evidence": "Sequence diagram shows full data flow: Client -> API -> PaymentService -> DB -> EventQueue -> WebhookDispatcher -> Client with clear entry, transforms, and destination."
+    }
+  },
+  "summary": {
+    "without_pass": 9,
+    "without_fail": 23,
+    "with_pass": 18,
+    "with_fail": 14,
+    "total": 32
+  }
+}

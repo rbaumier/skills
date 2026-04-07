@@ -1,0 +1,138 @@
+{
+  "skill_name": "writing",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\nSubject: Q3 Infrastructure Migration Initiative \u2014 Status Update and Forward-Looking Considerations\n\nIt is worth noting that significant progress has been made by the platform team in recent weeks with regard to the ongoing migration of our legacy infrastructure to the new cloud-based environment. The migration was initiated in order to leverage modern tooling and foster a more seamless developer experience across all of our engineering organizations. Furthermore, it should be mentioned that a myriad of challenges were encountered during the process \u2014 including networking misconfigurations \u2014 and moreover, several critical dependencies were not considered by the team during the initial planning phase \u2014 which resulted in a plethora of unexpected delays that impacted our overall timeline. The current completion rate is associated with approximately 60-ish percent of total workloads, and this pivotal milestone is a testament to the enduring legacy of collaboration across the organization, showcasing the robust capabilities of our cutting-edge platform while ensuring reliability at every step of the journey.\n\nAs mentioned above, the forward-looking strategy that has been developed by leadership involves a groundbreaking approach to the remaining workloads. It has been determined that the migration causes improved latency, and a recommendation has been made that additional resources should be allocated to the effort. In recent years, cloud migrations have garnered significant attention in our industry, and it is crucial that we do not fail to deliver on our commitments in this vital realm. The team did not remember to update the runbooks, and the dashboards were not reviewed by anyone before the cutover, which is something that needs to be addressed. This section discusses the key risks: the database layer, the authentication service, and the API gateway \u2014 all of which are multifaceted components \u2014 that require careful consideration moving forward. Furthermore, the tapestry of interconnected services means we must delve into each dependency with care, utilizing every tool at our disposal.\n\nIn summary, the team is encouraged to continue to utilize the new deployment tooling and to leverage the monitoring stack to its fullest. We would like to humbly suggest that stakeholders should consider approving the budget increase that was requested, and it is our hope that this update has been helpful in providing context. Please do not hesitate to reach out if there are any questions or concerns that need to be addressed.\n\nOutput fixed text only.",
+      "assertions": [
+        {
+          "id": "cut-filler-hedging",
+          "trap": "approximately 60-ish percent, something that needs to be addressed, in recent weeks, every step of the journey",
+          "category": "concision",
+          "description": "Filler, hedging, and corporate fluff must be cut"
+        },
+        {
+          "id": "active-voice",
+          "trap": "progress has been made, was initiated, were encountered, were not considered, has been developed, has been determined, has been made, were not reviewed, is encouraged",
+          "category": "voice",
+          "description": "Active voice default; passive only when actor irrelevant"
+        },
+        {
+          "id": "concrete-over-abstract",
+          "trap": "approximately 60-ish percent, significant progress, several critical dependencies, unexpected delays",
+          "category": "specificity",
+          "description": "Concrete over abstract: specific numbers, names, dates"
+        },
+        {
+          "id": "banned-words",
+          "trap": "leverage, utilize, in order to, worth noting, multifaceted, foster, realm, tapestry, delve",
+          "category": "diction",
+          "description": "Banned words must be removed or replaced"
+        },
+        {
+          "id": "no-ai-warmth",
+          "trap": "we would like to humbly suggest, it is our hope that this update has been helpful, please do not hesitate to reach out",
+          "category": "tone",
+          "description": "No AI warmth or sycophancy"
+        },
+        {
+          "id": "ai-artifact-hollow-openers",
+          "trap": "It is worth noting that, In recent years cloud migrations have garnered, As mentioned above",
+          "category": "ai-artifacts",
+          "description": "Remove hollow openers typical of AI-generated text"
+        },
+        {
+          "id": "ai-artifact-over-connectors",
+          "trap": "Furthermore (x2), Moreover",
+          "category": "ai-artifacts",
+          "description": "Remove over-connectors: Furthermore, Moreover, It is worth noting"
+        },
+        {
+          "id": "ai-artifact-false-precision",
+          "trap": "a myriad of, a plethora of",
+          "category": "ai-artifacts",
+          "description": "Remove false precision phrases like myriad/plethora"
+        },
+        {
+          "id": "ai-artifact-meta-narration",
+          "trap": "This section discusses, As mentioned above",
+          "category": "ai-artifacts",
+          "description": "Remove meta-narration that describes what the text is doing"
+        },
+        {
+          "id": "em-dash-overuse",
+          "trap": "Six em-dashes across three paragraphs, well above max 1 per paragraph",
+          "category": "punctuation",
+          "description": "Max 1 em-dash per paragraph; replace most with commas, parentheses, or periods"
+        },
+        {
+          "id": "omit-needless-words",
+          "trap": "with regard to, in providing context, to its fullest, at every step of the journey, moving forward",
+          "category": "concision",
+          "description": "Omit needless words ruthlessly"
+        },
+        {
+          "id": "positive-form",
+          "trap": "did not remember, did not fail to deliver, were not reviewed, were not considered",
+          "category": "grammar",
+          "description": "Put statements in positive form"
+        },
+        {
+          "id": "puffery",
+          "trap": "pivotal, crucial, vital, testament, enduring legacy",
+          "category": "diction",
+          "description": "Avoid puffery words"
+        },
+        {
+          "id": "empty-ing-phrases",
+          "trap": "ensuring reliability, showcasing the robust capabilities, utilizing every tool",
+          "category": "diction",
+          "description": "Avoid empty -ing phrases"
+        },
+        {
+          "id": "promotional-adjectives",
+          "trap": "groundbreaking, seamless, robust, cutting-edge",
+          "category": "diction",
+          "description": "Avoid promotional adjectives"
+        },
+        {
+          "id": "causal-language",
+          "trap": "the migration causes improved latency (observational claim stated as causal)",
+          "category": "data-integrity",
+          "description": "Use correlates with / is associated with for observational data, not causes"
+        },
+        {
+          "id": "lead-with-so-what",
+          "trap": "Entire memo leads with process narrative instead of key finding or action needed",
+          "category": "structure",
+          "description": "Lead with so what, not methodology"
+        },
+        {
+          "id": "end-with-action",
+          "trap": "Memo ends with vague please reach out instead of clear next steps",
+          "category": "structure",
+          "description": "End every piece with clear action/next steps"
+        },
+        {
+          "id": "one-paragraph-one-topic",
+          "trap": "First paragraph mixes progress, challenges, and completion rate; second mixes strategy, risks, and dependencies",
+          "category": "structure",
+          "description": "One paragraph per topic; begin each with topic sentence"
+        },
+        {
+          "id": "comma-splice",
+          "trap": "The team did not remember to update the runbooks, and the dashboards were not reviewed (loose comma-joined independent clauses throughout)",
+          "category": "grammar",
+          "description": "Never join independent clauses with comma alone; avoid succession of loose sentences"
+        },
+        {
+          "id": "cognitive-fluency",
+          "trap": "forward-looking considerations, networking misconfigurations, interconnected services \u2014 rare/complex phrasing where simpler works",
+          "category": "fluency",
+          "description": "Use common words over rare synonyms for cognitive fluency"
+        }
+      ]
+    }
+  ]
+}

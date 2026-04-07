@@ -1,0 +1,168 @@
+{
+  "skill": "i18n",
+  "grades": {
+    "zero-hardcoded-text": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "All hardcoded strings (Settings, Display Name, Email, Bio, Password, Confirm Password, Save changes, Last saved, title tag) replaced with t() calls. Removed <html>/<title> tags.",
+      "with_evidence": "All hardcoded strings replaced with t() calls. Removed <html>/<title> tags. Every visible string goes through t()."
+    },
+    "rtl-logical-properties": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "marginLeft->marginInlineStart, paddingRight->paddingInlineEnd, textAlign:'left'->'start', borderLeft->borderInlineStart",
+      "with_evidence": "marginLeft->marginInlineStart, paddingRight->paddingInlineEnd, textAlign:'left'->'start', borderLeft->borderInlineStart"
+    },
+    "locale-detection-chain": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Only added typeof navigator guard. Still just navigator.language with fallback. No user preference, URL, subdomain, or Accept-Language in chain.",
+      "with_evidence": "Added localStorage.getItem('userLanguage') ?? navigator.language. Only 2 levels (user pref, navigator). Missing URL, subdomain, Accept-Language header detection."
+    },
+    "ts-file-as-const": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Still uses en.json (JSON file), not TypeScript exported as const.",
+      "with_evidence": "Changed to en.ts with 'export default { ... } as const' - TypeScript file with const assertion."
+    },
+    "flat-keys-domain-prefix": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Keys are nested objects (validation.tooShort inside nested 'validation' object, settings.fields.displayName is 3 levels). Not flat dot-prefixed keys.",
+      "with_evidence": "All keys are flat dot-prefixed strings: 'settings.title', 'validation.too_short', 'diffs.delete_confirm'. No nested objects."
+    },
+    "key-describes-element-not-content": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "'welcome' key still describes content. 'auth.signIn' is slightly better but still content-ish. No element-descriptive naming like 'auth.submit_button'.",
+      "with_evidence": "Keys like 'auth.submit_button', 'settings.display_name_label', 'settings.save_button', 'settings.email_label' describe the UI element, not the English content."
+    },
+    "deeply-nested-key": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "diffs.header.actions.delete.confirm still exists as a deeply nested object in en.json (5 levels deep).",
+      "with_evidence": "Flattened to 'diffs.delete_confirm' - only 2 levels."
+    },
+    "no-trans-component": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "<Trans i18nKey='welcome'> still present in the output. The <strong> tag inside could arguably need JSX interpolation, but the skill says t() suffices for 99% of cases.",
+      "with_evidence": "Replaced <Trans> with t('common.welcome') - simple t() call, no <Trans> component."
+    },
+    "singleton-outside-react": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Route head() uses i18n.t('settings.seoTitle') singleton.",
+      "with_evidence": "Route head() uses i18n.t('seo.settings_page') singleton. formErrorMap uses i18n.t() singleton."
+    },
+    "fallback-chain-not-single": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "fallbackLng is still a single string 'en' (defaultLng). No chain like pt-BR -> pt -> en.",
+      "with_evidence": "fallbackLng configured as object: { 'pt-BR': ['pt', 'en'], default: ['en'] } - proper chain."
+    },
+    "plural-suffix-convention": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Changed to items_one/items_other and files_one/files_other with _other suffix.",
+      "with_evidence": "Uses diffs.files / diffs.files_other with _other suffix convention."
+    },
+    "no-manual-plural-if": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Replaced fileCount === 1 ternary with t('files', { count: fileCount }).",
+      "with_evidence": "Uses t('diffs.files', { count: fileCount }) instead of manual ternary."
+    },
+    "no-string-concatenation": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "Uses Intl.ListFormat and interpolation t('settings.collaborators', { list: formattedList }).",
+      "with_evidence": "Uses Intl.ListFormat and interpolation t('settings.collaborators', { list: formattedCollaborators })."
+    },
+    "intl-list-format": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "new Intl.ListFormat(i18n.language, { style: 'long', type: 'conjunction' }).format(collaborators)",
+      "with_evidence": "new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(collaborators)"
+    },
+    "date-explicit-locale": {
+      "without": "PASS",
+      "with": "PASS",
+      "without_evidence": "toLocaleDateString(i18n.language) with explicit locale.",
+      "with_evidence": "new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(lastSaved) with explicit locale."
+    },
+    "zod-hardcoded-messages": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Uses inline i18n.t() calls in schema (.min(2, () => i18n.t('validation.nameTooShort'))). No formErrorMap mapping Zod issue codes to i18n keys.",
+      "with_evidence": "Created formErrorMap that maps ZodIssueCode (too_small, too_big, invalid_string) to i18n keys. Passed to zodResolver."
+    },
+    "zod-refine-key-fragment": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "refine message is i18n.t('validation.passwordsMismatch') - a fully resolved translation, not a bare key fragment.",
+      "with_evidence": "refine message is bare key fragment 'passwords_mismatch' with translateSettingsError() utility to resolve it."
+    },
+    "zod-error-map-resolver": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "zodResolver(settingsSchema) called without errorMap option.",
+      "with_evidence": "zodResolver(settingsSchema, { errorMap: formErrorMap }) - errorMap passed to resolver."
+    },
+    "api-error-translation": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "getErrorMessage still returns raw error.message for Error instances. No isProblemDetail check. Fallback uses i18n.t but no ProblemDetail handling.",
+      "with_evidence": "Implements isProblemDetail check -> i18n.t('errors.${error.code}') -> error.message fallback -> i18n.t('common.error')."
+    },
+    "global-toast-handler": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Still uses alert(getErrorMessage(error)) in mutation onError. No global QueryCache/MutationCache onError handler.",
+      "with_evidence": "Replaced alert with form.setError and added meta: { skipGlobalToast: true }, but no global QueryCache/MutationCache onError toast handler is actually implemented in the code."
+    },
+    "route-static-data-title-key": {
+      "without": "FAIL",
+      "with": "PASS",
+      "without_evidence": "Route has i18n.t() in head() but no staticData.titleKey.",
+      "with_evidence": "Route has both head() with i18n.t('seo.settings_page') and staticData: { titleKey: 'settings.title' }."
+    },
+    "seo-hreflang-tags": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No hreflang alternate links added in head().",
+      "with_evidence": "No hreflang alternate links added in head(). Missing <link rel='alternate' hreflang='xx'> tags."
+    },
+    "html-lang-dynamic": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "Removed the <html> tag entirely from component. Did not add dynamic i18n.language to root route <html>.",
+      "with_evidence": "Removed <html> tag from component. Mentioned it should be on root route but did not implement it."
+    },
+    "ssr-sync-init": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "i18n.init() is still called normally (async). No initImmediate:false or synchronous initialization shown.",
+      "with_evidence": "i18n.init() still called without initImmediate:false. Static imports used but init is still async."
+    },
+    "suppress-hydration-warning": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No suppressHydrationWarning on the date display <p> element.",
+      "with_evidence": "No suppressHydrationWarning on the date display <p> element."
+    },
+    "html-dir-rtl": {
+      "without": "FAIL",
+      "with": "FAIL",
+      "without_evidence": "No dir attribute on any <html> element. Removed the <html> tag entirely.",
+      "with_evidence": "No dir attribute implemented. <html> tag removed from component, no root-level dir='rtl' added."
+    }
+  },
+  "summary": {
+    "without_pass": 8,
+    "without_fail": 18,
+    "with_pass": 16,
+    "with_fail": 10,
+    "total": 26
+  }
+}
