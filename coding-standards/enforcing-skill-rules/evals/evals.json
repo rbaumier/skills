@@ -4,7 +4,7 @@
     {
       "id": 12,
       "name": "full-sweep",
-      "prompt": "Refactor this module. Fix everything wrong with it:\n\n```typescript\nimport { db } from './db';\nimport { cache } from './cache';\nimport { mailer } from './mailer';\n\n// Process orders\nexport async function handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) {\n  // Get user\n  const u = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\n  if (!u.rows[0]) throw new Error('not found');\n  const usr = u.rows[0];\n  if (usr.blocked) throw new Error('blocked');\n\n  // Process items\n  let total = 0;\n  let ct = 0;\n  for (let i = 0; i < items.length; i++) {\n    const itm = items[i];\n    if (itm.qty > 0 && itm.active && !usr.blocked) {\n      const amt = itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0);\n      if (amt > 0) {\n        total += amt;\n        ct++;\n        // Check stock\n        const s = await db.query('SELECT qty FROM stock WHERE id = $1', [itm.id]);\n        if (s.rows[0]?.qty < itm.qty) throw new Error('stock');\n      }\n    }\n  }\n\n  if (total > 1000) {\n    // Notify\n    await mailer.send(usr.email, `Big order: ${total}`);\n    await db.query('INSERT INTO big_orders (user_id, total, ts) VALUES ($1, $2, $3)', [userId, total, Date.now()]);\n  }\n\n  // Create order\n  const order = await db.query('INSERT INTO orders (user_id, total, item_count, status) VALUES ($1, $2, $3, $4) RETURNING *', [userId, total, ct, 'pending']);\n\n  if (isUrgent) {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['high', order.rows[0].id]);\n    await mailer.send(usr.email, 'Urgent order placed');\n  } else {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['normal', order.rows[0].id]);\n  }\n\n  if (sendEmail) await mailer.send(emailTo, 'Order confirmation', JSON.stringify(order.rows[0]));\n\n  // Log inside business logic\n  console.log('Order created:', order.rows[0].id);\n  console.log('Total:', total);\n\n  // Update cache\n  cache.set(`user:${userId}:lastOrder`, order.rows[0].id);\n  return order.rows[0];\n}\n\n// Types\ntype OrderStatus = string;\n\ninterface OrderInput {\n  userId: any;\n  items: any[];\n}\n```\n\nOutput ALL component code inline. No unshown imports. Do not write files.",
+      "prompt": "Refactor this module. Fix everything wrong with it:\n\n```typescript\nimport { db } from './db';\nimport { cache } from './cache';\nimport { mailer } from './mailer';\n\n// Process orders\nexport async function handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) {\n  // Get user\n  const u = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\n  if (!u.rows[0]) throw new Error('not found');\n  const usr = u.rows[0];\n  if (usr.blocked) throw new Error('blocked');\n\n  // Process items\n  let total = 0;\n  let ct = 0;\n  for (let i = 0; i < items.length; i++) {\n    const itm = items[i];\n    if (itm.qty > 0 && itm.active && !usr.blocked) {\n      const amt = itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0);\n      if (amt > 0) {\n        total += amt;\n        ct++;\n        // Check stock\n        const s = await db.query('SELECT qty FROM stock WHERE id = $1', [itm.id]);\n        if (s.rows[0]?.qty < itm.qty) throw new Error('stock');\n      }\n    }\n  }\n\n  if (total > 1000) {\n    // Notify\n    await mailer.send(usr.email, `Big order: ${total}`);\n    await db.query('INSERT INTO big_orders (user_id, total, ts) VALUES ($1, $2, $3)', [userId, total, Date.now()]);\n  }\n\n  // Create order\n  const order = await db.query('INSERT INTO orders (user_id, total, item_count, status) VALUES ($1, $2, $3, $4) RETURNING *', [userId, total, ct, 'pending']);\n\n  if (isUrgent) {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['high', order.rows[0].id]);\n    await mailer.send(usr.email, 'Urgent order placed');\n  } else {\n    await db.query('UPDATE orders SET priority = $1 WHERE id = $2', ['normal', order.rows[0].id]);\n  }\n\n  if (sendEmail) await mailer.send(emailTo, 'Order confirmation', JSON.stringify(order.rows[0]));\n\n  // Log inside business logic\n  console.log('Order created:', order.rows[0].id);\n  console.log('Total:', total);\n\n  // Update cache\n  cache.set(`user:${userId}:lastOrder`, order.rows[0].id);\n  return order.rows[0];\n}\n\nexport async function removeCartItem(userId: string, itemId: string) {\n  const cart = await db.query('SELECT * FROM carts WHERE user_id = $1', [userId]);\n  if (!cart.rows[0]) throw new Error('cart not found');\n  const item = cart.rows[0].items.find((i: any) => i.id === itemId);\n  if (!item) throw new Error('item not in cart');\n  await db.query('DELETE FROM cart_items WHERE cart_id = $1 AND item_id = $2', [cart.rows[0].id, itemId]);\n}\n\nfunction formatEmail(to: string, name: string, amount: number, currency: string) {\n  return `To: ${to}\\nDear ${name}, your total is ${amount} ${currency}`;\n}\n\nfunction formatReceipt(to: string, name: string, amount: number, currency: string) {\n  return `Receipt for ${name}: ${amount} ${currency}\\nSent to: ${to}`;\n}\n\nfunction formatInvoice(to: string, name: string, amount: number, currency: string) {\n  return `Invoice for ${name}: ${amount} ${currency}\\nBilling: ${to}`;\n}\n\nfunction getShippingLabel(order: any) {\n  return `${order.customer.address.street}, ${order.customer.address.city}, ${order.customer.address.zip}`;\n}\n\nfunction validateOrder(order: any) {\n  const addr = order.customer.address.city;\n  if (!addr) throw new Error('missing city');\n  const total = order.items.reduce((s: number, i: any) => s + i.price * i.qty, 0);\n  if (total <= 0) throw new Error('invalid total');\n  const formatted = `${order.customer.name} - ${total.toFixed(2)} ${order.currency}`;\n  return formatted;\n}\n\nexport function applyBulkDiscount(items: any[], retryCount: number, retryDelayMs: number, maxRetries: number) {\n  return items.map(i => ({ ...i, price: i.price * 0.9 }));\n}\n\n// Types\ntype OrderStatus = string;\n\ninterface OrderInput {\n  userId: any;\n  items: any[];\n}\n```\n\nOutput ALL component code inline. No unshown imports. Do not write files.",
       "expected_output": "Full refactoring covering all coding-standards rules",
       "assertions": [
         {
@@ -246,6 +246,60 @@
           "trap": "Single export mixed in with all implementation",
           "description": "Exports/public API at top of file, private helpers at bottom",
           "category": "architecture"
+        },
+        {
+          "id": "fs-rule-of-three",
+          "trap": "formatEmail, formatReceipt, formatInvoice are 3 functions with identical params (to, name, amount, currency) and similar bodies — a pattern has emerged",
+          "description": "3 similar functions with identical signatures extracted into a shared abstraction or parameterized function",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-data-clumps-value-object",
+          "trap": "to, name, amount, currency appear as the same 4 params across formatEmail, formatReceipt, formatInvoice",
+          "description": "Repeated param group (to, name, amount, currency) extracted to a Value Object / named type",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-law-of-demeter",
+          "trap": "order.customer.address.street, order.customer.address.city, order.customer.address.zip — 3 levels deep into object graph",
+          "description": "Chained property access 2+ levels deep replaced with direct accessor or destructured at boundary",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-one-abstraction-level",
+          "trap": "validateOrder mixes high-level validation (check city exists, check total) with low-level string formatting (template literal with toFixed)",
+          "description": "validateOrder split — validation logic separated from string formatting, no mixing of abstraction levels",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-define-errors-out-of-existence",
+          "trap": "removeCartItem throws 'item not in cart' when removing an item that doesn't exist — but the postcondition is the same: item is not in cart",
+          "description": "removeCartItem redesigned to succeed even if item absent — guarantees 'after call, item is not in cart' instead of throwing",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-pull-complexity-down",
+          "trap": "applyBulkDiscount forces callers to pass retryCount, retryDelayMs, maxRetries — retry logic pushed to caller instead of absorbed internally",
+          "description": "Retry config params removed from applyBulkDiscount — module handles retry internally or removes it (caller shouldn't deal with retry complexity)",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-impossible-state-documented",
+          "trap": "if (total <= 0) throw new Error('invalid total') in validateOrder — a negative total after summing valid items is a programmer bug, but the code treats it like a normal error with no explanation",
+          "description": "Impossible-state check returns Result error (not throw) AND has a comment explaining why this state should never occur — the comment documents the invariant",
+          "category": "behavior"
+        },
+        {
+          "id": "fs-barricade-boundary",
+          "trap": "Validation scattered: usr.blocked checked in main function AND redundantly inside loop (itm.qty > 0 && itm.active && !usr.blocked)",
+          "description": "Validation consolidated at boundary — usr.blocked checked once at entry (barricade), not re-checked inside loop",
+          "category": "security"
+        },
+        {
+          "id": "fs-ascii-diagram",
+          "trap": "The order pipeline has 5+ sequential steps (validate user → check stock → calculate total → create order → set priority → notify → cache) explained only in prose comments or not explained at all — no ASCII diagram",
+          "description": "Multi-step order pipeline (3+ steps) gets an ASCII diagram in comments showing the flow, not just prose",
+          "category": "format"
         }
       ]
     }
