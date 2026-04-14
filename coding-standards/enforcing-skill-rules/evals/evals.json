@@ -116,10 +116,10 @@
           "category": "architecture"
         },
         {
-          "id": "fs-max-30-lines",
-          "trap": "handleOrderData is ~45 lines with all logic inline",
-          "description": "No single function exceeds 30 lines — logic split into helpers",
-          "category": "format"
+          "id": "fs-extract-by-responsibility",
+          "trap": "handleOrderData mixes 7 concerns in one function: fetch user, loop-price items, check stock, big-order notification, create order, set priority, send email, update cache, log",
+          "description": "handleOrderData is split by RESPONSIBILITY (not line count): at minimum fetch user, price items, persist order, and notify are separate named operations. The split is driven by mixing concerns, not by hitting an arbitrary line threshold.",
+          "category": "behavior"
         },
         {
           "id": "fs-max-3-args",
