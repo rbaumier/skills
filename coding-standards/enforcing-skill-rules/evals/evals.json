@@ -312,6 +312,38 @@
           "trap": "getInstanceConfig has a comment 'These values are exposed because the admin dashboard needs them on the instance settings page' — a shared API comment anchored to one specific caller (the admin dashboard / instance settings page) instead of the stable domain purpose",
           "description": "getInstanceConfig comment rewritten to describe the stable domain purpose of the config values (what they mean / what consumers decide with them) — NO reference to the admin dashboard, the instance settings page, or any single caller",
           "category": "format"
+        },
+        {
+          "id": "fs-divergent-change-business-domain",
+          "trap": "formatEmail, formatReceipt, formatInvoice, getShippingLabel, validateOrder, applyBulkDiscount all live in the same file as handleOrderData — mixing order fulfillment (place order, apply discount) with document formatting (email/receipt/invoice) with shipping (label) with order validation — multiple unrelated business domains in one module",
+          "description": "The module is split so each file covers ONE business domain. Order fulfillment (placeOrder + applyBulkDiscount), document formatting (email/receipt/invoice), shipping, and validation are not all colocated in the same file — they are distinct business concerns that should not share a module",
+          "category": "architecture"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "file-structure-loc",
+      "prompt": "Refactor these files. Assume this is the ENTIRE codebase — there are NO other callers beyond what's shown here.\n\n```typescript\n// src/features/signup/signup-handler.ts\nimport { validateEmail } from '../../utils/email-validator';\nimport { formatWelcomeMessage } from '../../utils/welcome-formatter';\nimport { hashPassword } from '../../utils/password-hasher';\nimport { Database, Mailer } from '../../types';\n\nexport async function signupUser(db: Database, mailer: Mailer, email: string, password: string) {\n  if (!validateEmail(email)) throw new Error('invalid email');\n  const hashed = await hashPassword(password);\n  const welcome = formatWelcomeMessage(email);\n  await db.insert('users', { email, password: hashed });\n  await mailer.send(email, 'Welcome', welcome);\n  return { email };\n}\n```\n\n```typescript\n// src/utils/email-validator.ts\nexport function validateEmail(email: string): boolean {\n  return email.includes('@') && email.length > 3;\n}\n```\n\n```typescript\n// src/utils/welcome-formatter.ts\nexport function formatWelcomeMessage(email: string): string {\n  return `Welcome ${email}! Thanks for signing up.`;\n}\n```\n\n```typescript\n// src/utils/password-hasher.ts\nimport * as crypto from 'crypto';\nexport async function hashPassword(password: string): Promise<string> {\n  return crypto.createHash('sha256').update(password).digest('hex');\n}\n```\n\nOutput the final file structure (list of files) and the full contents of each file after refactoring. Fix everything wrong with these files.",
+      "expected_output": "Single workflow file with all single-use helpers inlined at the bottom",
+      "assertions": [
+        {
+          "id": "loc-inline-single-use",
+          "trap": "validateEmail, formatWelcomeMessage, and hashPassword each live in their own file under src/utils/ but are imported from exactly one caller (signup-handler.ts)",
+          "description": "The three single-use helpers (validateEmail, formatWelcomeMessage, hashPassword) are no longer in separate files under src/utils/. They are inlined at the call site or colocated at the bottom of the signup file. The three original utils files (email-validator.ts, welcome-formatter.ts, password-hasher.ts) are deleted.",
+          "category": "architecture"
+        },
+        {
+          "id": "loc-workflow-first",
+          "trap": "The signup feature is split across 4 files — signup-handler.ts, email-validator.ts, welcome-formatter.ts, password-hasher.ts — each with single callers",
+          "description": "The signup feature lives in a single file (or at most 2 files if there's a legitimate responsibility split like infra types vs feature logic) — NOT scattered across 4+ files with single-caller helpers each",
+          "category": "architecture"
+        },
+        {
+          "id": "loc-no-new-shared-primitives",
+          "trap": "A refactor under LoB rules must not introduce NEW helper files (shared/result.ts, shared/with-timeout.ts, etc.) that each have a single consumer — 'imagined future consumer' is not a justification",
+          "description": "The refactor does not create new helper/primitive files (shared/*.ts, utils/*.ts, helpers/*.ts) that each have exactly one consumer. Result types, withTimeout, and similar 'shared primitives' are inlined into the caller's file until a second real consumer appears.",
+          "category": "architecture"
         }
       ]
     }
