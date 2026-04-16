@@ -3,54 +3,66 @@ name: coding-standards
 description: Enforce engineering standards — readability, robustness, maintainability, type safety. ALWAYS use when writing, reviewing, or refactoring code. Use for architecture decisions, system design, component boundaries, tooling choices, and documentation conventions.
 ---
 
-## Comments — first-class citizen
+## Comments
 
-**Write comments like a senior explaining the code to a junior sitting next to them.** Conversational, concrete, patient. The code shows WHAT — comments tell WHY, what breaks without it, and how things connect.
+**Default: no comment.** Each = tax on every reader. 3 load-bearing beat 15 fillers.
 
-### Why & consequences
-- **Every comment answers "what goes wrong if I delete this?"** -- `// Apply corrections` (BAD). `// Apply corrections — without this, the frontend shows stale failure badges on healthy endpoints` (GOOD). If you can't name a consequence, the comment is a paraphrase
-- **Chain cause → effect across calls** -- `// Advance cursor so the next tick skips these rows`. `// Called by the validator crate via #[validate(schema(...))]`
-- **Inaction must be justified** -- every empty branch, no-op, early return: `// Already disabled — we don't touch it to avoid overriding the user's deliberate re-enable`
-- **Write for the enduring reader, not the current dev story** -- comments describe the stable domain purpose, not why it was added today. On a shared API (multi-consumer) NEVER name a single caller as the RATIONALE for the data existing — name the domain. **NEVER write `exposed because/so/for [caller]`, `added for [feature]`, `needed by [page/screen/job]` on a shared API.** Softening `because` to `so` or `for` is NOT a fix — the anchor is still there. The test: remove the caller name entirely; if the comment still explains what the data means, it was wrong. Wrong: `// exposed because the frontend instance page needs these thresholds`. Wrong (softened, still wrong): `// exposed so the admin dashboard can render them`. Wrong (softened, still wrong): `// for the instance settings page`. Right: `// operational thresholds — consumers decide warning vs disable states from these values`. Right: listing multiple known consumers as evidence of generality (`// consumers — admin dashboard, alerting, CLI — decide warning vs disable`) is fine because it demonstrates multi-caller intent rather than anchoring to one. Exception: documenting a structural coupling invisible from code reading (e.g. `// Called by the validator crate via #[validate(schema(...))]`) is legitimate flow documentation. Reviews: comment with `because/so/for/needed by/added for [single caller]` on a shared API or library -> flag "describe what the data means, not who currently reads it"
-- **No archaeology** -- history belongs in git, not in comments. The current code is the only thing that exists; comments serve the future reader, not someone reading the changelog. Wrong: `// used to be an enum`, `// previously we did X`, `// was a Map before we switched`, `// refactored from a class in Q3`. Reviews: comment starting with "previously", "used to", "was", "before", "originally", "refactored from" -> flag and delete
+### 1. The 5 Exceptions (ALWAYS comment)
+1. **Silent correctness protections:** Fallbacks, clamps, saturating casts, `unwrap_or`. Name the protection *(e.g., "bounded upstream", "prevents verdict flip")*.
+2. **State & Idempotency guards:** CAS loops, deduplication, retry blockers. State the exact consequence of a replay, rewind, or bypass.
+3. **Cross-cutting invariants:** Shared `now`, "all in one TX". State what breaks if the execution is split or the assumption changes.
+4. **Struct role:** ONE line naming what ONE instance represents in domain terms.
+5. **Dense code / non-trivial algorithms:** Complex SQL, heavy math, atomic state machines. Name the invariant protected. Hard code with zero comment is a bug.
 
-### Explaining concepts & domain
-- **Every project/technical term gets a full explanation on first use** -- what it is, what it does, why it exists, how it connects to the rest. `// Advance the cursor (a singleton row that bookmarks the last processed delivery — the next tick reads it to know where to resume)`. Not just `// Advance the cursor`. Plain language first, jargon in parentheses: `// Find postings that have no matching entry ("dangling postings")`
-- **Structs/types: describe the role, not the fields** -- `// All the data the state machine needs to decide whether to warn, disable, or resolve` not `// Contains failure_percent, last_status, and retry config`
-- **State transitions: narrate the journey** -- `// Was warned but failure rate dropped below threshold — the endpoint recovered`. Past tense for what happened, present for the conclusion
-- **ASCII diagram for multi-step concepts** -- when a comment needs 3+ sequential steps, state transitions, or entity relationships, draw an ASCII diagram instead of writing prose. The diagram lives in the comment block, next to the code it explains. Max 10 lines — if the diagram exceeds 10 lines, simplify it or split the module. Don't diagram what's already obvious from the code (a clean `switch` IS a diagram). Examples:
-  ```
-  // Data flow:
-  //   Request → validateInput() → enrichWithDefaults()
-  //                                       ↓
-  //                                persistToDb()
-  //                                       ↓
-  //                                sendConfirmation()
-  ```
-  ```
-  //  PENDING ──(payment ok)──→ ACTIVE ──(3 failures)──→ SUSPENDED
-  //                              ↑                        │    │
-  //                              └────(retry ok)──────────┘  (30d)
-  //                                                          ↓
-  //                                                        CLOSED
-  ```
-  Reviews: prose comment chaining 3+ "then"/"which"/"passes to" -> flag "replace with ASCII diagram"
-- **Explain limits, invariants, and boundaries** -- caps: why + what happens to leftovers (`// LIMIT avoids long queries — remaining rows picked up next tick`). Invariants: state + enforcement (`// singleton row, CHECK on PK`). Transaction boundaries: what's in TX vs post-commit (`// emails sent after commit`)
+*Else: Delete unless absence lets a fast reader miss deliberate protection.*
 
-### Structure & conventions
-- **Module-level orientation** -- every module starts with "What it does" (1 sentence) + "How it works" (numbered overview)
-- **JSDoc on every exported function** -- block description + `@example` with call AND return (`// => value`)
-- **Return values: what the caller must do** -- `// Returns max_completed_at — caller should pass to advance_cursor after committing`
-- **Gotcha warnings + links** -- `// WARNING: ...` / `// See: https://...`
+### 2. Form & Style: Extreme Concision
+- **10 words MAX, hard cap. Count them.** Sacrifice grammar entirely for the sake of concision. Flow is NOT the goal.
+- **MANDATORY OMISSIONS:** Drop articles (`the`, `a`), copulas (`is`, `are`, `was`), auxiliaries (`would`, `will`, `can`, `has`), and pronouns (`it`, `this`, `that`) wherever meaning survives.
+- **Before / After shape:**
+  - ❌ 28w: *"A rewind would re-count attempts we already folded into closed groups, inflating the failure rate."*
+  - ✅ 4+3w: *"Rewind double-counts closed groups. Failure rate inflates."*
+- **Self-check on every comment before save:**
+  1. Scan for split triggers: `and`, `so`, `but`, `—` between clauses, `then`, `, which`, `;`, `that`. Found one? Split.
+  2. Count words in each sentence.
+  3. Still over 10? The sentence holds 2 ideas. Split. Break lines on idea end, not column.
+- **Plain English only:** The reader is a junior dev, English as second language, skimming at 2am. Pick the short Germanic word over the Latinate one.
+- **Banned words — closed list, grep-able, zero exceptions:** `tally`, `tallies`, `flapping`, `hog`, `spurious`, `singleton`, `contended`, `bookmarking`, `trailing`, `leaky`, `flush`, `starve`. Presence = violation, rewrite. **The closed list is the floor, not the ceiling** — apply the same test to every word you write: shorter-older-more-childlike wins.
 
-### Tone & style
-- **Conversational, not mechanical** -- `// Read the cursor — "where did I stop last time?"`. Use the reader's inner voice. Quotes, rhetorical questions, like pair programming
-- **Concrete over abstract in comments** -- specific numbers, names, thresholds. `// Retry 3 times with 500ms backoff` not `// Retry with backoff`. `// Rate limited to 100 req/s per API contract` not `// Rate limited`. If there's a number, name it
-- **Comments are sentences — active voice** -- capitalize, punctuate, active voice. A comment is prose, not a label. `// The cache expires after 30 minutes to avoid stale pricing data.` not `// cache expiry 30m`. `// The scheduler retries failed jobs` not `// Failed jobs are retried by the scheduler`
-- **Emphatic word at end** -- the most important part of the comment goes last, where the eye lands. `// Skip validation — already checked by the middleware upstream` (the WHY lands last). Not `// Already checked upstream, so skip validation`
-- **Error messages ARE comments** -- error messages explain what went wrong AND what the user should do about it. `"API key expired. Generate a new one at /settings/api-keys"` not `"Invalid API key"`. Every error message is a micro-comment for the person debugging at 2am
+### 3. Content Rules: Why over How
+- **How -> Code. Why -> Comment. Never both.** The code shows the mechanics. Dense SQL/math (Exception 5) is the only exception where you walk through invariant steps.
+- **Customer/operator consequence:** Document what happens for the customer/operator. What human-visible symptom occurs if it fails?
+- **Don't paraphrase the callee:**
+  - **Detector:** Is the comment's first verb a synonym of the called function's name? E.g., `// Fetch subscriptions...` above `list_candidates(...)` → `fetch` paraphrases `list`. Delete the paraphrase, keep ONLY the *why-here* ("same tx as cursor advance").
+- **Never define a language keyword:** `useMemo`, `Arc`, `ON CONFLICT`: docs exist. Comment adds *why*, never the definition.
+- **Inaction needs a reason:** Empty branch, no-op, early return: state why.
+- **One insight, one place:** State invariant once per file at earliest useful spot.
 
-**Never:** code paraphrases, commented-out code, `TODO`/`FIXME` without issue link, comments that restate the function name
+### 4. Domain & Boundaries
+- **Domain terms:** Keep verbatim. Introduce once. NEVER use synonyms. NEVER abbreviate (`subscription` stays `subscription`, never `sub`).
+- **Limits/invariants:** Caps: state why + leftovers. TX: state in-tx vs post-commit.
+- **No archaeology:** History = git. Never `was`, `previously`, or `refactored`.
+
+### 5. Documentation Structure
+- **Struct doc:** ONE line exactly. Role only, not fields. No "and also" filler.
+  - ❌ *"Operational knobs for the monitor. Everything the tick needs to decide."*
+  - ✅ *"Tuning for one running monitor: thresholds, windows, scan caps."*
+- **Function doc:** ~5 lines max. Must answer "what does the system's consumer observe?". **The consumer depends strictly on the module type:**
+  - API handler → end user (visible HTTP response, screen)
+  - Background job / cron → operator (reading logs) + side effect (event emitted, endpoint disabled)
+  - Library → caller (return value meaning, contract guarantees)
+
+  **Banned opening verbs:** `reads`, `pulls`, `fetches`, `loads`, `sums`, `counts`, `aggregates`, `iterates`, `loops`, `processes`, `handles`, `computes`, `calculates`. Three or more of these verbs and zero outward sentence naming a consumer-visible effect → rewrite.
+- **Module doc — mandatory shape:**
+  (1) What, one sentence.
+  (2) Consumer consequence, one sentence (using the mapping above).
+  (3) How, as a **bullet list**. *A single prose paragraph is NOT a module doc.*
+
+### 6. EXCEPTION: Logs and Errors
+- Error and log messages are a separate class, NOT comments. The telegraphic 10-word rule DOES NOT apply.
+- Go detailed and helpful. Name what went wrong, relevant identifiers, and the user's/operator's next action.
+
+**Never**: code paraphrases, commented-out code, `TODO`/`FIXME` without issue link, name-restating. **Reviews**: any bullet violated → flag with bullet name.
 
 ## Philosophy
 
