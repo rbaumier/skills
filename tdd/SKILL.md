@@ -44,6 +44,30 @@ Write code before the test? Delete it. Start over.
 
 Implement fresh from tests. Period.
 
+## Anti-Pattern: Horizontal Slices
+
+**NEVER write all tests first, then all implementation.** Treating RED as "write all tests" and GREEN as "write all code" = horizontal slicing.
+
+Horizontal slicing produces crap tests:
+- Tests written in bulk test *imagined* behavior, not *actual* behavior
+- You end up testing the *shape* of things (signatures, data structures) instead of user-facing behavior
+- Tests become insensitive to real changes — they pass when behavior breaks, fail when behavior is fine
+- You outrun your headlights, committing to test structure before understanding the implementation
+
+**Correct: vertical slices via tracer bullets.** One test → one implementation → repeat. Each test responds to what the previous cycle taught you. Because you just wrote the code, you know exactly what behavior matters and how to verify it.
+
+```
+WRONG (horizontal):
+  RED:   test1, test2, test3, test4, test5
+  GREEN: impl1, impl2, impl3, impl4, impl5
+
+RIGHT (vertical):
+  RED→GREEN: test1→impl1
+  RED→GREEN: test2→impl2
+  RED→GREEN: test3→impl3
+  ...
+```
+
 ## Acceptance Test First
 
 Before starting Red-Green-Refactor on unit tests, write ONE failing acceptance/integration test that describes the complete feature from the user's perspective. This stays RED throughout development. Unit TDD cycles happen inside this outer loop. The acceptance test turns GREEN when the feature is complete. This prevents building technically correct code that doesn't solve the user's problem.
