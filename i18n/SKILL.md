@@ -1,6 +1,6 @@
 ---
 name: i18n
-description: Internationalization patterns — i18next, react-i18next, Zod error translation, API error mapping, route metadata, SSR.
+description: Use when adding internationalization — translating UI text, configuring i18next/react-i18next, translating Zod errors, mapping API errors, or setting route metadata with SSR.
 ---
 
 ## When to use

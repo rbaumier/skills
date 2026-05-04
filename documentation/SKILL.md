@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: "Generate and maintain technical docs. Trigger on 'docs', 'README', 'API docs', 'OpenAPI', 'ADR', 'changelog'."
+description: "Use when writing or updating docs, READMEs, API docs, OpenAPI specs, ADRs, or changelogs."
 ---
 
 ## When to use

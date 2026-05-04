@@ -1,4 +1,18 @@
 {
+  "Matt Pocock": [
+    "matt-caveman",
+    "matt-diagnose",
+    "matt-grill-me",
+    "matt-grill-with-docs",
+    "matt-improve-codebase-architecture",
+    "matt-pocock-skills",
+    "matt-tdd",
+    "matt-to-issues",
+    "matt-to-prd",
+    "matt-triage",
+    "matt-write-a-skill",
+    "matt-zoom-out"
+  ],
   "Backend - TypeScript": [
     "database",
     "drizzle-orm",
@@ -10,10 +24,7 @@
     "coding-standards",
     "zod"
   ],
-  "Code Review": [
-    "code-review",
-    "coding-standards"
-  ],
+  "Code Review": ["code-review", "coding-standards"],
   "Dev Process": [
     "parallel-agents",
     "subagent-development",
@@ -23,11 +34,7 @@
     "build-fix",
     "refactor-clean"
   ],
-  "DevOps": [
-    "ci-cd",
-    "docker",
-    "kubernetes"
-  ],
+  "DevOps": ["ci-cd", "docker", "kubernetes"],
   "Frontend - React": [
     "frontend",
     "react",
@@ -56,11 +63,7 @@
     "coding-standards",
     "zod"
   ],
-  "Languages": [
-    "language-typescript",
-    "language-rust",
-    "language-swift"
-  ],
+  "Languages": ["language-typescript", "language-rust", "language-swift"],
   "Legal & Finance": [
     "paperasse:comptable",
     "paperasse:notaire",
@@ -77,46 +80,12 @@
     "claude-hud:setup",
     "claude-hud:configure"
   ],
-  "Mobile": [
-    "react-native",
-    "language-swift",
-    "coding-standards"
-  ],
-  "Planning": [
-    "brainstorming",
-    "plans",
-    "grill-me",
-    "plan",
-    "generate-visual-plan",
-    "plan-review"
-  ],
-  "Review & Docs": [
-    "vscode-diff-review",
-    "diff-review",
-    "documentation",
-    "project-recap",
-    "update-docs",
-    "fact-check"
-  ],
-  "Rust": [
-    "language-rust",
-    "coding-standards"
-  ],
-  "Skills": [
-    "prompt-engineering",
-    "writing",
-    "skill-creator",
-    "enforcing-skill-rules"
-  ],
-  "Testing": [
-    "tdd",
-    "debugging",
-    "testing",
-    "expect",
-    "dogfood",
-    "e2e",
-    "test-coverage"
-  ],
+  "Mobile": ["react-native", "language-swift", "coding-standards"],
+  "Planning": ["brainstorming", "plans", "grill-me", "plan", "generate-visual-plan", "plan-review"],
+  "Review & Docs": ["vscode-diff-review", "diff-review", "documentation", "project-recap", "update-docs", "fact-check"],
+  "Rust": ["language-rust", "coding-standards"],
+  "Skills": ["prompt-engineering", "writing", "skill-creator", "enforcing-skill-rules"],
+  "Testing": ["tdd", "debugging", "testing", "expect", "dogfood", "e2e", "test-coverage"],
   "Writing": [
     "writing",
     "documentation",

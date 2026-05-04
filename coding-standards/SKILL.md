@@ -62,6 +62,16 @@ description: Enforce engineering standards — readability, robustness, maintain
 - Error and log messages are a separate class, NOT comments. The telegraphic 10-word rule DOES NOT apply.
 - Go detailed and helpful. Name what went wrong, relevant identifiers, and the user's/operator's next action.
 
+### 7. Workaround Comments with Upstream Link
+- When code contains a workaround, hack, or edge-case bypass, the comment MUST include a link to the upstream issue/PR documenting the problem.
+- Prefix with `HACK:` or `WORKAROUND:` for greppability. This enables knowing when the workaround can be removed.
+- Format: `// WORKAROUND(rustc#12345): remove when MSRV >= 1.78` or `// HACK: esbuild doesn't tree-shake enums, see https://...`
+
+### 8. Lint Suppressions Must Be Justified
+- Every lint suppression (`#[allow]`, `// eslint-disable`, `@ts-ignore`, `@ts-expect-error`) requires a comment explaining WHY.
+- In Rust, prefer `#[expect]` over `#[allow]` — `expect` breaks compilation when the warning disappears, forcing cleanup.
+- Reviews: bare suppression without justification -> flag "add reason for suppression"
+
 **Never**: code paraphrases, commented-out code, `TODO`/`FIXME` without issue link, name-restating. **Reviews**: any bullet violated → flag with bullet name.
 
 ## Philosophy
@@ -70,10 +80,19 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **Reuse before creating** -- search the codebase for existing equivalents before writing new code. Reviews: new code that duplicates existing functionality -> flag "reuse X instead"
 - **Rule of Three -- don't abstract until 3+ occurrences** -- two similar snippets are coincidence, three are a pattern. Premature abstraction couples unrelated callers. When a shared function accumulates `if (options.X)` branches to serve diverging callers, it became a wrong abstraction. Fix: inline into every call site, delete what each caller doesn't need, re-extract only when a true shared pattern emerges. Reviews: shared function with 3+ option flags controlling branches -> flag "inline and re-extract"
 - **Prefer boring technology** -- choose well-understood tools over novel ones. Novel solutions carry hidden costs in debugging, hiring, and documentation. Reviews: new dependency or pattern introduced when a well-known equivalent exists -> flag "justify why the boring option won't work"
+- **State machines as enums** -- workflows with discrete states use an enum with a dedicated struct per state and a single `handle()`/`step()` method. Transitions via dedicated methods. Centralized dispatch via exhaustive match with uniform branches. Reviews: `status: string` with scattered `if (status === "...")` -> flag "model as state machine enum"
+- **Cancellation as first-class citizen** -- every long-running async operation accepts a `CancellationToken` or `AbortSignal` parameter. Propagate through the entire call chain. Reviews: long async operation with no cancellation mechanism -> flag "add cancellation support"
+- **Concentrate complexity in identified modules** -- inherent complexity (DI, routing, parsing, optimization) is intentionally concentrated in a small number of clearly identified files. The rest of the codebase stays simple. Only these critical files are allowed to exceed usual size limits. Reviews: complexity diluted across the entire codebase instead of isolated -> flag "concentrate in dedicated module"
+- **Immutable configuration resolution** -- configuration is resolved once at boot into an immutable object. Two distinct types: `Config` (raw, optional fields) and `SanitizedConfig` (resolved, required fields with defaults applied). Runtime code never works with the raw type. Reviews: `config.field ?? fallback` in runtime code -> flag "resolve at boot, not at use site"
+- **Separation mechanism / policy** -- core implements the mechanism (how to do), policy (what to do) is injected via traits/interfaces. Allows changing policy without touching the mechanism. Reviews: business logic hardcoded in core infrastructure -> flag "inject as policy"
+- **Symmetric sibling implementations** -- when a pattern is repeated for N variants (transports, adapters, drivers), each variant follows exactly the same file structure, same skeleton, same method names in the same order. Reviews: one variant with a different structure than its siblings -> flag "enforce symmetry"
+- **Minimal main function** -- `main()` in 15 lines max. All logic in separate functions/modules. Main parses args, builds config, delegates. Reviews: main with 100+ lines containing business logic -> flag "extract to dedicated module"
 
 ## Naming
 
 - **Intent over implementation**: `closeAccount()` not `setStatusToClosed()`. **Banned function-name words: `process`, `handle`, `data`, `do`, `execute`, `run`, `perform`** -- vague mechanics. Replace: `processOrder` -> `fulfillOrder`, `handlePayment` -> `chargeCustomer`. Reviews: any function with banned word -> rename
+- **Specific verbs with fixed semantics** -- each verb has one documented meaning project-wide: `sanitize` = cleanup at boot, `validate` = data validation at runtime, `build` = assembly, `create` = instantiation, `resolve` = lookup with resolution, `is`/`has` = predicates. Never use one verb with two different meanings. Reviews: two functions with same prefix but different semantics -> flag "inconsistent verb usage"
+- **Name dangerous options defensively** -- prefix security-bypassing options with `dangerous_`/`unsafe_`/`insecure_`. Prefix workarounds with `_hack`/`_workaround`/`_compat` plus explanatory comment. Prefix unstable features with `experimental_`. Reviews: dangerous option with a neutral name -> flag "prefix with `dangerous_`"
 - Symmetry: `get/set`, `add/remove`, `start/stop`
 - Booleans: `is`/`has`/`should`/`can` prefix, positive form
 - Full words always (`user` not `u`, `account` not `acct`). Destructure abbreviations: `const { timestamp, buffer, userId } = record`. Remove unused params
@@ -96,7 +115,7 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **One level of abstraction per function** -- don't mix high-level orchestration with low-level details. A function that calls `validateOrder(order)` then inlines a regex to parse a date string is mixing levels. Reviews: function body mixing domain calls with raw string/regex/byte manipulation -> flag "extract low-level detail to named helper"
 - **Single call site = inline** -- a function with exactly ONE caller anywhere in the codebase is indirection without benefit. Paste the body at the call site, delete the function. Applies regardless of location: same file, helper file, `shared/`, `utils/`. The reader shouldn't jump to a named helper just to discover it's specific to its caller. **Exceptions** (must be real, not hypothetical): (a) step-down orchestrator helper named by business intent (`applyPromotions`, `convertCurrency`) that lets the caller read as a top-level map, (b) function has dedicated unit tests, (c) function lives inside a slice-folder as an isolated independently-testable concern. Reviews: function with exactly 1 call site + no dedicated test + not a business-named step-down helper -> flag "inline at call site, delete the function"
 - **Stepdown Rule — orchestrator first, details below** -- write the top-level function first (names each step at business level), then its helpers below in the same file. Reader follows intent top-to-bottom, reads details only when needed. This is why a long well-structured file beats five small scattered ones: top = map, bottom = territory.
-- Max 3 positional args; options object for 4+
+- **Max 3 positional args; objects to prevent same-type swaps** -- options object for 4+ args. Also use objects when 2+ consecutive params share the same type — positional same-type args compile even when swapped: `sendEmail("Welcome!", "Hi there")` silently inverts subject/body. Reviews: 2+ consecutive params of same type -> flag "use named object to prevent silent swap"
 - CQS -- command OR query. Composition over inheritance
 - Focused modules -- no `common`/`shared` grab-bags
 - **No default parameters -- use explicit factory methods** -- default params hide behavior and create invisible coupling. `createUser(name, role = 'viewer')` -> `createViewer(name)` / `createAdmin(name)`. Each factory is self-documenting and independently testable. Reviews: function with default params controlling behavior -> flag 'extract named factory'
@@ -168,4 +187,5 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **Cyclomatic and cognitive complexity — linter-enforced, not line-counted** -- file length is a proxy metric. The real constraint: cognitive complexity per function. Configure linter to fail on cognitive complexity > 15 per function (`eslint-plugin-sonarjs` or equivalent). A 400-line file of sequential logic is fine. A 60-line function with 4 levels of nesting is not. Reviews: function with deep nesting or complex branching -> flag the function, not the file
 - **Linter-enforced domain isolation** -- enforce cross-domain access rules in CI, not by convention. Configure your linter to fail when a domain imports internal files of another domain. Only public index exports allowed across domain boundaries. Tooling enforces the architecture — convention alone does not.
 - **Dead code removal as hygiene** -- unused imports, unreachable branches, commented-out code, and unused exports are liabilities. Run dead-code detection (`ts-prune`, `knip`, `deadcode` for Go) in CI. Reviews: any unreferenced export, unused variable, or unreachable branch -> flag for removal
+- **Actionable TODOs with context** -- every TODO must include a specific action AND a version target or ticket reference. Format: `// TODO(v3.0): migrate to new parser` or `// TODO(#1234): remove when upstream fix lands`. Vague TODOs ("fix later", "clean up") are violations. Reviews: TODO without issue link or version target -> flag "add context or create ticket"
 - Structural guardrails over discipline. Hard cutover. Pin all versions

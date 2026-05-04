@@ -1,6 +1,6 @@
 ---
 name: react-native
-description: "React Native and Expo mobile apps. Trigger on 'mobile', 'iOS', 'Android', 'Expo', 'React Native', 'native module'."
+description: "Use when building mobile apps with React Native or Expo — iOS, Android, native modules, navigation, and platform-specific patterns."
 ---
 
 ## When to use

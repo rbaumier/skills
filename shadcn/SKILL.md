@@ -1,6 +1,6 @@
 ---
 name: shadcn
-description: "Manage shadcn/ui components. Trigger on 'shadcn', 'components.json', '--preset', 'component registry'."
+description: "Use when adding, configuring, or customizing shadcn/ui components — components.json, presets, and component registry."
 user-invocable: false
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Requesting, conducting, and receiving code reviews with structured multi-axis evaluation
+description: Use when reviewing code, requesting a review, or receiving review feedback. Structured multi-axis evaluation.
 ---
 
 # Code Review

@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: "Build UI components, pages, dashboards, 3D scenes. Trigger on 'component', 'page', 'layout', 'design system', 'responsive', 'forms', 'server component'."
+description: "Use when building UI components, pages, layouts, dashboards, forms, or 3D scenes. Also for design systems, responsive design, and server components."
 ---
 
 ## Context Gathering Protocol

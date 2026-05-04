@@ -1,7 +1,7 @@
 ---
 name: ui-animations
 version: "2.1"
-description: "Web animations and motion design. Trigger on 'animation', 'transition', 'scroll effect', 'parallax', 'hover state', 'micro-interaction', 'GSAP', 'Framer Motion', 'Lenis', 'generative art'."
+description: "Use when adding animations, transitions, scroll effects, parallax, hover states, or micro-interactions — GSAP, Framer Motion, Lenis, generative art."
 tags: [animation, motion-design, gsap, framer-motion, motion, anime-js, lenis, scroll, parallax, audit, accessibility, performance, sound-design, generative-art, physics, three-js]
 ---
 
