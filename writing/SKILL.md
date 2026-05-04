@@ -1,6 +1,6 @@
 ---
 name: writing
-description: Internal comms, data storytelling, prose quality, concision. Applies Strunk's rules for clearer, stronger writing.
+description: Use when writing prose for humans — internal comms, status updates, newsletters, data stories, presentations, commit messages, PR descriptions, error messages, or ADRs.
 ---
 
 ## When to use

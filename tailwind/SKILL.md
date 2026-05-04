@@ -1,6 +1,6 @@
 ---
 name: tailwind
-description: "Tailwind CSS styling, design tokens, responsive, dark mode. Trigger on 'tailwind', 'utility classes', 'design tokens', 'OKLCH'."
+description: "Use when styling with Tailwind CSS — utility classes, design tokens, responsive layouts, dark mode, and OKLCH colors."
 ---
 
 ## Gotchas

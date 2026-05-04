@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: "Use when starting any creative work — designing features, planning components, adding functionality, or changing behavior. MUST run before implementation to explore intent, requirements, and design."
 ---
 
 # Brainstorming Ideas Into Designs

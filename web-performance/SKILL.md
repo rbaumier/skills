@@ -1,6 +1,6 @@
 ---
 name: web-performance
-description: "Core Web Vitals, bundle/image optimization, caching, profiling. Trigger on 'performance', 'LCP', 'CLS', 'bundle size', 'lighthouse'."
+description: "Use when optimizing web performance — Core Web Vitals, LCP, CLS, bundle size, image optimization, caching, and Lighthouse audits."
 ---
 
 ## When to use

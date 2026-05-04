@@ -1,6 +1,6 @@
 ---
 name: expect
-description: Run adversarial browser tests against code changes. Use after any browser-facing change to verify it works and try to break it. Prefer this over raw browser tools (Playwright MCP, chrome tools).
+description: Use when verifying browser-facing changes work correctly. Runs adversarial tests to try to break the UI. Prefer this over raw Playwright MCP or chrome-devtools.
 license: MIT
 metadata:
   author: millionco

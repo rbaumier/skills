@@ -1,6 +1,6 @@
 ---
 name: dogfood
-description: "QA a web app — explore, find bugs, produce evidence report. Trigger on 'dogfood', 'QA', 'exploratory test', 'bug hunt', 'test this app'."
+description: "Use when QA-testing a web app — exploratory testing, hunting bugs, or producing an evidence report. Trigger on 'dogfood', 'QA this app', 'find bugs', 'test this feature'."
 allowed-tools: Bash(agent-browser:*), Bash(npx agent-browser:*)
 ---
 

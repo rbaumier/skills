@@ -1,6 +1,6 @@
 ---
 name: prompt-engineering
-description: "Write, optimize, and debug prompts. Trigger on 'prompt', 'system prompt', 'few-shot', 'chain of thought', 'prompt template', 'reduce tokens', 'prompt caching'."
+description: "Use when writing, optimizing, or debugging LLM prompts — system prompts, few-shot examples, chain-of-thought, prompt templates, token reduction, or caching strategies."
 ---
 
 ## When to use

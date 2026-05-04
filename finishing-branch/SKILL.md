@@ -1,6 +1,6 @@
 ---
 name: finishing-branch
-description: Verify all claims with evidence, then complete a development branch via merge, PR, or cleanup
+description: Use when a branch is ready to merge, needs final verification, or requires cleanup before PR. Also for resuming interrupted branch completion.
 ---
 
 # Finishing a Branch

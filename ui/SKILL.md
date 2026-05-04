@@ -1,6 +1,6 @@
 ---
 name: ui
-description: 'Explore, build, and refine UI.'
+description: 'Use when exploring UI options, building interfaces, or refining existing UI with live component references from v0.dev.'
 allowed-tools: 'mcp__uidotsh__uidotsh_fetch WebFetch'
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: testing
-description: "Testing strategy, TDD, UI testing, Vitest, Playwright. Trigger on 'test', 'TDD', 'coverage', 'E2E', 'unit test', 'Vitest', 'Playwright'."
+description: "Use when writing tests, choosing test strategies, or setting up test infrastructure — TDD, unit tests, E2E, Vitest, Playwright, coverage."
 ---
 
 ## Gotchas
@@ -25,6 +25,100 @@ Mock at boundaries only — network, filesystem, DB, time, randomness. Never moc
 Test public interface only. Prefer real deps (in-memory DB) for integration.
 **Contract testing for API boundaries**: When your service depends on external APIs, write contract tests that verify the shape/types of responses (not values). Use MSW to intercept and validate against recorded contracts. Without contract tests, a third-party API silently changes a field name and your service breaks in production. In reviews: if integration tests call real external APIs, flag and recommend contract tests with MSW
 **Flaky test triage protocol**: Run failing test 3x. If intermittent: classify as flaky. Action: quarantine (`describe.skip` or tag `@flaky`), file a ticket, fix root cause (race condition, shared state, time dependency). Never retry-and-ignore in CI — retries mask real regressions and erode trust in the suite. In reviews: if you see `retries: 3` in Playwright config without a comment explaining why, flag it
+
+### Test Naming as Specification
+Names follow `should [action] when [condition]` with nested `describe` by module then method. A reader understands expected behavior without reading the test body.
+```typescript
+describe('OrderService', () => {
+  describe('cancel', () => {
+    it('should refund full amount when order is pending', () => { /* ... */ });
+    it('should throw ForbiddenError when order is already shipped', () => { /* ... */ });
+  });
+});
+```
+In reviews: test named `test1`, `testCreate`, or `it works` -> flag "name must describe scenario + outcome"
+
+### Regression Test Discipline
+Every bug fix gets a regression test named with the issue number and a link. Dedicated `regression.spec.ts` file or prefixed tests for priority execution.
+```typescript
+// regression.spec.ts
+it('should not panic on empty input (#1234)', () => {
+  // https://github.com/org/repo/issues/1234
+  expect(parse('')).toEqual({ nodes: [] });
+});
+```
+In reviews: bug fix PR without a regression test -> flag "add regression test with issue link"
+
+### Specification-Driven Tests
+Tests organized section by section of the specification. References to exact spec sections in comments. Domain edge cases tested mandatorily.
+```typescript
+describe('RFC 7230 Section 3.2.6 — Quoted String', () => {
+  it('should handle escaped characters within quotes', () => { /* ... */ });
+});
+```
+
+### Property-Based Testing (TypeScript)
+Use `fast-check` for round-trip invariants, idempotence, and mathematical properties. Complements unit tests — does not replace them. Catches edge cases that hardcoded values miss.
+```typescript
+import fc from 'fast-check';
+test('encode/decode round-trip', () => {
+  fc.assert(fc.property(fc.string(), (input) => {
+    expect(decode(encode(input))).toBe(input);
+  }));
+});
+```
+Good candidates: serializers, parsers, sorting, math operations, state machine transitions
+
+### Deterministic Tests — Concrete Patterns
+Zero source of non-determinism. Inject dependencies for all impure operations:
+- **Time**: injectable `TimeProvider` or `vi.useFakeTimers()` — never rely on `Date.now()` in assertions
+- **Random**: seeded RNG (`seedrandom` or pass seed as param) — reproducible on failure
+- **Async scheduling**: deterministic scheduler, never `setTimeout` in prod code under test
+- **IDs**: factory-generated sequential IDs or fixed UUIDs in tests
+
+### Multi-Layer Testing (6 techniques)
+Combine complementary techniques for robust coverage:
+1. **Unit** — pure logic, transforms, edge cases (fastest, most numerous)
+2. **Integration** — API contracts, DB interactions with real adapters
+3. **Property-based** — invariants, round-trips, mathematical properties
+4. **Fuzz** — random invalid inputs to find crashes/panics
+5. **Regression** — every fixed bug gets a dedicated test
+6. **Fault injection** — simulate I/O failures, timeouts, partial writes to verify resilience
+
+### Test Infrastructure as Investment
+Invest in test helpers: fluent builders for test contexts, assertion helpers with visual diffs, dedicated test utilities package. The setup boilerplate should be one line.
+```typescript
+// Good: builder abstracts setup complexity
+const ctx = await TestBuilder.create()
+  .withUser({ role: 'admin' })
+  .withOrder({ status: 'pending' })
+  .build();
+```
+In reviews: copy-pasted setup boilerplate across 5+ tests -> flag "extract test builder"
+
+### Test Isolation — Prefix Strategy
+Each test creates its own instances, no shared singletons. Prefix shared keys by test to avoid parallel collisions:
+```typescript
+const testId = crypto.randomUUID().slice(0, 8);
+const cacheKey = `test_${testId}_user_session`;
+```
+In reviews: test that fails alone but passes in suite (or vice versa) -> flag "shared state pollution"
+
+### Ecosystem / Real-World Testing
+For tools (linters, formatters, compilers): run against real open-source projects in CI as a safety net. Benchmarks use representative real-world data, not synthetic micro-examples.
+
+### Snapshot Testing — Nuanced Usage
+`toMatchSnapshot()` on UI components is a maintenance trap — assert specific values instead.
+**But snapshots are excellent for deterministic output**: CLI formatters, code generators, compilers, serializers. Use `insta` (Rust) or inline snapshots (Vitest) for these. Update with `--update-snapshots`. The distinction: snapshot tests work when the output is the contract (formatting), not when it's a side effect of implementation (component render).
+
+### Compile-Time Type Tests
+Type tests are as rigorous as runtime tests. In TS: `.test-d.ts` files with `expectTypeOf`. In Rust: `compile_fail` doc-tests documenting what the API **forbids**.
+```typescript
+// user.test-d.ts
+import { expectTypeOf } from 'vitest';
+expectTypeOf<ReturnType<typeof getUser>>().toEqualTypeOf<Promise<Result<User, 'not-found'>>>();
+```
+In reviews: generic library without type tests -> flag "add .test-d.ts for public API types"
 
 ---
 

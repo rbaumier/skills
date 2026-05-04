@@ -1,6 +1,6 @@
 ---
 name: tanstack-query
-description: TanStack Query v5 for React server state management + Table v8, Form, Virtual, Store
+description: Use when managing server state with TanStack Query v5, building tables with TanStack Table v8, or using TanStack Form, Virtual, Store
 ---
 
 ## When to use

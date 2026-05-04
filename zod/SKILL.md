@@ -1,6 +1,6 @@
 ---
 name: zod
-description: Zod schema validation best practices. Trigger on z.object, z.string, safeParse, z.infer.
+description: Use when writing Zod schemas or validation — z.object, z.string, safeParse, z.infer, transforms, discriminated unions, error handling.
 ---
 
 # Zod Best Practices

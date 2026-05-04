@@ -1,6 +1,6 @@
 ---
 name: landing-page-copywriter
-description: "Landing page copy using PAS/AIDA/StoryBrand. Trigger on 'landing page', 'copy', 'headlines', 'CTA', 'conversion', 'sales page'."
+description: "Use when writing landing page copy, headlines, CTAs, or conversion-focused content. Applies PAS, AIDA, and StoryBrand frameworks."
 ---
 
 # Landing Page Copywriter

@@ -1,6 +1,6 @@
 ---
 name: database
-description: Data architecture, SQL engineering, persistence strategies, PostgreSQL internals, query optimization, migrations, connection pooling, replication, and operational best practices.
+description: Use when writing SQL, designing schemas, optimizing queries, managing migrations, or debugging PostgreSQL. Also for connection pooling, replication, and persistence architecture.
 ---
 
 ## Gotchas

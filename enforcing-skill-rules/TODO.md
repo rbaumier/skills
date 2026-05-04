@@ -19,4 +19,3 @@
 - landing-page-copywriter, writing, documentation
 - visual-explainer, frontend-slides, diff-review-ui
 - grill-me, continue
-- superpowers:* (meta-skills)
