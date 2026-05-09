@@ -17,7 +17,8 @@ description: Enforce engineering standards — readability, robustness, maintain
 *Else: Delete unless absence lets a fast reader miss deliberate protection.*
 
 ### 2. Form & Style: Extreme Concision
-- **10 words MAX, hard cap. Count them.** Sacrifice grammar entirely for the sake of concision. Flow is NOT the goal.
+- **Plain English only:** The reader is a junior dev, English as second language, skimming at 2am. Pick the short Germanic word over the Latinate one.
+- **30 words MAX, hard cap. Count them.** Sacrifice grammar entirely for the sake of concision. Flow is NOT the goal.
 - **MANDATORY OMISSIONS:** Drop articles (`the`, `a`), copulas (`is`, `are`, `was`), auxiliaries (`would`, `will`, `can`, `has`), and pronouns (`it`, `this`, `that`) wherever meaning survives.
 - **Before / After shape:**
   - ❌ 28w: *"A rewind would re-count attempts we already folded into closed groups, inflating the failure rate."*
@@ -26,7 +27,6 @@ description: Enforce engineering standards — readability, robustness, maintain
   1. Scan for split triggers: `and`, `so`, `but`, `—` between clauses, `then`, `, which`, `;`, `that`. Found one? Split.
   2. Count words in each sentence.
   3. Still over 10? The sentence holds 2 ideas. Split. Break lines on idea end, not column.
-- **Plain English only:** The reader is a junior dev, English as second language, skimming at 2am. Pick the short Germanic word over the Latinate one.
 - **Banned words — closed list, grep-able, zero exceptions:** `tally`, `tallies`, `flapping`, `hog`, `spurious`, `singleton`, `contended`, `bookmarking`, `trailing`, `leaky`, `flush`, `starve`. Presence = violation, rewrite. **The closed list is the floor, not the ceiling** — apply the same test to every word you write: shorter-older-more-childlike wins.
 
 ### 3. Content Rules: Why over How
@@ -44,7 +44,7 @@ description: Enforce engineering standards — readability, robustness, maintain
 - **No archaeology:** History = git. Never `was`, `previously`, or `refactored`.
 
 ### 5. Documentation Structure
-- **Struct doc:** ONE line exactly. Role only, not fields. No "and also" filler.
+- **Struct doc:** JSDoc/Rustdoc/etc. Role only, not fields. No "and also" filler.
   - ❌ *"Operational knobs for the monitor. Everything the tick needs to decide."*
   - ✅ *"Tuning for one running monitor: thresholds, windows, scan caps."*
 - **Function doc:** ~5 lines max. Must answer "what does the system's consumer observe?". **The consumer depends strictly on the module type:**
@@ -77,13 +77,14 @@ description: Enforce engineering standards — readability, robustness, maintain
 ## Philosophy
 
 Make invalid states unrepresentable. Functional core, imperative shell. Parse, don't validate. DRY.
+- **Optional markers are banned** -- never use `?:` in TypeScript types or `.optional()` in Zod schemas. Every property is required and always present on the object. If a value can be absent, use `| null` (or `.nullable()` in Zod) — the key exists, the value is null. No shape ambiguity. Rationalizations ("caller might not have it", "safer", "more flexible", "API doesn't always return it") are all wrong — fix the caller, narrow the type, validate at the boundary, or default. Applies to types, schemas, Drizzle columns, function params, return types. Reviews: any `?:` or `.optional()` -> reject, demand `| null` or required field
 - **Reuse before creating** -- search the codebase for existing equivalents before writing new code. Reviews: new code that duplicates existing functionality -> flag "reuse X instead"
 - **Rule of Three -- don't abstract until 3+ occurrences** -- two similar snippets are coincidence, three are a pattern. Premature abstraction couples unrelated callers. When a shared function accumulates `if (options.X)` branches to serve diverging callers, it became a wrong abstraction. Fix: inline into every call site, delete what each caller doesn't need, re-extract only when a true shared pattern emerges. Reviews: shared function with 3+ option flags controlling branches -> flag "inline and re-extract"
 - **Prefer boring technology** -- choose well-understood tools over novel ones. Novel solutions carry hidden costs in debugging, hiring, and documentation. Reviews: new dependency or pattern introduced when a well-known equivalent exists -> flag "justify why the boring option won't work"
 - **State machines as enums** -- workflows with discrete states use an enum with a dedicated struct per state and a single `handle()`/`step()` method. Transitions via dedicated methods. Centralized dispatch via exhaustive match with uniform branches. Reviews: `status: string` with scattered `if (status === "...")` -> flag "model as state machine enum"
 - **Cancellation as first-class citizen** -- every long-running async operation accepts a `CancellationToken` or `AbortSignal` parameter. Propagate through the entire call chain. Reviews: long async operation with no cancellation mechanism -> flag "add cancellation support"
 - **Concentrate complexity in identified modules** -- inherent complexity (DI, routing, parsing, optimization) is intentionally concentrated in a small number of clearly identified files. The rest of the codebase stays simple. Only these critical files are allowed to exceed usual size limits. Reviews: complexity diluted across the entire codebase instead of isolated -> flag "concentrate in dedicated module"
-- **Immutable configuration resolution** -- configuration is resolved once at boot into an immutable object. Two distinct types: `Config` (raw, optional fields) and `SanitizedConfig` (resolved, required fields with defaults applied). Runtime code never works with the raw type. Reviews: `config.field ?? fallback` in runtime code -> flag "resolve at boot, not at use site"
+- **Immutable configuration resolution** -- configuration is resolved once at boot into an immutable object. Two distinct types: `Config` (raw, nullable fields) and `SanitizedConfig` (resolved, required fields with defaults applied). Runtime code never works with the raw type. Reviews: `config.field ?? fallback` in runtime code -> flag "resolve at boot, not at use site"
 - **Separation mechanism / policy** -- core implements the mechanism (how to do), policy (what to do) is injected via traits/interfaces. Allows changing policy without touching the mechanism. Reviews: business logic hardcoded in core infrastructure -> flag "inject as policy"
 - **Symmetric sibling implementations** -- when a pattern is repeated for N variants (transports, adapters, drivers), each variant follows exactly the same file structure, same skeleton, same method names in the same order. Reviews: one variant with a different structure than its siblings -> flag "enforce symmetry"
 - **Minimal main function** -- `main()` in 15 lines max. All logic in separate functions/modules. Main parses args, builds config, delegates. Reviews: main with 100+ lines containing business logic -> flag "extract to dedicated module"
@@ -141,6 +142,21 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - **Pull complexity downward** -- when complexity is unavoidable, the module absorbs it internally rather than pushing it to callers via config params, exceptions, or "you figure it out" interfaces. A module has more users than developers — better for the implementer to suffer once than for every caller to suffer repeatedly. Reviews: hard decision turned into a config parameter -> flag "pull this decision into the module"; exception thrown for uncertain condition -> flag "handle internally or define out of existence"
 - **Barricade pattern for trust boundaries** -- designate specific interfaces as validation boundaries. All data crossing a barricade is validated and sanitized; code inside the barricade assumes inputs are clean. This prevents both over-validation (redundant checks in every function) and under-validation (missed checks deep in call chains). Security-critical paths (auth, crypto, PII) are never exempt regardless of barricade position. Reviews: validation scattered throughout inner logic -> flag "move validation to the barricade boundary"
 - **Document impossible states, still use Result** -- when a condition should never occur if code is correct (e.g., negative total after summing valid prices), return `err({ type: 'INVARIANT_VIOLATION' })` with a comment explaining why this state is impossible. Don't use `assert`/`throw` — keep Result as the single error mechanism. The comment is the real value: `// Impossible: valid prices can't sum to negative — indicates a bug in price calculation`
+- **Every error must be diagnostic-complete** -- an error (Result, log, alert) answers four questions: what operation failed, why it failed, what to do about it, and what's the blast radius. Not `"connection failed"` but `"POST /api/orders: connection to payments-service:443 timed out after 5000ms — retry with backoff or check service health dashboard — order not charged, cart preserved"`. This applies to Result types (`err({ type: 'PAYMENT_TIMEOUT', operation: 'chargeCustomer', detail: '...' })`), log lines, and monitoring alerts equally. Reviews: error with just a message string and no context -> flag "add operation, cause, remediation, and impact scope"
+- **Generic error types are tech debt** -- `UNKNOWN_ERROR`, `INTERNAL_ERROR`, `SOMETHING_WENT_WRONG` are the equivalent of `any` in your type system — a red flag, not a solution. Every catch-all deserves a follow-up ticket to investigate and discriminate. Acceptable only at the outermost boundary as a last-resort fallback, never as a design choice. When you don't know the cause yet, say so explicitly: `err({ type: 'UNCLASSIFIED', operation: 'syncInventory', detail: 'unexpected 502 from warehouse API' })` — still diagnostic, just honestly unclassified. Reviews: `UNKNOWN_ERROR` or `INTERNAL_ERROR` without a tracking ticket -> flag "classify or create a ticket to investigate"
+- **Appropriate tone in all error contexts** -- no "Oops!", "Whoops!", or "Yikes!" in error messages at any level. Errors are serious for whoever reads them — a dev paged at 3am doesn't want cute, a user whose payment failed doesn't want casual. State the facts plainly. Empathy yes ("please try again"), flippancy never
+
+## User-Facing Error Messages
+
+**Every error the user sees must answer: what happened, what to do, and is my stuff safe?**
+
+- **Say what happened and why** -- not "Something went wrong" but "Unable to connect your account". If the cause is known, state it. If it's a technical issue, say "due to a technical issue on our end" — honest without jargon. Reviews: user-facing message that says only "an error occurred" -> flag "specify what failed"
+- **Tell them how to fix it** -- every message includes a concrete next step. "Try connecting again" beats "Try again later". Short on space? Link to a help article with a descriptive label ("Learn how to resolve this"), not a generic "Click here". Reviews: error message with no corrective action -> flag "add what the user should do"
+- **Always provide a way out** -- if the user can't fix it themselves, give them a path to support. "If the issue keeps happening, contact Customer Care" prevents dead ends. No error should strand the user with zero options
+- **Reassure on what's not affected** -- reduce anxiety by stating what still worked. "Your changes were saved, but we couldn't send the notification" is dramatically better than just "Notification failed". When data is at stake, reassurance is not optional
+- **No technical jargon** -- "credentials denied", "failed to fetch", "null reference" mean nothing to users. Translate to outcomes: "We couldn't sign you in" instead of "Authentication token expired". The technical details belong in logs, not on screen. Reviews: user-facing message containing technical terms (API, timeout, 500, null, token, parse, fetch) -> flag "rewrite in plain language"
+- **Never blame the user or a third party** -- focus on the problem and the solution, not who caused it. Not "You entered an invalid email" but "This email address doesn't look right — check for typos". Not "PayPal isn't responding" but "We're having trouble connecting to your payment method". Blaming the user shames them; blaming a third party looks unprofessional. Reviews: error message with "you" as subject of a negative verb -> flag "reframe around the problem"
+- **Generic user-facing errors are product debt** -- if you know the cause and show "Something went wrong" anyway, that's a deliberate choice to leave the user helpless. Audit error messages after launch: track which generic messages fire most, then replace them with specific ones. Reviews: known error condition mapped to a generic message -> flag "write a specific message for this case"
 
 ## Readability
 
