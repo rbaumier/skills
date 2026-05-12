@@ -105,16 +105,13 @@ Split into separate files when:
 - Content has distinct domains (finance vs sales schemas)
 - Advanced features are rarely needed
 
-## Every rule needs an example AND a counter-example
+## Ground rules in real experience, not vibes
 
-A skill rule is tacit knowledge being made explicit. The way to convey tacit knowledge is via the body of experiences that generated the rule — pithy principles without grounding decay into noise (or worse, get misapplied). For every rule in the skill:
+A skill rule is tacit knowledge being made explicit. Principles without grounding decay into noise or, worse, get misapplied.
 
-- **One concrete example** showing the rule applied correctly (real code, real situation, not "imagine that…").
-- **One concrete counter-example** showing what the rule rejects, AND why that rejection is right.
-
-The counter-example matters as much as the example: it scopes the rule. A rule with only positive examples gets over-applied to situations it doesn't cover.
-
-**Bullshit check during authoring:** for every claim you write down, try to enumerate three places you've actually applied it. If you can't find any, the claim is aspiration, not practice — drop it or downgrade to "we'd like to" instead of "we do". This catches rules-by-vibe before they become skill text.
+- **At least one concrete example** per rule. Real code, real situation, not "imagine that…".
+- **A counter-example when the rule's scope is contested** — i.e. when the rule could plausibly be over-applied, or when the boundary between "this rule applies" and "this rule doesn't" isn't obvious. For unambiguous rules (e.g. "every TODO needs an issue link"), an example is enough; a counter-example would be artificial.
+- **The bullshit check**: for every claim, can you enumerate at least one real place you've applied it (your own code, a project, a review you did)? If not, the claim is aspiration. Either drop it, or rephrase as "we'd like to" so future readers know.
 
 ## Review Checklist
 
@@ -124,6 +121,6 @@ After drafting, verify:
 - [ ] SKILL.md under 100 lines
 - [ ] No time-sensitive info
 - [ ] Consistent terminology
-- [ ] **Every rule has at least one example AND one counter-example**
-- [ ] **Every claim survived the "three places I've applied this" check**
+- [ ] Every rule has a concrete example; ambiguous rules also have a counter-example
+- [ ] Every claim survives the "real place I've applied this" check
 - [ ] References one level deep

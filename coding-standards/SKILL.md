@@ -1,6 +1,6 @@
 ---
 name: coding-standards
-description: Engineering standards umbrella — core philosophy and routing to focused sub-skills. ALWAYS load this when writing, reviewing, or refactoring code. The sub-skills (coding-standards:style, :design, :errors, :hygiene) hold the detailed rules; load them on demand based on the task.
+description: Use when writing, reviewing, or refactoring code in any language. Use for architecture decisions, system design, component boundaries, and code quality judgment. Always relevant when touching source code.
 ---
 
 This is the umbrella skill. It states the load-bearing **philosophy** and the meta-rule that **rules vary by boundary**, then routes to focused sub-skills. The detailed rules live in the sub-skills — load them based on what you're doing.

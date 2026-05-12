@@ -1,6 +1,6 @@
 ---
 name: coding-standards:hygiene
-description: Project hygiene — tooling, lint enforcement, CI checks, dead code, TODOs, complexity limits, codebase homogeneity. Use when setting up a new project, configuring CI/CD, adding linters, deciding on structural guardrails, or auditing project health. Pair with coding-standards (umbrella) and ci-cd for pipelines.
+description: Use when setting up a new project, configuring CI/CD, adding linters, writing custom lint messages, deciding on structural guardrails, or auditing project health for dead code, TODOs, and complexity.
 ---
 
 ## Project Hygiene
