@@ -41,6 +41,26 @@ Look at test coverage for the area being refactored. **Refactoring without tests
 
 Break the implementation into a plan of **tiny commits**. Each commit should leave the codebase in a working state. If a commit can't be independently green, it's too big — split it.
 
+**For multi-day refactors, default to the parallel-pipeline pattern.** Don't replace the old code in place — build the new one *alongside* it. Each commit either (a) adds a piece of the new path, or (b) flips one consumer from old to new. The old path stays green until every consumer has been flipped; the final commit deletes the old path. Tests run against both during the transition; discrepancies are caught immediately rather than at the big-bang merge.
+
+```
+Bad — long-lived refactor branch:
+  commit 1: ...
+  commit 2: ...
+  (3 weeks later, 80-commit branch, painful merge, drift, conflicts)
+
+Good — parallel pipeline:
+  commit 1: introduce new module `pricing_v2`, no consumers yet
+  commit 2: characterization tests covering current `pricing` behavior
+  commit 3: implement first behavior in `pricing_v2`, identical output verified by tests
+  commit 4: flip `checkout.ts` to call `pricing_v2`
+  commit 5: implement next behavior, flip `cart.ts`
+  ...
+  commit N: delete `pricing`
+```
+
+Benefits: every commit ships independently, the old path is always available for revert, divergences surface within hours not weeks, and the refactor never blocks unrelated work in the same area.
+
 ### 8. Write the doc
 
 **Default location**: `docs/rfcs/YYYY-MM-DD-refactor-{slug}.md` at repo root. Create `docs/rfcs/` if missing.

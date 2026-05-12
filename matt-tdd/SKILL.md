@@ -13,6 +13,8 @@ description: Test-driven development with red-green-refactor loop. Use when user
 
 **Bad tests** are coupled to implementation. They mock internal collaborators, test private methods, or verify through external means (like querying a database directly instead of using the interface). The warning sign: your test breaks when you refactor, but behavior hasn't changed. If you rename an internal function and tests fail, those tests were testing implementation, not behavior.
 
+**Scope qualifier for "tests survive refactors":** this rule applies at the **system boundary** — the public API, the user-facing behavior, the contract that outside callers depend on. It does **not** apply to internal scaffolding tests written during development. Those are expected (and welcome) to break during a refactor; the breakage is how the type system and red squigglies guide the change. Treat internal tests as designed artifacts (see `testing` skill) — they can be rewritten, deleted, or refactored just like any other code. The maxim "good tests survive refactors" without this scope qualifier produces over-mocked, behavior-blind suites that pass while production breaks.
+
 See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
 
 ## Anti-Pattern: Horizontal Slices
@@ -61,10 +63,15 @@ Ask: "What should the public interface look like? Which behaviors are most impor
 
 ### 2. Tracer Bullet
 
-Write ONE test that confirms ONE thing about the system:
+In a typed codebase, the loop is **Type → Test → Code → Refactor**, not Test → Code → Refactor. The type signature is the first executable spec — a failing typecheck is the first red, before the test runner is even invoked. This is not a deviation from TDD; it's TDD acknowledging that the signature is part of the test surface in a language that has one.
+
+Write the signature first (one function, one struct, one trait — minimal to express the behavior you're about to test), then the test, then the body.
+
+Then write ONE test that confirms ONE thing about the system:
 
 ```
-RED:   Write test for first behavior → test fails
+TYPE:  Write the signature → typecheck fails (or signature didn't exist)
+RED:   Write test against that signature → test fails
 GREEN: Write minimal code to pass → test passes
 ```
 
@@ -98,12 +105,25 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 
 **Never refactor while RED.** Get to GREEN first.
 
+## When TDD doesn't fit — build a bespoke harness instead
+
+For some domains the generic xUnit shape feels wrong, and "skip TDD" is the lazy answer. The right answer is to build a problem-specific harness that gives you the same feedback loop:
+
+- **Concurrent / distributed systems:** TLA+ for design-level invariants, Jepsen-style chaos testing, recorded replay logs against the real implementation
+- **Games / simulations:** record-and-replay determinism tests, golden-frame screenshots, behavior trees with assertions
+- **Compilers / parsers:** corpus-based testing (run against real input files, snapshot the output), differential testing against a reference implementation
+- **Schemas / migrations:** round-trip property tests on real production data shapes, migration replay against a copy of prod
+- **Performance work:** benchmark suites with regression thresholds, criterion-style statistical comparisons
+
+TDD bridges "I think I know how to solve this" → "this is what the code looks like". It does not replace upstream problem-thinking. When the unit/integration shape doesn't fit your domain, design the test harness as carefully as you'd design the production code — it's still test-first, just with a different test shape.
+
 ## Checklist Per Cycle
 
 ```
+[ ] Type signature written before test
 [ ] Test describes behavior, not implementation
 [ ] Test uses public interface only
-[ ] Test would survive internal refactor
+[ ] Test would survive internal refactor (if test is at a system boundary)
 [ ] Code is minimal for this test
 [ ] No speculative features added
 ```
