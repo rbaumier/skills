@@ -50,3 +50,4 @@ description: "Use when writing Drizzle ORM schemas, migrations, queries, or debu
 - relations() with one/many; filter operators (eq, gt, like) from drizzle-orm
 - **Parameterized raw SQL** — when using `sql` template tag with user input, always use `sql.placeholder('name')` for prepared statements or the tagged template literal. NEVER `sql.raw(userInput)` — it bypasses parameterization and enables SQL injection
 - sql template tag for raw SQL, never string concatenation
+- use .findFirst() to get the first matching row
