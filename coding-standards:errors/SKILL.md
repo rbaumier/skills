@@ -1,6 +1,6 @@
 ---
 name: coding-standards:errors
-description: Error handling, runtime invariants and assertions, and user-facing error messages. Use when writing try/catch, designing Result/Option types, adding timeouts, deciding between errors and assertions, writing user-facing error messages, or adding invariant checks. Pair with coding-standards (umbrella), coding-standards:design (for error types in module design), and better-result-adopt (for migration patterns).
+description: Use when handling errors, designing Result or Option types, adding timeouts, choosing between errors and assertions, writing user-facing error messages, or adding runtime invariant checks.
 ---
 
 ## Error Handling

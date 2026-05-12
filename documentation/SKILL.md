@@ -88,7 +88,7 @@ YYYY-MM-DD
 - [Trigger 3, e.g. "Onboarding a new tenant takes more than 1 engineer-day"]
 ```
 
-**Re-evaluation triggers are the load-bearing addition.** A decision without one is open-ended: nobody knows when to revisit it, so it calcifies. With explicit triggers, future-you (or future-team) gets a signal: "the assumption behind ADR-007 just broke — open ADR-024 to revisit". Concrete examples of good triggers:
+A decision without a re-evaluation trigger is open-ended: nobody knows when to revisit it, so it calcifies. With explicit triggers, future-you (or future-team) gets a signal: "the assumption behind ADR-007 just broke, open ADR-024 to revisit." Concrete examples of good triggers:
 - Scale: "exceeds X req/s", "row count > N", "DB size > X GB"
 - Operational: "more than Y on-call pages/month attributable to this", "Z% of requests miss SLA"
 - Organizational: "more than 2 teams depend on this", "more than W engineers in the codebase"

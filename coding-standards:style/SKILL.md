@@ -1,6 +1,6 @@
 ---
 name: coding-standards:style
-description: Surface-level code style — comments, naming, control flow, readability, file structure. Use when writing or reviewing comments/docstrings, picking names, structuring control flow, organizing files, or evaluating readability. Pair with coding-standards (umbrella), coding-standards:design (for function/type/architecture choices), coding-standards:errors (for error handling).
+description: Use when writing or reviewing comments, docstrings, names, control flow, or file organization. Use when evaluating readability, choosing identifiers, splitting files, or applying naming conventions. Covers the visible surface of code.
 ---
 
 ## Comments

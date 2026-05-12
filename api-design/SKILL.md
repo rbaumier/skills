@@ -221,7 +221,7 @@ A removable module has:
 - **No persisted state schema other modules read** — its tables, queues, events, files are private to it
 - **A killable feature flag or a single import-removal that takes it offline** — the deletion is a diff, not a project
 
-This is the architectural counterpart to **vertical slices**: each slice is born as a removable bet. CQRS-style slices, feature-folder layouts, and event-driven contracts all align naturally with removability — they minimize the cost of being wrong.
+Vertical slices align naturally with this goal: each slice is born as a removable bet. CQRS-style slices, feature-folder layouts, and event-driven contracts all minimize the cost of being wrong.
 
 **When to optimize for maintainability instead:** stable, well-understood core domains where the bet has already paid off and the cost of change comes from breadth of consumers (e.g. the auth subsystem, the billing engine, the data model after 5 years of validation). Don't optimize new exploratory code for maintainability — you'll calcify the wrong design.
 

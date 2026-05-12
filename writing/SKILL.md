@@ -62,7 +62,7 @@ description: Use when writing prose for humans — internal comms, status update
 - Voice capture workflow: when writing in someone's voice, (1) collect samples, (2) extract sentence length/rhythm, formality, rhetorical devices, vocabulary tier, humor style, (3) document as voice profile, (4) write draft, (5) compare draft sentence patterns against samples. Never invent biographical facts
 - Data stories follow Setup -> Conflict -> Resolution arc
 - Also use SCQA (Situation, Complication, Question, Answer) for exec-level comms and Pyramid Principle (answer first, then supporting evidence in groups of 3) for busy readers
-- Every rule, claim, or principle is paired with a concrete example AND a concrete counter-example. The way to convey tacit knowledge is via the body of experiences that generated the rule; principles without grounding decay into noise. Counter-examples matter as much as examples — they scope the rule and prevent over-application. If you can't enumerate three places you've applied the claim, it's aspiration, not practice; drop it or rephrase as "we'd like to" instead of "we do"
+- Ground every rule in a concrete example. Add a counter-example when the rule's scope is contested or could be over-applied; an unambiguous rule needs only the positive case. If you can't name a real place you've applied a claim, it's aspiration, not practice — drop it or rephrase as "we'd like to"
 - Three pillars: Data (evidence), Narrative (meaning), Visuals (clarity)
 - Story arc: Hook, Context, Rising Action, Climax, Resolution, CTA
 - Use problem-solution, trend, or comparison framework as appropriate

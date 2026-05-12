@@ -1,6 +1,6 @@
 ---
 name: coding-standards:design
-description: Function, type, data, and architecture design — DI, extraction, type-driven design, modularity, boundaries, abstractions, vertical slices. Use when designing functions, choosing types, modeling data, drawing module boundaries, deciding what depends on what, or evaluating architecture. Pair with coding-standards (umbrella), coding-standards:style (for naming/files), coding-standards:errors (for error handling).
+description: Use when designing functions, modeling data, choosing types, drawing module boundaries, or deciding what depends on what. Use when evaluating architecture, extracting abstractions, or shaping vertical slices.
 ---
 
 ## Functions
