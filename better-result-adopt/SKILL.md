@@ -15,28 +15,93 @@ Migrate existing error handling (try/catch, Promise rejections, thrown exception
 - Migrating Promise-based code to Result.tryPromise
 - Introducing railway-oriented programming patterns
 
-## Migration Strategy
+## Rules
 
-### 1. Start at Boundaries
+- Use Result.gen with yield* for composing multiple Result-returning operations - enables railway-oriented programming
+- Use Result.await to yield Promise<Result> in async generators - required for async operations inside Result.gen
+- Extend TaggedError(\"YourError\") for discriminated error types - creates errors with _tag for exhaustive matching
+- Return Result.ok() or Result.err() at the end of Result.gen blocks - generators must return a Result
+- Use Result.try with catch handler to convert exceptions to typed errors - wrap throwing functions safely
+- Use Result.tryPromise for async ops with optional retry - supports times, delayMs, backoff, shouldRetry options
+- For async retry decisions, enrich error in catch handler (can be async) then use shouldRetry synchronously
+- Use .match({ ok, err }) for exhaustive handling of both Result variants - forces explicit error handling
+- Use matchError for exhaustive pattern matching on TaggedError unions - compiler enforces all error variants
+- Prefer unwrapOr over unwrap to provide fallback values - unwrap throws on Err
+- All combinators support dual API: fn(result, arg) and fn(arg)(result) - both data-first and pipeable styles
+- Chain .mapError() on Result.gen() output to normalize multiple error types into a single unified error type
 
-Begin migration at I/O boundaries (API calls, DB queries, file ops) and work inward. Don't attempt full-codebase migration at once.
 
-### 2. Identify Error Categories
+## API Reference
 
-Before migrating, categorize errors in target code:
+### Result
 
-| Category       | Example                | Migration Target                                |
-| -------------- | ---------------------- | ----------------------------------------------- |
-| Domain errors  | NotFound, Validation   | TaggedError + Result.err                        |
-| Infrastructure | Network, DB connection | Result.tryPromise + TaggedError                 |
-| Bugs/defects   | null deref, type error | Let throw (becomes Panic if in Result callback) |
+| Method                                  | Description                                                                              |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `Result.ok(value)`                      | Create success                                                                           |
+| `Result.err(error)`                     | Create error                                                                             |
+| `Result.try(fn)`                        | Wrap throwing function                                                                   |
+| `Result.tryPromise(fn, config?)`        | Wrap async function with optional retry                                                  |
+| `Result.isOk(result)`                   | Type guard for Ok                                                                        |
+| `Result.isError(result)`                | Type guard for Err                                                                       |
+| `Result.gen(fn)`                        | Generator composition                                                                    |
+| `Result.tryRecover(result, fn)`         | Recover error into same success type                                                     |
+| `Result.tryRecoverAsync(result, fn)`    | Async recover error into same success type                                               |
+| `Result.tap(result, fn)`                | Run side effect on success and return original result                                    |
+| `Result.tapAsync(result, fn)`           | Run async side effect on success and return original result                              |
+| `Result.tapError(result, fn)`           | Run side effect on error and return original result                                      |
+| `Result.tapErrorAsync(result, fn)`      | Run async side effect on error and return original result                                |
+| `Result.tapBoth(result, handlers)`      | Run side effect on either branch and return original result                              |
+| `Result.tapBothAsync(result, handlers)` | Run async side effect on either branch and return original result                        |
+| `Result.await(promise)`                 | Wrap Promise<Result> for generators                                                      |
+| `Result.serialize(result)`              | Convert Result to plain object                                                           |
+| `Result.deserialize(value)`             | Rehydrate serialized Result (returns `Err<ResultDeserializationError>` on invalid input) |
+| `Result.partition(results)`             | Split array into [okValues, errValues]                                                   |
+| `Result.flatten(result)`                | Flatten nested Result                                                                    |
 
-### 3. Migration Order
+### Instance Methods
 
-1. Define TaggedError classes for domain errors
-2. Wrap throwing functions with Result.try/tryPromise
-3. Convert imperative error checks to Result chains
-4. Refactor callbacks to generator composition
+| Method                    | Description                                |
+| ------------------------- | ------------------------------------------ |
+| `.isOk()`                 | Type guard, narrows to Ok                  |
+| `.isErr()`                | Type guard, narrows to Err                 |
+| `.map(fn)`                | Transform success value                    |
+| `.mapError(fn)`           | Transform error value                      |
+| `.tryRecover(fn)`         | Recover error into same success type       |
+| `.tryRecoverAsync(fn)`    | Async recover error into same success type |
+| `.andThen(fn)`            | Chain Result-returning function            |
+| `.andThenAsync(fn)`       | Chain async Result-returning function      |
+| `.match({ ok, err })`     | Pattern match                              |
+| `.unwrap(message?)`       | Extract value or throw                     |
+| `.unwrapOr(fallback)`     | Extract value or return fallback           |
+| `.tap(fn)`                | Side effect on success                     |
+| `.tapAsync(fn)`           | Async side effect on success               |
+| `.tapError(fn)`           | Side effect on error                       |
+| `.tapErrorAsync(fn)`      | Async side effect on error                 |
+| `.tapBoth(handlers)`      | Side effect on either branch               |
+| `.tapBothAsync(handlers)` | Async side effect on either branch         |
+
+### TaggedError
+
+| Method                                 | Description                        |
+| -------------------------------------- | ---------------------------------- |
+| `TaggedError(tag)<Props>()`            | Factory for tagged error class     |
+| `TaggedError.is(value)`                | Type guard for any TaggedError     |
+| `matchError(err, handlers)`            | Exhaustive pattern match by `_tag` |
+| `matchErrorPartial(err, handlers, fb)` | Partial match with fallback        |
+| `isTaggedError(value)`                 | Type guard (standalone function)   |
+| `panic(message, cause?)`               | Throw unrecoverable Panic          |
+| `isPanic(value)`                       | Type guard for Panic               |
+
+### Type Helpers
+
+| Type                     | Description                  |
+| ------------------------ | ---------------------------- |
+| `InferOk<R>`             | Extract Ok type from Result  |
+| `InferErr<R>`            | Extract Err type from Result |
+| `SerializedResult<T, E>` | Plain object form of Result  |
+| `SerializedOk<T>`        | Plain object form of Ok      |
+| `SerializedErr<E>`       | Plain object form of Err     |
+
 
 ## Pattern Transformations
 
