@@ -80,7 +80,21 @@ YYYY-MM-DD
 - [What becomes easier or possible as a result]
 - [What becomes harder or impossible as a result]
 - [What new constraints or obligations does this create]
+
+## Re-evaluation Triggers
+[Concrete, measurable conditions under which this decision should be revisited. NOT "in 6 months" — name observable signals from the system itself.]
+- [Trigger 1, e.g. "Daily writes exceed 1M rows"]
+- [Trigger 2, e.g. "P99 latency on the read path exceeds 200ms"]
+- [Trigger 3, e.g. "Onboarding a new tenant takes more than 1 engineer-day"]
 ```
+
+**Re-evaluation triggers are the load-bearing addition.** A decision without one is open-ended: nobody knows when to revisit it, so it calcifies. With explicit triggers, future-you (or future-team) gets a signal: "the assumption behind ADR-007 just broke — open ADR-024 to revisit". Concrete examples of good triggers:
+- Scale: "exceeds X req/s", "row count > N", "DB size > X GB"
+- Operational: "more than Y on-call pages/month attributable to this", "Z% of requests miss SLA"
+- Organizational: "more than 2 teams depend on this", "more than W engineers in the codebase"
+- Business: "feature X ships and requires multi-tenant isolation we don't have"
+
+If you can't name a trigger, the decision is too vague — clarify the assumption first. Reviews: ADR with no Re-evaluation Triggers section -> flag "name what would invalidate this decision"
 
 ### ADR lifecycle
 ```
@@ -98,6 +112,29 @@ PROPOSED -> ACCEPTED -> (SUPERSEDED or DEPRECATED)
 - Group by version and date, classify by type, focus on user-facing changes
 - Highlight breaking changes with migration notes at the top of each version
 - Merge related commits into single entries (3 commits fixing the same bug = 1 changelog line)
+
+## Docs as design pressure — write usage docs before finalizing the API
+
+Documentation is not only a deliverable; it's a **design feedback mechanism that runs before users exist**. The act of explaining how to use an API forces the writer to take the user's perspective and confront whatever is awkward, inconsistent, or unexplainable in the design — at a moment when changing the design is still cheap.
+
+Apply this in two ways:
+
+- **Write the "Getting Started" example before locking the API.** If the example is awkward to write, the API is awkward to use. The right response is to fix the API, not to soften the docs.
+- **Empower documentation writers to push back on design.** If the writer reports that a section is awkward, treat it as a design bug, not a doc bug. The friction surfaced is real user friction, just earlier. (This is a process / org rule: the doc writer must have credibility to request API changes.)
+
+This is distinct from "docs live next to code they describe" (that's about freshness). This is about **timing**: docs as pressure during design, not only as record after design.
+
+## Erase-function-bodies design review
+
+A concrete heuristic for reviewing a module's design: **mentally erase every function body and look only at what remains** — type signatures, struct shapes, module exports, dependency directions. What remains IS the design. If you can't evaluate the design without reading bodies, the types are too thin (insufficient information) or the bodies are doing the design's job (encapsulation breach).
+
+Apply during code review and during your own writing:
+- Open a file, scroll to the signatures, hide the bodies (collapse all in editor, or grep `^function|^export|^interface`).
+- Can a stranger predict what each function does from name + signature alone?
+- Can they predict what the module promises from its exports alone?
+- If no, the names are weak, the types are too generic, or the public surface is doing too little to express intent.
+
+Reviews: function whose name + parameter types + return type don't predict behavior -> flag "tighten the signature"; module whose exports don't tell you what it's for -> flag "exports underspecify the module's contract"
 
 ## Rules
 - Trace actual code paths, never guess from file names

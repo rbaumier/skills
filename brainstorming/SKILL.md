@@ -109,6 +109,99 @@ Imagine the idea has already failed. Work backwards: What went wrong? List every
 
 **Best for:** Stress-testing ideas in Phase 2 that feel good but haven't been pressure-tested.
 
+### Residuality Stress-Testing — for architecture, not just ideas
+
+Pre-mortem captures **known unknowns** (failures you can imagine). Residuality Theory (Barry O'Reilly) captures **unknown unknowns** — and, more importantly, reveals **hidden coupling** between components, which is the real architectural payoff. Use this *in addition to* pre-mortem when designing or reviewing a system architecture.
+
+**The exercise has four artifacts:**
+
+1. **Stressors list** — brainstorm 8-15 stressors that could hit the system. Include obviously-plausible ones (payment provider outage, DB failure) AND deliberately outlandish ones (regulatory ban, founding-team quits, a competitor open-sources our product, Godzilla, the data center loses power for a week). The outlandish ones are not for risk planning — they're for revealing coupling.
+
+2. **Incidence Matrix** — a table with stressors as rows and components as columns. Each cell: does this component break under this stressor? (✓ / ✗). Concrete deliverable; the LLM can produce it as a markdown table.
+
+   ```
+                       | Orders | Payment | Kitchen | Notify | Pickup |
+   Stripe outage       |        |    ✓    |         |        |        |
+   Shop internet down  |   ✓    |    ✓    |    ✓    |   ✓    |   ✓    |  ← high coupling!
+   TikTok virality     |   ✓    |    ✓    |    ✓    |   ✓    |        |
+   Health inspector    |        |         |    ✓    |        |   ✓    |
+   ```
+
+3. **Attractors** — patterns in the matrix. Components that fail *together* across many stressors are coupled. The matrix above reveals a "Total Meltdown" attractor (any infrastructure stressor breaks everything). Naming the attractor — "the death spiral", "Friday night attractor", "the all-fire state" — makes it discussable.
+
+4. **Residues** — for each attractor, what's the redesign that breaks the coupling? Critically, **the answer is not always technical**. Examples:
+   - Technical: dual payment providers, offline mode, circuit breakers, async queues
+   - Process/business: an "Internet Down Tuesday" promotion that turns the outage into a marketing event; an express menu during rush that prevents overload; a 15-minute auto-donation policy for unclaimed orders
+   - The point: an LLM defaults to technical redundancy; force yourself to consider non-technical residues for half the attractors.
+
+**Best for:** Architecture review, system design before commitment, post-incident "we got hit by X, what coupling did we miss" exercises. Distinct from pre-mortem because the deliverable (Incidence Matrix) makes coupling visible — pre-mortem leaves coupling implicit.
+
+### Problem-vs-Solution heuristic
+
+When a request arrives — from a user, a PM, a business stakeholder, an issue tracker — the wording is **almost always a proposed solution**, not the underlying problem. The default failure mode is to take the solution at face value and build it.
+
+Test every incoming request:
+
+| Surface request (likely solution) | Real problem to dig for |
+|---|---|
+| "Build me a web app for timesheets" | "HR needs to know how many hours each person worked" → could be Excel + email + parser |
+| "Add a user admin panel" | "Support team needs to reset passwords without engineering" → could be a CLI script or runbook |
+| "Make this 10x faster" | "Page feels slow" → could be a loading skeleton; "Customers are dropping off" → could be UX changes upstream |
+| "Add caching" | "Database is overloaded at peak" → could be a query fix or batch job rescheduling |
+
+**Two questions to surface the real problem:**
+1. "If this exact feature existed tomorrow, what would change for the user?" — surfaces the outcome.
+2. "What's the user doing today instead?" — surfaces the workaround they've already built; the real problem is usually whatever the workaround is paid in.
+
+**When to take the request at face value:** explicit constraint ("we MUST integrate with system X"), regulatory requirement, deliberate user choice with full context. Otherwise: dig. The LLM has a stronger bias than humans toward "code what's asked" — counteract it explicitly.
+
+Henry Ford (apocryphal but apt): *"If I had asked people what they wanted, they would have said faster horses."*
+
+**Best for:** every non-trivial incoming request. Run it before generating options.
+
+## Goal-Quality Gate — apply before any divergence
+
+Before generating options, the stated goal must clear these three checks. If it doesn't, you're brainstorming wishes, not goals.
+
+### 1. Falsifiable
+
+**You must be able to name a concrete failure condition.** If you cannot describe a result that would mean "this didn't work", you don't have a goal — you have a wish, and any direction is equally fine because nothing is wrong.
+
+- ❌ "Make the importer better" — what would count as worse? Equal?
+- ✅ "Process 10,000-row CSVs in ≤30s end-to-end with zero data corruption" — failure: longer than 30s OR loses any row in a fuzz test
+- ❌ "Improve developer experience" — no measurable failure mode
+- ✅ "Reduce time from `git pull` to passing tests below 2 minutes on a clean repo" — failure: any flow above 2 min
+
+Surface this gate explicitly: "What would tell us this didn't work?"
+
+### 2. Operationalized
+
+A goal headline ("CSV importer ≤30s") is the surface; the design problem isn't specified until the dimensions below are named (whichever apply):
+
+- Exact **scope** of the problem being solved (and just as importantly, what's **not** in scope)
+- **Who uses** the code; **where** it runs (browser? server? edge?); on **what hardware**
+- **Who maintains** it and for how long
+- **Constraints on correct output** (precision, idempotency, ordering, durability)
+- **Consequences of bugs** (silent corruption? user-visible error? page out?)
+- **Input data**: volume, distribution, rate of change, expected adversarial shapes
+- **Requirements on throughput, latency, memory, storage, power**
+
+If five+ of these are unknown for a non-trivial design, the design problem is unspecified, not solved. Ask the user before producing options.
+
+### 3. Honest, not performative
+
+**Watch for goals that are what a Good Engineer is supposed to want, not what you actually want.** Signal: you find yourself contorting to justify a chosen direction using the goal you wrote down — the strain is the tell. The real goal is somewhere else (cost, speed-of-ship, signal to a stakeholder, learning a new tool). Surface the real goal explicitly even when it's awkward; an unstated real goal will sabotage every option you generate against the performative one.
+
+When in doubt, write down both: "stated goal" and "actual goal". If they differ, that's the conversation to have first.
+
+## Decision-Paralysis Circuit-Breaker
+
+When stuck on a decision (yours or the user's), walk this three-step protocol in order — most paralysis happens because someone is at step 3 when the real problem was at step 1 or 2.
+
+1. **Does it matter?** Will this choice be visible in three months? In one quarter? If no, **coin-flip and move**. Most decisions don't matter; deliberation is the cost.
+2. **Do you have enough information?** If the choice hinges on a fact you don't know (a benchmark, a user preference, a constraint from another team), **stop debating and go get the fact**. A 10-minute spike beats an hour of arguing.
+3. **Which option moves toward the goal?** If steps 1 and 2 are settled and it still feels balanced, this question usually resolves it. If it doesn't, return to step 1 — the choice probably doesn't matter.
+
 ## Refinement Criteria Rubric
 
 Use during the Converge phase to evaluate candidate directions.

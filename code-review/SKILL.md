@@ -33,7 +33,7 @@ Dispatch a code-reviewer subagent to catch issues before they cascade. The revie
 
 ### Pre-Review Self-Check
 
-Before dispatching the code-reviewer subagent, do a personal pass — read every changed line as if seeing it for the first time:
+Before dispatching the code-reviewer subagent, do a personal pass — **read every changed line as if you were explaining it out loud to a teammate who hadn't seen the work yet**. The mental act of explaining catches more silly bugs than any linter: wrong variable name, missing `await`, swapped arguments, copy-paste residue, off-by-one in a loop. Cheap, fast, surprisingly effective.
 
 1. No debug/console.log left
 2. No commented-out code
@@ -112,6 +112,7 @@ Before looking at code, understand the intent: What is this change trying to acc
 - Are edge cases covered?
 - Do tests have descriptive names?
 - Would the tests catch a regression if the code changed?
+- **Is the prod diff invisible to tests?** Every commit that changes production code should change tests, OR be a pure refactor (no behavior change), OR be specially scrutinized. A commit with prod-code changes and zero test changes falls in one of those three categories — your job as reviewer is to decide which. "It's hard to test" is not category four. Reviews: prod-code diff with zero test diff and no "refactor" label -> flag "explain why no test, or add one"
 
 ### Step 3: Review the Implementation (Five Axes)
 

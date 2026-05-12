@@ -3,6 +3,23 @@ name: api-design
 description: API design principles — contract-first, error semantics, versioning, pagination, Hyrum's Law, interface stability. Use when designing REST/GraphQL endpoints, TypeScript interfaces, module boundaries, or any public surface between systems.
 ---
 
+## Public vs private dependencies
+
+A dependency is **public** if any of its types appear in your module's parameter signatures or return types — to call your function, the consumer must import that other module's types. It is **private** if you only use it internally; the consumer never knows it exists.
+
+```typescript
+// Public dependency on `zod` — every caller now needs zod in scope
+export function validate(schema: z.ZodSchema, input: unknown) { ... }
+
+// Private dependency on `zod` — caller sees only `Result`
+export function validate(input: unknown): Result<User, ValidationError> {
+  const parsed = userSchema.safeParse(input);  // zod used internally
+  // ...
+}
+```
+
+Audit every export: "to call this, what types from other modules must the user import?" Each one is a transitively-imposed cost on every consumer, every dependency-graph traversal, every future migration. Private dependencies are cheap (swap them out anytime); public dependencies are forever (Hyrum's Law). Reviews: function exposing a third-party type when a domain wrapper would do -> flag "wrap at the boundary, keep the dependency private"
+
 ## Hyrum's Law
 
 > With a sufficient number of users, all observable behaviors of your system will be depended on by somebody.
@@ -194,6 +211,63 @@ GET /api/orders?page=1&pageSize=20&sortBy=createdAt&sortOrder=desc
 
 **Always paginate list endpoints.** "We don't need pagination yet" is the rationalization. You will the moment someone has 100+ items.
 
+## Removability over maintainability
+
+Maintainability is the default goal: "easy to change for a long time". But for new, uncertain, evolving systems, the better goal is **removability** — design so each piece can be **deleted cleanly** when the bet behind it turns out to be wrong. Greg Young: *"One of the beautiful things about deleting code is that it allows you to change your mind."*
+
+A removable module has:
+- **No incoming dependencies you don't control** — only your own callers depend on it, and you can flip them in one change
+- **No outgoing dependencies it brought into the codebase** — when you delete it, no third-party package becomes orphaned and stays around "just in case"
+- **No persisted state schema other modules read** — its tables, queues, events, files are private to it
+- **A killable feature flag or a single import-removal that takes it offline** — the deletion is a diff, not a project
+
+This is the architectural counterpart to **vertical slices**: each slice is born as a removable bet. CQRS-style slices, feature-folder layouts, and event-driven contracts all align naturally with removability — they minimize the cost of being wrong.
+
+**When to optimize for maintainability instead:** stable, well-understood core domains where the bet has already paid off and the cost of change comes from breadth of consumers (e.g. the auth subsystem, the billing engine, the data model after 5 years of validation). Don't optimize new exploratory code for maintainability — you'll calcify the wrong design.
+
+**Removability check before merging a new module:** "if this turns out to be the wrong design, what does the deletion diff look like?" If the answer is "we'd never delete it, we'd refactor it forever", the module is locking in a bet that hasn't proven itself yet — reduce its coupling before merging, or accept that you're past the experimentation phase. Reviews: new feature module with state schema read by 3+ other modules on day one -> flag "this isn't removable; either it's core or it's premature shared state"
+
+## Open for modification, not extension (for non-boundary code)
+
+The "Open/Closed Principle" tells you to make code open for extension and closed for modification. **This is true at system boundaries only.** For internal code that you fully control, the better goal is **easy modification** — keep the design lean enough that changing it is cheap, instead of pre-building extension hooks that imagine future needs.
+
+Extensibility hooks (strategy patterns, plugin slots, callback registries, configuration parameters with no current second user) are bets on future shape. Most bets are wrong; the cost is paid daily by readers navigating the indirection. Internal code that's easy to modify wins over internal code that's hard to modify but easy to extend in directions nobody asked for.
+
+Reviews: internal abstraction (strategy/plugin/extension point) with zero consumers outside its module -> flag "inline back; extensibility unearned"
+
+## Avoid "entity services" in distributed architectures
+
+A service whose entire job is CRUD on entity X (`UserService`, `OrderService`, `LoanService` that just stores and returns the entity) is usually a misdesign. It treats the entity as if it has identity that requires a process to keep, when really the entity is **data** that flows between processes whose identity is the **task** they perform.
+
+Better shape: task-shaped services (`Onboarding`, `Pricing`, `Fulfillment`) that *consume and produce* entity data, with one canonical store rather than one service per entity. Each task service does meaningful work; the data passes through.
+
+Reviews: new microservice proposed as "the X service" with CRUD as its primary API -> flag "what task does this perform? if CRUD is the answer, this should be a table, not a service"
+
+## Always pass options explicitly at call sites
+
+Don't rely on a library's default arguments — pass them explicitly at every call site. This pins behavior at the call site rather than at the library boundary, surviving library upgrades that change defaults.
+
+```typescript
+// Bad: behavior depends on what `fetch` decides today
+await fetch(url);
+
+// Good: behavior pinned at this call, library upgrades cannot silently change it
+await fetch(url, {
+  method: 'GET',
+  redirect: 'error',
+  credentials: 'omit',
+  signal: AbortSignal.timeout(5_000),
+});
+```
+
+The cost is verbosity; the benefit is that no library upgrade silently changes your security posture. Especially important for: HTTP clients, crypto APIs, ORM query builders, auth middleware, file system operations. Reviews: hot-path I/O call relying on library defaults for safety-relevant behavior (redirects, credentials, timeouts, retries) -> flag "pass options explicitly"
+
+## Big-step interfaces over small-step
+
+When decomposing an interface into smaller internal handles makes it easier to **test** but harder to **use**, you've designed for the test harness, not the user. Compilers are tested with `compile(source) -> output`, not with separate `tokenize`/`parse`/`type-check`/`codegen` handles — even though the small-step decomposition would unit-test more granularly. The user-facing shape stays big-step; granular testing happens inside, hidden.
+
+Ask of every interface: "is this shape the user wants, or the test wants?" If a small-step decomposition leaks to callers solely to enable isolated testing, fold it back. Test through the big-step interface; the internal seams can still be tested via per-layer integration tests (see `testing` skill). Reviews: public API decomposed into a chain of internal handles the user must wire together for any single use case -> flag "expose the big-step operation; keep the small steps internal"
+
 ## Interface Stability Rules
 
 1. **Add, never remove.** New fields are optional. Removed fields break consumers.
@@ -271,6 +345,35 @@ createUser({ name: 'john', role: 'admin', verified: true, quotaLimit: 30 });
 ```
 
 Also use objects when 2+ consecutive params share the same type — positional same-type args compile even when swapped silently.
+
+## Interface-introduction triage
+
+Before adding any new `interface` / `trait` / `abstract class`, classify it. Only the last category justifies the interface; the first three are workarounds masquerading as abstractions.
+
+| Case | Real intent | Right tool |
+|---|---|---|
+| Single-method "callback" interface | Missing function type | Use a function type: `(event: Event) => void` |
+| Sum of variants disguised as interface | Missing discriminated union | Use a discriminated union: `type Result = Ok \| Err` |
+| Interface with exactly one implementation | Premature abstraction | Inline the concrete type, delete the interface |
+| Interface with N implementations selected at runtime, owned outside this module | Real polymorphism over open variants | Keep the interface |
+
+Reviews: interface with 0 or 1 implementations -> flag "remove or replace with discriminated union"; interface with a single method and all implementations inside the codebase -> flag "use function type"
+
+## Return-type dimensionality ladder
+
+Every step UP this ladder forces a new branch at every call site. Prefer the simplest type that does the job — and when forced higher, do it deliberately.
+
+```
+void  <  bool  <  T  <  Option<T>  <  Result<T, E>
+```
+
+- **`void`**: callers can't branch on the result at all (best for pure side effects with diagnostic-complete errors via Result on the error path).
+- **`bool`**: one bit of state, two branches. Use only when the two states are genuinely symmetric (success/failure of equal interest).
+- **`T`**: a value, no absence to handle. Use when the function never reasonably "doesn't have a value".
+- **`Option<T>`**: value or normal absence. Caller must consider both.
+- **`Result<T, E>`**: value or failure with diagnostic info. Caller must consider success path AND each error variant.
+
+Reviews: function returning `Result<T, E>` where the error variants are never observed and absence would suffice -> flag "downgrade to `Option<T>`"; function returning `Option<T>` where `T | null` could not occur and the function is total -> flag "downgrade to `T`".
 
 ## Interface/Trait Design for Extensibility
 

@@ -229,6 +229,12 @@ You MUST complete each phase before proceeding to the next.
    - No other tests broken?
    - Issue actually resolved?
 
+4. **Sweep adjacent code for sibling mistakes**
+   - Bugs cluster. The same class of mistake (forgotten clone, missing `await`, wrong unit, swapped argument, missing null check) often appears nearby.
+   - Immediately after the fix, scan the surrounding file and any direct callers for the same pattern.
+   - Cost: 30 seconds. Alternative: an identical incident next week.
+   - Pair with a grep / lint scan over the whole codebase if the pattern is mechanical.
+
 4. **If Fix Doesn't Work**
    - STOP
    - Count: How many fixes have you tried?
@@ -303,6 +309,28 @@ If you catch yourself thinking:
 | **2. Pattern** | Find working examples, compare | Identify differences |
 | **3. Hypothesis** | Form theory, test minimally | Confirmed or new hypothesis |
 | **4. Implementation** | Create test, fix, verify | Bug resolved, tests pass |
+
+## After the Fix — Harden the Environment, Not the Human
+
+If the same class of bug keeps appearing (across the codebase, or in your own work), the brain is the wrong place to store the discipline that prevents it. Change the environment so the mistake becomes hard to make.
+
+| Repeated mistake | Environmental fix |
+|---|---|
+| Forgotten `await` on a Promise | `eslint-plugin/no-floating-promises`, or wrap returns in a non-Promise type |
+| Mixed up two same-typed parameters | Wrap in a named object, or branded types |
+| Wrong unit (ms vs seconds, bytes vs KB) | Encode units in the type or in the variable name (`delay_ms`, `size_kb`) |
+| Forgotten null check at a boundary | Make the type non-nullable; validate at the boundary; eliminate the null source |
+| Re-introduced a bug after fixing it | Failing regression test on file with issue link |
+| Hit a flaky external API in dev | Mock by default, opt-in for live |
+| Edited in the wrong git branch | Shell prompt shows branch + dirty state |
+
+The instinct "I'll just be more careful" predicts a future repeat of the same bug. Lint rules, types, tests, and prompts predict zero repeats. After every non-trivial fix, ask: "what environment change would make this class of mistake impossible?"
+
+## The Distraction Loop During Debugging
+
+If you find yourself wanting to "try something else", "take a break", or "context-switch to another task" mid-debug, recognize the pattern: debugging produces effort/anxiety, switching tabs removes the anxiety AND adds dopamine — that's a positively reinforced loop, not a signal that you've hit a real dead end. The urge to switch is often a symptom of progress on something hard, not the signal to abort. Sit with it for 30-90 seconds; if it's a real dead end, the urge persists. If it's the loop, it passes.
+
+If you've actually tried three hypotheses cleanly and they all failed, see Phase 4.5 (Question Architecture) — that's the legitimate exit. Tab-switching is not.
 
 ## When Process Reveals "No Root Cause"
 
