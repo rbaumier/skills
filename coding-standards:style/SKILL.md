@@ -30,6 +30,11 @@ description: Use when writing or reviewing comments, docstrings, names, control 
 - **Banned words — closed list, grep-able, zero exceptions:** `tally`, `tallies`, `flapping`, `hog`, `spurious`, `singleton`, `contended`, `bookmarking`, `trailing`, `leaky`, `flush`, `starve`. Presence = violation, rewrite. **The closed list is the floor, not the ceiling** — apply the same test to every word you write: shorter-older-more-childlike wins.
 
 ### 3. Content Rules: Why over How
+- **Place comments inline next to the statement they guard.** A multi-line "steps" block at the top of a function paraphrases the code, rots on the first refactor, and forces the reader to mentally re-pair abstract steps with lines. If a comment would describe N steps, write N separate inline comments next to N different statements — not one block. Function doc (above the signature) is the ONLY top-of-function prose and names consumer-visible behavior, never steps (see Section 5).
+  - ❌ 6-line block atop the function: *"1. Validate input. 2. Fetch user. 3. Check permission. 4. Update record. 5. Emit event. 6. Return result."*
+  - ✅ Each line lives where it applies, e.g. above `if (!isAllowed(user, record))`: *"Permission re-checked here: caller's check is advisory."*
+  - **Counter-example (when a top block IS correct):** dense SQL or an atomic state-machine algorithm (Section 1, Exception 5) — walking through the invariant once at the top is the point. Outside Exception 5, this rule applies.
+  - Reviews: 3+ line "what this function does" block above an ordinary function body → flag "split per-statement and move next to the relevant line, or delete if the code already says it."
 - **How -> Code. Why -> Comment. Never both.** The code shows the mechanics. Dense SQL/math (Exception 5) is the only exception where you walk through invariant steps.
 - **Customer/operator consequence:** Document what happens for the customer/operator. What human-visible symptom occurs if it fails?
 - **Don't paraphrase the callee:**
