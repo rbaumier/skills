@@ -76,14 +76,17 @@ If every agent returned "No findings.": done. Proceed to Step 5.
 
 Otherwise, re-spawn only agents that had findings OR whose scoped files were touched by a fix. Continue fixing, committing, and re-launching until convergence.
 
-### Step 5 — HTML Report
+### Step 5 — Brief conversation summary
 
-Generate a self-contained HTML report:
-- **Summary:** iteration count, agents per iteration, convergence confirmation
-- **Per iteration:** findings by agent, corrections with reasoning, commit diff
-- **Non-regression tests:** bug description paired with the test that covers it
+Print a short summary directly in the conversation. No file artifact.
 
-Write to `code-review-report-YYYY-MM-DD.html` in the project root. Open with `open`.
+Format:
+- Iterations: N (converged on iteration K)
+- Agents per iteration: N₁ → N₂ → … (e.g. 12 → 4 → 0)
+- Findings fixed: total count, grouped by agent
+- Non-regression tests added: one bullet per bug (description → test name)
+
+Keep it under ~15 lines. The diff is the source of truth; the summary just locates it.
 
 ---
 

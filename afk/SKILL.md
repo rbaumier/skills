@@ -150,7 +150,7 @@ if [ -s "$STATE_FILE" ]; then
     def isIidOk: . == null or (type == "number" and . == (. | floor) and . >= 1);
     def isStrArrOk: . == null or (type == "array" and (all(type == "string")));
     def isBoolOk: . == null or type == "boolean";
-    def allowedKeys: ["iid","title","status","branch","parent_branch","parent_mr","mr_url","touched_files","review_iterations","loop_report_path","pushed_at_sha","created_during_cycle","discovered_from_issue","notes"];
+    def allowedKeys: ["iid","title","status","branch","parent_branch","parent_mr","mr_url","touched_files","review_iterations","pushed_at_sha","created_during_cycle","discovered_from_issue","notes"];
     [.[]
       | select(
           (.iid | type) != "number" or .iid != (.iid | floor) or .iid < 1
@@ -163,7 +163,6 @@ if [ -s "$STATE_FILE" ]; then
           or (.pushed_at_sha | isNullOrNonEmptyStr | not)
           or (.review_iterations | isNumOk | not)
           or (.touched_files | isStrArrOk | not)
-          or (.loop_report_path | isNullOrNonEmptyStr | not)
           or (.created_during_cycle | isBoolOk | not)
           or (.discovered_from_issue | isIidOk | not)
           or (.notes | (. == null or type == "string") | not)
@@ -415,7 +414,6 @@ Decide the order yourself. Reasonable heuristics:
 - `mr_url` — once opened
 - `touched_files` — array of paths, filled in after implementation
 - `review_iterations` — once code-review-loop runs
-- `loop_report_path` — path to the code-review-loop HTML report, if any
 - `pushed_at_sha` — local commit SHA at the time `git push` succeeded; `null` if never pushed
 - `created_during_cycle` — boolean, `true` if filed via Phase 3, else `false`
 - `discovered_from_issue` — iid of the parent issue if `created_during_cycle`, else `null`
@@ -585,7 +583,6 @@ Compare with every `done` cycle entry's `touched_files`. If you branched as **in
 Record into state for the current issue:
 - `review_iterations`: how many iterations the loop ran
 - `touched_files`: `git diff --name-only $BASE...HEAD` — this issue's files only
-- `loop_report_path`: path to the loop's HTML report, if produced
 
 ### Phase 5 — Open the MR
 
@@ -726,7 +723,7 @@ For each failed entry, derive the branch line from state:
 - Else if branch was pushed → "Branch pushed at `origin/<branch-name>`."
 - Else → "Branch left locally at `<branch-name>`, not pushed (reason: <e.g., collision, abort>)."
 
-Then add: "No MR opened. Review-loop report: <loop_report_path or 'n/a'>."
+Then add: "No MR opened. Unresolved findings: see `notes`."
 
 - #67 — <title> — reason: <e.g., code-review-loop did not converge after 8 iterations> — <derived branch line above>
 - #45 — <title> — reason: branch name collision with stale remote — Branch left locally at `<branch>`, not pushed. No MR opened.
@@ -749,7 +746,7 @@ PUSHED_SHA=$(git rev-parse HEAD)
 
 - **Issue too vague to implement.** Comment on the issue with the questions you'd need answered. Mark `blocked`. Move on. No branch was created, nothing to push.
 - **Tests won't pass after reasonable attempts.** Commit what you have. `git push -u origin <branch-name>`. Do **not** open an MR. Mark `failed`. Record the reason in `notes`.
-- **code-review-loop doesn't converge after 8 iterations.** Stop the loop. Commit current state. `git push -u origin <branch-name>`. Do **not** open an MR. Mark `failed`. Record unresolved findings in `notes`. The user inspects the branch and the loop's HTML report in the morning.
+- **code-review-loop doesn't converge after 8 iterations.** Stop the loop. Commit current state. `git push -u origin <branch-name>`. Do **not** open an MR. Mark `failed`. Record the unresolved findings (per-agent, with file:line citations) into `notes`. The user inspects the branch and the `notes` field in the morning.
 - **Conflict against `$DEFAULT_BRANCH` mid-cycle** (someone pushed while you were running). Rebase. If the rebase is non-trivial, commit and push current state, mark `failed`, move on.
 - **`git push` succeeds but `glab mr create` fails.** Keep the entry `in-progress` with `notes` describing the error. Phase 2's resume logic will route back into Phase 5, where the idempotence check detects the pushed branch and retries `glab mr create` only. If the retry also fails: mark `failed`, leave the branch pushed, record the error in `notes`.
 - **External command exits non-zero unexpectedly** and the failure is not covered above. Retry once. If it still fails: if no side effect happened on remote, leave the entry as it was (`pending` or `in-progress`) and surface the error in `notes`; if a side effect did happen, treat per the partial-failure rule above. After two failed retries on the same command for the same issue, mark `failed` so the cycle can complete.
