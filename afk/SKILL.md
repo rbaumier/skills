@@ -318,7 +318,8 @@ On resume (`RESUME=1`), the trap is re-registered fresh on the new process. The 
 page=1
 tmpdir=$(mktemp -d)
 while :; do
-  batch=$(glab issue list --state opened --per-page 100 --page "$page" --output json 2>/dev/null)
+  # glab 1.80+ defaults to opened and does not accept `--state opened`; rely on the default.
+  batch=$(glab issue list --per-page 100 --page "$page" --output json 2>/dev/null)
   # Distinguish API failure from end-of-results: a valid empty page is "[]",
   # but a network or auth failure typically yields empty string or non-JSON.
   if [ -z "$batch" ] || ! printf '%s' "$batch" | jq empty 2>/dev/null; then
@@ -347,7 +348,7 @@ The helper `fetch_open_mrs_for_issue` is defined in Phase 0. Iterate the queue a
 ```bash
 # Helpers (fetch_open_mrs_for_issue, upsert_skip, remove_skip) are defined in Phase 0.
 
-jq -c '.[]' /tmp/afk-queue.json | while read row; do
+jq -c '.[]' /tmp/afk-queue.json | while IFS= read -r row; do   # -r preserves backslashes in titles (e.g., backticks/markdown)
   iid=$(printf '%s' "$row" | jq '.iid')
   title=$(printf '%s' "$row" | jq -r '.title')
   result=$(fetch_open_mrs_for_issue "$iid")
@@ -593,7 +594,7 @@ Before pushing and creating the MR, check the remote state — you may be resumi
 ```bash
 REMOTE_SHA=$(git ls-remote --heads origin <branch-name> | awk '{print $1}')
 LOCAL_SHA=$(git rev-parse HEAD)
-EXISTING_MR=$(glab mr list --source-branch <branch-name> --state opened --output json | jq 'length')
+EXISTING_MR=$(glab mr list --source-branch <branch-name> --output json | jq '[.[] | select(.state == "opened")] | length')
 ```
 
 - `REMOTE_SHA` empty → not pushed yet. Push, then `glab mr create`.
