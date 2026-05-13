@@ -225,7 +225,7 @@ Use whatever end-to-end type tool the project already has (tRPC, oRPC, Elysia, T
 **MANDATORY: After ANY modification to TypeScript/JavaScript files, run the audit before considering your work done.** No exceptions -- not for "small changes," not for "I'll run it later."
 
 ```bash
-comply --working-tree
+/Users/rbaumier/www/comply/target/release/comply --working-tree
 ```
 
 Fix all errors before committing. Modes: `--working-tree`, `--last-commit`, `--commit <sha>`, `--staged`, or no flag for full scan.
