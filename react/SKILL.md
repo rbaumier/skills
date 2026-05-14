@@ -3,6 +3,22 @@ name: react
 description: React and Next.js performance optimization, diagnosis, and health-check guidelines. Use when writing, reviewing, refactoring, or auditing React/Next.js code.
 ---
 
+## Code-review gate: run react-doctor first
+
+**When invoked from `code-review-loop` (or any reviewing context), before walking the rules below, run:**
+
+```bash
+bunx react-doctor@latest
+```
+
+Use the project's runtime if Bun isn't installed: `pnpm dlx react-doctor@latest` or `npx react-doctor@latest`. Pick whatever matches the lockfile.
+
+Treat each diagnostic in the output as a finding, with file:line taken from react-doctor's report. Rank them by the priority table below.
+
+`react-doctor` runs the mechanical checks this skill encodes by hand (hook deps, SSR-unsafe patterns, bundle hazards, common Next.js misuses). Letting it go first catches those cheaply so your manual review can focus on the judgment calls.
+
+**Do not skip this step** because the diff "looks small" or "looks unrelated to React". If the project ships React code, run it. If `react-doctor` errors out (network, missing peer dep, unknown flag), note it as a finding (`could not run react-doctor: <reason>`) so the user sees it. Never proceed silently.
+
 ## Issue Priorities
 
 > When reviewing or optimizing, fix issues in this order. Higher priority = bigger user impact.
