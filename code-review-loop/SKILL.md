@@ -51,6 +51,8 @@ If you are unsure, spawn Dogfood. A spurious dogfood run is cheap; a missed runt
 
 **Codex:** only if the user explicitly requests it.
 
+**General Opus 4.7:** always spawn. Same role as Codex (generalist reviewer, no skill loaded). Spawn via `general-purpose` subagent with `model: opus`.
+
 **Scope files per agent:**
 - Language agents: only files matching the extension
 - Framework/lib agents: only files that import the framework
