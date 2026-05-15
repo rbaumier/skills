@@ -31,6 +31,31 @@ Dispatch a code-reviewer subagent to catch issues before they cascade. The revie
 - Before refactoring (baseline check)
 - After fixing a complex bug
 
+### Triage Before Requesting Review
+
+The standard for "is this worth a review request" is **shape, not size**. A 500-line mechanical rename is safer than a 3-line operator flip on a permissions check. Apply this filter before the self-check.
+
+**Skip the review entirely** when the diff is genuinely trivial:
+
+- single-word doc typo, whitespace/format-only, or comment-only
+- lockfile or generated-code regeneration
+- mechanical rename whose only effect is import-path updates
+- low-risk dependency patch bump
+
+**Do NOT skip** when the diff looks trivial but isn't — small diff, big blast radius:
+
+- any 1-line change to SQL, regex, auth, billing, permission, or signature-verification code
+- flipping a feature-flag default, a config default, or a retry/timeout constant
+- changing a money, tax, currency, or fee constant by any amount
+- changing an HTTP method, redirect URL, response code, or status enum
+- tightening or loosening a comparison operator (`<` ↔ `<=`, `==` ↔ `!=`)
+- renaming a public API surface (the shape is trivial; the blast radius is not)
+- adding a new direct dependency (supply-chain surface)
+- a "typo fix" in user-facing copy that changes meaning ("approved" → "denied")
+- mixed diffs where a semantic 1-liner is buried in whitespace/formatting changes
+
+When unsure, request the review.
+
 ### Pre-Review Self-Check
 
 Before dispatching the code-reviewer subagent, do a personal pass — **read every changed line as if you were explaining it out loud to a teammate who hadn't seen the work yet**. The mental act of explaining catches more silly bugs than any linter: wrong variable name, missing `await`, swapped arguments, copy-paste residue, off-by-one in a loop. Cheap, fast, surprisingly effective.
@@ -78,12 +103,21 @@ HEAD_SHA=$(git rev-parse HEAD)
 ```
 
 **2. Dispatch code-reviewer subagent** with these placeholders:
-- `{WHAT_WAS_IMPLEMENTED}` — What you built
-- `{PLAN_OR_REQUIREMENTS}` — What it should do
+- `{PLAN_OR_REQUIREMENTS}` — The spec the change is meant to satisfy (what it should do, not what you built)
 - `{BASE_SHA}` / `{HEAD_SHA}` — Commit range
-- `{DESCRIPTION}` — Brief summary with file-by-file purpose
-- `{TESTING_DONE}` — How changes were verified (tests added, manual checks)
-- `{RISKS}` — Known risks, areas of uncertainty, things reviewer should scrutinize
+- `{TESTING_DONE}` — A tight summary of how you verified the change (tests added, manual checks, fixes you applied during build with their root causes). Lets the reviewer check that fixes addressed root causes rather than suppressed symptoms.
+- `{RISKS}` — Known risks, areas of uncertainty, things you want scrutinized
+
+### Delegation Discipline
+
+A reviewer finds more when it discovers scope on its own. Four biases to avoid:
+
+- **Don't summarize what you implemented.** Summaries bias the reviewer toward validating the shape of your solution instead of questioning whether the solution is right.
+- **Don't curate a reading list.** Let the reviewer discover scope from the diff and the codebase. A reading list reflects the files YOU touched, not the files affected.
+- **Don't pre-shape findings with a severity schema.** That leaks your hypotheses about what matters. Severity is your call at evaluation time, not the reviewer's.
+- **Don't defect-hunt in parallel with the reviewer.** Your role is dispatch + evaluation. Hunting bugs alongside the reviewer reintroduces the implementation bias the reviewer is meant to mitigate.
+
+For diffs that depend on third-party API contracts, SDK semantics, framework directives, or DB-engine specifics, explicitly instruct the reviewer to **verify load-bearing claims via web search and quote source URLs** rather than trust training data. This is the single most common review-quality failure mode: an "I'm pretty sure Stripe does X" that turns out wrong in production.
 
 ### Change Descriptions
 
@@ -179,6 +213,22 @@ Label every comment with severity so the author knows what is required vs option
 | **[QUESTION]** | Clarifications, "why did you..." | Answer in thread, no code change |
 | **[FYI]** | Informational only | No action needed |
 
+### The Bloat Filter (run before submitting any finding)
+
+Reviewers — human and AI alike — bias toward *recommending additions*. Before a finding leaves your draft, run it through this filter:
+
+A finding is worth submitting only if applying its fix would leave the code more **sound + correct + elegant**. Two-out-of-three is a signal to keep looking for a fix that gets all three, not to ship the two-out-of-three change.
+
+Drop findings that propose:
+
+- defensive checks for cases that can't happen (e.g. null guards on values the type system already proves non-null)
+- abstractions used only once
+- comments restating obvious code
+- tests asserting tautologies (language semantics, type guards, "it returns a string when given a string")
+- "just-in-case" guards added without an identified failure mode
+
+A change that nominally improves correctness by degrading elegance usually makes the codebase worse, not better. The smallest diff that fixes the real defect almost always wins. Authors who receive bloat-shaped suggestions should push back using the same filter — see the *Bloat Check on Incoming Feedback* subsection in Part 3.
+
 ### Step 5: Verify the Verification
 
 Check the author's verification story: What tests were run? Did the build pass? Was it tested manually? Are there screenshots for UI changes? Is there a before/after comparison?
@@ -221,6 +271,24 @@ Before approving any new dependency:
 - Push back on approaches with clear problems. Sycophancy is a failure mode.
 - Accept override gracefully. If the author has full context and disagrees, defer to their judgment.
 - Comment on code, not people.
+
+### Communicating Review Severity (GitHub Alert Ladder)
+
+When the review lands on a GitHub PR, the callout intensity is the **first** thing the author sees — it sets the next action they'll take. The `approved` flag is the second lever: GitHub renders a "Fix" button on every non-approving review, so `approved: false` invites the author to click Fix, and `approved: true` suppresses it.
+
+Pick the tier that matches the action the author's situation actually justifies:
+
+| Tier | Callout | Use for | `approved` | Inline comments |
+|---|---|---|---|---|
+| **Critical** | `> [!CAUTION]` (large red — "this will break something") | Bugs, security holes, data loss, broken core flows | `false` | yes — anchor every finding |
+| **Must-address** | `> [!IMPORTANT]` (large purple — "look at this before merging") | Real consequences if shipped: incorrect behavior, missing validation, regressions the author should fix before merge | `false` | yes |
+| **Minor only** | *no callout* (plain text) | Single-line nits, doc polish, defer-able observations, "rough edges" | `false` | yes |
+| **Informational** | `> [!NOTE]` (small blue — "FYI") | Mergeable as-is, nothing actionable, surfacing a noteworthy observation | `true` | **no** |
+| **Clean** | "No new issues found." | No findings worth surfacing | `true` | no |
+
+**Why the two levers matter together.** Wrapping mergeable feedback in `[!IMPORTANT]` trains authors to click Fix on reviews that don't actually need fixing — they stop trusting the callout. Reserve `[!CAUTION]` and `[!IMPORTANT]` for findings with concrete fallout; downgrade to plain text for nits and "consider also" suggestions.
+
+**Why `[!NOTE]` excludes inline comments.** Inline anchors signal "act on this," which contradicts `[!NOTE]`'s "no action needed." If a point is concrete enough to anchor to a line, downgrade the whole review to **minor only** (`approved: false`, no callout) instead of mixing `[!NOTE]` with inline comments.
 
 ---
 
@@ -307,6 +375,22 @@ IF reviewer suggests "implementing properly":
   IF unused: "This endpoint isn't called. Remove it (YAGNI)?"
   IF used: Then implement properly
 ```
+
+### Bloat Check on Incoming Feedback
+
+Reviewers — including AI ones — bias toward recommending additions. Before applying any feedback, run it through the **Bloat Filter from Part 2**: would applying this fix leave the code more *sound + correct + elegant*? Two-out-of-three is a signal that the suggestion is bloat-shaped.
+
+Push back (technically, not defensively) when the feedback proposes:
+
+- defensive checks for cases that can't happen (e.g. null guards on type-guaranteed values)
+- an abstraction used only once
+- comments restating obvious code
+- tests asserting tautologies (language semantics, type guards)
+- "just-in-case" guards without a named failure mode
+
+The push-back form is: "Applying this would add X without addressing a real failure mode I can identify. Concretely, [reasoning]. Happy to apply if you can name the scenario." Then either the reviewer names the scenario (and the change earns its place) or the suggestion is withdrawn.
+
+This is the same filter the reviewer should have applied before submitting. Applying it on receipt catches what slipped through.
 
 ### Implementation Order
 

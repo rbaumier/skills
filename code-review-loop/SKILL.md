@@ -9,9 +9,33 @@ Specialized review agents in parallel. Fix every finding. Loop until convergence
 
 ## When not to use
 
-- Diff under 10 lines or single-file typo/rename
-- No code changes (docs-only, config-only)
-- The user wants a quick opinion, not an autonomous fix loop
+The right standard is **shape, not size**. A 500-line mechanical rename is safer than a 3-line operator flip on a permissions check.
+
+**Skip when the diff is genuinely trivial** (regardless of how many lines it touches):
+
+- single-word doc typo, whitespace/format-only, or comment-only
+- lockfile or generated-code regeneration
+- mechanical rename whose only effect is import-path updates
+- low-risk dependency patch bump
+- docs-only changes (markdown, no runtime effect)
+- inert config changes (linter/formatter rules, editor settings, build-tool flags with no runtime effect)
+- the user wants a quick opinion, not an autonomous fix loop
+
+Note: "config-only" is NOT a blanket skip. A diff that touches only config files but flips a feature-flag default, retry/timeout, auth callback URL, deployment target, or secrets wiring **is** runtime-affecting and falls under "looks trivial but isn't" below.
+
+**Do NOT skip when the diff looks trivial but isn't** — small diff, big blast radius:
+
+- any 1-line change to SQL, regex, auth, billing, permission, or signature-verification code
+- flipping a feature-flag default, a config default, or a retry/timeout constant
+- changing a money, tax, currency, or fee constant by any amount
+- changing an HTTP method, redirect URL, response code, or status enum
+- tightening or loosening a comparison operator (`<` ↔ `<=`, `==` ↔ `!=`)
+- renaming a public API surface (the shape is trivial; the blast radius is not)
+- adding a new direct dependency (supply-chain surface)
+- a "typo fix" in user-facing copy that changes meaning ("approved" → "denied")
+- mixed diffs where a semantic 1-liner is buried in whitespace/formatting changes
+
+When unsure, run the loop. A spurious run costs a few minutes of agent time; a missed billing bug costs much more.
 
 ## The Funnel
 
@@ -38,6 +62,28 @@ Run `git diff --name-only main...HEAD` to get all changed files. Determine which
 **Spawn by imports** (one agent per detected skill):
 `better-auth-best-practices`, `better-result-adopt`, `database`, `docker`, `drizzle-orm`, `frontend`, `i18n`, `kubernetes`, `react`, `react-native`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui`, `ui-animations`, `ui-ux`, `vue`, `web-performance`, `zod`
 
+**Spawn by subsystem touched.** When the diff touches a high-stakes subsystem, spawn an extra **subsystem-framed agent** alongside the generic Correctness agent. The framing primes the agent for domain-specific failure modes a generic "correctness" lens misses (double-charges, refund races, signature replay, cross-tenant leaks).
+
+**File-set for subsystem detection** matches the Dogfood rule: union `git diff --name-only main...HEAD` with `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Otherwise uncommitted edits to auth/billing/schema files silently bypass the high-stakes lenses.
+
+**Pass the unified file-set to the spawned agent**, not just the `main...HEAD` slice. When uncommitted files trigger the lens, the agent must see those files' contents. In the agent's prompt, instruct it to read the file directly (not via `git diff main...HEAD`), since the diff may not yet exist for unstaged/untracked work. Concretely: replace the standard `rtk proxy git diff main...HEAD -- {files}` line in the subsystem prompt with `read the current contents of {files} directly, and run \`git diff -- {files}\` to see the unstaged delta on top`.
+
+Each trigger is specific enough to avoid firing on UI tokens, ARIA roles, job listings, or generic "workspace" UI. A row fires only when **at least one** of its concrete signals is present in the changed file set.
+
+All path globs below are **recursive** — `**/billing/**` matches `apps/api/src/billing/prices.ts` as well as `billing/index.ts`. Modern monorepos rarely place subsystem code at the repo root.
+
+| Trigger (recursive path globs, imports, or code patterns) | Subsystem agent | Failure modes it should hunt |
+|---|---|---|
+| files under `**/billing/**`, `**/payments/**`, `**/invoices/**`, `**/subscriptions/**`; OR imports of `stripe`, `@paddle/`, `@lemonsqueezy/`; OR code with `chargeAmount`, `refundAmount`, `idempotencyKey`, `invoice.*total` | **billing-subsystem** | double-charge, refund races, currency rounding, dispute flows, idempotency keys |
+| files under `**/auth/**`, `**/session/**`; OR imports of `better-auth`, `next-auth`, `lucia`, `@clerk/`, `@auth/`; OR code with `signIn(`, `signUp(`, `getSession(`, `verifyJwt`, `bcrypt`, `argon2` | **auth-subsystem** | session fixation, token leak, replay, MFA bypass, account takeover |
+| files under `**/migrations/**`, `**/drizzle/migrations/**`, `**/prisma/migrations/**`; OR `**/*.sql` schema files; OR Drizzle/Prisma `**/schema.ts` edits that alter columns | **schema-migration-subsystem** | forward + rollback safety, column-nullability flips, data loss, downtime |
+| files with `webhook` anywhere in the path (`**/webhook*/**`, `**/*webhook*.ts`); OR code with `verifySignature`, `crypto.createHmac`, `crypto.timingSafeEqual` | **webhook-subsystem** | signature verification, replay protection, timing-attack-safe compare |
+| files under `**/policies/**`, `**/permissions/**`, `**/rbac/**`; OR imports of `casl`, `@casl/`; OR code with `hasPermission(`, `canAccess(`, `authorize(`, `Policy.` | **rbac-subsystem** | privilege escalation, cross-role data leaks, policy drift |
+| code that filters DB queries by `tenantId`, `organizationId`, or `workspaceId`; OR middleware that resolves a current tenant/org/workspace | **multi-tenant-subsystem** | cross-tenant leaks, missing tenant filters on shared tables |
+| files under `**/cron/**`, `**/jobs/**`, `**/workers/**`; OR imports of `bullmq`, `bull`, `agenda`, `node-cron`, `@trigger.dev/`, `inngest`; OR code with `defineJob(`, `enqueue(`, `.cron(` | **cron-subsystem** | duplicate execution, missed runs, ordering, dead-letter handling |
+
+The subsystem agent **adds to** (does not replace) the generic Correctness agent. Use the **Subsystem Agent** prompt template below — not the Skill Agent template, which would try to load a non-existent skill of that name.
+
 **Spawn by interface touched.** If the diff changes a user-facing surface, also spawn a **Dogfood** agent. Detect broadly — *err on the side of triggering*. Categories and signals:
 
 - **Web UI**: `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `*.html`, CSS / design-token files (`*.css`, `*.scss`, `tokens.*`, theme files), `app/**/page.*`, `pages/**`, `src/routes/**`, server actions, i18n copy files, public/static assets that change observable behaviour.
@@ -61,20 +107,47 @@ If you are unsure, spawn Dogfood. A spurious dogfood run is cheap; a missed runt
 
 ### Step 1 — Spawn all agents in a single message block
 
-Launch every agent in one message block so they run in parallel. Use the prompt templates below. Pass each agent its scoped file list.
+**Parallelism is the only reason this skill exists.** The default tool-call behavior is serial: emit one Task call, await the result, emit the next. That collapses your fan-out into `N × (think-time + agent-time)` of wall time and defeats the whole point. **Override the default.** Emit ALL Task tool_use blocks in the SAME assistant message, BEFORE reading ANY result from ANY of them.
 
-### Step 2 — Process findings and fix
+- ✅ **Right pattern:** one assistant turn with N parallel Task blocks → wait → N results arrive together → aggregate.
+- ❌ **Wrong pattern:** turn 1 = Task(L1) → turn 2 (after L1 result) = Task(L2) → turn 3 (after L2 result) = Task(L3). If you catch yourself doing this, stop and re-issue everything together.
+
+You can also include your own `read` / `grep` / `webfetch` calls in the SAME turn as the parallel Task dispatches — concurrent context-pulling runs in parallel with the fan-out and costs zero extra wall time.
+
+Use the prompt templates below. Pass each agent its scoped file list.
+
+### Step 2 — Process findings, drop bloat, then fix
 
 Read all reports. Process in funnel order:
 1. L1 findings first. If L1 says "delete this module," discard findings about that module from other agents.
 2. L2 findings next. If L2 says "merge these files," discard file-level findings on the originals.
 3. All other findings. Contradictions: the simpler option wins.
 
-Fix every finding, regardless of how many agents reported it. A single-agent finding is just as valid as one from seven agents.
+**Filter bloat-shaped findings before doing anything else.** Review agents — including these — bias toward *recommending additions*. The bar for every kept finding is **sound + correct + elegant**. Two-out-of-three is a signal to look harder for a fix that gets all three, not to mechanically apply the proposed change.
+
+For each finding, do a two-step triage:
+
+1. **Is the underlying failure mode real?** Verify by reading the cited code — does the described scenario actually occur, or is it imagined? If the failure mode is imagined (e.g. a null guard on a type-guaranteed value), drop the finding entirely.
+
+2. **If the failure mode is real but the proposed remedy is bloated**, keep the finding and rewrite the fix. A real race condition with a "just add a mutex everywhere" remedy is still a real race condition — look for a smaller fix (remove the shared state, narrow the lock, switch to an atomic primitive). Never drop a real defect just because its proposed fix is ugly.
+
+Bloat-shaped remedies typically propose:
+
+- defensive checks for cases that can't happen (e.g. null guards on values the type system already proves non-null)
+- abstractions used only once
+- comments restating obvious code
+- tests asserting tautologies (language semantics, type guards, "it returns a string when given a string")
+- "just-in-case" guards added without an identified failure mode
+
+A change that nominally improves correctness by degrading elegance usually makes the codebase worse, not better. The smallest diff that fixes the real defect almost always wins.
+
+For the findings that survive: fix every one, regardless of how many agents reported it. A single-agent finding is just as valid as one from seven agents; overlap is a signal of higher confidence, not of higher priority.
 
 **Parallelize fixes.** Group findings by file. Spawn one fix agent (model: `sonnet`) per file group, in parallel. Fix agents receive only their findings and apply all of them. Fix agents do not load skills. Do NOT use `isolation: "worktree"`. Fix agents work directly on the current working tree.
 
 **Bugs get TDD treatment.** Write a non-regression test that fails first, then fix the code so the test passes.
+
+**Re-read your own fixes.** After the fix agents return, re-read each changed file. If any fix you accepted now reads as bloat in context (a guard for an impossible case, a one-use abstraction, a tautological test), revert it. Catching bloat in your own diff is cheaper than catching it on the next review.
 
 ### Step 3 — Verify and commit
 
@@ -85,9 +158,11 @@ Fix every finding, regardless of how many agents reported it. A single-agent fin
 
 ### Step 4 — Loop or stop
 
-If every agent returned "No findings.": done. Proceed to Step 4.5 (if Dogfood was flagged) or Step 5.
+**Convergence is measured on findings that survived the Step 2 triage, not raw agent output.** An agent that returned only imagined-failure-mode findings — all of which were dropped at step 1 of the triage — counts as converged. Otherwise the same imagined findings would resurface on the next iteration and the loop would never terminate.
 
-Otherwise, re-spawn only agents that had findings OR whose scoped files were touched by a fix. Continue fixing, committing, and re-launching until convergence.
+If every agent either (a) returned "No findings." or (b) had all of its findings dropped at step 1 of the Step 2 triage (imagined failure modes): done. Proceed to Step 4.5 (if Dogfood was flagged) or Step 5.
+
+Otherwise, re-spawn only agents whose findings survived the Step 2 triage OR whose scoped files were touched by a fix. Continue fixing, committing, and re-launching until convergence.
 
 ### Step 4.5 — Runtime dogfood (only if flagged in Step 0)
 
@@ -187,6 +262,24 @@ Your task:
 Stay within these files: {file_list}
 
 Output: a flat list of findings. If zero findings, say exactly: "No findings."
+```
+
+### Subsystem Agent (billing-subsystem, auth-subsystem, schema-migration-subsystem, etc.)
+
+```
+You review changed code under a specific domain frame — NOT a skill. The frame primes you to remember domain-specific failure modes a generic correctness lens misses.
+
+You are framed as the **{subsystem_name}** reviewer. The failure modes you should hunt: {failure_modes}.
+
+Do NOT attempt to load a skill named "{subsystem_name}" — this is a framing label, not a registered skill. Read the project's CLAUDE.md for conventions.
+
+Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files when context is needed. Grep the codebase for related call sites, schemas, and tests when a finding's correctness depends on them.
+
+Your task: walk the diff and, for each listed failure mode, ask whether the change plausibly introduces or amplifies it. Report only concrete instances — never a generic "consider adding handling for X" without a specific line that exhibits the gap.
+
+Stay within these files: {file_list}
+
+Output: a flat list of findings, each anchored to file:line. If zero findings, say exactly: "No findings."
 ```
 
 ### Correctness Agent
