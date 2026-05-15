@@ -7,13 +7,15 @@ description: Use when the user runs /afk to autonomously work through all open G
 
 You are running unattended. The user has left the keyboard, often gone to bed. They cannot rescue you mid-run. If you cut corners, the corners stay cut. Quality and discipline beat throughput.
 
+**Context is not your problem.** The harness auto-summarizes prior messages as the conversation grows; you are not limited by the context window and you have no token-budget signal to read. Do not estimate "remaining capacity" from how the conversation feels. Do not pre-emptively wrap up because you fear a cutoff. Finish the current issue, write state, pick the next one — every pick is a fresh logical step that the harness can handle however long the run goes. If you reach for a graceful-shutdown pattern based on perceived conversation length, you are about to fabricate a system constraint that does not exist.
+
 ## Announce at start
 
-"I'm using the afk skill to process the GitLab backlog unattended. Sequential mode, full code-review-loop per issue."
+"I'm using the afk skill to process the GitLab backlog unattended. Sequential within this instance (run ID `<RUN_ID>`), full code-review-loop per issue. Other AFK instances on this repo coordinate through the shared claims file."
 
 ## The four non-negotiables
 
-1. **One issue at a time.** No parallel implementation across issues. Finish each one (implementation + review + MR opened) before touching the next.
+1. **One issue at a time *within this instance*.** No parallel implementation across issues *inside this run*. Finish each one (implementation + review + MR opened) before touching the next. Multiple AFK runs in different worktrees of the same repo are allowed and coordinate through the shared claims file (see "Multi-instance coordination" below) — but each individual run stays strictly sequential.
 2. **Full code-review-loop per issue.** Every issue runs the `code-review-loop` skill to its own convergence. No skipping agents. No early exit because the diff is small.
 3. **Out-of-scope work becomes a new GitLab issue, not a side commit.** Anything you'd want to clean up that isn't required by the current issue gets filed. The new issue joins this cycle's queue.
 4. **Stop only when every fetched issue is either terminal in state OR durably deferred.** Two kinds of outcomes count as final for the stop check: (a) a state-file entry whose status is `done`, `blocked`, or `failed`; (b) a record in `"$SKIP_FILE"` (either `existing-mr` covered externally, or `api-error` we couldn't verify). Issues that are `pending` or `in-progress` in state, or absent from both files, do not count. GitLab issues stay `opened` until the MR is merged the next morning, so do **not** use `glab issue list` emptiness as the stop signal. Use the state file and skip file together.
@@ -24,12 +26,15 @@ The user flagged these patterns explicitly. If any of these thoughts cross your 
 
 | Temptation | Reality |
 |------------|---------|
-| "Sequential is slow, let me run two issues in parallel" | Parallel writes to a shared repo create conflicts, double-edits, and test-suite races. The user explicitly asked for sequential. |
+| "Sequential is slow, let me run two issues in parallel inside this instance" | Parallel writes to a shared worktree create conflicts, double-edits, and test-suite races. Each AFK run stays strictly sequential. If you want parallelism, the user opens a second worktree and launches another `/afk` there — the claims file makes them safe to coexist. |
 | "The diff is small, code-review-loop is overkill" | Small diffs hide subtle bugs. Convergence is the only reliable signal. Run the full loop. |
 | "Some review agents won't find anything, let me skip them" | Skipping any agent breaks the convergence guarantee. `code-review-loop` already decides which agents apply. Don't second-guess. |
 | "I noticed a refactor opportunity, let me sneak it in" | Scope creep. File an issue. It joins this cycle and gets its own MR. |
 | "The queue keeps growing as I find things. Time to cap it" | The cycle is exhaustion-based. A growing queue is expected behaviour. Keep going. |
 | "It's been many hours, time to wrap up" | Time isn't the stop condition. Terminal state for every queued item is. |
+| "My context is filling up / I'm running out of token budget, let me wrap up early before I get cut off" | There is no token-budget signal visible to you. Estimating "this conversation feels long" is fabrication, not observation. You do not get to terminalize pending issues with a made-up reason like "budget tokens main thread épuisé". The runtime handles context — your job is to finish issues. If you genuinely fear a cutoff: finish the *current* issue cleanly (push, MR or `failed`), write state, and move to the next pick. State is the resume point; the next pick starts a fresh logical step. Never mass-fail the queue with a fabricated system constraint. |
+| "I should stop here even though pendings remain; the user can resume tomorrow" | The user is asleep and cannot resume anything. Stopping with `pending` or `in-progress` entries in state is exactly what "unattended" forbids. Keep going until every entry is terminal. If you find yourself reaching for Phase 7 with non-terminal entries in state, you are violating non-negotiable #4 — go back to Phase 2. |
+| "Convergence on the substantive findings is good enough; the residuals are judgment calls / stylistic / nice-to-have" | There is no substantive-vs-residual split. Convergence is the loop's verdict, not yours. If any agent on the next iteration returned anything other than the literal string `No findings.`, you have not converged — your reading of the severity is irrelevant. The 8-iteration cap exists for cases where convergence is genuinely unreachable; use it, then mark `failed`. Do not pre-empt it with severity reasoning. |
 | "This issue is too vague, I'll just skip it" | Don't skip silently. Comment on the issue with the missing info, mark `blocked` in state, surface in the final report. |
 | "The user is asleep, let me ask in chat anyway, they'll see it later" | No mid-flight prompts. Use issue comments and the final report. The conversation must stand on its own when they return. |
 | "Tests are failing but probably unrelated, I'll open the MR anyway" | Failing tests block the MR. If you can't make them green, the issue is `failed`, no MR. Don't push bad green-looking state. |
@@ -77,6 +82,136 @@ AFK could not proceed.
 $state_summary
 EOF
 }
+```
+
+**Multi-instance coordination — claims, lock, run identity.** Run this block before any phase that reads the queue, picks an issue, or creates state. Paths below resolve through `--git-common-dir`, so every worktree of this repo sees the same coordination files. `STATE_FILE` / `SKIP_FILE` stay per-worktree (each instance keeps its own journal). The 4-hour stale-claim threshold is the floor at which a crashed instance gives its work back to siblings — long enough to outlast a code-review-loop iteration, short enough to recover by morning.
+
+```bash
+# Run identity — used in branch naming AND claim records so two instances can never collide.
+RUN_ID=$(uuidgen 2>/dev/null | tr 'A-Z' 'a-z' | tr -d '-' | head -c 8)
+[ -z "$RUN_ID" ] && RUN_ID=$(printf '%s%s' "$$" "$(date +%s | tail -c 5)")
+
+# Shared coordination files — same across every worktree of this repo.
+COMMON_DIR=$(git rev-parse --git-common-dir)
+CLAIMS_FILE="$COMMON_DIR/afk-claims.json"
+CLAIMS_LOCK_DIR="$COMMON_DIR/afk-claims.lock"
+STALE_AFTER=14400   # 4 hours in seconds
+
+[ -s "$CLAIMS_FILE" ] || printf '[]' > "$CLAIMS_FILE"
+
+# Atomic lock via mkdir (portable; macOS has no flock by default).
+acquire_claims_lock() {
+  local attempts=0
+  while ! mkdir "$CLAIMS_LOCK_DIR" 2>/dev/null; do
+    attempts=$((attempts+1))
+    if [ "$attempts" -gt 600 ]; then return 1; fi   # 60s — something is wedged
+    sleep 0.1
+  done
+}
+release_claims_lock() { rmdir "$CLAIMS_LOCK_DIR" 2>/dev/null; }
+
+# Validate CLAIMS_FILE shape — a corrupt shared file would break every instance.
+if ! jq empty "$CLAIMS_FILE" 2>/dev/null \
+  || [ "$(jq -r 'type' "$CLAIMS_FILE")" != "array" ]; then
+  write_fatal_report "Shared claims file $CLAIMS_FILE is corrupt. Inspect manually (other AFK instances may still be running on this repo)."
+  exit 1
+fi
+
+# Try to acquire a claim on an iid. Echoes "acquired" / "claimed-by-other" / "lock-failed".
+try_claim() {
+  local iid=$1
+  acquire_claims_lock || { echo "lock-failed"; return; }
+  local now stale active
+  now=$(date +%s); stale=$((now - STALE_AFTER))
+  active=$(jq --argjson iid "$iid" --argjson stale "$stale" --arg run "$RUN_ID" \
+    '[.[] | select(.iid == $iid and .heartbeat_at > $stale and .run_id != $run)] | length' "$CLAIMS_FILE")
+  if [ "$active" -gt 0 ]; then release_claims_lock; echo "claimed-by-other"; return; fi
+  jq --argjson iid "$iid" --arg run "$RUN_ID" --argjson now "$now" \
+    '[.[] | select(.iid != $iid or .run_id != $run)] + [{iid: $iid, run_id: $run, claimed_at: $now, heartbeat_at: $now}]' \
+    "$CLAIMS_FILE" > "$CLAIMS_FILE".tmp && mv "$CLAIMS_FILE".tmp "$CLAIMS_FILE"
+  release_claims_lock
+  echo "acquired"
+}
+
+# Bump heartbeat for our claim — call at phase transitions and around long-running steps.
+heartbeat_claim() {
+  local iid=$1
+  acquire_claims_lock || return 1
+  local now=$(date +%s)
+  jq --argjson iid "$iid" --arg run "$RUN_ID" --argjson now "$now" \
+    '[.[] | if .iid == $iid and .run_id == $run then .heartbeat_at = $now else . end]' \
+    "$CLAIMS_FILE" > "$CLAIMS_FILE".tmp && mv "$CLAIMS_FILE".tmp "$CLAIMS_FILE"
+  release_claims_lock
+}
+
+# Release one claim (called when the entry reaches a terminal state).
+release_claim() {
+  local iid=$1
+  acquire_claims_lock || return 1
+  jq --argjson iid "$iid" --arg run "$RUN_ID" \
+    '[.[] | select(.iid != $iid or .run_id != $run)]' \
+    "$CLAIMS_FILE" > "$CLAIMS_FILE".tmp && mv "$CLAIMS_FILE".tmp "$CLAIMS_FILE"
+  release_claims_lock
+}
+
+# Release every claim owned by this run (called on exit / abort).
+release_all_claims() {
+  acquire_claims_lock || return 1
+  jq --arg run "$RUN_ID" '[.[] | select(.run_id != $run)]' \
+    "$CLAIMS_FILE" > "$CLAIMS_FILE".tmp && mv "$CLAIMS_FILE".tmp "$CLAIMS_FILE"
+  release_claims_lock
+}
+
+# Is iid currently claimed by some other live instance? Returns 0 (true) if so.
+is_claimed_by_other() {
+  local iid=$1
+  acquire_claims_lock || return 0   # err on the safe side: pretend claimed
+  local now stale count
+  now=$(date +%s); stale=$((now - STALE_AFTER))
+  count=$(jq --argjson iid "$iid" --argjson stale "$stale" --arg run "$RUN_ID" \
+    '[.[] | select(.iid == $iid and .heartbeat_at > $stale and .run_id != $run)] | length' "$CLAIMS_FILE")
+  release_claims_lock
+  [ "$count" -gt 0 ]
+}
+
+# Any other live instance present (any claim with a different run_id)? Used by alias cleanup.
+other_instances_alive() {
+  acquire_claims_lock || return 0
+  local now stale count
+  now=$(date +%s); stale=$((now - STALE_AFTER))
+  count=$(jq --argjson stale "$stale" --arg run "$RUN_ID" \
+    '[.[] | select(.run_id != $run and .heartbeat_at > $stale)] | length' "$CLAIMS_FILE")
+  release_claims_lock
+  [ "$count" -gt 0 ]
+}
+
+# Presence claim — iid:null marker proving this instance is alive even before it has picked
+# its first issue. Required so an older instance's alias-cleanup pass can see us in Phase 0/1
+# (when we have no real claims yet) and NOT delete the shared `main` alias under our feet.
+register_presence() {
+  acquire_claims_lock || return 1
+  local now=$(date +%s)
+  jq --arg run "$RUN_ID" --argjson now "$now" \
+    '[.[] | select(.run_id != $run or .iid != null)] + [{iid: null, run_id: $run, claimed_at: $now, heartbeat_at: $now}]' \
+    "$CLAIMS_FILE" > "$CLAIMS_FILE".tmp && mv "$CLAIMS_FILE".tmp "$CLAIMS_FILE"
+  release_claims_lock
+}
+
+register_presence
+
+# Arm the cleanup trap now so any fatal-exit in Phase 0 still releases this run's claims.
+# AFK_CREATED_MAIN_ALIAS gets set later in step c; until then it's unset (= false), so the
+# alias branch is skipped on early exits — correct, since no alias was created yet.
+afk_cleanup() {
+  release_all_claims 2>/dev/null
+  if [ "$AFK_CREATED_MAIN_ALIAS" = "1" ]; then
+    if ! other_instances_alive; then
+      git branch -D main 2>/dev/null
+      rm -f "$ALIAS_MARKER"
+    fi
+  fi
+}
+trap afk_cleanup EXIT
 ```
 
 ```bash
@@ -240,12 +375,13 @@ After this block: `RESUME=1` means we're picking up an actually-interrupted cycl
 **Step c — code-review-loop alignment (only reached if Step b passed).** `code-review-loop`'s prompt templates hardcode `git diff main...HEAD`. If `$DEFAULT_BRANCH != "main"`, those diffs will be wrong. To make `code-review-loop` work without modifying it, ensure a local `main` ref exists pointing at the right place for the duration of the cycle. Because we only reach this step after Step b passed, the alias is created only on paths that will actually run a cycle — no leftover alias from aborted fresh starts.
 
 ```bash
-ALIAS_MARKER=$(git rev-parse --git-path afk-main-alias)
+# Marker lives in the SHARED common dir so every worktree sees the same "this main is ours" flag.
+ALIAS_MARKER="$COMMON_DIR/afk-main-alias"
 
 if [ "$DEFAULT_BRANCH" != "main" ]; then
   if git show-ref --verify --quiet refs/heads/main; then
     if [ -f "$ALIAS_MARKER" ]; then
-      # Existing 'main' is an AFK alias left by a prior crashed run. Adopt and refresh it.
+      # Either a prior AFK run left it, or a sibling instance just created it. Adopt and refresh.
       git update-ref refs/heads/main "refs/remotes/origin/$DEFAULT_BRANCH"
       AFK_CREATED_MAIN_ALIAS=1
     else
@@ -259,14 +395,9 @@ if [ "$DEFAULT_BRANCH" != "main" ]; then
   fi
 fi
 
-# Register exit-trap to remove the alias on EVERY exit path from this point on.
-cleanup_main_alias() {
-  if [ "$AFK_CREATED_MAIN_ALIAS" = "1" ]; then
-    git branch -D main 2>/dev/null
-    rm -f "$ALIAS_MARKER"
-  fi
-}
-trap cleanup_main_alias EXIT
+# The cleanup trap was armed earlier (right after register_presence) so a fatal-exit
+# anywhere in Phase 0 still releases claims. AFK_CREATED_MAIN_ALIAS is set above; by the
+# time the trap fires, afk_cleanup picks it up via shell variable scope.
 ```
 
 **Define the GitLab and skip helpers now** (they're used in Phase 1, 2, and 6; defining them in Phase 0 means they exist on both fresh starts and resumes):
@@ -295,6 +426,12 @@ upsert_skip() { # $1=iid, $2=title, $3=reason, $4=mr_url-or-empty
 remove_skip() { # $1=iid
   jq --argjson iid "$1" '[ .[] | select(.iid != $iid) ]' \
      "$SKIP_FILE" > "$SKIP_FILE".tmp && mv "$SKIP_FILE".tmp "$SKIP_FILE"
+}
+
+# Used by Phase 2's claim gate and MR recheck. Defined here so it's available to both.
+remove_from_state() { # $1=iid
+  jq --argjson iid "$1" '[ .[] | select(.iid != $iid) ]' \
+     "$STATE_FILE" > "$STATE_FILE".tmp && mv "$STATE_FILE".tmp "$STATE_FILE"
 }
 ```
 
@@ -419,7 +556,12 @@ Decide the order yourself. Reasonable heuristics:
 - `discovered_from_issue` — iid of the parent issue if `created_during_cycle`, else `null`
 - `notes` — short free-text, e.g., reason for `blocked` or `failed`, or last command stderr on partial failure
 
-**Populate the state file (fresh start, `RESUME=0`).** `$STATE_FILE` was already initialized to `[]` above (before the terminal-shortcut). Now, for every issue remaining in `/tmp/afk-queue.json` (post-filter), append a state entry with `status: "pending"`, `created_during_cycle: false`, all other dynamic fields `null` or empty. After this step, `$STATE_FILE` has exactly one `pending` entry per fetched-and-not-deferred issue, in the order you decided.
+**Populate the state file (fresh start, `RESUME=0`).** `$STATE_FILE` was already initialized to `[]` above (before the terminal-shortcut). For every issue remaining in `/tmp/afk-queue.json` (post-filter):
+
+1. If `is_claimed_by_other "$iid"` returns true → skip. A sibling instance owns this issue; we neither queue it nor record a skip (it's not our deferral).
+2. Otherwise → append a state entry with `status: "pending"`, `created_during_cycle: false`, every other dynamic field `null` or empty.
+
+After this loop, `$STATE_FILE` has one `pending` entry per fetched, non-deferred, non-sibling-claimed issue, in the order you decided. We do not pre-claim our own entries here; the atomic claim happens in Phase 2 right before work starts, so a race between two instances reading the same backlog resolves cleanly there.
 
 **On resume (`RESUME=1`), do not run Phase 1 at all.** The state file is the queue. Phase 6 will reconcile any new GitLab issues filed since the interruption.
 
@@ -428,6 +570,21 @@ Write the file immediately after every external side effect (`git push`, `glab i
 ### Phase 2 — Pick the next issue and decide branching
 
 **Pick the next item first.** Read `$STATE_FILE`. Select the first entry whose status is `pending` **or** `in-progress`, in file order.
+
+**Pre-pick claim acquisition (multi-instance gate).** After picking a candidate but before the pre-pick MR recheck, capture `try_claim`'s output and branch on it:
+
+```bash
+case "$(try_claim "$iid")" in
+  acquired)         ;;  # fall through to MR recheck and the rest of Phase 2
+  claimed-by-other) remove_from_state "$iid"; continue ;;   # next entry; no SKIP_FILE write — not our deferral
+  lock-failed)      # write notes, jump to Abort routine
+                    ;;
+esac
+```
+
+- `acquired` → we own this iid. Call `heartbeat_claim "$iid"` at every subsequent phase entry (start of Phase 3, between code-review-loop iterations in Phase 4, before push in Phase 5) so a long implementation doesn't look stale to siblings.
+- `claimed-by-other` → a sibling won the race. Drop our state entry and move on. This also resolves the Phase-3-then-Phase-6 race (instance A files a new issue, B ingests it via refetch, whichever reaches Phase 2 first wins; the loser drops here).
+- `lock-failed` → the shared lockdir is wedged after 60s. Write `notes: "shared claims lock wedged at $CLAIMS_LOCK_DIR — needs manual cleanup"`, leave status as-is, jump to Abort. Human attention required before any instance can continue safely.
 
 **Pre-pick MR recheck — run only when AFK has no local or remote artifact for this entry.** Specifically: run the recheck if the entry is `pending`, or if the entry is `in-progress` AND `branch` is null (Phase 2 branching never completed — there is nothing of AFK's own to confuse with an external MR). In any other state — branch created locally, commits made, or pushed — **skip** the recheck. The risk of losing local AFK work to a transient API error outweighs the rare race of a human opening an MR mid-implementation. Phase 5's idempotence handles AFK's own remote artifacts.
 
@@ -440,10 +597,7 @@ For runnable entries (pending or fully-empty in-progress), catch MRs opened by h
 iid=$(jq -r '.iid' <<<"$entry")
 title=$(jq -r '.title' <<<"$entry")
 
-remove_from_state() {
-  jq --argjson iid "$1" '[ .[] | select(.iid != $iid) ]' \
-     "$STATE_FILE" > "$STATE_FILE".tmp && mv "$STATE_FILE".tmp "$STATE_FILE"
-}
+# remove_from_state is defined in Phase 0 helpers; available here.
 
 result=$(fetch_open_mrs_for_issue "$iid")
 if [ "$result" = "ERROR" ]; then
@@ -519,7 +673,7 @@ git checkout <parent-cycle-branch>
 git checkout -b <branch-name>
 ```
 
-**Branch naming.** Follow the project's convention (look at recent MRs: `glab mr list --per-page 10`). Append a cycle marker to keep this run idempotent and avoid collision with branches from earlier runs: `<project-pattern>-afk-$AFK_DATE`. Example: `feat/42-cleanup-afk-20260513`. Record the final name in `branch`.
+**Branch naming.** Follow the project's convention (look at recent MRs: `glab mr list --per-page 10`). Append a cycle-and-run marker: `<project-pattern>-afk-$AFK_DATE-$RUN_ID`. Example: `feat/42-cleanup-afk-20260513-a3f9c2b1`. The `$RUN_ID` suffix is belt-and-suspenders against a claim-system bug — if two instances ever did land on the same iid, their branches would still never collide on the remote, and the user gets two distinct artifacts to inspect rather than a force-push race. Record the final name in `branch`.
 
 ### Phase 3 — Implement
 
@@ -561,7 +715,11 @@ Do not:
 
 **Hard cap: 8 iterations.** If the loop does not converge after 8 iterations, the issue is `failed`. Do **not** open an MR. Push the branch, log the unresolved findings into `notes`, and move on. (Treatment in Failure handling below.)
 
-**Convergence — single rule, no exceptions.** Convergence is whatever `code-review-loop` itself defines: an iteration where every spawned agent returns exactly the string `No findings.`. Nothing else counts as converged. In particular: a fix being applied does **not** count as resolution — only the agents' verdict on the *next* iteration, on the post-fix code, does.
+**Convergence — single rule, no exceptions.** Convergence is whatever `code-review-loop` itself defines: an iteration where every spawned agent returns exactly the string `No findings.`. Nothing else counts as converged. In particular:
+
+- A fix being applied does **not** count as resolution — only the agents' verdict on the *next* iteration, on the post-fix code, does.
+- Findings the loop emits that you classify as "judgment call", "stylistic", "subjective", "optional", "nice-to-have", "non-blocking", "residual", or "not substantive" **still count**. Your severity reading does not override the loop's output. If the loop's verdict is not `No findings.`, you have not converged.
+- "I've addressed the important ones, let me push and open the MR so the iter loop doesn't drag" is a banned thought. The loop dragging is the signal you need — either keep going to convergence within the 8-cap, or hit the cap and mark `failed` per Failure handling. There is no third option that involves opening a clean MR with the loop still flagging things.
 
 **Stacked-branch consequence.** Because `code-review-loop` diffs against `$DEFAULT_BRANCH`, agents on a stacked branch may keep flagging code introduced by the parent MR. This can prevent convergence even when the child issue is fine. We do **not** introduce a special parent-territory shortcut — it would be a loophole. Instead, this is the explicit failure mode:
 
@@ -644,7 +802,7 @@ EOF
 
 **Why `pushed_at_sha` is recorded between the push and the `glab mr create`** (rather than after the MR is created): if a crash happens between push and MR creation, Phase 2's pre-pick recheck must know AFK already pushed this branch, so it doesn't misclassify AFK's own pending push as an external MR-less issue.
 
-If the MR stacks on a cycle branch, set the target branch with `--target-branch <parent-cycle-branch>`. Capture the MR URL into `$STATE_FILE` **immediately** after `glab mr create` succeeds. Mark the issue `done`.
+If the MR stacks on a cycle branch, set the target branch with `--target-branch <parent-cycle-branch>`. Capture the MR URL into `$STATE_FILE` **immediately** after `glab mr create` succeeds. Mark the issue `done`, then `release_claim "$iid"` (terminal-release rule, see Failure handling).
 
 Do not merge. Do not push to `$DEFAULT_BRANCH` or any protected branch.
 
@@ -654,10 +812,12 @@ Re-fetch open issues (paginated as in Phase 1, with `jq -s`). **Phase 6 must not
 
 **If the paginated fetch fails here, the response depends on whether this Phase 6 call is end-of-cycle or pre-routing reconciliation:**
 
-- **End-of-cycle Phase 6 (the loop's main "refresh before deciding stop" call).** Terminalize every state entry still `pending` or `in-progress` as `failed` with `notes: "Phase 6 refetch failed — cycle ended early; this issue was not processed"`. Push any branch that has commits before terminalizing it, recording `pushed_at_sha`. Then jump straight to Phase 7. Do not exit before Phase 7.
+- **End-of-cycle Phase 6 (the loop's main "refresh before deciding stop" call).** Terminalize every state entry still `pending` or `in-progress` as `failed` with `notes: "Phase 6 refetch failed — cycle ended early; this issue was not processed"`. Push any branch that has commits before terminalizing it, recording `pushed_at_sha`. Apply the terminal-release rule (`release_claim "$iid"`) after each state write. Then jump straight to Phase 7; do not exit before Phase 7.
 - **Pre-routing reconciliation (called from Phase 2 before resuming an in-progress item).** This is best-effort. Skip the reconciliation, write `notes: "Phase 6 pre-routing reconciliation failed; resuming without it"` on the current entry, and proceed with the resume. Do **not** terminalize the in-progress item — its local work must not be lost.
 
 If the fetch succeeds, for every issue iid not already in `$STATE_FILE`:
+
+**0. Multi-instance claim filter.** Call `is_claimed_by_other "$iid"` *before* hitting the GitLab MR endpoint. If true, a sibling AFK instance is already on this issue: skip — do NOT add to state, do NOT add to `"$SKIP_FILE"` (it's not our deferral). This filter must run first to avoid pointless API calls for issues we'd discard anyway.
 
 1. **Apply the same open-MR filter as Phase 1, idempotently.** Call `fetch_open_mrs_for_issue`.
    - **Empty array** → if the iid was previously in `"$SKIP_FILE"` (e.g., past `api-error`), call `remove_skip "$iid"` first so the final report reflects the new reality. Then proceed to step 2.
@@ -677,6 +837,20 @@ The stop signal is the **state file**, not the GitLab query:
 - Every entry is `done`, `blocked`, or `failed` → go to Phase 7.
 
 ### Phase 7 — Final report
+
+**Entry guard — non-skippable.** Before writing a single byte of the report, re-read `$STATE_FILE` and verify every entry is `done`, `blocked`, or `failed`. If any entry is `pending` or `in-progress`:
+
+```bash
+NONTERMINAL=$(jq '[.[] | select(.status == "pending" or .status == "in-progress")] | length' "$STATE_FILE")
+if [ "$NONTERMINAL" -gt 0 ]; then
+  # You are NOT allowed to be in Phase 7. Go back to Phase 2 and resume.
+  exit_to_phase_2
+fi
+```
+
+This guard exists because of an observed real failure: an AFK run wrote the final report after only 4 of 40 issues, having unilaterally terminalized the remaining 36 as `failed` with a fabricated note ("budget tokens main thread épuisé"). Mass-failing the queue to wrap up early is the failure mode this guard catches. If you arrive here with non-terminal entries, the right action is *always* to go back to Phase 2 — never to flip pendings to `failed` so the guard passes. Pre-emptive terminalization to satisfy the guard is the same banned pattern in a different costume.
+
+The only exception: the Abort routine has already deliberately terminalized every non-terminal entry as `failed` with a real reason (dirty tree, lock wedged, Phase 6 fetch broken). After Abort, the guard passes legitimately.
 
 Write `afk-report-YYYY-MM-DD.md` at the repo root. This is what the user reads first thing when they return. Make it scannable.
 
@@ -737,6 +911,8 @@ You will hit things that don't work. Every failure must end with the issue in a 
 
 For every failure that produced commits, **push the branch** so the user has a remote artifact to inspect tomorrow. Treat the failure push exactly like the Phase 5 success push: record `pushed_at_sha` to state immediately after the push command returns, so the final report's branch-status derivation is correct.
 
+**Terminal-release rule.** Every transition to `done`, `blocked`, or `failed` ends with `release_claim "$iid"` *after* the state-file write. A claim that outlives its work blocks sibling instances from retrying the issue until the 4h heartbeat expires. The trap's `release_all_claims` is the crash safety net, not a substitute for explicit per-issue release on every clean terminal.
+
 ```bash
 git push -u origin <branch-name>
 # success → record SHA:
@@ -758,6 +934,7 @@ If you must abort the loop before all entries are terminal — typically because
 1. For every entry still `pending` or `in-progress`:
    - If the entry has a `branch` that exists locally with commits past `$DEFAULT_BRANCH`, push it (`git push -u origin <branch-name>`) and record `pushed_at_sha` before flipping status. This mirrors the Failure-handling rule "every failure that produced commits gets pushed."
    - Set status to `failed` with `notes: "AFK cycle aborted before processing — <reason>"`.
+   - Apply the terminal-release rule (`release_claim "$iid"`) after the state write.
 2. For the entry whose dirty residue you found (if identifiable): include the dirty file list in `notes`.
 3. Jump to Phase 7 and write the final report; flag the abort prominently at the top.
 
@@ -769,12 +946,18 @@ Never `git push --force` to a branch shared with anyone else. Never push to `$DE
 
 ## Red flags — if you catch yourself thinking these, stop
 
+(All apply *within this AFK instance*. Other instances in sibling worktrees are coordinated by the claims file — they're not "you".)
+
 - "Let me start the next issue while this review loop runs"
 - "This review agent is slow, let me skip it"
 - "I'll lump this cleanup into the current MR"
 - "I'll come back to this small refactor at the end, committing it now is fine"
 - "These two issues are close enough, one MR is cleaner"
 - "It's getting late, let me wrap up early"
+- "I'm running out of token budget / context space, time to wrap up before I'm cut off" (there is no such signal — you are fabricating it)
+- "Let me terminalize the remaining queue as `failed` so I can write a clean report" (the report is a *consequence* of finishing; you don't get to fast-forward to it)
+- "Convergence on the substantive findings is good; the rest are judgment calls" (the loop decides convergence, not you)
+- "I've addressed enough findings, let me push and not drag the iter loop"
 - "Tests fail but probably unrelated, MR anyway"
 - "Hit the iteration cap, basically done"
 - "Docs-only / config-only, code-review-loop doesn't apply"
