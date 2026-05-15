@@ -18,6 +18,7 @@ description: "Use when writing Drizzle ORM schemas, migrations, queries, or debu
 ### Relations
 - Many-to-many: explicit junction table with `primaryKey({ columns: [t.aId, t.bId] })`
 - Use `db.query.X.findMany({ with: { ... } })` for relational queries, not manual joins
+- **Aggregation belongs to SQL, not to application code** -- whatever the DB can compute (joins, sub-selects, `json_agg`/`array_agg`, `count`, ordering, filtering, deduplication, group-by) **must** be in the query, not rebuilt in TS with `Map`/`for`/`.filter().map()`. Fetching flat rows just to reshape them is slower than the DB and a vector for off-by-one bugs. Prefer `db.query.X.findMany({ with: { ... } })` with explicit `defineRelations`, or a single `select` with explicit joins/aggregates. If you find yourself rebuilding parent/child relations in code, the schema lacks a relation declaration — fix the schema, not the handler. Only acceptable in-code post-processing: final domain transformation (DB row → API contract), never the join itself. Reviews: handler fetching flat rows then reshaping them in JS to nest children under parents -> flag "move the join into SQL"
 
 ### Queries
 - Cursor pagination `gt(t.id, lastSeenId)` for large datasets, not OFFSET

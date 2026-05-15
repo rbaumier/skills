@@ -109,7 +109,7 @@ Beyond `strict: true`, enable these flags — they catch real bugs `strict` miss
 - **Narrowing lost across closures** -- narrowing doesn't survive closure boundaries (`setTimeout`, `.then`, event handlers). Capture the narrowed value in a `const` before passing to callbacks: `const name = user.name; setTimeout(() => log(name))` — not `setTimeout(() => log(user.name))` where `user` may be re-assigned
 - Template literal types for string-typed APIs — `type Route = /`/api/${string}/`` constrains string shapes at compile time. Use for API paths, CSS units (`${number}px`), event names
 - ESM only: `"type": "module"` in package.json. Never mix CJS imports (`require`) with ESM modules
-- Declare param/prop types as named types above the function, not inline objects
+- Declare param/prop types as named types above the function, not inline objects — **exception: React component props, which should be inlined at the function signature** unless genuinely reused (see `react` skill)
 - `Set.has()` over `Array.includes()` for repeated lookups in loops/hot paths
 - Validate `JSON.parse` output with type guards — never cast with `as` (`JSON.parse` returns `unknown` in spirit)
 - **JSON serialization type erosion** -- `Date` becomes `string`, `Map`/`Set` become `{}`, functions are stripped, `undefined` values disappear. Define a `Serialized<T>` type or use Zod to parse the deserialized shape at API boundaries. Never trust that `JSON.parse(JSON.stringify(x))` round-trips correctly

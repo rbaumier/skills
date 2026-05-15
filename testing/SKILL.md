@@ -58,6 +58,9 @@ Test public interface only. Prefer real deps (in-memory DB) for integration.
 **Contract testing for API boundaries**: When your service depends on external APIs, write contract tests that verify the shape/types of responses (not values). Use MSW to intercept and validate against recorded contracts. Without contract tests, a third-party API silently changes a field name and your service breaks in production. In reviews: if integration tests call real external APIs, flag and recommend contract tests with MSW
 **Flaky test triage protocol**: Run failing test 3x. If intermittent: classify as flaky. Action: quarantine (`describe.skip` or tag `@flaky`), file a ticket, fix root cause (race condition, shared state, time dependency). Never retry-and-ignore in CI — retries mask real regressions and erode trust in the suite. In reviews: if you see `retries: 3` in Playwright config without a comment explaining why, flag it
 
+### Colocate tests with the source — no `__tests__/` directories
+Test files live next to the module they cover (`foo.ts` + `foo.test.ts`, or `foo.integration.test.ts`). Never group under `__tests__/` sub-directories. Colocation keeps source and tests visible in the same listing, removes a navigation step, and prevents divergence between `src/X/__tests__/foo.test.ts` and `src/X/foo.ts` when the module moves. Reviews: tests grouped under `__tests__/` -> flag "colocate next to the source"
+
 ### Test Naming as Specification
 Names follow `should [action] when [condition]` with nested `describe` by module then method. A reader understands expected behavior without reading the test body.
 ```typescript
