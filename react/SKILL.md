@@ -37,8 +37,19 @@ Treat each diagnostic in the output as a finding, with file:line taken from reac
 ## Component Typing
 - **Inline component props at the function signature** -- never extract `type XxxProps = { ... }` above the component unless the props type is genuinely reused by a second component. Inline keeps the contract visible at the declaration, avoids a navigation step, and prevents premature abstraction. This is React-specific and overrides the general TypeScript rule of extracting param/prop types above the function (see `language-typescript`). Reviews: extracted `*Props` type used by exactly one component -> flag "inline back into the function signature"
 
+## React Compiler
+
+If the project has [React Compiler](https://react.dev/learn/react-compiler) enabled, skip every manual memoization recommendation in this skill (`useMemo`, `useCallback`, `React.memo`, stable-default constants, etc.). The compiler auto-memoizes components and values at build time, so hand-written memoization is at best redundant and at worst hides bugs the compiler would catch.
+
+How to detect it (any one is sufficient):
+- `babel-plugin-react-compiler` in `package.json` dependencies
+- `experimental.reactCompiler: true` in `next.config.{js,ts,mjs}`
+- `react-compiler-runtime` imported anywhere, or a `"use memo"` / `"use no memo"` directive in source files
+
+What still applies even with the compiler on: dependency-array hygiene (still surface primitive deps), `useState` initializer functions for SSR-unsafe defaults, key-based state reset, `Promise.all` parallelization — these are correctness or data-flow issues, not memoization. In reviews: if the compiler is enabled and the diff adds `useMemo`/`useCallback`/`memo()`, flag it as noise and recommend deletion unless there's a documented reason (e.g. third-party API that requires referential equality).
+
 ## Gotchas
-- `useMemo`/`useCallback` for every value is premature optimization. Only memoize when: passing to React.memo'd children, or computation is genuinely expensive (>1ms).
+- `useMemo`/`useCallback` for every value is premature optimization. Only memoize when: passing to React.memo'd children, or computation is genuinely expensive (>1ms). **Skip this rule entirely if React Compiler is enabled** -- see the React Compiler section above.
 - `useEffect` with empty dep array `[]` is NOT `componentDidMount`. It runs after paint, not before. Use `useLayoutEffect` for synchronous DOM measurement. In reviews: if you see a comment like "runs like componentDidMount", flag it as incorrect.
 - State updates in React 18+ are auto-batched everywhere (promises, timeouts). Don't wrap in `flushSync` unless you specifically need synchronous rendering.
 - Next.js App Router: `cookies()`, `headers()` make the entire route dynamic. One call in a layout makes ALL child pages dynamic. In reviews: always flag `cookies()`/`headers()` in layouts and explain the blast radius.

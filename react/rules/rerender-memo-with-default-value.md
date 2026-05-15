@@ -36,3 +36,5 @@ const UserAvatar = memo(function UserAvatar({ onClick = NOOP }: { onClick?: () =
 // Used without optional onClick
 <UserAvatar />
 ```
+
+**Note:** If your project has [React Compiler](https://react.dev/learn/react-compiler) enabled, you can drop the `memo()` wrapper and the `NOOP` constant — the compiler handles referential stability for you. This rule only applies to projects without the compiler.
