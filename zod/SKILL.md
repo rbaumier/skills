@@ -51,6 +51,7 @@ description: Use when writing Zod schemas or validation — z.object, z.string, 
 - Use `z.ZodIssueCode.custom` as the code in `ctx.addIssue()` within `.superRefine()` for consistent error handling
 - v4: per-field error codes for i18n with `.check()`: `z.string().check({ kind: 'min', value: 8, error(iss) { iss.params = { errorCode: 'VALIDATION.PASSWORD.TOO_SHORT' } } })`
 - Error messages must not leak sensitive info (schema structure, internal types) to end users -- map to user-friendly messages at the API boundary
+- **Don't override messages when the locale already handles them** -- once `z.config(z.locales.fr())` (or any locale) is set globally, never add manual `message: "..."` to schema-level validators (`.min()`, `.max()`, `.email()`, `.uuid()`, `.regex()`, etc.). The locale's translations already cover them. Custom messages are only acceptable inside `.refine()` / `.superRefine()` callbacks — business rules the locale cannot translate. Reviews: `.min(8, { message: "..." })` in a locale-configured project -> flag "remove, let the locale handle it"
 
 ### Object Schemas
 - strict() vs strip() for unknown keys; partial() for updates
@@ -70,6 +71,7 @@ description: Use when writing Zod schemas or validation — z.object, z.string, 
 - drizzle-zod: `InsertSchema` and `UpdateSchema` reflect table columns -- don't manually duplicate. Use `.omit()` for server-defaulted columns
 - Share the same Zod schema between client and server validation -- single source of truth prevents validation drift
 - Use separate schemas where semantics differ -- don't over-reuse one schema across UI, API, DB, and provider layers
+- **Reuse the canonical schema, never re-declare a subset** -- if `OrganizationSelectSchema` exists, never re-declare `z.object({ id, name, slug })` to represent a subset of it. Don't `.pick({ ... })` to project columns either — column projection is a query-time concern, not a schema concern. Compose with `.extend(...)` when genuinely adding fields. The only acceptable subset is one that strictly cannot be derived (e.g. an input that drops auto-generated columns via `.omit({ id: true, createdAt: true })`). Drift between picked subsets and the canonical schema breaks consumers silently. Reviews: redeclared narrower variant of an existing schema -> flag "reuse the canonical schema"
 
 ### Refinements & Transforms
 - refine() for simple bool, superRefine() for multiple issues

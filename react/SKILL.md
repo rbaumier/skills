@@ -34,6 +34,9 @@ Treat each diagnostic in the output as a finding, with file:line taken from reac
 | **MEDIUM** | Hydration issues | Flicker/mismatch | Missing `suppressHydrationWarning`, SSR-unsafe `useState` defaults |
 | **LOW** | Micro-optimizations | Minor CPU savings | RegExp in render, chained array methods on small arrays |
 
+## Component Typing
+- **Inline component props at the function signature** -- never extract `type XxxProps = { ... }` above the component unless the props type is genuinely reused by a second component. Inline keeps the contract visible at the declaration, avoids a navigation step, and prevents premature abstraction. This is React-specific and overrides the general TypeScript rule of extracting param/prop types above the function (see `language-typescript`). Reviews: extracted `*Props` type used by exactly one component -> flag "inline back into the function signature"
+
 ## Gotchas
 - `useMemo`/`useCallback` for every value is premature optimization. Only memoize when: passing to React.memo'd children, or computation is genuinely expensive (>1ms).
 - `useEffect` with empty dep array `[]` is NOT `componentDidMount`. It runs after paint, not before. Use `useLayoutEffect` for synchronous DOM measurement. In reviews: if you see a comment like "runs like componentDidMount", flag it as incorrect.
