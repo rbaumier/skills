@@ -332,6 +332,23 @@ Functions in the same family share exactly the same signature pattern. Symmetric
 
 Reviews: `@Get(path)` accepts string but `@Post(path)` accepts object for the same purpose -> flag "inconsistent API family"
 
+## Closure property
+
+```typescript
+"ape".replace("e", "i").toUpperCase(); // string -> string -> string
+```
+
+An API has the **closure property** when operations accept and return types from a small shared set, so outputs chain directly into the next call. String libraries are the canonical case — five primitives cover a thousand use cases because every operation takes strings and returns strings.
+
+When inputs and outputs travel on different rails, callers paper over the gap with one-off glue code for every combination. When they share a rail, the family composes, and experts unlock the long tail of problems the designer never wrote out. Closure is aspirational — few domains behave as cleanly as strings — but each closed-over operation expands the reach of the API without new endpoints, which is why flexible APIs feel like they "let you do what you want" without ever saying that explicitly.
+
+Practical instances:
+- Query builders where every method returns the same `Query<T>` so any can chain
+- Iterator/stream operators (`.map`, `.filter`, `.take`) all returning iterators
+- `Result`-returning functions that lift back into `Result<T, E>` instead of unwrapping at each hop
+
+Reviews: operation that returns a one-off shape callers must convert before passing into the next operation in the family -> flag "close over a shared type so the family composes"
+
 ## Single Object Parameter
 
 Public functions with 3+ parameters use a single options object. Enables adding options without breaking changes. Calls become self-documenting.
@@ -445,3 +462,6 @@ Reviews: business logic duplicated in HTTP handler when SDK operation exists -> 
 - Dangerous operation easier to call than the safe path (inverted pit of success)
 - Function family where members have inconsistent signatures
 - `/health` returning 200 when a critical dependency is down
+- Convenience wrapper that bundles many concepts behind one call but exposes no incremental layer — when the caller's needs diverge, they must learn every hidden concept at once (`create-react-app` → `eject` problem)
+- Composability gap: an output type from one operation in the family can't be passed into another without conversion
+- New layer that changes the semantics of the layer beneath — field becomes immutable when wrapped, mandatory becomes optional, sync becomes async — contradicting what callers learned at the prior step
