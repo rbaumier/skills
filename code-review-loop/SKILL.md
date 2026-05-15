@@ -105,6 +105,32 @@ If you are unsure, spawn Dogfood. A spurious dogfood run is cheap; a missed runt
 - Tests agent: only test files + the source files they test
 - All other agents: all changed files
 
+### Step 0.5 — Pre-triage with a cheap model
+
+Many diffs contain a long tail of routine files — config additions, pure renames, formatting, generated regeneration, simple field additions. Sending those to 10+ specialized agents wastes wall time and tokens. Filter them out with one cheap pass before the expensive fan-out.
+
+Spawn ONE `general-purpose` subagent with `model: haiku` (fallback `sonnet` if Haiku is unavailable) using this prompt:
+
+```
+You classify file diffs in a merge request as NEEDS_REVIEW or APPROVED.
+
+NEEDS_REVIEW: potential bugs, security issues, non-trivial logic, new API endpoints, error-handling changes, complex refactoring, schema/migration changes, auth changes, billing changes, signature-verification code, anything touching a high-stakes subsystem, **any added or changed field on a serialized type** (DTO, schema, API response, persisted struct — these need validation/test coverage), **any new defaulted value** (constants, config defaults, fallback values, enum defaults).
+
+APPROVED: only the non-semantic tail — lockfile updates, generated-code regeneration, reordering of *named* import bindings (NOT side-effect imports like `import './polyfill'`, bare `import 'x'`, or any CSS/SCSS `@import` whose cascade is order-sensitive), whitespace/formatting-only changes, file renames whose only effect is updating import paths.
+
+When in doubt → NEEDS_REVIEW. The downstream funnel and bloat-filter handle false positives; missed bugs are expensive. The triage's job is to skip lockfile churn and rename-only diffs, not to substitute its own judgement for the deep review on anything carrying semantics.
+
+Diff to classify:
+{full_diff}
+
+Output a single JSON object, no markdown, no preamble:
+{"verdicts": [{"file": "path/to/file.rs", "verdict": "NEEDS_REVIEW"}, ...]}
+```
+
+**Subtract APPROVED files from every agent's scoped file list before Step 1.** Exception: a file that matched any subsystem trigger (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) or any Dogfood category in Step 0 stays in the review set regardless of the triage verdict. Cheap-model + high-stakes path = trust the path, not the model.
+
+Triage is one shared round for the whole diff, not per agent. Run it once, apply the subtraction, then fan out. The point isn't to replace the funnel's "is this code necessary" question — only to stop paying for agents to look at lockfile churn and one-line rename diffs.
+
 ### Step 1 — Spawn all agents in a single message block
 
 **Parallelism is the only reason this skill exists.** The default tool-call behavior is serial: emit one Task call, await the result, emit the next. That collapses your fan-out into `N × (think-time + agent-time)` of wall time and defeats the whole point. **Override the default.** Emit ALL Task tool_use blocks in the SAME assistant message, BEFORE reading ANY result from ANY of them.
@@ -143,7 +169,11 @@ A change that nominally improves correctness by degrading elegance usually makes
 
 For the findings that survive: fix every one, regardless of how many agents reported it. A single-agent finding is just as valid as one from seven agents; overlap is a signal of higher confidence, not of higher priority.
 
-**Parallelize fixes.** Group findings by file. Spawn one fix agent (model: `sonnet`) per file group, in parallel. Fix agents receive only their findings and apply all of them. Fix agents do not load skills. Do NOT use `isolation: "worktree"`. Fix agents work directly on the current working tree.
+**Use the JSON envelope.** Line-anchored agents return `{findings: [{file, line, severity, title, analysis_chain, fix_prompt, ...}]}`. The `analysis_chain` is your auditable artifact: if a chain doesn't survive a re-read of the cited code, the finding is a hallucination — drop it without re-deriving from scratch.
+
+**`fix_prompt` is the orchestrator's draft, not the reviewer's final word.** The bloat-filter applies to fix prompts too: if triage accepts a real finding but the reviewer's `fix_prompt` proposes a bloated remedy (mutex everywhere, defensive guard for an impossible case, one-shot abstraction), rewrite the `fix_prompt` before forwarding it. The verbatim contract is between **you (orchestrator) and the fix agent**, not between the reviewer and the fix agent — fix agents receive a `fix_prompt` you have accepted as-is or rewritten. Once forwarded, they apply it without re-interpretation.
+
+**Parallelize fixes.** Group findings by file. Spawn one fix agent (model: `sonnet`) per file group, in parallel. Each fix agent receives the list of (post-triage) `fix_prompt` strings for its file, in order. Fix agents do not load skills, do not re-derive fixes from the original code, and do not use `isolation: "worktree"` — they work directly on the current working tree.
 
 **Bugs get TDD treatment.** Write a non-regression test that fails first, then fix the code so the test passes.
 
@@ -168,7 +198,7 @@ Otherwise, re-spawn only agents whose findings survived the Step 2 triage OR who
 
 Spawn the Dogfood agent once static review has converged. When it returns:
 
-1. Process its findings the same way as static findings: spawn fix agents per file group.
+1. Process its findings the same way as static findings: spawn fix agents per file group. Dogfood emits a textual contract (one-line summary, repro steps, observed vs expected, `suspected files:`) — **not** the JSON `fix_prompt` envelope. Before fanning out, the orchestrator forges a `fix_prompt` for each bug from those fields (`In {suspected_file}, {one-line summary}. Reproduce by {steps}. Expected {expected}, observed {observed}. Fix the code path so the expected behavior holds.`) and groups by suspected file. The "verbatim contract is orchestrator → fix agent" rule from Step 2 applies — fix agents still receive a single uniform `fix_prompt` shape.
 2. **Re-run the full Step 3 gate** (tests + linter, then commit) on the fixes.
 3. **Re-run static review** on the touched files until it re-converges (Step 4's discipline applies — no shortcuts because "it's just a small fix").
 4. Re-spawn Dogfood.
@@ -189,9 +219,67 @@ Keep it under ~15 lines. The diff is the source of truth; the summary just locat
 
 ---
 
+## Context verification protocol
+
+Before any agent reports a finding it MUST run these five checks. Filtering imagined failure modes at the source is faster (fewer loop iterations) and cheaper (agents stop emitting findings that Step 2 will drop anyway).
+
+Inject this block verbatim into every prompt that emits line-anchored findings (Correctness, Subsystem, Tests, Skill agents). Funnel L1/L2 don't need it — their findings are structural ("delete this module"), not failure-mode-anchored. Dogfood doesn't need it — its findings are empirical (the UI either broke or didn't), not inferred.
+
+```
+## Context verification — MANDATORY before reporting any finding
+
+For every potential finding, answer these questions. If any answer kills the finding, drop it silently — do not emit it.
+
+1. **Callers/callees**: is the missing validation/conversion/error-handling already done at the call site or in a visible wrapper? If yes, drop.
+2. **Test context**: does the path contain a *segment* (between `/` separators) named exactly `tests`, `test`, `__tests__`, `spec`, `specs`, `fixtures`, `mocks`, OR does the filename match `*_test.*` / `*.test.*` / `*.spec.*` / `test_*.py` / `*_spec.rb`, OR is the code inside `#[cfg(test)]` / `describe(` / `test(` / `it(` / `def test_`? Substring matches don't count — `src/prospecting/`, `src/mockingbird/`, `src/special/` are production. If the strict criteria match, `.unwrap()` / `panic!` / missing validation / unsafe patterns are normal — drop unless it's a genuine logic bug.
+3. **Intentional comments**: is there a `// SAFETY:`, `// intentionally`, `// fallback`, `# noqa`, or equivalent that *specifically* explains the failure mode you would flag? A generic "this is intentional" nearby is not enough — the comment must address the exact failure mode (a `// SAFETY:` justifying an unchecked-bounds index does NOT silence a race condition on the same line). If the comment matches the failure mode you'd flag, drop.
+4. **Diff is the fix**: does the added code *resolve the same failure mode* you're about to flag, or does it improve a different aspect? Replacing `.unwrap()` with `?` resolves a panic-on-None failure; replacing `format!` with bind parameters resolves SQL injection but does NOT resolve a missing tenant filter on the same query. Drop only when the diff fixes the specific failure mode you would have flagged — partial improvements still leave their unaddressed failure modes flaggable.
+5. **Type tracing**: for a claimed type mismatch (`f64` vs `i64`, `Option<T>` vs `T`, `&str` vs `String`), trace the value flow through the diff. If a conversion exists at any visible point on the path, the types are consistent — drop.
+```
+
+## Output format for line-anchored findings
+
+Agents that anchor findings to `file:line` emit JSON. The structure carries an auditable reasoning chain and a fix prompt that the per-file fix agent consumes verbatim — no re-interpretation between finding and fix.
+
+Funnel L1/L2 stay textual — their findings are structural, not file:line-anchored. Dogfood keeps its own contract (the `cleanup-complete` line is load-bearing for convergence).
+
+If zero findings, respond exactly `No findings.` (textual, not JSON — preserves the convergence signal Step 4 reads).
+
+Otherwise, respond with a single JSON object, no markdown, no preamble:
+
+```json
+{
+  "findings": [
+    {
+      "file": "src/auth/session.rs",
+      "line": 42,
+      "end_line": 45,
+      "severity": "bug",
+      "title": "unwrap() on user-supplied header",
+      "analysis_chain": [
+        "Line 42 calls .unwrap() on req.headers.get(\"X-Token\")",
+        "HeaderMap::get returns Option<&HeaderValue>",
+        "Header is attacker-controlled — missing header panics the handler"
+      ],
+      "fix_prompt": "In src/auth/session.rs line 42, replace .unwrap() with .ok_or(AuthError::MissingToken)? to propagate instead of panic."
+    }
+  ]
+}
+```
+
+**Why `analysis_chain`**: the chain is auditable. A finding whose chain doesn't survive a re-read of the cited code is a hallucination — Step 2 triage can drop it by reading the chain, without re-reading the diff. This complements the Context verification block: that one filters before emission; this one filters after.
+
+**Why `fix_prompt`**: the per-file fix agents in Step 2 consume it verbatim. They no longer re-interpret the finding or re-derive the fix — they apply what's written.
+
+Severity values: `bug` | `security` | `performance` | `error_handling` | `suggestion`. Suggestion-only findings should usually have been dropped at Context verification step 1 — emit them only when the pattern actively harms correctness or readability.
+
+---
+
 ## Agent Prompt Templates
 
 Every agent follows: role → context → task → constraints → output format.
+
+**Line-anchored templates (Skill, Tests, Subsystem, Correctness) require the Context verification block AND the Output format block to be appended verbatim at the bottom before spawning.** Funnel L1/L2 and Dogfood are self-contained — do not append.
 
 ### Funnel L1
 
@@ -241,8 +329,6 @@ Your task:
 4. Report all violations found
 
 Stay within these files: {file_list}
-
-Output: a flat list of findings. If zero findings, say exactly: "No findings."
 ```
 
 ### Tests Agent
@@ -260,8 +346,6 @@ Your task:
 - Improvable tests: tests that test implementation instead of behavior, tests that would break on refactor
 
 Stay within these files: {file_list}
-
-Output: a flat list of findings. If zero findings, say exactly: "No findings."
 ```
 
 ### Subsystem Agent (billing-subsystem, auth-subsystem, schema-migration-subsystem, etc.)
@@ -278,8 +362,6 @@ Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files
 Your task: walk the diff and, for each listed failure mode, ask whether the change plausibly introduces or amplifies it. Report only concrete instances — never a generic "consider adding handling for X" without a specific line that exhibits the gap.
 
 Stay within these files: {file_list}
-
-Output: a flat list of findings, each anchored to file:line. If zero findings, say exactly: "No findings."
 ```
 
 ### Correctness Agent
@@ -294,8 +376,6 @@ Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files
 Your task: check the implementation against the apparent intent. Look for bugs, missing edge cases, race conditions, incomplete error handling, logic gaps. For every permission check, verify the role is correct for the operation.
 
 Stay within these files: {file_list}
-
-Output: a flat list of findings. If zero findings, say exactly: "No findings."
 ```
 
 ### Dogfood Agent (runtime, post-static-convergence)
