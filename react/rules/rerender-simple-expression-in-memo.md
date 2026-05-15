@@ -33,3 +33,5 @@ function Header({ user, notifications }: Props) {
   // return some markup
 }
 ```
+
+**Note:** If your project has [React Compiler](https://react.dev/learn/react-compiler) enabled, this rule is moot: the compiler decides automatically what to memoize, so writing `useMemo` by hand is just noise. Delete it.
