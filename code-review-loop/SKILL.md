@@ -41,7 +41,7 @@ When unsure, run the loop. A spurious run costs a few minutes of agent time; a m
 
 Once you've decided the loop runs, classify the diff to pick the fan-out shape. This is the **mid-ground between "skip" and "full review"** — many real diffs (≤100 lines, no high-stakes path) don't justify burning twelve agents.
 
-Compute the inputs once from the unified file-set (`main...HEAD` ∪ unstaged ∪ staged ∪ untracked):
+Compute the inputs once from the unified file-set (`"$DEFAULT_BRANCH"...HEAD` ∪ unstaged ∪ staged ∪ untracked):
 
 - `total_lines` = sum of added + removed across non-noise files (after the diff filter — see Step 0.5)
 - `file_count` = unique non-noise files
@@ -49,8 +49,8 @@ Compute the inputs once from the unified file-set (`main...HEAD` ∪ unstaged �
 
 | Tier | Condition | Fan-out |
 |---|---|---|
-| **Lite** | `total_lines ≤ 100` AND `file_count ≤ 20` AND `high_stakes = false` | Funnel L1, Funnel L2, **one** Correctness agent, **one** language agent (dominant ext), simplify, coding-standards (umbrella only — skip the 4 sub-skills), Tests. No subsystem agents (high_stakes is false). No general Opus. ~7 agents. |
-| **Full** | otherwise — incl. any high_stakes trigger, OR `file_count > 50`, OR `total_lines > 100` | Current behavior (everything in Step 0 below). ~12+ agents. |
+| **Lite** | `total_lines ≤ 50` AND `file_count ≤ 5` AND `high_stakes = false` | Funnel L1, Funnel L2, **one** Correctness agent, **one** language agent (dominant ext), simplify, coding-standards (umbrella only — skip the 4 sub-skills), Tests. No subsystem agents (high_stakes is false). No general Opus. ~7 agents. |
+| **Full** | otherwise — incl. any high_stakes trigger, OR `file_count > 5`, OR `total_lines > 50` | Current behavior (everything in Step 0 below). ~12+ agents. |
 
 **Override:** if the user explicitly asks for a deep review, force `Full` regardless of size. The tier is a default, not a ceiling.
 
@@ -72,7 +72,21 @@ Three levels, in order. Each gates the next.
 
 ### Step 0 — Detect agents and scope files
 
-Run `git diff --name-only main...HEAD` to get all changed files. Determine which agents to spawn based on file extensions and imports.
+Every `git diff` below uses `"$DEFAULT_BRANCH"...HEAD`, never a hardcoded `main`. If the caller (e.g. the `afk` skill) hasn't already exported `DEFAULT_BRANCH`, detect it now using the same fallback chain:
+
+```bash
+if [ -z "$DEFAULT_BRANCH" ]; then
+  DEFAULT_BRANCH=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+  [ -z "$DEFAULT_BRANCH" ] && DEFAULT_BRANCH=$(glab repo view --output json 2>/dev/null | jq -r '.default_branch // empty')
+  [ -z "$DEFAULT_BRANCH" ] && DEFAULT_BRANCH=$(git for-each-ref --format='%(refname:short)' refs/heads/main refs/heads/master refs/heads/develop 2>/dev/null | head -1)
+  test -n "$DEFAULT_BRANCH" || { echo "ERREUR : default branch introuvable. code-review-loop ne démarre pas." >&2; exit 1; }
+fi
+git fetch origin "$DEFAULT_BRANCH"
+```
+
+The `fetch` keeps the local tracking ref current against concurrent pushes; recipes below reference `"$DEFAULT_BRANCH"` for readability.
+
+Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` to get all changed files. Determine which agents to spawn based on file extensions and imports.
 
 **Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by subsystem touched", "Spawn by interface touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
 
@@ -85,9 +99,9 @@ Run `git diff --name-only main...HEAD` to get all changed files. Determine which
 
 **Spawn by subsystem touched.** When the diff touches a high-stakes subsystem, spawn an extra **subsystem-framed agent** alongside the generic Correctness agent. The framing primes the agent for domain-specific failure modes a generic "correctness" lens misses (double-charges, refund races, signature replay, cross-tenant leaks).
 
-**File-set for subsystem detection** matches the Dogfood rule: union `git diff --name-only main...HEAD` with `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Otherwise uncommitted edits to auth/billing/schema files silently bypass the high-stakes lenses.
+**File-set for subsystem detection** matches the Dogfood rule: union `git diff --name-only "$DEFAULT_BRANCH"...HEAD` with `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Otherwise uncommitted edits to auth/billing/schema files silently bypass the high-stakes lenses.
 
-**Pass the unified file-set to the spawned agent**, not just the `main...HEAD` slice. When uncommitted files trigger the lens, the agent must see those files' contents. In the agent's prompt, instruct it to read the file directly (not via `git diff main...HEAD`), since the diff may not yet exist for unstaged/untracked work. Concretely: replace the standard `rtk proxy git diff main...HEAD -- {files}` line in the subsystem prompt with `read the current contents of {files} directly, and run \`git diff -- {files}\` to see the unstaged delta on top`.
+**Pass the unified file-set to the spawned agent**, not just the `"$DEFAULT_BRANCH"...HEAD` slice. When uncommitted files trigger the lens, the agent must see those files' contents. In the agent's prompt, instruct it to read the file directly (not via `git diff "$DEFAULT_BRANCH"...HEAD`), since the diff may not yet exist for unstaged/untracked work. Concretely: replace the standard `rtk proxy git diff "$DEFAULT_BRANCH"...HEAD -- {files}` line in the subsystem prompt with `read the current contents of {files} directly, and run \`git diff -- {files}\` to see the unstaged delta on top`.
 
 Each trigger is specific enough to avoid firing on UI tokens, ARIA roles, job listings, or generic "workspace" UI. A row fires only when **at least one** of its concrete signals is present in the changed file set.
 
@@ -114,21 +128,31 @@ The subsystem agent **adds to** (does not replace) the generic Correctness agent
 
 If you are unsure, spawn Dogfood. A spurious dogfood run is cheap; a missed runtime bug is expensive. Dogfood runs **after Step 4 static convergence**, not in parallel with the static agents — it needs the code to actually work.
 
-**Don't rely on `git diff main...HEAD` alone for the dogfood trigger.** That misses uncommitted work. When deciding to spawn Dogfood, also union in `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Any of these touching a category above flags Dogfood.
+**Don't rely on `git diff "$DEFAULT_BRANCH"...HEAD` alone for the dogfood trigger.** That misses uncommitted work. When deciding to spawn Dogfood, also union in `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Any of these touching a category above flags Dogfood.
 
 **Codex:** only if the user explicitly requests it.
 
 **General Opus 4.7:** always spawn. Same role as Codex (generalist reviewer, no skill loaded). Spawn via `general-purpose` subagent with `model: opus`.
 
-**Spawn by materiality.** If the diff touches anything that should be reflected in `CLAUDE.md` / `AGENTS.md` but those files are unchanged, spawn the **claude-md-materiality** agent (model: `haiku`). High-materiality signals: package manager switch (`package.json` `packageManager` field, lockfile family change), test framework swap (new `vitest.config.*` / `jest.config.*` / removed equivalent), build tool change (`vite.config.*`, `tsconfig.json` paths/targets, bundler config), new top-level dir, new required env var (`.env.example` additions), CI/CD workflow change. The agent's only job is to flag the gap — not to write the missing doc.
+**Spawn by materiality.** If the diff touches anything that should be reflected in `CLAUDE.md` / `AGENTS.md` but those files are unchanged, spawn the **claude-md-materiality** agent (model: `haiku`). High-materiality signals — kept deliberately tight to avoid firing on routine config tweaks:
+
+- package manager switch (`package.json` `packageManager` field changed, OR lockfile family added/removed: `pnpm-lock.yaml` ↔ `package-lock.json` ↔ `yarn.lock` ↔ `bun.lock`)
+- test framework swap (a `vitest.config.*` / `jest.config.*` / `playwright.config.*` file added or removed — not edited)
+- build tool added or removed (new `vite.config.*` / `webpack.config.*` / `rollup.config.*` / `next.config.*` file, OR an existing one deleted)
+- `tsconfig.json` change to `module`, `moduleResolution`, or addition of a *new top-level alias prefix* in `paths` (NOT path tweaks, NOT `target`/`lib`/`strict` flag toggles)
+- new top-level dir (root of repo or root of a monorepo workspace)
+- new required env var (additions in `.env.example` — not removals, not renames)
+- CI/CD workflow file added or removed (NOT edited — workflow tweaks rarely invalidate docs)
+
+The agent's only job is to flag the gap — not to write the missing doc. Skip materiality entirely under the `Lite` tier (cost is low but consistency matters — Lite ≡ no structural change).
 
 ### Step 0.2 — Write shared diff to disk
 
-Write the full diff once to `/tmp/review-diff-{branch}.patch` using `rtk proxy git diff main...HEAD > /tmp/review-diff-{branch}.patch`. Pass this path to every agent in their prompt. Agents read the file instead of re-running git diff per-spawn.
+Write the full diff once to `/tmp/review-diff-{branch}.patch` using `rtk proxy git diff "$DEFAULT_BRANCH"...HEAD > /tmp/review-diff-{branch}.patch`. Pass this path to every agent in their prompt. Agents read the file instead of re-running git diff per-spawn.
 
-**Why:** on large diffs (>500 lines) with 10+ agents, the per-agent `git diff` invocation duplicates the same bytes through every subagent's context window. Writing once, reading N times, saves token cost and avoids repeated subprocess overhead. The path replaces the `rtk proxy git diff main...HEAD -- {files}` line in each agent template — agents `grep` the patch file scoped to their files.
+**Why:** on large diffs (>500 lines) with 10+ agents, the per-agent `git diff` invocation duplicates the same bytes through every subagent's context window. Writing once, reading N times, saves token cost and avoids repeated subprocess overhead. The path replaces the `rtk proxy git diff "$DEFAULT_BRANCH"...HEAD -- {files}` line in each agent template — agents `grep` the patch file scoped to their files.
 
-If the file-set for an agent includes untracked or unstaged files (subsystem agents triggered by uncommitted edits), the agent still reads those files directly per Step 0's rule — the patch file only covers the `main...HEAD` slice.
+If the file-set for an agent includes untracked or unstaged files (subsystem agents triggered by uncommitted edits), the agent still reads those files directly per Step 0's rule — the patch file only covers the `"$DEFAULT_BRANCH"...HEAD` slice.
 
 **Scope files per agent:**
 - Language agents: only files matching the extension
@@ -224,9 +248,11 @@ For the findings that survive: fix every one, regardless of how many agents repo
 **Severity-based convergence.** Convergence is reached when every agent meets one of:
 - (a) returned `No findings.`, OR
 - (b) had all findings dropped at step 1 of the Step 2 triage, OR
-- (c) all surviving findings are `severity: suggestion`.
+- (c) all surviving findings are `severity: suggestion` (line-anchored JSON agents) **or** all carry the `[suggestion]` tag (prose agents — Funnel L1/L2, Materiality).
 
 Suggestions are **not auto-fixed in the loop** — they're collected and listed in Step 5 for the user to decide. Auto-fixing every suggestion is what gives review tools their reputation for noisy churn; the bias is explicitly toward stopping. Bugs / security / performance / error_handling findings still block convergence and must be fixed.
+
+**Prose agents tag their findings.** Funnel L1/L2 and Materiality emit text, not JSON, so the convergence checker can't read `severity:`. Their templates require each finding to be prefixed with either `[must]` (concrete action required — blocks convergence) or `[suggestion]` (worth considering but not required — qualifies under (c)). The orchestrator reads the tag, not its own interpretation of the prose.
 
 If converged: proceed to Step 4.5 (if Dogfood was flagged) or Step 5.
 
@@ -349,7 +375,11 @@ Every agent follows: role → context → task → constraints → output format
 
 **Shared diff file.** Step 0.2 wrote the full diff to `/tmp/review-diff-{branch}.patch`. Every template below uses `{diff_file}` to refer to it. Agents grep / filter the patch file rather than re-running `git diff`. When an agent's file-set includes uncommitted files (subsystem agents triggered by unstaged work), the agent additionally reads those files directly per the Step 0 rule.
 
-**Previous findings injection (iteration N>1 only).** Step 4's incremental re-review requires building a `{previous_findings_block}` per agent before re-spawning. At iteration 1, this placeholder is replaced by the empty string — do not emit a header for an empty block. At iteration N>1, replace it with:
+**Previous findings injection (iteration N>1 only).** Step 4's incremental re-review requires building a `{previous_findings_block}` per agent before re-spawning. At iteration 1, this placeholder is replaced by the empty string — do not emit a header for an empty block.
+
+Two block shapes — pick the one that matches the agent's output contract. Dogfood never receives previous findings (its output is empirical, each run starts fresh).
+
+**Shape A — line-anchored agents (Correctness, Subsystem, Tests, Skill):**
 
 ```
 ## Previous findings (iteration N-1)
@@ -360,13 +390,28 @@ You emitted these findings last iteration. Use them to avoid re-deriving the sam
   ...
 
 Rules for this iteration:
-- For `fixed`: verify the new code actually resolves the failure mode. If the fix is superficial (comment added, code re-arranged but bug remains), re-emit.
-- For `dropped-by-triage`: do not re-emit unless the cited code has materially changed since last iteration. If it has, re-verify against the new code before re-emitting.
-- For `unfixed`: re-emit only if the failure mode still applies to the current code.
+- `fixed`: verify the new code actually resolves the failure mode. If the fix is superficial (comment added, code re-arranged but bug remains), re-emit.
+- `dropped-by-triage`: do not re-emit unless the cited code has materially changed since last iteration. If it has, re-verify against the new code before re-emitting.
+- `unfixed`: re-emit only if the failure mode still applies to the current code.
 - Emit any genuinely new findings introduced by the fix commit as usual.
 ```
 
-Funnel L1/L2 and Materiality agents accept the same block format — Dogfood does not (its findings are empirical, not inference-based, so each run starts fresh).
+**Shape B — prose agents (Funnel L1, Funnel L2, Materiality):**
+
+```
+## Previous findings (iteration N-1)
+
+You emitted these findings last iteration. Use them to avoid re-deriving the same conclusions.
+
+- scope (file / module / claim) — your previous one-line summary — disposition: addressed | rejected-by-orchestrator (reason) | still-stands
+  ...
+
+Rules for this iteration:
+- `addressed`: the orchestrator accepted your structural change and a commit reflects it. Re-emit only if the commit didn't actually resolve your concern (e.g. you said "delete this module" and only the export changed).
+- `rejected-by-orchestrator`: the orchestrator judged the finding as bloat / out-of-scope / over-reach. Do not re-emit unless the cited scope materially changed since last iteration.
+- `still-stands`: the orchestrator accepted the finding but chose not to act this iteration (often because it was `[suggestion]`-tagged). Re-emit verbatim only if the underlying scope is unchanged. If the diff has moved on, re-evaluate from scratch.
+- Emit any genuinely new findings introduced by the fix commit as usual, with the `[must]` / `[suggestion]` tag.
+```
 
 ### Funnel L1
 
@@ -389,7 +434,13 @@ Stay within these files: {file_list}
 
 {previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 
-Output: a flat list of findings. If zero findings, say exactly: "No findings."
+## Output format
+
+Each finding starts with `[must]` (the code as-is shouldn't ship — concrete necessity or completeness gap) or `[suggestion]` (worth considering but the change can ship without it). A finding without a tag is invalid.
+
+Example: `[must] The new helpers in src/utils/fmt.ts duplicate the formatting passes already done in src/io/render.ts — consolidate into the existing module instead of adding a second one.`
+
+If zero findings, say exactly: "No findings."
 ```
 
 ### Funnel L2
@@ -413,7 +464,13 @@ Stay within these files: {file_list}
 
 {previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 
-Output: a flat list of findings. If zero findings, say exactly: "No findings."
+## Output format
+
+Each finding starts with `[must]` (the diff actively carries unused/wasted scope that should be reduced before shipping) or `[suggestion]` (a smaller perimeter is possible but the current shape is defensible). A finding without a tag is invalid.
+
+Example: `[must] BillingProvider wraps only the existing useBilling() hook — inline the hook into its sole caller and delete the provider.`
+
+If zero findings, say exactly: "No findings."
 ```
 
 ### Skill Agent (coding-standards, coding-standards:*, security-defensive, language-*, framework/lib, simplify, matt-improve-codebase-architecture)
@@ -523,16 +580,17 @@ You check whether the project's AI instructions are stale relative to the diff.
 
 Read `CLAUDE.md` and `AGENTS.md` at the repo root if they exist. Read the diff from {diff_file}.
 
-Your task: answer ONE question — does this diff make any line in CLAUDE.md/AGENTS.md misleading or incomplete? Examples of high-materiality changes that warrant an update:
-- Package manager change (npm → pnpm, lockfile family swap)
-- Test framework change (added vitest.config, removed jest.config, etc.)
-- Build tool change (new vite/webpack/rollup config, tsconfig target shift, bundler swap)
-- New top-level directory (apps/, packages/, services/)
-- New required env var (additions in .env.example)
-- CI/CD workflow change (.github/workflows/*, .gitlab-ci.yml)
+Your task: answer ONE question — does this diff make any line in CLAUDE.md/AGENTS.md misleading or incomplete? High-materiality changes that warrant an update (the orchestrator only spawns you when at least one of these triggers fires — be ready to confirm or refute):
+- Package manager change (`packageManager` field changed in package.json, OR lockfile family added/removed)
+- Test framework swap (a *new* `vitest.config.*` / `jest.config.*` / `playwright.config.*` file, OR an existing one removed — not edited)
+- Build tool added or removed (new `vite.config.*` / `webpack.config.*` / `rollup.config.*` / `next.config.*`, OR an existing one deleted)
+- `tsconfig.json` change to `module`, `moduleResolution`, or a *new top-level alias prefix* in `paths`
+- New top-level directory at the repo root or at a monorepo workspace root
+- New required env var (additions in .env.example — not removals, not renames)
+- CI/CD workflow file added or removed (not edited)
 - Major dependency upgrade that changes API surface (e.g. React 18 → 19, Next 14 → 15)
 
-Low materiality (do NOT flag): bug fixes, feature additions using existing patterns, CSS-only changes, dep patch bumps, internal refactors.
+Low materiality (do NOT flag): bug fixes, feature additions using existing patterns, CSS-only changes, dep patch bumps, internal refactors, tsconfig `target`/`lib`/`strict` flag flips, CI workflow tweaks that don't add/remove a file, path-alias *additions* under an existing root.
 
 ## What NOT to flag
 - Generic "consider updating docs" — only concrete claims that became false
@@ -541,7 +599,13 @@ Low materiality (do NOT flag): bug fixes, feature additions using existing patte
 
 Stay within these files: {file_list} plus CLAUDE.md / AGENTS.md.
 
-Output: if CLAUDE.md/AGENTS.md is unchanged but the diff is high-materiality, one finding per stale claim, each with: which file, which line/section, what the diff makes false, and a one-sentence proposed correction. If zero findings, say exactly: "No findings."
+## Output format
+
+If CLAUDE.md/AGENTS.md is unchanged but the diff is high-materiality, one finding per stale claim. Each finding starts with `[must]` (a stated fact is now factually wrong — e.g. "we use npm" after a pnpm migration) or `[suggestion]` (a vague convention that's drifted but didn't break — e.g. "tests live in __tests__" after some moved to colocated `.test.ts`). Then: which file, which line/section, what the diff makes false, and a one-sentence proposed correction. A finding without a tag is invalid.
+
+Example: `[must] CLAUDE.md line 14: "Run npm install" is now wrong — the diff switched to pnpm. Replace with "Run pnpm install".`
+
+If zero findings, say exactly: "No findings."
 ```
 
 ### Dogfood Agent (runtime, post-static-convergence)
