@@ -37,6 +37,25 @@ Note: "config-only" is NOT a blanket skip. A diff that touches only config files
 
 When unsure, run the loop. A spurious run costs a few minutes of agent time; a missed billing bug costs much more.
 
+## Tier classification
+
+Once you've decided the loop runs, classify the diff to pick the fan-out shape. This is the **mid-ground between "skip" and "full review"** — many real diffs (≤100 lines, no high-stakes path) don't justify burning twelve agents.
+
+Compute the inputs once from the unified file-set (`main...HEAD` ∪ unstaged ∪ staged ∪ untracked):
+
+- `total_lines` = sum of added + removed across non-noise files (after the diff filter — see Step 0.5)
+- `file_count` = unique non-noise files
+- `high_stakes` = ANY subsystem trigger fires (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) OR security-sensitive paths (`**/auth/**`, `**/crypto/**`, `**/permissions/**`, `**/migrations/**`) OR signature-verification code
+
+| Tier | Condition | Fan-out |
+|---|---|---|
+| **Lite** | `total_lines ≤ 100` AND `file_count ≤ 20` AND `high_stakes = false` | Funnel L1, Funnel L2, **one** Correctness agent, **one** language agent (dominant ext), simplify, coding-standards (umbrella only — skip the 4 sub-skills), Tests. No subsystem agents (high_stakes is false). No general Opus. ~7 agents. |
+| **Full** | otherwise — incl. any high_stakes trigger, OR `file_count > 50`, OR `total_lines > 100` | Current behavior (everything in Step 0 below). ~12+ agents. |
+
+**Override:** if the user explicitly asks for a deep review, force `Full` regardless of size. The tier is a default, not a ceiling.
+
+The classification result feeds Step 0's agent selection. If `Lite`, Step 0's "Always spawn" list shrinks to the Lite column above, and the "Spawn by imports" / "Spawn by subsystem touched" tables don't apply (Lite tier ≡ no high-stakes path, by construction).
+
 ## The Funnel
 
 Three levels, in order. Each gates the next.
@@ -54,6 +73,8 @@ Three levels, in order. Each gates the next.
 ### Step 0 — Detect agents and scope files
 
 Run `git diff --name-only main...HEAD` to get all changed files. Determine which agents to spawn based on file extensions and imports.
+
+**Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by subsystem touched", "Spawn by interface touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
 
 **Always spawn:** Funnel L1, Funnel L2, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, security-defensive, Tests, Correctness.
 
@@ -98,6 +119,16 @@ If you are unsure, spawn Dogfood. A spurious dogfood run is cheap; a missed runt
 **Codex:** only if the user explicitly requests it.
 
 **General Opus 4.7:** always spawn. Same role as Codex (generalist reviewer, no skill loaded). Spawn via `general-purpose` subagent with `model: opus`.
+
+**Spawn by materiality.** If the diff touches anything that should be reflected in `CLAUDE.md` / `AGENTS.md` but those files are unchanged, spawn the **claude-md-materiality** agent (model: `haiku`). High-materiality signals: package manager switch (`package.json` `packageManager` field, lockfile family change), test framework swap (new `vitest.config.*` / `jest.config.*` / removed equivalent), build tool change (`vite.config.*`, `tsconfig.json` paths/targets, bundler config), new top-level dir, new required env var (`.env.example` additions), CI/CD workflow change. The agent's only job is to flag the gap — not to write the missing doc.
+
+### Step 0.2 — Write shared diff to disk
+
+Write the full diff once to `/tmp/review-diff-{branch}.patch` using `rtk proxy git diff main...HEAD > /tmp/review-diff-{branch}.patch`. Pass this path to every agent in their prompt. Agents read the file instead of re-running git diff per-spawn.
+
+**Why:** on large diffs (>500 lines) with 10+ agents, the per-agent `git diff` invocation duplicates the same bytes through every subagent's context window. Writing once, reading N times, saves token cost and avoids repeated subprocess overhead. The path replaces the `rtk proxy git diff main...HEAD -- {files}` line in each agent template — agents `grep` the patch file scoped to their files.
+
+If the file-set for an agent includes untracked or unstaged files (subsystem agents triggered by uncommitted edits), the agent still reads those files directly per Step 0's rule — the patch file only covers the `main...HEAD` slice.
 
 **Scope files per agent:**
 - Language agents: only files matching the extension
@@ -190,9 +221,25 @@ For the findings that survive: fix every one, regardless of how many agents repo
 
 **Convergence is measured on findings that survived the Step 2 triage, not raw agent output.** An agent that returned only imagined-failure-mode findings — all of which were dropped at step 1 of the triage — counts as converged. Otherwise the same imagined findings would resurface on the next iteration and the loop would never terminate.
 
-If every agent either (a) returned "No findings." or (b) had all of its findings dropped at step 1 of the Step 2 triage (imagined failure modes): done. Proceed to Step 4.5 (if Dogfood was flagged) or Step 5.
+**Severity-based convergence.** Convergence is reached when every agent meets one of:
+- (a) returned `No findings.`, OR
+- (b) had all findings dropped at step 1 of the Step 2 triage, OR
+- (c) all surviving findings are `severity: suggestion`.
 
-Otherwise, re-spawn only agents whose findings survived the Step 2 triage OR whose scoped files were touched by a fix. Continue fixing, committing, and re-launching until convergence.
+Suggestions are **not auto-fixed in the loop** — they're collected and listed in Step 5 for the user to decide. Auto-fixing every suggestion is what gives review tools their reputation for noisy churn; the bias is explicitly toward stopping. Bugs / security / performance / error_handling findings still block convergence and must be fixed.
+
+If converged: proceed to Step 4.5 (if Dogfood was flagged) or Step 5.
+
+Otherwise, re-spawn only agents whose non-suggestion findings survived the Step 2 triage OR whose scoped files were touched by a fix.
+
+**Incremental re-review: inject the previous iteration's findings.** When re-spawning an agent at iteration N>1, append a `<previous_findings>` block to its prompt containing every finding it emitted last iteration, with its disposition: `fixed` (commit touched the cited line), `dropped-by-triage` (orchestrator dropped — reason: imagined / bloat), or `unfixed` (still present, real, re-flag if still applicable). Agents must:
+- not re-emit `dropped-by-triage` findings unless the cited code has materially changed since the last iteration (re-verify against the new diff before re-emitting),
+- verify `fixed` findings are actually resolved by the new code (catch superficial fixes),
+- continue to emit genuinely new findings introduced by the fix commit.
+
+Without this, agents re-derive the same imagined failure modes every iteration and the loop only terminates because the orchestrator keeps re-dropping them — wasting one full round-trip per loop.
+
+Continue fixing, committing, and re-launching until convergence.
 
 ### Step 4.5 — Runtime dogfood (only if flagged in Step 0)
 
@@ -210,12 +257,14 @@ Loop until Dogfood's **first line** is exactly `No findings.` **AND** the final 
 Print a short summary directly in the conversation. No file artifact.
 
 Format:
+- Tier: trivial / lite / full
 - Iterations: N (converged on iteration K)
 - Agents per iteration: N₁ → N₂ → … (e.g. 12 → 4 → 0)
 - Findings fixed: total count, grouped by agent
 - Non-regression tests added: one bullet per bug (description → test name)
+- **Open suggestions (not auto-fixed):** one bullet per surviving `severity: suggestion`, with `file:line` and one-line rationale. Empty section if none. The user picks which to address.
 
-Keep it under ~15 lines. The diff is the source of truth; the summary just locates it.
+Keep it under ~15 lines plus the suggestions list. The diff is the source of truth; the summary just locates it.
 
 ---
 
@@ -281,6 +330,44 @@ Every agent follows: role → context → task → constraints → output format
 
 **Line-anchored templates (Skill, Tests, Subsystem, Correctness) require the Context verification block AND the Output format block to be appended verbatim at the bottom before spawning.** Funnel L1/L2 and Dogfood are self-contained — do not append.
 
+**Model assignment.** Spawn each agent with the model below — heavy reasoning gets `sonnet`, structural/textual lifts get `haiku`. The orchestrator (you) handles the coordinator role and stays on its session model.
+
+| Agent | Model | Rationale |
+|---|---|---|
+| Pre-triage (Step 0.5) | `haiku` | classification only |
+| Funnel L1, Funnel L2 | `haiku` | structural reasoning, short prompts |
+| Correctness | `sonnet` | bug-hunting needs depth |
+| Subsystem (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) | `sonnet` | domain reasoning |
+| Tests | `sonnet` | coverage gaps need code understanding |
+| Skill Agent — heavy (security-defensive, language-rust, language-typescript, language-swift, react, react-native, database, drizzle-orm, frontend, web-performance, simplify, matt-improve-codebase-architecture) | `sonnet` | dense rules, code-level violations |
+| Skill Agent — light (i18n, tailwind, ui, ui-animations, ui-ux, shadcn, vue, tanstack-query, tanstack-start-best-practices, better-auth-best-practices, better-result-adopt, docker, kubernetes, zod) | `haiku` | mostly style/usage rules, low ambiguity |
+| coding-standards (umbrella + 4 sub-skills) | `sonnet` | judgement-heavy |
+| claude-md-materiality | `haiku` | yes/no classification, no fix to derive |
+| Dogfood | `sonnet` | needs to drive a real UI/CLI |
+| General Opus 4.7 | `opus` | generalist, by design |
+| Fix agents (Step 2) | `sonnet` | already specified |
+
+**Shared diff file.** Step 0.2 wrote the full diff to `/tmp/review-diff-{branch}.patch`. Every template below uses `{diff_file}` to refer to it. Agents grep / filter the patch file rather than re-running `git diff`. When an agent's file-set includes uncommitted files (subsystem agents triggered by unstaged work), the agent additionally reads those files directly per the Step 0 rule.
+
+**Previous findings injection (iteration N>1 only).** Step 4's incremental re-review requires building a `{previous_findings_block}` per agent before re-spawning. At iteration 1, this placeholder is replaced by the empty string — do not emit a header for an empty block. At iteration N>1, replace it with:
+
+```
+## Previous findings (iteration N-1)
+
+You emitted these findings last iteration. Use them to avoid re-deriving the same conclusions.
+
+- file:line — title — disposition: fixed | dropped-by-triage (reason) | unfixed
+  ...
+
+Rules for this iteration:
+- For `fixed`: verify the new code actually resolves the failure mode. If the fix is superficial (comment added, code re-arranged but bug remains), re-emit.
+- For `dropped-by-triage`: do not re-emit unless the cited code has materially changed since last iteration. If it has, re-verify against the new code before re-emitting.
+- For `unfixed`: re-emit only if the failure mode still applies to the current code.
+- Emit any genuinely new findings introduced by the fix commit as usual.
+```
+
+Funnel L1/L2 and Materiality agents accept the same block format — Dogfood does not (its findings are empirical, not inference-based, so each run starts fresh).
+
 ### Funnel L1
 
 ```
@@ -288,11 +375,19 @@ You review code for necessity and completeness.
 
 Read the project's CLAUDE.md for conventions. Read CONTEXT.md for domain terms, roles, and invariants.
 
-Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. For every role, type, or constant referenced in the diff, grep the codebase to verify it exists.
+Read the diff from {diff_file}, filtered to {file_list}. For every role, type, or constant referenced in the diff, grep the codebase to verify it exists.
 
 Your task: does each piece of code need to exist? Does the framework or a dependency already solve this? Is there a simpler approach? What's missing?
 
+## What NOT to flag
+- Style, naming, formatting — that's other agents' job
+- Specific bug claims with line numbers — Correctness owns those
+- Test coverage gaps — Tests owns those
+- "Consider extracting X for reusability" without a concrete second caller in the diff
+
 Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 
 Output: a flat list of findings. If zero findings, say exactly: "No findings."
 ```
@@ -304,11 +399,19 @@ You review code for scope reduction.
 
 Read the project's CLAUDE.md for conventions.
 
-Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files when context is needed.
+Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
 
 Your task: find the smallest perimeter. Can files be inlined? Can queries be merged? Can wrapper types be removed? Every abstraction must justify itself through concrete usage.
 
+## What NOT to flag
+- Naming or style improvements — out of scope
+- New abstractions that the diff doesn't already introduce — only flag existing abstractions that don't pay rent
+- Anything requiring a file-level rewrite the user didn't ask for — propose a smaller perimeter, not a refactor of the whole module
+- Defensive "factor this out in case we need it later" reasoning — concrete current usage only
+
 Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 
 Output: a flat list of findings. If zero findings, say exactly: "No findings."
 ```
@@ -320,7 +423,7 @@ You enforce a single skill's rules on changed code.
 
 Read the project's CLAUDE.md for conventions. Then load the skill `{skill_name}` via the Skill tool.
 
-Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files when context is needed.
+Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
 
 Your task:
 1. After loading the skill, list every rule and its review standard (the "flag when..." patterns)
@@ -328,7 +431,15 @@ Your task:
 3. Walk through each rule. For each rule, scan every changed line and check if it violates. When a rule has a review standard, apply it literally.
 4. Report all violations found
 
+## What NOT to flag
+- Anything outside this skill's rules — other agents own their domains
+- Patterns the skill doesn't explicitly prescribe — if you're inferring a rule from "best practices" rather than reading it in the skill, drop it
+- Pre-existing patterns in unchanged code — only flag what the diff introduces or modifies
+- Theoretical risks requiring unlikely preconditions when the primary defense in the diff is adequate
+
 Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 ```
 
 ### Tests Agent
@@ -338,14 +449,23 @@ You review test quality and coverage.
 
 Read the project's CLAUDE.md for conventions. Load the skills `testing` and `matt-tdd` via the Skill tool.
 
-Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files when context is needed.
+Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
 
 Your task:
 - Missing tests: what behavior is untested?
 - Useless tests: trivial type guards, tests that verify language semantics, no real behavior tested
 - Improvable tests: tests that test implementation instead of behavior, tests that would break on refactor
 
+## What NOT to flag
+- Missing tests for trivial accessors / passthrough wrappers / pure type re-exports
+- "Add a test for X" without naming the specific behavior X — vague coverage asks are noise
+- Missing 100% line coverage as a goal — coverage is a side effect of testing the right behaviors
+- E2E tests when the change is pure logic — match test shape to the change
+- Tests for code that's deleted in this diff
+
 Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 ```
 
 ### Subsystem Agent (billing-subsystem, auth-subsystem, schema-migration-subsystem, etc.)
@@ -357,11 +477,20 @@ You are framed as the **{subsystem_name}** reviewer. The failure modes you shoul
 
 Do NOT attempt to load a skill named "{subsystem_name}" — this is a framing label, not a registered skill. Read the project's CLAUDE.md for conventions.
 
-Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files when context is needed. Grep the codebase for related call sites, schemas, and tests when a finding's correctness depends on them.
+Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed. Grep the codebase for related call sites, schemas, and tests when a finding's correctness depends on them.
 
 Your task: walk the diff and, for each listed failure mode, ask whether the change plausibly introduces or amplifies it. Report only concrete instances — never a generic "consider adding handling for X" without a specific line that exhibits the gap.
 
+## What NOT to flag
+- Generic correctness issues outside your failure-mode list — the Correctness agent owns those
+- Style or naming concerns — out of scope
+- "Defense in depth" suggestions when the primary defense in the diff is already adequate
+- Theoretical attack chains requiring multiple unlikely preconditions to land
+- Pre-existing failure modes in unchanged code — only what the diff introduces or amplifies counts
+
 Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 ```
 
 ### Correctness Agent
@@ -371,11 +500,48 @@ You hunt bugs.
 
 Read the project's CLAUDE.md for conventions.
 
-Run `rtk proxy git diff main...HEAD -- {files}` to get the diff. Read full files when context is needed.
+Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
 
 Your task: check the implementation against the apparent intent. Look for bugs, missing edge cases, race conditions, incomplete error handling, logic gaps. For every permission check, verify the role is correct for the operation.
 
+## What NOT to flag
+- Style, naming, formatting — other agents own those
+- "Consider adding error handling" on code that already propagates errors (e.g. `?` in Rust, awaited Promises with downstream `.catch` or top-level rejection)
+- Defensive null checks on values the type system already proves non-null
+- Edge cases requiring conditions that the calling contract already prevents (read the call sites before flagging)
+- Theoretical race conditions without a concrete two-thread interleaving demonstrating the bug
+
 Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
+```
+
+### Materiality Agent (claude-md-materiality)
+
+```
+You check whether the project's AI instructions are stale relative to the diff.
+
+Read `CLAUDE.md` and `AGENTS.md` at the repo root if they exist. Read the diff from {diff_file}.
+
+Your task: answer ONE question — does this diff make any line in CLAUDE.md/AGENTS.md misleading or incomplete? Examples of high-materiality changes that warrant an update:
+- Package manager change (npm → pnpm, lockfile family swap)
+- Test framework change (added vitest.config, removed jest.config, etc.)
+- Build tool change (new vite/webpack/rollup config, tsconfig target shift, bundler swap)
+- New top-level directory (apps/, packages/, services/)
+- New required env var (additions in .env.example)
+- CI/CD workflow change (.github/workflows/*, .gitlab-ci.yml)
+- Major dependency upgrade that changes API surface (e.g. React 18 → 19, Next 14 → 15)
+
+Low materiality (do NOT flag): bug fixes, feature additions using existing patterns, CSS-only changes, dep patch bumps, internal refactors.
+
+## What NOT to flag
+- Generic "consider updating docs" — only concrete claims that became false
+- Missing CLAUDE.md when none exists — only flag staleness, not absence (unless the diff is itself a new project scaffold)
+- Wording improvements to CLAUDE.md — your job is staleness detection, not editing
+
+Stay within these files: {file_list} plus CLAUDE.md / AGENTS.md.
+
+Output: if CLAUDE.md/AGENTS.md is unchanged but the diff is high-materiality, one finding per stale claim, each with: which file, which line/section, what the diff makes false, and a one-sentence proposed correction. If zero findings, say exactly: "No findings."
 ```
 
 ### Dogfood Agent (runtime, post-static-convergence)
