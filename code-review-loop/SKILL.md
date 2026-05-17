@@ -9,31 +9,13 @@ Specialized review agents in parallel. Fix every finding. Loop until convergence
 
 ## When not to use
 
-The right standard is **shape, not size**. A 500-line mechanical rename is safer than a 3-line operator flip on a permissions check.
+The right standard is **shape, not size** — a 500-line mechanical rename is safer than a 3-line operator flip on a permissions check.
 
-**Skip when the diff is genuinely trivial** (regardless of how many lines it touches):
+**Skip when the diff is genuinely trivial**: single-word doc typos, whitespace/comment-only, lockfile or generated-code regeneration, mechanical renames whose only effect is import-path updates, low-risk dependency patch bumps, docs-only changes, inert config changes (linter/formatter rules with no runtime effect), or when the user wants a quick opinion not an autonomous fix loop.
 
-- single-word doc typo, whitespace/format-only, or comment-only
-- lockfile or generated-code regeneration
-- mechanical rename whose only effect is import-path updates
-- low-risk dependency patch bump
-- docs-only changes (markdown, no runtime effect)
-- inert config changes (linter/formatter rules, editor settings, build-tool flags with no runtime effect)
-- the user wants a quick opinion, not an autonomous fix loop
+**Do NOT skip when the diff looks trivial but isn't** — small diff, big blast radius. Examples: any 1-line change to SQL/regex/auth/billing/permission/signature-verification code; flipping a feature-flag default, retry/timeout, or auth callback URL; changing a money/tax/currency/fee constant; changing an HTTP method, redirect URL, or status enum; tightening or loosening a comparison operator (`<` ↔ `<=`, `==` ↔ `!=`); renaming a public API surface; adding a new direct dependency (supply-chain surface); user-facing copy that changes meaning ("approved" → "denied"); mixed diffs where a semantic 1-liner is buried in whitespace.
 
-Note: "config-only" is NOT a blanket skip. A diff that touches only config files but flips a feature-flag default, retry/timeout, auth callback URL, deployment target, or secrets wiring **is** runtime-affecting and falls under "looks trivial but isn't" below.
-
-**Do NOT skip when the diff looks trivial but isn't** — small diff, big blast radius:
-
-- any 1-line change to SQL, regex, auth, billing, permission, or signature-verification code
-- flipping a feature-flag default, a config default, or a retry/timeout constant
-- changing a money, tax, currency, or fee constant by any amount
-- changing an HTTP method, redirect URL, response code, or status enum
-- tightening or loosening a comparison operator (`<` ↔ `<=`, `==` ↔ `!=`)
-- renaming a public API surface (the shape is trivial; the blast radius is not)
-- adding a new direct dependency (supply-chain surface)
-- a "typo fix" in user-facing copy that changes meaning ("approved" → "denied")
-- mixed diffs where a semantic 1-liner is buried in whitespace/formatting changes
+"Config-only" is not a blanket skip — if the config flips a feature-flag default, retry/timeout, auth callback URL, or secrets wiring, it's runtime-affecting and falls under the second list.
 
 When unsure, run the loop. A spurious run costs a few minutes of agent time; a missed billing bug costs much more.
 
@@ -91,6 +73,8 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` to get all changed files. De
 **Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by subsystem touched", "Spawn by interface touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
 
 **Always spawn:** Funnel L1, Funnel L2, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, security-defensive, Tests, Correctness.
+
+**Spawn when `CLAUDE.md` exists at repo root or any monorepo workspace root:** **claude-md-compliance** agent. Reads the file(s), extracts the rules, walks the diff to flag any rule violation the diff introduces. Distinct from `claude-md-materiality` (which flags staleness of the doc) — compliance flags the *code* breaking the doc's rules. Required because most repos document conventions there that no language/framework skill checks for (commit-message rules, project-specific naming, "we use X not Y"). If multiple `CLAUDE.md` exist, one agent handles all of them.
 
 **Spawn by extension:** `.ts`/`.tsx` → language-typescript, `.rs` → language-rust, `.swift` → language-swift, `.vue` → vue.
 
@@ -232,23 +216,14 @@ Run dedup once before the bloat filter. Without it, the fix fan-out receives N c
 
 **Audit `inspected.files` against `finding.file`.** For every line-anchored finding, check that `finding.file` appears in the emitting agent's `inspected.files`. If a finding cites a file the agent never claimed to read, the agent is generalizing from the diff slice rather than from the code — drop it. This catches a common hallucination shape (agent infers a bug from grep results without reading the actual implementation). The audit applies only to line-anchored agents; prose findings (Funnel L1/L2, Materiality) are scoped by structural claims, not by cited files, and are exempt.
 
-**Filter bloat-shaped findings before doing anything else.** Review agents — including these — bias toward *recommending additions*. The bar for every kept finding is **sound + correct + elegant**. Two-out-of-three is a signal to look harder for a fix that gets all three, not to mechanically apply the proposed change.
+**Filter bloat-shaped findings before doing anything else.** Review agents bias toward recommending additions. The bar for every kept finding is **sound + correct + elegant** — two-out-of-three is a signal to look harder, not to mechanically apply the proposed change.
 
-For each finding, do a two-step triage:
+Two-step triage per finding:
 
-1. **Is the underlying failure mode real?** Verify by reading the cited code — does the described scenario actually occur, or is it imagined? If the failure mode is imagined (e.g. a null guard on a type-guaranteed value), drop the finding entirely. For `confidence: low` findings, always re-read the cited code and re-derive the analysis_chain before accepting — low confidence is the agent's request for a second look, treat it as such.
+1. **Is the failure mode real?** Read the cited code. If the scenario is imagined (e.g. a null guard on a type-guaranteed value), drop. For `confidence: low`, re-read and re-derive the analysis_chain before accepting — low confidence is a request for a second look.
+2. **Is the remedy bloated?** If yes but the failure mode is real, keep the finding and rewrite the `fix_prompt` for the smallest fix that resolves the defect. A real race with a "mutex everywhere" remedy is still a real race — look for the narrow lock, the removed shared state, the atomic primitive. Never drop a real defect over an ugly proposal.
 
-2. **If the failure mode is real but the proposed remedy is bloated**, keep the finding and rewrite the fix. A real race condition with a "just add a mutex everywhere" remedy is still a real race condition — look for a smaller fix (remove the shared state, narrow the lock, switch to an atomic primitive). Never drop a real defect just because its proposed fix is ugly.
-
-Bloat-shaped remedies typically propose:
-
-- defensive checks for cases that can't happen (e.g. null guards on values the type system already proves non-null)
-- abstractions used only once
-- comments restating obvious code
-- tests asserting tautologies (language semantics, type guards, "it returns a string when given a string")
-- "just-in-case" guards added without an identified failure mode
-
-A change that nominally improves correctness by degrading elegance usually makes the codebase worse, not better. The smallest diff that fixes the real defect almost always wins.
+Bloat-shaped remedies typically propose: defensive checks for impossible cases, abstractions used once, comments restating obvious code, tautological tests, "just-in-case" guards with no identified failure mode. The smallest diff that fixes the real defect almost always wins.
 
 For the findings that survive: fix every one, regardless of how many agents reported it. A single-agent finding is just as valid as one from seven agents; overlap is a signal of higher confidence, not of higher priority.
 
@@ -349,20 +324,18 @@ Keep it under ~15 lines plus the suggestions list. The diff is the source of tru
 
 ## Context verification protocol
 
-Before any agent reports a finding it MUST run these five checks. Filtering imagined failure modes at the source is faster (fewer loop iterations) and cheaper (agents stop emitting findings that Step 2 will drop anyway).
-
-Inject this block verbatim into every prompt that emits line-anchored findings (Correctness, Subsystem, Tests, Skill agents). Funnel L1/L2 don't need it — their findings are structural ("delete this module"), not failure-mode-anchored. Dogfood doesn't need it — its findings are empirical (the UI either broke or didn't), not inferred.
+Inject verbatim into every line-anchored prompt (Correctness, Subsystem, Tests, Skill, CLAUDE.md Compliance). Funnel L1/L2 and Dogfood don't need it — their findings are structural or empirical, not failure-mode-inferred.
 
 ```
 ## Context verification — MANDATORY before reporting any finding
 
-For every potential finding, answer these questions. If any answer kills the finding, drop it silently — do not emit it.
+For every potential finding, answer these questions. If any answer kills the finding, drop it silently.
 
-1. **Callers/callees**: is the missing validation/conversion/error-handling already done at the call site or in a visible wrapper? If yes, drop.
-2. **Test context**: does the path contain a *segment* (between `/` separators) named exactly `tests`, `test`, `__tests__`, `spec`, `specs`, `fixtures`, `mocks`, OR does the filename match `*_test.*` / `*.test.*` / `*.spec.*` / `test_*.py` / `*_spec.rb`, OR is the code inside `#[cfg(test)]` / `describe(` / `test(` / `it(` / `def test_`? Substring matches don't count — `src/prospecting/`, `src/mockingbird/`, `src/special/` are production. If the strict criteria match, `.unwrap()` / `panic!` / missing validation / unsafe patterns are normal — drop unless it's a genuine logic bug.
-3. **Intentional comments**: is there a `// SAFETY:`, `// intentionally`, `// fallback`, `# noqa`, or equivalent that *specifically* explains the failure mode you would flag? A generic "this is intentional" nearby is not enough — the comment must address the exact failure mode (a `// SAFETY:` justifying an unchecked-bounds index does NOT silence a race condition on the same line). If the comment matches the failure mode you'd flag, drop.
-4. **Diff is the fix**: does the added code *resolve the same failure mode* you're about to flag, or does it improve a different aspect? Replacing `.unwrap()` with `?` resolves a panic-on-None failure; replacing `format!` with bind parameters resolves SQL injection but does NOT resolve a missing tenant filter on the same query. Drop only when the diff fixes the specific failure mode you would have flagged — partial improvements still leave their unaddressed failure modes flaggable.
-5. **Type tracing**: for a claimed type mismatch (`f64` vs `i64`, `Option<T>` vs `T`, `&str` vs `String`), trace the value flow through the diff. If a conversion exists at any visible point on the path, the types are consistent — drop.
+1. **Callers/callees** — is the missing validation/conversion/error-handling already done at the call site or in a visible wrapper? If yes, drop.
+2. **Test context** — does the path contain a *segment* (between `/` separators) named exactly `tests`, `test`, `__tests__`, `spec`, `specs`, `fixtures`, `mocks`, OR a filename matching `*_test.*` / `*.test.*` / `*.spec.*` / `test_*.py` / `*_spec.rb`, OR code inside `#[cfg(test)]` / `describe(` / `test(` / `it(` / `def test_`? Substring matches don't count — `src/prospecting/`, `src/mockingbird/` are production. In test code, `.unwrap()` / `panic!` / missing validation are normal — drop unless it's a genuine logic bug.
+3. **Intentional comments** — is there a `// SAFETY:` / `// intentionally` / `// fallback` / `# noqa` that *specifically* addresses the failure mode you would flag? A `// SAFETY:` justifying an unchecked-bounds index does NOT silence a race condition on the same line. Match must be specific.
+4. **Diff is the fix** — does the added code resolve the same failure mode you're about to flag, or only a different aspect? `.unwrap()` → `?` resolves panic-on-None; `format!` → bind params resolves SQL injection but does NOT resolve a missing tenant filter. Drop only when the diff addresses your specific failure mode.
+5. **Type tracing** — for a claimed type mismatch (`f64` vs `i64`, `Option<T>` vs `T`, `&str` vs `String`), trace the value flow through the diff. If a conversion exists anywhere on the path, the types are consistent — drop.
 ```
 
 ## Output format for line-anchored findings
@@ -405,26 +378,22 @@ Otherwise, respond with a single JSON object, no markdown, no preamble:
 }
 ```
 
-**Why `analysis_chain`**: the chain is auditable. A finding whose chain doesn't survive a re-read of the cited code is a hallucination — Step 2 triage can drop it by reading the chain, without re-reading the diff. This complements the Context verification block: that one filters before emission; this one filters after.
+**Field rationales (each field earns its line):**
 
-**Why `fix_prompt`**: the per-file fix agents in Step 2 consume it verbatim. They no longer re-interpret the finding or re-derive the fix — they apply what's written.
+- `analysis_chain` — auditable trace. A chain that doesn't survive a re-read of the cited code is a hallucination; Step 2 can drop it without re-reading the diff.
+- `fix_prompt` — consumed verbatim by per-file fix agents. No re-interpretation between reviewer and fix agent.
+- `signature` — dedup key `<file>:<line>:<failure-mode-slug>`. Use a slug from this controlled vocabulary when applicable: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation`. Otherwise emit a free 3-5 kebab-token slug. Step 2 dedupes with a tolerant matcher (same file, line within ±3, same slug OR title-token Jaccard ≥ 0.6).
+- `confidence` — `high|medium|low`, separate from severity. `severity: bug, confidence: low` survives Step 2 only when the analysis_chain is airtight. Low-confidence security findings still warrant a second look — don't merge with severity.
+- `why_tests_dont_cover` — forces the agent to grep the test suite before emitting. If existing tests cover the failure mode, your finding is the test, not the bug — drop it. The field is your proof that you looked.
+- `suggested_regression_test` — consumed by the fix agent for the TDD step (Step 2 mandates a non-regression test for bugs). Pre-articulating it here saves the fix agent re-deriving it.
+- `minimum_fix_scope` — anti-bloat discipline at emission, not just at triage. If you can't state a small scope, the finding probably isn't ready.
+- `inspected` — audit surface. If `finding.file` isn't in `inspected.files`, the agent claimed insight without reading the code — drop. `symbols` and `notes` carry the supporting context considered.
 
-**Why `signature`**: dedup key shaped as `<file>:<line>:<failure-mode-slug>`. The slug SHOULD come from this controlled vocabulary when applicable — same failure mode, same slug, deterministic dedup: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation`. For defects not in this list, emit a free 3-5 kebab-token slug. Step 2 dedupes with a **tolerant matcher**: two findings are duplicates when same `file` AND `|line_diff| ≤ 3` AND (same slug OR title-token Jaccard ≥ 0.6). This catches the common case (agents anchor at slightly different lines, paraphrase the title) without merging genuinely distinct defects on adjacent lines.
+`why_tests_dont_cover`, `suggested_regression_test`, `minimum_fix_scope` apply to `bug` / `security` / `performance` / `error_handling`. For `suggestion` findings, set them to `null`.
 
-**Why `confidence`**: separates "I'm sure this is a defect" (high) from "this looks suspicious but the call site might handle it" (low). Step 2 reads confidence alongside severity — a `severity: bug, confidence: low` survives only when the analysis_chain is airtight. Don't merge confidence into severity: a low-confidence security finding still warrants checking; merging would either suppress it (lose signal) or treat it as critical (false alarm).
+Severity values: `bug` | `security` | `performance` | `error_handling` | `suggestion`. Suggestion findings should usually have been dropped at Context verification step 1.
 
-**Why `why_tests_dont_cover`, `suggested_regression_test`, `minimum_fix_scope`**:
-- `why_tests_dont_cover` forces the agent to grep the test suite **before** emitting. If existing tests cover the failure mode you're flagging, your finding is the test, not the bug — drop it. The field is your output proof that you looked.
-- `suggested_regression_test` is consumed by the fix agent for the TDD step (Step 2 mandates a non-regression test for bugs). Pre-articulating it here means the fix agent doesn't re-derive it.
-- `minimum_fix_scope` is the discipline against bloated remedies at the emission point, not just at triage. If you can't state a small scope, the finding probably isn't ready.
-
-These three apply to `bug` / `security` / `performance` / `error_handling`. For `suggestion` findings, set them to `null`.
-
-**Why `inspected`**: audit surface for hallucinations. If a finding's `file` isn't in `inspected.files`, the agent claimed insight without reading the code — drop the finding. `symbols` and `notes` document the supporting context the agent considered (call sites, related modules, intentional comments seen and rejected as not matching the failure mode).
-
-Severity values: `bug` | `security` | `performance` | `error_handling` | `suggestion`. Suggestion-only findings should usually have been dropped at Context verification step 1 — emit them only when the pattern actively harms correctness or readability.
-
-Confidence values: `high` | `medium` | `low`. Default to `high` only when the analysis_chain survives independent re-derivation from the cited code. `low` confidence on a `bug` severity is a request for a second look, not a request for a fix — treat it skeptically at triage.
+Confidence values: `high` | `medium` | `low`. Default to `high` only when the analysis_chain survives independent re-derivation from the cited code.
 
 ---
 
@@ -432,7 +401,7 @@ Confidence values: `high` | `medium` | `low`. Default to `high` only when the an
 
 Every agent follows: role → context → task → constraints → output format.
 
-**Line-anchored templates (Skill, Tests, Subsystem, Correctness) require the Context verification block AND the Output format block to be appended verbatim at the bottom before spawning.** Funnel L1/L2 and Dogfood are self-contained — do not append.
+**Line-anchored templates (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance) require the Context verification block AND the Output format block to be appended verbatim at the bottom before spawning.** Funnel L1/L2, Materiality, and Dogfood are self-contained — do not append.
 
 **Model assignment.** Spawn each agent with the model below — heavy reasoning gets `sonnet`, structural/textual lifts get `haiku`. The orchestrator (you) handles the coordinator role and stays on its session model.
 
@@ -448,6 +417,7 @@ Every agent follows: role → context → task → constraints → output format
 | Skill Agent — light (i18n, tailwind, ui, ui-animations, ui-ux, shadcn, vue, tanstack-query, tanstack-start-best-practices, better-auth-best-practices, better-result-adopt, docker, kubernetes, zod) | `haiku` | mostly style/usage rules, low ambiguity |
 | coding-standards (umbrella + 4 sub-skills) | `sonnet` | judgement-heavy |
 | claude-md-materiality | `haiku` | yes/no classification, no fix to derive |
+| claude-md-compliance | `sonnet` | rule walk requires judgement and code-level matching |
 | Dogfood | `sonnet` | needs to drive a real UI/CLI |
 | General Opus 4.7 | `opus` | generalist, by design |
 | Fix agents (Step 2) | `sonnet` | already specified |
@@ -699,47 +669,56 @@ Example: `[must] CLAUDE.md line 14: "Run npm install" is now wrong — the diff 
 If zero findings, say exactly: "No findings."
 ```
 
+### CLAUDE.md Compliance Agent
+
+```
+You enforce the project's own conventions as written in its CLAUDE.md / AGENTS.md.
+
+Read every `CLAUDE.md` and `AGENTS.md` at the repo root and at each monorepo workspace root. List every rule, convention, or constraint they state — commit message format, file layout, naming conventions, banned imports, mandatory patterns, "we always do X" / "we never do Y" lines.
+
+Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
+
+For each rule, scan every changed line and check if it violates. A rule fires only when the diff introduces or modifies code that breaks it — pre-existing violations in unchanged code are out of scope.
+
+This diff crosses these trust boundaries: {trust_boundaries}. Rules that touch these boundaries (auth conventions, secret-handling rules, etc.) take precedence when you have to choose between violations to flag.
+
+## What NOT to flag
+- Rules from skills loaded by other agents (language-typescript, security-defensive, etc.) — those agents own their domains
+- Inferences from "best practices" not literally stated in the doc — only flag what the doc actually says
+- Pre-existing violations in unchanged code
+- Style preferences the doc mentions in passing without a rule — "we tend to..." is not "you must..."
+
+Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
+```
+
 ### Dogfood Agent (runtime, post-static-convergence)
 
 ```
-You exercise a user-facing surface to find runtime bugs that static review can't catch.
+You exercise a user-facing surface to find runtime bugs static review can't catch.
 
 Load the `dogfood` skill via the Skill tool. Read the project's CLAUDE.md for run instructions, dev credentials, and conventions.
 
-The changed surface(s) to exercise: {file_list}
+Changed surface(s) to exercise: {file_list}
 
-Your task — in this exact order:
+Run in this exact order:
 
-1. **Verify you are NOT in production.** Before doing anything, confirm the environment: read `.env`/`.env.local`, check the database connection string, look for `NODE_ENV`/`APP_ENV`. If the active database, API host, or any service URL looks like a real production system, **abort immediately** and report it as a finding ("refused to run: target appears to be production"). Never mutate data on a non-dev environment.
+1. **Verify you are NOT in production.** Read `.env`/`.env.local`, check the DB connection string, look for `NODE_ENV`/`APP_ENV`. If the active database, API host, or any service URL looks like a real production system, **abort** and emit one finding: `refused to run: target appears to be production`. Never mutate data on non-dev.
 
-2. **Start the dev server / CLI with PID capture.** Find the command in package.json scripts, Makefile, justfile, or CLAUDE.md. Start it as a tracked background process so we can stop *every* child it spawns:
+2. **Start the dev server with PID capture and a cleanup trap.** Find the command in `package.json` scripts, Makefile, justfile, or CLAUDE.md. Use `setsid` so the server gets its own process group:
 
    ```bash
-   # setsid puts the server in its own process group whose leader's PID we can capture.
    setsid <run-command> &
    SERVER_PID=$!
-   # The PGID equals the leader's PID for a setsid leader, but read it explicitly to be safe.
    SERVER_PGID=$(ps -o pgid= "$SERVER_PID" 2>/dev/null | tr -d ' ')
-   ```
 
-   **If `setsid` is not available** (some shells/platforms): the fallback `<run-command> &` puts the child in the SAME process group as the agent shell. Negative-PGID kill in that case would terminate the agent itself. Therefore, **without `setsid`, never `kill -TERM -"$SERVER_PGID"`** — set `SERVER_PGID=""`, kill `SERVER_PID` directly with `kill -TERM "$SERVER_PID"` followed by `kill -KILL "$SERVER_PID"`, and rely on the port/pgrep checks in cleanup to catch escaped watchers and children. Note this limitation in the output's "How I authenticated" section.
-
-   Register a cleanup trap **before** running the test interactions:
-   ```bash
    cleanup() {
-     # Prefer process-group kill (covers children/watchers/queue workers). Falls back to PID-only
-     # if SERVER_PGID is empty (e.g., setsid unavailable) — never negative-PGID kill on the parent group.
      if [ -n "$SERVER_PGID" ]; then
-       kill -TERM -"$SERVER_PGID" 2>/dev/null
-       sleep 1
-       kill -KILL -"$SERVER_PGID" 2>/dev/null
+       kill -TERM -"$SERVER_PGID" 2>/dev/null; sleep 1; kill -KILL -"$SERVER_PGID" 2>/dev/null
      elif [ -n "$SERVER_PID" ]; then
-       kill -TERM "$SERVER_PID" 2>/dev/null
-       sleep 1
-       kill -KILL "$SERVER_PID" 2>/dev/null
+       kill -TERM "$SERVER_PID" 2>/dev/null; sleep 1; kill -KILL "$SERVER_PID" 2>/dev/null
      fi
-     # Verify nothing is still listening on the project's ports.
-     # Portable: pipe lsof output to a while-read loop (avoids `xargs -r`, which is GNU-only).
      for port in <project-ports>; do
        lsof -ti :"$port" 2>/dev/null | while IFS= read -r pid; do
          [ -n "$pid" ] && kill -KILL "$pid" 2>/dev/null
@@ -749,29 +728,21 @@ Your task — in this exact order:
    trap cleanup EXIT INT TERM
    ```
 
-   Wait for readiness (poll the port, watch for the "ready" line, etc.).
+   If `setsid` is unavailable, the fallback `<run-command> &` puts the child in the agent's own process group — negative-PGID kill would terminate the agent. Set `SERVER_PGID=""`, kill `SERVER_PID` directly, and rely on the port/pgrep checks to catch escaped watchers. Note the limitation in the "How I authenticated" output section.
 
-3. **Authenticate if needed.** Check CLAUDE.md for test credentials first. If absent, in this order:
-   - run a seed script if one exists,
-   - drive the signup flow yourself,
-   - request a magic-link / dev-only auth bypass,
-   - direct DB insert as a last resort, against the **confirmed-dev** database only.
+   Wait for readiness (poll the port, watch for a "ready" line).
 
-   **Use a unique identifier you can clean up later** — e.g., `email = afk-dogfood-<YYYYMMDD-HHMMSS>-<rand>@example.invalid`. Record exactly what you created in a list (`/tmp/dogfood-created.txt`): the table(s), the row ids, and the unique identifier. The next run reads this list; you must too.
+3. **Authenticate.** Check CLAUDE.md for test credentials first. Otherwise in order: seed script → signup flow → magic-link / dev auth bypass → direct DB insert (confirmed-dev DB only). Use a unique identifier (`email = afk-dogfood-<YYYYMMDD-HHMMSS>-<rand>@example.invalid`). Record everything created — tables, row ids, unique identifier — to `/tmp/dogfood-created.txt`. Next run reads this list; you must too.
 
-4. **Exercise the changed surface.** Drive the new code path end-to-end via the actual interface (browser for UI, terminal invocation for CLI, HTTP for API). Hit the happy path, then push it: empty inputs, oversized inputs, malformed inputs, rapid clicks, race conditions, refresh mid-flow, browser back, permission boundaries.
+4. **Exercise.** Drive the new code path end-to-end via the actual interface (browser for UI, terminal for CLI, HTTP for API). Happy path, then push: empty/oversized/malformed inputs, rapid clicks, race conditions, refresh mid-flow, browser back, permission boundaries.
 
-5. **Capture evidence.** For every bug: a one-line summary, the steps to reproduce, the observed vs expected behaviour, and any console / network / server-log artifact you saw.
+5. **Capture evidence.** Per bug: one-line summary, repro steps, observed vs expected, any console/network/server-log artifact.
 
-6. **Cleanup is mandatory.** Even on bugs, even on errors, even on your own crash — the trap from step 2 fires and stops the server's process group. Then:
-   - Delete every row listed in `/tmp/dogfood-created.txt`. Report exact counts (`deleted: 3 users, 7 sessions`).
-   - Verify ports are free: `lsof -i :<port>` returns nothing.
-   - Verify no orphan processes: `pgrep -f <server-command>` returns nothing.
-   - If anything you created cannot be cleanly deleted, list it in the output under "cleanup-incomplete" — do **not** hide it.
+6. **Cleanup is mandatory** — bugs, errors, crashes, anything. The trap fires; then delete every row in `/tmp/dogfood-created.txt` (report exact counts: `deleted: 3 users, 7 sessions`). Verify ports free (`lsof -i :<port>` returns nothing) and no orphans (`pgrep -f <server-command>` returns nothing). List uncleanable items under `cleanup-incomplete` — never hide them.
 
-Output (the **first line** is the convergence signal — keep header lines after it):
-- If zero bugs: line 1 is exactly `No findings.`
-- Otherwise: line 1 is a one-line count (e.g. `3 findings.`), then a flat list of bugs. Every bug entry MUST include a `suspected files:` field listing the paths/components most likely owning the defect — Step 4.5 groups fix agents by file, so this attribution is required, not optional.
-- A short "How I authenticated" note so the next run can reuse it.
-- A final line: `cleanup-complete: server stopped (PID/PGID killed and verified), N rows deleted` OR `cleanup-incomplete: <what's left>`.
+Output (the **first line** is the convergence signal):
+- Zero bugs: line 1 is exactly `No findings.`
+- Otherwise: line 1 is `N findings.`, then a flat list. Every entry MUST include `suspected files:` (Step 4.5 groups fix agents by file — attribution is required).
+- A short "How I authenticated" note for the next run.
+- Final line: `cleanup-complete: server stopped (PID/PGID killed and verified), N rows deleted` OR `cleanup-incomplete: <what's left>`.
 ```
