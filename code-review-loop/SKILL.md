@@ -119,6 +119,24 @@ All path globs below are **recursive** — `**/billing/**` matches `apps/api/src
 
 The subsystem agent **adds to** (does not replace) the generic Correctness agent. Use the **Subsystem Agent** prompt template below — not the Skill Agent template, which would try to load a non-existent skill of that name.
 
+**Compute active trust boundaries.** Even when the diff doesn't fire a full subsystem agent, the same triggers identify which boundaries the diff crosses. Compute the union — zero or more of `user-input | network | filesystem | secrets | process-exec | database | auth | permissions | concurrency | external-api | serialization` — and pass it as `{trust_boundaries}` into every line-anchored template (Correctness, Tests, Skill, Subsystem). When no boundary is crossed, pass `none`. **Computation runs for both Lite and Full tiers** — Lite diffs that touch `network` / `serialization` / `external-api` get the same lens (those boundaries don't gate high_stakes, so they survive Lite filtering).
+
+| Boundary | Signals (path globs / imports / code patterns) | Failure modes (used by line-anchored agents when boundary is in `{trust_boundaries}`) |
+|---|---|---|
+| `user-input` | HTTP handlers, form parsers, CLI argv, request-body deserialization, `req.body`/`req.query`/`params` | injection (SQL/command/template), unsanitized rendering, missing length/shape validation |
+| `network` | `fetch(`, `http.get(`, `axios`, `got`, `undici`, `reqwest`, raw sockets | unbounded retries, missing timeouts, leaked credentials in URLs/headers, silent failure on non-2xx |
+| `filesystem` | `fs.readFile`/`writeFile`, `std::fs`, `path.join` from user input, archive extraction | path traversal, symlink races, missing `O_NOFOLLOW`, unbounded reads |
+| `secrets` | `.env*`, env reads of `*_KEY`/`*_SECRET`/`*_TOKEN`, JWT secret loading, KMS/Vault | secret printed to logs/errors, secret committed to fixtures, secret in URL query string |
+| `process-exec` | `child_process.exec`/`spawn`, `std::process::Command`, shell-string concatenation | shell-string concatenation, missing arg array, unescaped user input as command parts |
+| `database` | ORM imports (drizzle, prisma, typeorm, sqlx, sea-orm), `db.query`/`pool.execute`, SQL templates | missing tenant/owner filter, raw SQL with interpolation, N+1, missing transaction on multi-step writes |
+| `auth` | session lookup, `getSession(`, JWT verification, `bcrypt`/`argon2`, OAuth callback handlers | session fixation, missing rotation, JWT verification skipped or with wrong key, replay |
+| `permissions` | role checks, RBAC predicates, `can(`/`authorize(`, policy lookups | check-then-use TOCTOU, wrong role for the operation, missing check on shared resource |
+| `concurrency` | `Promise.all` with side effects, mutexes, atomics, worker threads, channels, `tokio::spawn` | unsynchronized shared state, dropped futures, non-atomic compound ops, deadlock potential |
+| `external-api` | third-party SDK imports (Stripe, Twilio, S3 client, OpenAI, etc.) | missing rate-limit handling, retry-without-idempotency-key, sensitive payload not redacted |
+| `serialization` | `JSON.parse` of untrusted input, `serde` derives, protobuf encode/decode, `pickle.loads`, YAML loaders | trusting parsed shape without validation, prototype pollution, deserialization of untrusted blobs |
+
+The "Failure modes" column is the **single source of truth** for what line-anchored agents prioritize when a boundary is active. Templates reference this table rather than duplicating the list — saves bytes per spawn over a multi-iteration loop.
+
 **Spawn by interface touched.** If the diff changes a user-facing surface, also spawn a **Dogfood** agent. Detect broadly — *err on the side of triggering*. Categories and signals:
 
 - **Web UI**: `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `*.html`, CSS / design-token files (`*.css`, `*.scss`, `tokens.*`, theme files), `app/**/page.*`, `pages/**`, `src/routes/**`, server actions, i18n copy files, public/static assets that change observable behaviour.
@@ -204,11 +222,21 @@ Read all reports. Process in funnel order:
 2. L2 findings next. If L2 says "merge these files," discard file-level findings on the originals.
 3. All other findings. Contradictions: the simpler option wins.
 
+**Dedupe by signature before triaging.** Each line-anchored finding carries a `signature: <file>:<line>:<failure-mode-slug>`. When the same defect is flagged by N agents (Correctness + a subsystem agent + a language agent all spotting the same `unwrap()` on user input), they emit equivalent signatures. Use the tolerant matcher defined in the JSON envelope spec — same file, line within ±3, same slug OR title-token Jaccard ≥ 0.6 — to group:
+
+- Keep the emission with the highest `confidence`. Tiebreak: the one whose `fix_prompt` is most specific (cites a concrete line and a concrete replacement, not a paraphrase).
+- Annotate the kept finding with `reported_by: [agent_name, ...]` (orchestrator-added — agents do not emit this field). Three independent agents converging on the same signature is a strong triage signal.
+- Discard the duplicates entirely. They've voted; their fix_prompts are redundant and risk having the per-file fix agent apply the same change twice.
+
+Run dedup once before the bloat filter. Without it, the fix fan-out receives N copies of the same `fix_prompt` and rewrites the same line twice (sometimes inconsistently when the prompts paraphrase differently).
+
+**Audit `inspected.files` against `finding.file`.** For every line-anchored finding, check that `finding.file` appears in the emitting agent's `inspected.files`. If a finding cites a file the agent never claimed to read, the agent is generalizing from the diff slice rather than from the code — drop it. This catches a common hallucination shape (agent infers a bug from grep results without reading the actual implementation). The audit applies only to line-anchored agents; prose findings (Funnel L1/L2, Materiality) are scoped by structural claims, not by cited files, and are exempt.
+
 **Filter bloat-shaped findings before doing anything else.** Review agents — including these — bias toward *recommending additions*. The bar for every kept finding is **sound + correct + elegant**. Two-out-of-three is a signal to look harder for a fix that gets all three, not to mechanically apply the proposed change.
 
 For each finding, do a two-step triage:
 
-1. **Is the underlying failure mode real?** Verify by reading the cited code — does the described scenario actually occur, or is it imagined? If the failure mode is imagined (e.g. a null guard on a type-guaranteed value), drop the finding entirely.
+1. **Is the underlying failure mode real?** Verify by reading the cited code — does the described scenario actually occur, or is it imagined? If the failure mode is imagined (e.g. a null guard on a type-guaranteed value), drop the finding entirely. For `confidence: low` findings, always re-read the cited code and re-derive the analysis_chain before accepting — low confidence is the agent's request for a second look, treat it as such.
 
 2. **If the failure mode is real but the proposed remedy is bloated**, keep the finding and rewrite the fix. A real race condition with a "just add a mutex everywhere" remedy is still a real race condition — look for a smaller fix (remove the shared state, narrow the lock, switch to an atomic primitive). Never drop a real defect just because its proposed fix is ugly.
 
@@ -234,12 +262,37 @@ For the findings that survive: fix every one, regardless of how many agents repo
 
 **Re-read your own fixes.** After the fix agents return, re-read each changed file. If any fix you accepted now reads as bloat in context (a guard for an impossible case, a one-use abstraction, a tautological test), revert it. Catching bloat in your own diff is cheaper than catching it on the next review.
 
-### Step 3 — Verify and commit
+### Step 3 — Revalidate, verify, and commit
 
-1. Run the test suite
-2. Run the linter
-3. Fix failures
-4. Commit describing what was fixed and why
+1. **Revalidate the fixed findings before running the test suite.** Scope: only findings of `severity: bug | security | performance | error_handling` that entered the fix queue. Suggestions and `[suggestion]`-tagged prose are never fixed in the loop, so never revalidated. Spawn ONE `general-purpose` subagent with `model: haiku` that receives, for each fixed finding, its `signature`, `file`, `line`, `analysis_chain`, and the fix diff. Prompt:
+
+   ```
+   You revalidate code-review findings against the fixes applied to them.
+
+   For each finding below, read the cited file at its current state and the fix diff. Answer one of: `fixed` (the original failure mode is no longer reachable in the new code), `open` (original failure mode still reachable — fix is superficial: comment added, variable renamed, guard placed before the wrong line, or change in unrelated location), or `uncertain` (the fix is plausible but you cannot confirm without running it).
+
+   ## What NOT to do
+   - Do NOT flag new defects. Stay strictly within the listed signatures.
+   - Do NOT mark `open` for stylistic disagreement with the fix — `open` is reserved for the original failure mode still being reachable.
+   - If the fix lives in a different file than the signature's file (caller-site fix), follow the diff and revalidate against the actual changed code.
+   - If the signature's file was deleted by the fix (L1/L2 structural delete), mark `fixed`.
+
+   Return strict JSON, no markdown:
+   {"revalidations": [{"signature": "...", "status": "fixed|open|uncertain", "why": "one sentence"}]}
+
+   Findings to revalidate:
+   {findings_with_diffs}
+   ```
+
+   A single agent handles all of them — one Haiku call is cheaper than N parallel ones for what amounts to a checklist.
+
+2. **Findings marked `open` or `uncertain` re-enter the fix queue.** Build a new round of fix prompts from their original `fix_prompt` plus a one-line note (`previous attempt failed revalidation: <why>`), spawn the per-file fix agents again, and revalidate. Bound this micro-cycle: max 3 attempts total within a single Step 3 call (1 initial + 2 re-fixes). Track `attempts: N` per signature **across outer iterations** — when total attempts ≥ 5, stop fix-looping that finding and surface it in Step 5's open-suggestions list with the failure trail. This is the only safeguard against an outer loop spinning forever on a stubborn finding.
+3. Run the test suite.
+4. Run the linter.
+5. Fix failures.
+6. Commit describing what was fixed and why.
+
+**Why a dedicated revalidation pass.** Tests catch regressions, but they don't catch superficial fixes that pass-by-coincidence (a comment added next to the bug, a guard placed before the defective line instead of replacing it, a rename that suppresses a linter warning without fixing the logic). A fresh model that didn't write the fix re-reads it against the original `analysis_chain` and asks: "is the failure mode gone?" Cheaper than letting the bug slip through to the next iteration, where the original reviewer would have to re-derive its own chain.
 
 ### Step 4 — Loop or stop
 
@@ -330,15 +383,25 @@ Otherwise, respond with a single JSON object, no markdown, no preamble:
       "line": 42,
       "end_line": 45,
       "severity": "bug",
+      "confidence": "high",
+      "signature": "src/auth/session.rs:42:unwrap-on-user-header",
       "title": "unwrap() on user-supplied header",
       "analysis_chain": [
         "Line 42 calls .unwrap() on req.headers.get(\"X-Token\")",
         "HeaderMap::get returns Option<&HeaderValue>",
         "Header is attacker-controlled — missing header panics the handler"
       ],
+      "why_tests_dont_cover": "tests/auth/session_test.rs only covers the happy path with X-Token present; no test sends a request without the header",
+      "minimum_fix_scope": "replace .unwrap() with .ok_or(AuthError::MissingToken)? on line 42",
+      "suggested_regression_test": "POST /session without X-Token header expects 401, not 500",
       "fix_prompt": "In src/auth/session.rs line 42, replace .unwrap() with .ok_or(AuthError::MissingToken)? to propagate instead of panic."
     }
-  ]
+  ],
+  "inspected": {
+    "files": ["src/auth/session.rs", "src/auth/errors.rs", "tests/auth/session_test.rs"],
+    "symbols": ["validate_session", "AuthError"],
+    "notes": ["middleware in src/middleware/auth.rs already returns 401 on AuthError; no double-handling risk"]
+  }
 }
 ```
 
@@ -346,7 +409,22 @@ Otherwise, respond with a single JSON object, no markdown, no preamble:
 
 **Why `fix_prompt`**: the per-file fix agents in Step 2 consume it verbatim. They no longer re-interpret the finding or re-derive the fix — they apply what's written.
 
+**Why `signature`**: dedup key shaped as `<file>:<line>:<failure-mode-slug>`. The slug SHOULD come from this controlled vocabulary when applicable — same failure mode, same slug, deterministic dedup: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation`. For defects not in this list, emit a free 3-5 kebab-token slug. Step 2 dedupes with a **tolerant matcher**: two findings are duplicates when same `file` AND `|line_diff| ≤ 3` AND (same slug OR title-token Jaccard ≥ 0.6). This catches the common case (agents anchor at slightly different lines, paraphrase the title) without merging genuinely distinct defects on adjacent lines.
+
+**Why `confidence`**: separates "I'm sure this is a defect" (high) from "this looks suspicious but the call site might handle it" (low). Step 2 reads confidence alongside severity — a `severity: bug, confidence: low` survives only when the analysis_chain is airtight. Don't merge confidence into severity: a low-confidence security finding still warrants checking; merging would either suppress it (lose signal) or treat it as critical (false alarm).
+
+**Why `why_tests_dont_cover`, `suggested_regression_test`, `minimum_fix_scope`**:
+- `why_tests_dont_cover` forces the agent to grep the test suite **before** emitting. If existing tests cover the failure mode you're flagging, your finding is the test, not the bug — drop it. The field is your output proof that you looked.
+- `suggested_regression_test` is consumed by the fix agent for the TDD step (Step 2 mandates a non-regression test for bugs). Pre-articulating it here means the fix agent doesn't re-derive it.
+- `minimum_fix_scope` is the discipline against bloated remedies at the emission point, not just at triage. If you can't state a small scope, the finding probably isn't ready.
+
+These three apply to `bug` / `security` / `performance` / `error_handling`. For `suggestion` findings, set them to `null`.
+
+**Why `inspected`**: audit surface for hallucinations. If a finding's `file` isn't in `inspected.files`, the agent claimed insight without reading the code — drop the finding. `symbols` and `notes` document the supporting context the agent considered (call sites, related modules, intentional comments seen and rejected as not matching the failure mode).
+
 Severity values: `bug` | `security` | `performance` | `error_handling` | `suggestion`. Suggestion-only findings should usually have been dropped at Context verification step 1 — emit them only when the pattern actively harms correctness or readability.
+
+Confidence values: `high` | `medium` | `low`. Default to `high` only when the analysis_chain survives independent re-derivation from the cited code. `low` confidence on a `bug` severity is a request for a second look, not a request for a fix — treat it skeptically at triage.
 
 ---
 
@@ -361,6 +439,7 @@ Every agent follows: role → context → task → constraints → output format
 | Agent | Model | Rationale |
 |---|---|---|
 | Pre-triage (Step 0.5) | `haiku` | classification only |
+| Revalidation (Step 3) | `haiku` | checklist over a small structured input |
 | Funnel L1, Funnel L2 | `haiku` | structural reasoning, short prompts |
 | Correctness | `sonnet` | bug-hunting needs depth |
 | Subsystem (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) | `sonnet` | domain reasoning |
@@ -375,6 +454,8 @@ Every agent follows: role → context → task → constraints → output format
 
 **Shared diff file.** Step 0.2 wrote the full diff to `/tmp/review-diff-{branch}.patch`. Every template below uses `{diff_file}` to refer to it. Agents grep / filter the patch file rather than re-running `git diff`. When an agent's file-set includes uncommitted files (subsystem agents triggered by unstaged work), the agent additionally reads those files directly per the Step 0 rule.
 
+**Trust-boundaries placeholder.** Every line-anchored template uses `{trust_boundaries}` to receive the comma-separated list computed in Step 0 (e.g. `secrets, network, auth`) or the literal `none` when the diff crosses no boundary. Substitute before spawning; never leave the placeholder literal in the prompt.
+
 **Previous findings injection (iteration N>1 only).** Step 4's incremental re-review requires building a `{previous_findings_block}` per agent before re-spawning. At iteration 1, this placeholder is replaced by the empty string — do not emit a header for an empty block.
 
 Two block shapes — pick the one that matches the agent's output contract. Dogfood never receives previous findings (its output is empirical, each run starts fresh).
@@ -386,14 +467,16 @@ Two block shapes — pick the one that matches the agent's output contract. Dogf
 
 You emitted these findings last iteration. Use them to avoid re-deriving the same conclusions.
 
-- file:line — title — disposition: fixed | dropped-by-triage (reason) | unfixed
+- signature: <file:line:slug> — title — disposition: fixed | dropped-by-triage (reason) | unfixed — attempts: N
   ...
 
 Rules for this iteration:
-- `fixed`: verify the new code actually resolves the failure mode. If the fix is superficial (comment added, code re-arranged but bug remains), re-emit.
+- Match by `signature`, not by line number. Lines may have shifted after fixes; the `<file>:<slug>` portion is the stable key. If your new analysis lands on the same `<file>:<slug>` as a listed entry, treat it as the same finding.
+- `attempts` counts how many fix-and-revalidate cycles this signature has survived. The orchestrator escalates at 5 — do not pad your analysis to claim progress on a high-attempts finding; if it's a hallucination that keeps coming back, the right move is `dropped-by-triage` next round, not another fix attempt.
+- `fixed`: verify the new code actually resolves the failure mode. If the fix is superficial (comment added, code re-arranged but bug remains), re-emit with the same signature so the orchestrator can recognise it as a repeat-offender.
 - `dropped-by-triage`: do not re-emit unless the cited code has materially changed since last iteration. If it has, re-verify against the new code before re-emitting.
 - `unfixed`: re-emit only if the failure mode still applies to the current code.
-- Emit any genuinely new findings introduced by the fix commit as usual.
+- Emit any genuinely new findings introduced by the fix commit as usual, with fresh signatures.
 ```
 
 **Shape B — prose agents (Funnel L1, Funnel L2, Materiality):**
@@ -482,6 +565,8 @@ Read the project's CLAUDE.md for conventions. Then load the skill `{skill_name}`
 
 Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
 
+The diff crosses these trust boundaries: {trust_boundaries}. Skill rules that touch these boundaries take precedence when you have to choose between violations to flag.
+
 Your task:
 1. After loading the skill, list every rule and its review standard (the "flag when..." patterns)
 2. Read the diff
@@ -507,6 +592,8 @@ You review test quality and coverage.
 Read the project's CLAUDE.md for conventions. Load the skills `testing` and `matt-tdd` via the Skill tool.
 
 Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
+
+The diff crosses these trust boundaries: {trust_boundaries}. Untested code on a crossed boundary is a higher-priority gap than untested pure logic — prioritize accordingly.
 
 Your task:
 - Missing tests: what behavior is untested?
@@ -536,6 +623,8 @@ Do NOT attempt to load a skill named "{subsystem_name}" — this is a framing la
 
 Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed. Grep the codebase for related call sites, schemas, and tests when a finding's correctness depends on them.
 
+This diff crosses these trust boundaries: {trust_boundaries}. Your subsystem failure modes already overlap with one of them by construction; if other boundaries are present, weigh interactions (e.g. an auth-subsystem review on a diff that also crosses `network` should watch for token leakage in outbound calls, not just session logic).
+
 Your task: walk the diff and, for each listed failure mode, ask whether the change plausibly introduces or amplifies it. Report only concrete instances — never a generic "consider adding handling for X" without a specific line that exhibits the gap.
 
 ## What NOT to flag
@@ -558,6 +647,8 @@ You hunt bugs.
 Read the project's CLAUDE.md for conventions.
 
 Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
+
+This diff crosses these trust boundaries: {trust_boundaries}. For each boundary present, apply the failure modes listed in the trust-boundaries table at Step 0 (column "Failure modes") as a prioritized lens — they're more likely than generic bugs and deserve the closer read. When `{trust_boundaries}` is `none`, focus on generic correctness only. When a subsystem agent was also spawned for one of these boundaries, that agent owns depth on its failure modes; you still skim them for cross-cutting interactions but defer primary defect ownership.
 
 Your task: check the implementation against the apparent intent. Look for bugs, missing edge cases, race conditions, incomplete error handling, logic gaps. For every permission check, verify the role is correct for the operation.
 
