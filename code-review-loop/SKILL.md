@@ -31,7 +31,7 @@ Compute the inputs once from the unified file-set (`"$DEFAULT_BRANCH"...HEAD` �
 
 | Tier | Condition | Fan-out |
 |---|---|---|
-| **Lite** | `total_lines ≤ 50` AND `file_count ≤ 5` AND `high_stakes = false` | Funnel L1, Funnel L2, **one** Correctness agent, **one** language agent (dominant ext), simplify, coding-standards (umbrella only — skip the 4 sub-skills), Tests. No subsystem agents (high_stakes is false). No general Opus. ~7 agents. |
+| **Lite** | `total_lines ≤ 50` AND `file_count ≤ 5` AND `high_stakes = false` | Funnel L1, Funnel L2, Occam Razor, **one** Correctness agent, **one** language agent (dominant ext), simplify, coding-standards (umbrella only — skip the 4 sub-skills), Tests. No subsystem agents (high_stakes is false). No general Opus. ~8 agents. |
 | **Full** | otherwise — incl. any high_stakes trigger, OR `file_count > 5`, OR `total_lines > 50` | Current behavior (everything in Step 0 below). ~12+ agents. |
 
 **Override:** if the user explicitly asks for a deep review, force `Full` regardless of size. The tier is a default, not a ceiling.
@@ -72,7 +72,9 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` to get all changed files. De
 
 **Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by subsystem touched", "Spawn by interface touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
 
-**Always spawn:** Funnel L1, Funnel L2, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, security-defensive, Tests, Correctness.
+**Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, security-defensive, Tests, Correctness.
+
+**Why Occam Razor sits alongside the funnel.** L1 asks "does this code need to exist" and L2 asks "what's the smallest perimeter" — both prose, both evaluated face-value against the abstraction's surface. Neither walks the call graph. In practice L1 will validate a wrapper that *looks* justifiable when read in isolation, even when grep would reveal one caller (or zero). Occam Razor is the mechanical check: for every exported symbol the diff introduces or modifies, enumerate call sites and prove the shape pays rent. Past misses this would have caught: a function with 0 callers, a wrapper with 1 caller, defaults reconstructed from values the caller already had.
 
 **Spawn when `CLAUDE.md` exists at repo root or any monorepo workspace root:** **claude-md-compliance** agent. Reads the file(s), extracts the rules, walks the diff to flag any rule violation the diff introduces. Distinct from `claude-md-materiality` (which flags staleness of the doc) — compliance flags the *code* breaking the doc's rules. Required because most repos document conventions there that no language/framework skill checks for (commit-message rules, project-specific naming, "we use X not Y"). If multiple `CLAUDE.md` exist, one agent handles all of them.
 
@@ -324,7 +326,7 @@ Keep it under ~15 lines plus the suggestions list. The diff is the source of tru
 
 ## Context verification protocol
 
-Inject verbatim into every line-anchored prompt (Correctness, Subsystem, Tests, Skill, CLAUDE.md Compliance). Funnel L1/L2 and Dogfood don't need it — their findings are structural or empirical, not failure-mode-inferred.
+Inject verbatim into every line-anchored prompt (Correctness, Subsystem, Tests, Skill, CLAUDE.md Compliance, Occam Razor). Funnel L1/L2 and Dogfood don't need it — their findings are structural or empirical, not failure-mode-inferred.
 
 ```
 ## Context verification — MANDATORY before reporting any finding
@@ -382,7 +384,7 @@ Otherwise, respond with a single JSON object, no markdown, no preamble:
 
 - `analysis_chain` — auditable trace. A chain that doesn't survive a re-read of the cited code is a hallucination; Step 2 can drop it without re-reading the diff.
 - `fix_prompt` — consumed verbatim by per-file fix agents. No re-interpretation between reviewer and fix agent.
-- `signature` — dedup key `<file>:<line>:<failure-mode-slug>`. Use a slug from this controlled vocabulary when applicable: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation`. Otherwise emit a free 3-5 kebab-token slug. Step 2 dedupes with a tolerant matcher (same file, line within ±3, same slug OR title-token Jaccard ≥ 0.6).
+- `signature` — dedup key `<file>:<line>:<failure-mode-slug>`. Use a slug from this controlled vocabulary when applicable: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation` · `zero-callers-dead` · `single-caller-inlinable` · `unused-param` · `derivable-default` · `redundant-overload`. Otherwise emit a free 3-5 kebab-token slug. Step 2 dedupes with a tolerant matcher (same file, line within ±3, same slug OR title-token Jaccard ≥ 0.6).
 - `confidence` — `high|medium|low`, separate from severity. `severity: bug, confidence: low` survives Step 2 only when the analysis_chain is airtight. Low-confidence security findings still warrant a second look — don't merge with severity.
 - `why_tests_dont_cover` — forces the agent to grep the test suite before emitting. If existing tests cover the failure mode, your finding is the test, not the bug — drop it. The field is your proof that you looked.
 - `suggested_regression_test` — consumed by the fix agent for the TDD step (Step 2 mandates a non-regression test for bugs). Pre-articulating it here saves the fix agent re-deriving it.
@@ -401,7 +403,7 @@ Confidence values: `high` | `medium` | `low`. Default to `high` only when the an
 
 Every agent follows: role → context → task → constraints → output format.
 
-**Line-anchored templates (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance) require the Context verification block AND the Output format block to be appended verbatim at the bottom before spawning.** Funnel L1/L2, Materiality, and Dogfood are self-contained — do not append.
+**Line-anchored templates (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance, Occam Razor) require the Context verification block AND the Output format block to be appended verbatim at the bottom before spawning.** Funnel L1/L2, Materiality, and Dogfood are self-contained — do not append.
 
 **Model assignment.** Spawn each agent with the model below — heavy reasoning gets `sonnet`, structural/textual lifts get `haiku`. The orchestrator (you) handles the coordinator role and stays on its session model.
 
@@ -410,6 +412,7 @@ Every agent follows: role → context → task → constraints → output format
 | Pre-triage (Step 0.5) | `haiku` | classification only |
 | Revalidation (Step 3) | `haiku` | checklist over a small structured input |
 | Funnel L1, Funnel L2 | `haiku` | structural reasoning, short prompts |
+| Occam Razor | `sonnet` | grep is mechanical, but "is this default derivable from the caller?" needs reading call sites with judgement |
 | Correctness | `sonnet` | bug-hunting needs depth |
 | Subsystem (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) | `sonnet` | domain reasoning |
 | Tests | `sonnet` | coverage gaps need code understanding |
@@ -628,6 +631,66 @@ Your task: check the implementation against the apparent intent. Look for bugs, 
 - Defensive null checks on values the type system already proves non-null
 - Edge cases requiring conditions that the calling contract already prevents (read the call sites before flagging)
 - Theoretical race conditions without a concrete two-thread interleaving demonstrating the bug
+
+Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
+```
+
+### Occam Razor Agent
+
+```
+You audit the call graph of code introduced or modified by the diff. For every exported function, method, type, or constant the diff touches, ask: do the callers justify the shape?
+
+Read the project's CLAUDE.md for conventions. Read the diff from {diff_file}, filtered to {file_list}. Read full files when context is needed.
+
+This diff crosses these trust boundaries: {trust_boundaries}. Trust boundaries don't change your method — they only mean dead code on an auth/billing path is the same severity as dead code anywhere else (do not downgrade because "it's only a wrapper").
+
+## Method (mechanical — follow in order)
+
+Scope: **exported** functions, methods, types, and constants the diff introduces *or* whose signature it modifies. Pre-existing exports with unchanged signatures are out of scope unless the diff *adds* a new call site for them (i.e. you're auditing the new caller, not the export).
+
+For each in-scope symbol:
+
+1. **Enumerate callers.** Grep the whole repo (not just the diff slice) for the identifier. Count distinct call sites — both direct calls and re-exports that forward the symbol unchanged. List every site with its file:line and the literal arg-tuple passed.
+2. **Bin by caller count:**
+   - `0 callers` → emit `zero-callers-dead`. `severity: bug`.
+   - `1 caller` AND function body < 20 lines → emit `single-caller-inlinable`. `severity: suggestion` (the wrapper may be deliberate for testability or clarity; the user decides at Step 5).
+   - `≥ 2 callers` → proceed to step 3.
+3. **Walk each formal param.** For every param, list the value each caller passes:
+   - If no caller passes a non-default value → emit `unused-param`. `severity: suggestion`.
+   - If every caller computes the default's input *before* calling, and the function uses that input only to reconstruct what the caller already had → emit `derivable-default`. `severity: suggestion`.
+4. **Cross-check siblings.** If the diff introduces two or more exported functions whose bodies share ≥ 80% of their lines and whose callers are disjoint → emit `redundant-overload`. `severity: bug` (the diff is the source of the duplication — fixing it later is harder than not introducing it).
+
+Use the controlled-vocabulary slugs above for `signature`. Step 2's dedup will collapse cross-agent overlap.
+
+## What NOT to flag
+
+- Internal (non-exported) helpers — `simplify` and Funnel L2 own readability of those. Stay on exports.
+- Public API surfaces with external consumers — library exports re-exported from `index.ts`, framework lifecycle hooks, plugin contracts, anything in a package's `exports` map, anything with a JSDoc `@public` tag. A 0-caller export there means external callers exist; not dead.
+- Test helpers — tests legitimately scope helpers per-test-file, and 1-caller test utilities are normal. Apply the Context verification "test context" question before emitting.
+- Pre-existing 1-caller functions in unchanged code — only what the diff introduces or whose signature it changes counts.
+- Truly generic utilities at 1 current caller — a `pick<T, K>` or `clamp(n, min, max)` with one current consumer is not inlinable; the shape *is* the contract.
+- Bodies < 5 lines where the function name is more informative than the body — the inline cost (loss of name) exceeds the wrapper cost. Keep the wrapper.
+- Params that look unused but are required by an interface / trait / abstract class the function implements — the signature is fixed by the contract. Grep for the interface before emitting `unused-param`.
+- Intentional-comment signals: `// keep: testability`, `// future caller in <branch>`, `// API surface — do not inline`. The Context verification "intentional comments" question must specifically match the failure mode you'd flag.
+
+## Severity guide
+
+- `zero-callers-dead`, `redundant-overload` → `bug`. These block convergence — the diff ships unreachable or duplicated code.
+- `single-caller-inlinable`, `unused-param`, `derivable-default` → `suggestion`. These surface in Step 5's open-suggestions list; the user decides. Auto-deleting a 1-caller wrapper every iteration is too aggressive — many are deliberate.
+
+`why_tests_dont_cover`, `suggested_regression_test`, `minimum_fix_scope` apply when severity is `bug`. For `suggestion`, set them to `null`.
+
+## A worked example (what good looks like)
+
+Diff introduces `enumFilter(values, options, opts = defaults)` in `src/filters/enum.ts`.
+
+1. Enumerate callers: `grep -rn 'enumFilter\b'` returns 2 hits — the definition itself and one usage in `src/search/buildQuery.ts:88`. Distinct call sites: **1**.
+2. Body is 14 lines (< 20). Not a re-export. Not in a package `exports` map. No `@public` tag.
+3. Emit `single-caller-inlinable`, severity `suggestion`, signature `src/filters/enum.ts:12:single-caller-inlinable`, fix_prompt: "In src/filters/enum.ts the exported `enumFilter` has one caller (src/search/buildQuery.ts:88). Inline its body at the call site and delete the export."
+
+If instead the grep had returned 0 distinct call sites (only the definition), severity would be `bug` with slug `zero-callers-dead`.
 
 Stay within these files: {file_list}
 
