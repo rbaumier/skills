@@ -31,7 +31,7 @@ description: Use when designing functions, modeling data, choosing types, drawin
   - **Object**: identity-based equality, usually mutable, encapsulated, fixed operations with open shape (handles, sessions, sockets). Reserved for things with lifecycle.
   - Most "immutable objects with methods" want to be Data. The giveaway: if you'd be happy to serialize, diff, or hash it, it's Data — stop hiding it behind a class.
   Reviews: class with only getters and pure methods on internal fields -> flag "this is data, expose the fields"
-- **Don't generalize the problem you don't have** -- generalization replaces a known specific problem with a harder, vaguer one. Don't add a parameter, type variable, or hook for an imagined second caller. The Rule of Three applies before you generalize, not after the first instance. Reviews: type variable / config slot / strategy interface with one user -> flag "specialize back; the second case will tell us its real shape"
+- **Don't generalize the problem you don't have** -- generalization replaces a known specific problem with a harder, vaguer one. Don't add a parameter, type variable, or hook for an imagined second caller. The Rule of Three applies before you generalize, not after the first instance. Symmetric exception: if the second case is **already concrete** (spec written, ticket open), generalize now — but name it in the commit, not "future-proofing". Reviews: type variable / config slot / strategy interface with one user -> flag "specialize back; the second case will tell us its real shape"
 
 ## Architecture
 
