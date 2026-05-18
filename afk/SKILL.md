@@ -15,12 +15,14 @@ You are running unattended. The user has gone to bed. They cannot rescue you. A 
 
 Two-level architecture. You orchestrate; you never read source files or edit code yourself. All code work happens in level-2 subagents. The orchestrator's context stays small so overnight runs do not drift, and "manual lite review" becomes structurally impossible — you have no source in context to review.
 
-- **You (orchestrator, level 1)** — manage the queue, claim, branch, spawn subagents, invoke skills, open MRs.
-- **Implementer subagent (level 2, Opus 4.7)** — one per issue. Reads files, implements, commits, pushes. Returns `DONE` or `BLOCKER_SUSPECTED`.
-- **`code-review-loop` skill (invoked at level 1, spawns level-2 agents internally)** — runs full review/fix iteration to convergence.
-- **Blocker-verifier subagent (level 2, Opus 4.7)** — only when Implementer signals BLOCKER_SUSPECTED. Adversarial.
+- **You (orchestrator, level 1)** — manage the queue, claim, create worktree, spawn subagents, invoke skills, open MRs.
+- **Implementer subagent (level 2, Opus 4.7)** — one per issue. `cd`s into the worktree, reads files, implements, commits, pushes. Returns `DONE` or `BLOCKER_SUSPECTED`.
+- **`code-review-loop` skill (invoked at level 1, spawns level-2 agents internally)** — runs full review/fix iteration to convergence inside the worktree.
+- **Blocker-verifier subagent (level 2, Opus 4.7)** — only when Implementer signals BLOCKER_SUSPECTED. Adversarial. Also `cd`s into the worktree.
 
 Subagents never spawn further subagents. Max nesting depth = 2.
+
+**Worktree isolation.** Each issue gets its own git worktree under `~/.afk-worktrees/<repo>/<branch>/`. The launcher's checkout (where the user typed `/afk`) is never touched — dirty trees in the launcher are fine. All Implementer / verifier / code-review-loop work targets the worktree path; the orchestrator threads `$WORKTREE` through every Bash call (`git -C "$WORKTREE" ...`) and every subagent prompt.
 
 The four non-negotiables: (1) one issue at a time within this instance, (2) full `code-review-loop` per issue, (3) out-of-scope work becomes a new GitLab issue, (4) stop only when the GitLab queue is empty.
 
@@ -69,7 +71,7 @@ The skill ships executable scripts under `scripts/` and subagent prompts under `
 bash "$AFK_SKILL_DIR/scripts/sanity.sh" || exit 1
 ```
 
-Where `AFK_SKILL_DIR` is the path to this skill's directory (resolve via `dirname` of the SKILL.md location, or hardcode `~/.claude/skills/afk` in the user's setup). Aborts with stderr on missing default branch, glab auth failure, or dirty working tree.
+Where `AFK_SKILL_DIR` is the path to this skill's directory (resolve via `dirname` of the SKILL.md location, or hardcode `~/.claude/skills/afk` in the user's setup). Aborts with stderr on missing default branch, glab auth failure, or missing project id. **A dirty working tree in the launcher's checkout is fine** — AFK works in isolated worktrees and never touches the launcher's tree.
 
 ### Phase 1 — Build the queue
 
@@ -98,23 +100,25 @@ On success, parse: `IID=$(jq -r .iid <<<"$CLAIM")`, `TITLE=$(jq -r .title <<<"$C
 
 The script handles stale-claim recovery (4h threshold), open-MR filter, and label add. The body is fetched once here so the Implementer prompt can embed it.
 
-### Phase 3 — Create the working branch
+### Phase 3 — Create the working branch + worktree
 
 ```bash
 BRANCH_INFO=$(bash "$AFK_SKILL_DIR/scripts/create-branch.sh" "$IID" "$TITLE")
 RC=$?
 case $RC in
-  0) ;;                      # ok; BRANCH_INFO holds {branch, parent_branch, parent_mr_iid}
-  1) # push collision — lost the race; remove our label and retry Phase 2
+  0) ;;                      # ok; BRANCH_INFO holds {branch, parent_branch, parent_mr_iid, worktree}
+  1) # worktree-add or push collision — lost the race; remove our label and retry Phase 2
      glab issue update "$IID" --unlabel picked-by-agent
      ;;
   2) echo "ERREUR phase 3" >&2; exit 1 ;;
 esac
 ```
 
-Parse: `BRANCH=$(jq -r .branch <<<"$BRANCH_INFO")`, `PARENT_BRANCH=$(jq -r .parent_branch <<<"$BRANCH_INFO")`, `PARENT_MR_IID=$(jq -r .parent_mr_iid <<<"$BRANCH_INFO")` (string `"null"` if independent).
+Parse: `BRANCH=$(jq -r .branch <<<"$BRANCH_INFO")`, `PARENT_BRANCH=$(jq -r .parent_branch <<<"$BRANCH_INFO")`, `PARENT_MR_IID=$(jq -r .parent_mr_iid <<<"$BRANCH_INFO")` (string `"null"` if independent), **`WORKTREE=$(jq -r .worktree <<<"$BRANCH_INFO")`**.
 
-Detects deps from issue body and notes via regex `(depends on|blocked by|needs|requires|after|stack(s|ed)? on) +!?#?[0-9]+`. If any dep has an open MR, branches from that MR's source. Otherwise branches from `$DEFAULT_BRANCH`. Pushes the empty branch immediately to claim the remote name.
+Detects deps from issue body and notes via regex `(depends on|blocked by|needs|requires|after|stack(s|ed)? on) +!?#?[0-9]+`. If any dep has an open MR, branches from that MR's source. Otherwise branches from `$DEFAULT_BRANCH`. Creates a dedicated worktree at `~/.afk-worktrees/<repo>/<branch>` and pushes the empty branch from it.
+
+`$WORKTREE` is now the workspace for this issue. Every subsequent orchestrator Bash call that touches the work branch uses `git -C "$WORKTREE" ...`; every subagent prompt carries `$WORKTREE` and instructs the subagent to `cd` there first.
 
 ### Phase 4 — Spawn the Implementer subagent
 
@@ -130,6 +134,7 @@ PROMPT=$(sed \
   -e "s|<PARENT_BRANCH>|$PARENT_BRANCH|g" \
   -e "s|<PARENT_MR_IID>|$PARENT_MR_IID|g" \
   -e "s|<DEFAULT_BRANCH>|$DEFAULT_BRANCH|g" \
+  -e "s|<WORKTREE>|$WORKTREE|g" \
   "$AFK_SKILL_DIR/assets/prompts/implementer.md")
 # Append the body separately because it contains newlines/special chars sed can't handle inline:
 PROMPT="${PROMPT//<BODY>/$BODY}"
@@ -146,17 +151,17 @@ Read the **first line** of the subagent's last output.
 - Anything else (silent return, malformed, timeout) → terminal failure:
   ```bash
   bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" \
-    "AFK Implementer failed to return a structured result. Branch left at \`$BRANCH\` for inspection."
+    "AFK Implementer failed to return a structured result. Branch left at \`$BRANCH\` and worktree at \`$WORKTREE\` for inspection."
   ```
   Continue the loop.
 
 ### Phase 5b — Blocker-verifier (only on BLOCKER_SUSPECTED)
 
-Spawn a second subagent. `subagent_type: general-purpose`, **`model: "opus"`** (adversarial reasoning needs Opus; Sonnet agrees too readily). Pass the verifier prompt template with `<IID>`, `<BODY>`, `<FILES_EXPLORED>`, `<GIT_DIFF>`. **Do NOT pass the Implementer's `context` field** — anchoring kills the verifier.
+Spawn a second subagent. `subagent_type: general-purpose`, **`model: "opus"`** (adversarial reasoning needs Opus; Sonnet agrees too readily). Pass the verifier prompt template with `<IID>`, `<BODY>`, `<WORKTREE>`, `<FILES_EXPLORED>`, `<GIT_DIFF>`. **Do NOT pass the Implementer's `context` field** — anchoring kills the verifier.
 
 ```bash
-GIT_DIFF=$(git diff "origin/$DEFAULT_BRANCH"...HEAD)
-PROMPT=$(sed -e "s|<IID>|$IID|g" "$AFK_SKILL_DIR/assets/prompts/blocker-verifier.md")
+GIT_DIFF=$(git -C "$WORKTREE" diff "origin/$DEFAULT_BRANCH"...HEAD)
+PROMPT=$(sed -e "s|<IID>|$IID|g" -e "s|<WORKTREE>|$WORKTREE|g" "$AFK_SKILL_DIR/assets/prompts/blocker-verifier.md")
 PROMPT="${PROMPT//<BODY>/$BODY}"
 PROMPT="${PROMPT//<FILES_EXPLORED>/$FILES_EXPLORED}"
 PROMPT="${PROMPT//<GIT_DIFF>/$GIT_DIFF}"
@@ -182,11 +187,11 @@ Invoke the `code-review-loop` **skill** via the `Skill` tool. The skill runs its
 
 **Invocation contract:**
 - Use the `Skill` tool. Do NOT spawn a general-purpose Agent with a review prompt — that's a substitute, not the skill.
-- Tell the skill explicitly: *"AFK invocation — Full tier required, no Lite override regardless of `total_lines` or `file_count`."*
+- Tell the skill explicitly: *"AFK invocation — Full tier required, no Lite override regardless of `total_lines` or `file_count`. **Operate inside `$WORKTREE`** — all git operations, file reads, and edits target that path. The orchestrator's cwd is not the work branch."*
 - Dogfood is mandatory when triggered; the skill decides triggers, not you.
 
 After the skill returns:
-- **Converged** → re-run the project's full test suite once. If green, Phase 7. If red, re-invoke `code-review-loop` (counts toward cap). Still red → cap-hit handling.
+- **Converged** → re-run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). If green, Phase 7. If red, re-invoke `code-review-loop` (counts toward cap). Still red → cap-hit handling.
 - **Cap hit (8 iter)** → record the dump, then:
   ```bash
   CAP_REPORT=$(mktemp)
@@ -201,8 +206,11 @@ After the skill returns:
 
   ## Diff state
   \`\`\`
-  $(git diff --stat "origin/$DEFAULT_BRANCH"...HEAD)
+  $(git -C "$WORKTREE" diff --stat "origin/$DEFAULT_BRANCH"...HEAD)
   \`\`\`
+
+  ## Worktree (left in place for inspection)
+  $WORKTREE
   EOF
   bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" "code-review-loop cap-hit" "$CAP_REPORT"
   ```
@@ -235,7 +243,7 @@ $STACK_NOTE
 - code-review-loop converged in <N> iteration(s)
 EOF
 
-bash "$AFK_SKILL_DIR/scripts/finalize.sh" open-mr "$IID" "$BRANCH" "$PARENT_BRANCH" "$PARENT_MR_IID" "$N_ITERS" "$DESC"
+bash "$AFK_SKILL_DIR/scripts/finalize.sh" open-mr "$IID" "$BRANCH" "$PARENT_BRANCH" "$PARENT_MR_IID" "$N_ITERS" "$DESC" "$WORKTREE"
 ```
 
 Where `STACK_NOTE` is either *"Independent of other cycle MRs."* or *"Stacks on !$PARENT_MR_IID (source: \`$PARENT_BRANCH\`). Review !$PARENT_MR_IID first. GitLab retargets this MR to \`$DEFAULT_BRANCH\` when the parent merges."*
@@ -250,10 +258,11 @@ When Phase 1 returns 0 items:
 
 ```bash
 echo "AFK terminé. Voir GitLab pour les MRs ouverts et les issues étiquetées failed-by-agent."
+echo "Worktrees laissés sous ~/.afk-worktrees/ (cleanup manuel : git worktree remove <path> + git worktree prune)."
 exit 0
 ```
 
-No markdown report is generated. The user reviews work in GitLab in the morning.
+No markdown report is generated. The user reviews work in GitLab in the morning. Worktrees stay on disk for post-mortem on `failed-by-agent` issues and for local inspection of merged work; the user prunes them at leisure.
 
 ## Failure handling
 
@@ -277,4 +286,4 @@ Specific cases:
 
 ## When the user asks "what do I do?"
 
-You (the human reading this) launch `/afk` and go to bed. Before launching: ensure issues to process are labeled `ready-for-agent`, working tree is clean, `glab auth status` works. In the morning: open GitLab, review MRs, decide what to do with `failed-by-agent` issues (read the comment AFK posted, re-tag `ready-for-agent` if you want to retry).
+You (the human reading this) launch `/afk` and go to bed. Before launching: ensure issues to process are labeled `ready-for-agent` and `glab auth status` works. Your current checkout can be dirty — AFK uses its own worktrees under `~/.afk-worktrees/` and never touches the launcher's tree. In the morning: open GitLab, review MRs, decide what to do with `failed-by-agent` issues (read the comment AFK posted, inspect the worktree if useful, re-tag `ready-for-agent` if you want to retry). Once you're done, `git worktree remove <path>` (or `git worktree prune` for already-deleted dirs) cleans up.
