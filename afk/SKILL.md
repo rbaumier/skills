@@ -146,7 +146,17 @@ Spawn with that prompt. The Agent's return string is the subagent's final messag
 
 Read the **first line** of the subagent's last output.
 
-- `DONE` → continue to Phase 6 (parse `files_touched`, `new_issues_filed`, `notes` from subsequent lines for the MR description).
+- `DONE` → **first verify the Implementer actually committed in the worktree** before continuing:
+  ```bash
+  WORK_SHA=$(git -C "$WORKTREE" rev-parse HEAD)
+  BASE_SHA=$(git -C "$WORKTREE" rev-parse "origin/$PARENT_BRANCH")
+  if [ "$WORK_SHA" = "$BASE_SHA" ]; then
+    bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" \
+      "Implementer returned DONE but HEAD == $PARENT_BRANCH base ($BASE_SHA). No commits landed in worktree \`$WORKTREE\`. Likely cause: subagent forgot to \`cd\` into the worktree and operated on the launcher's cwd."
+    # Continue the loop.
+  fi
+  ```
+  If the SHA check passes, continue to Phase 6 (parse `files_touched`, `new_issues_filed`, `notes` from subsequent lines for the MR description).
 - `BLOCKER_SUSPECTED` → Phase 5b. Parse `files_explored` from subsequent lines; the `context` line is for the user's eventual debug, not for the verifier.
 - Anything else (silent return, malformed, timeout) → terminal failure:
   ```bash
@@ -187,7 +197,8 @@ Invoke the `code-review-loop` **skill** via the `Skill` tool. The skill runs its
 
 **Invocation contract:**
 - Use the `Skill` tool. Do NOT spawn a general-purpose Agent with a review prompt — that's a substitute, not the skill.
-- Tell the skill explicitly: *"AFK invocation — Full tier required, no Lite override regardless of `total_lines` or `file_count`. **Operate inside `$WORKTREE`** — all git operations, file reads, and edits target that path. The orchestrator's cwd is not the work branch."*
+- Build the instruction string **with `$WORKTREE` already expanded to its concrete path** before passing it to the Skill tool — the Skill tool does no shell expansion. Concretely, if `$WORKTREE` is `/Users/foo/.afk-worktrees/12345/380-fix-bar-afk-20260518`, the instruction text you send must contain that literal path, not the string `$WORKTREE`. Template:
+  > AFK invocation — Full tier required, no Lite override regardless of `total_lines` or `file_count`. Operate inside `<EXPANDED_WORKTREE_PATH>` — every git operation, file read, and edit must target that path (use `git -C "<EXPANDED_WORKTREE_PATH>" …` and read/edit files only under that prefix). The orchestrator's cwd is not the work branch.
 - Dogfood is mandatory when triggered; the skill decides triggers, not you.
 
 After the skill returns:
