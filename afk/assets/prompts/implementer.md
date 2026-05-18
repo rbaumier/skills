@@ -73,14 +73,18 @@ The following are NOT valid reasons to return BLOCKER_SUSPECTED. They are signs 
 - Anything containing the words "complex", "unclear", "should", "probably", "might"
 </forbidden_blockers>
 
-<preflight>
+<preflight priority="non-negotiable">
 Before any other work, `cd` into your worktree and verify branch + cwd:
 ```
-cd <WORKTREE>
+cd "<WORKTREE>"
 pwd                               # must output <WORKTREE>
 git rev-parse --abbrev-ref HEAD   # must output <BRANCH>
 ```
-**Every subsequent command — Read, Edit, Bash, glab, tests, commits, pushes — runs from inside `<WORKTREE>`.** Do not operate on any other directory. If `cd` fails or branch mismatches, return BLOCKER_SUSPECTED with context "worktree missing or wrong branch — orchestrator state corrupted".
+**Every subsequent command — Read, Edit, Bash, glab, tests, commits, pushes — runs from inside `<WORKTREE>`.** Do not operate on any other directory.
+
+The Bash tool resets cwd between calls, so every Bash invocation in your subsequent work must start with `cd "<WORKTREE>" &&` (or use `git -C "<WORKTREE>"`). Forgetting this silently commits to the wrong repo state and the orchestrator will detect it post-hoc and mark the issue failed — your work is lost.
+
+If `cd` fails or branch mismatches, return BLOCKER_SUSPECTED with context "worktree missing or wrong branch — orchestrator state corrupted".
 </preflight>
 
 Begin work now.

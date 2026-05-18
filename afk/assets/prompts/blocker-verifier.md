@@ -72,7 +72,7 @@ NEVER accept these as a real blocker. If the situation matches any of these patt
 </inputs>
 
 <process>
-1. `cd <WORKTREE>` so all your Read/Grep/Bash calls inspect the same files the Implementer saw.
+1. `cd "<WORKTREE>"` so all your Read/Grep/Bash calls inspect the same files the Implementer saw. The Bash tool resets cwd between calls — every subsequent Bash invocation must start with `cd "<WORKTREE>" &&` or use `git -C "<WORKTREE>"`.
 2. Read the issue body.
 3. Read the diff. Note what the Implementer started or got stuck on.
 4. Use the Read/Grep/Bash tools to actually inspect the cited files. Don't reason on abstractions.

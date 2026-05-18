@@ -28,8 +28,17 @@ case "$cmd" in
     # Push any local commits that aren't on the remote. All git ops target the
     # worktree explicitly — the orchestrator's cwd is not the work branch.
     local_sha=$(git -C "$worktree" rev-parse HEAD)
+    git -C "$worktree" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1
+    ls_rc=$?
+    if [ $ls_rc -eq 2 ]; then
+      echo "ERREUR: ls-remote failed (network?) pre-MR" >&2
+      exit 2
+    fi
     remote_sha=$(git -C "$worktree" ls-remote --heads origin "$branch" | awk '{print $1}')
-    [ "$local_sha" != "$remote_sha" ] && git -C "$worktree" push -u origin "$branch" >/dev/null 2>&1
+    if [ "$local_sha" != "$remote_sha" ]; then
+      git -C "$worktree" push -u origin "$branch" >/dev/null 2>&1 \
+        || { echo "ERREUR: push pre-MR failed" >&2; exit 2; }
+    fi
 
     # Idempotence: did an earlier glab mr create succeed server-side?
     existing=$(glab mr list --source-branch "$branch" --output json 2>/dev/null \

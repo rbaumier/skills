@@ -26,11 +26,13 @@ afk_date() { date +%Y%m%d; }
 # Where AFK puts its per-issue worktrees. Outside the repo so the launcher's
 # checkout state is untouched, predictable so the user can find failed runs.
 # Args: <branch>. Prints the absolute path.
+# Uses the GitLab numeric project_id (stable across renames, collision-free
+# when two repos share the same dirname on disk).
 afk_worktree_path() {
   local branch=$1
-  local repo_name
-  repo_name=$(basename "$(git rev-parse --show-toplevel)")
-  printf '%s/.afk-worktrees/%s/%s' "$HOME" "$repo_name" "$branch"
+  local pid
+  pid=$(afk_project_id) || return 1
+  printf '%s/.afk-worktrees/%s/%s' "$HOME" "$pid" "$branch"
 }
 
 # Slugify a title for use in a branch name. Max 40 chars.
