@@ -266,50 +266,50 @@ Where `STACK_NOTE` is either *"Independent of other cycle MRs."* or *"Stacks on 
 
 The script handles idempotence (checks for existing MR via `glab mr list --source-branch`) and removes `picked-by-agent`. Prints the MR URL.
 
-### Phase 7.5 — Land the MR (auto-merge with auto-fix on failure)
+### Phase 7.5 — Land the MR (auto-merge with auto-fix)
 
-AFK does not leave open MRs for a human to merge later. After Phase 7, queue auto-merge; if it fails, **fix the cause and retry**. Only escalate to `failed-by-agent` when the cause is structurally unfixable by an agent (approvals required, project-policy blocks even after `--squash` retry, or the fix attempt itself fails).
+`$MR_URL` from Phase 7 is the failure-note anchor.
 
 ```bash
 OUT=$(bash "$AFK_SKILL_DIR/scripts/finalize.sh" queue-merge "$IID" "$BRANCH")
 RC=$?
 ```
 
-Dispatch on `$RC`:
+**Attempt budget per issue: one rebase + one CI-fix + one `--squash` retry, total — never reset.** A second occurrence of any category → `failed-by-agent`.
 
-| Code | Meaning | What you do |
+| `$RC` | Cause | Action |
 |---|---|---|
-| `0` | Auto-merge queued (will land when CI is green) or already merged | Loop to next issue. |
-| `10` | Merge conflict with target branch | Spawn an Implementer subagent (model `opus`, prompt below) to rebase `$BRANCH` on `origin/$DEFAULT_BRANCH`, resolve conflicts, and push. Then re-invoke `queue-merge`. **One rebase attempt.** If the Implementer cannot resolve, or the second `queue-merge` still returns `10`, finalize as `failed-by-agent` (family: non-convergence). |
-| `11` | Pipeline failed | Spawn an Implementer subagent (model `opus`) with the failing job's logs (`glab ci view --branch "$BRANCH" --logs`) and a fix prompt. One fix attempt. Push, re-invoke `queue-merge`. Still `11` → `failed-by-agent` (family: non-convergence). |
-| `12` | Approvals required | Terminal. The agent cannot self-approve. Call `finalize.sh fail "$IID" "Auto-merge blocked: project requires human approval on this MR. \`$URL\`"`. This is the family "blocker externe confirmé" — needs human action. |
-| `13` | Branch protection / merge method policy | Retry once with `queue-merge "$IID" "$BRANCH" --squash`. Still `13` → `failed-by-agent` (family: blocker externe confirmé, message names the policy). |
-| `1` | Unrecognised glab error | `failed-by-agent` with `$OUT` quoted as the cause. The orchestrator must not guess a fix it doesn't understand. |
-| `2` | Infra (no MR found, network) | `failed-by-agent` with the infra error. |
+| `0` | Queued or merged | Phase 8. |
+| `10` | Conflict | Spawn `assets/prompts/conflict-resolution.md` (model `opus`). On `REBASED` re-invoke `queue-merge`. On `REBASE_FAILED` or 2nd `10` → `failed-by-agent`. |
+| `11` | Pipeline failed | Spawn `assets/prompts/ci-fix.md` (model `opus`). On `CI_FIXED`, **poll the new pipeline** (see below) before re-`queue-merge`. On `CI_FIX_FAILED`, post-fix pipeline non-success, or 2nd `11` → `failed-by-agent`. |
+| `12` | Approvals required | `finalize.sh fail "$IID" "Auto-merge blocked: requires human approval. $MR_URL"`. |
+| `13` | Branch protection / merge method | Retry once with `queue-merge "$IID" "$BRANCH" --squash`. 2nd `13` → `failed-by-agent` (quote `$OUT`). |
+| `1` | Unrecognised | `failed-by-agent` with `$OUT`. |
+| `2` | Infra | `failed-by-agent` with the infra error. |
 
-**Conflict-resolution Implementer prompt** (substitute `<IID>`, `<BRANCH>`, `<DEFAULT_BRANCH>`, `<WORKTREE>`):
+**Post-CI-fix poll** (else the new pipeline runs unobserved and a late failure leaves the MR stuck):
 
-```
-You are resolving a merge conflict for AFK issue #<IID>. The branch <BRANCH> conflicts with <DEFAULT_BRANCH> and `glab mr merge` was rejected.
-
-Workspace: <WORKTREE>
-
-1. `cd "<WORKTREE>"`
-2. `git fetch origin <DEFAULT_BRANCH>`
-3. `git rebase origin/<DEFAULT_BRANCH>`
-4. For each conflict: read the file, understand BOTH sides, resolve preserving the intent of THIS branch's change AND the conflicting upstream change. No deletions to make the conflict go away. No `git checkout --ours` / `--theirs` shortcuts unless one side is structurally unrelated (e.g. lockfile vs source).
-5. Run the project's test suite. Fix breakages introduced by the rebase.
-6. `git push --force-with-lease`
-7. Return exactly one line: `REBASED` on success, or `REBASE_FAILED: <reason>` on irreconcilable conflict.
+```bash
+until status=$(glab ci status --branch "$BRANCH" 2>/dev/null | head -1); \
+      [[ "$status" =~ (success|failed|canceled|skipped|manual) ]] || (( SECONDS > 1800 )); do
+  sleep 30
+done
+[[ "$status" == *success* ]] || \
+  bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" \
+    "Post-CI-fix pipeline finished $status. $MR_URL"
 ```
 
-**CI-fix Implementer prompt** is structurally similar — instruct the subagent to read the failing job logs, identify the failing test/lint/build, fix it inside `<WORKTREE>`, push, return `CI_FIXED` or `CI_FIX_FAILED: <reason>`.
-
-**Loop discipline:** at most one auto-fix attempt per failure category. The point of AFK is to deliver a merged MR per issue, but not at any cost — when a single fix attempt doesn't land, the next-best output is a clean `failed-by-agent` with the diagnostic for human review.
+Storming a broken project with 20 same-shaped failures is correct; do not invent a circuit breaker.
 
 ### Phase 8 — Loop or end
 
-Go back to Phase 1. Refetch the queue. The queue may have grown (Implementer filed out-of-scope) or shrunk (parallel instance handled siblings).
+GitLab clears `merge_when_pipeline_succeeds` when it retargets a child after a parent merges, so first sweep:
+
+```bash
+bash "$AFK_SKILL_DIR/scripts/finalize.sh" requeue-retargeted
+```
+
+Then Phase 1. The queue may have grown (Implementer filed out-of-scope) or shrunk (parallel instance handled siblings).
 
 When Phase 1 returns 0 items:
 
