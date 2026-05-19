@@ -19,7 +19,11 @@ glab auth status >/dev/null 2>&1 || { echo "ERREUR: glab non authentifié" >&2; 
 
 # Phase 7.5 needs `glab mr merge --auto-merge` (added in glab v1.30, 2023).
 # Without it every issue would end failed-by-agent on the merge step.
-glab mr merge --help 2>&1 | grep -q -- '--auto-merge' \
+# NOTE: pipe `glab ... | grep -q` is unsafe under `set -o pipefail` — `grep -q`
+# exits on first match, glab gets SIGPIPE (rc 141), pipefail propagates 141,
+# the `||` branch falsely fires. Capture first, then grep against the buffer.
+glab_help=$(glab mr merge --help 2>&1)
+grep -q -- '--auto-merge' <<<"$glab_help" \
   || { echo "ERREUR: glab too old, --auto-merge flag absent. Upgrade glab to >=1.30." >&2; exit 1; }
 
 project_id=$(glab repo view --output json 2>/dev/null | jq -r '.id // empty')

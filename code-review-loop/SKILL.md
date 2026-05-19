@@ -355,9 +355,16 @@ On bail, finalize as `failed-by-agent` (family: non-convergence) with a dump of 
 
 **Dogfood findings themselves never produce `failed-by-agent`.** In-scope is fixed; out-of-scope becomes a new issue. The only `failed-by-agent` from this phase is non-convergence of the fix loop or the static-cap propagation above — both already in the documented failure taxonomy.
 
-### Step 5 — Brief conversation summary
+### Step 5 — Final output
 
-Print a short summary directly in the conversation. No file artifact.
+**If invoked from AFK** (the instruction string passed to the Skill tool starts with `AFK invocation`): return exactly ONE single-line token as your last assistant text. Nothing else — no prose, no markdown, no preamble, no suggestions list. The AFK orchestrator parses the first token and treats anything richer as a malformed return, which forces it into the "summary-then-stop" cognitive trap that this branch exists to prevent.
+
+- Converged: `CONVERGED iter=<N> findings_fixed=<C>`
+- Cap-hit: `CAP_HIT iter=8 dump=<absolute path to findings-dump file you wrote>`
+
+Surviving `severity: suggestion` findings are NOT surfaced to the AFK orchestrator — they're noise for an auto-merge flow. If they're worth keeping, the orchestrator (or a separate /afk pass) can file them as `ready-for-agent` issues later from the diff comments. Do not append them to the token.
+
+**Otherwise** (direct user invocation): print a short summary in the conversation. No file artifact.
 
 Format:
 - Tier: trivial / lite / full
