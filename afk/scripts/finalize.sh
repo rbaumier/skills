@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# AFK terminal-state helpers. Three subcommands:
-#   open-mr     <iid> <branch> <parent_branch> <parent_mr_iid|null> <iterations> <description_path> <worktree>
-#   queue-merge <iid> <branch> [--squash]
-#   fail        <iid> <reason> [<comment_path>]
+# AFK terminal-state helpers. Four subcommands:
+#   open-mr             <iid> <branch> <parent_branch> <parent_mr_iid|null> <iterations> <description_path> <worktree>
+#   queue-merge         <iid> <branch> [--squash]
+#   requeue-retargeted                  (Phase 8 sweep — re-queues AFK MRs whose
+#                                        auto-merge was cleared by GitLab retargeting)
+#   fail                <iid> <reason> [<comment_path>]
 # Each is idempotent. open-mr prints the MR URL on stdout.
 # queue-merge returns a structured exit code so the orchestrator can dispatch
 # auto-fix flows (rebase, CI debug) instead of silently leaving open MRs:
@@ -80,8 +82,10 @@ case "$cmd" in
              | jq -r '[.[] | select(.state == "opened")] | .[0].iid // empty')
     [ -n "$mr_iid" ] || { echo "ERREUR: no open MR for branch $branch" >&2; exit 2; }
 
-    # `--auto-merge` queues the merge for after the pipeline succeeds. Stacked
-    # MRs survive parent-merge retargeting because the attribute is server-side.
+    # `--auto-merge` queues the merge for after the pipeline succeeds. NB:
+    # GitLab clears `merge_when_pipeline_succeeds` when it retargets an MR
+    # after a parent merges, so stacked children need re-queueing once
+    # retargeted. Phase 8 in SKILL.md handles that sweep on each loop tick.
     if [ "$extra_flag" = "--squash" ]; then
       merge_err=$(glab mr merge "$mr_iid" --auto-merge --remove-source-branch --squash --yes 2>&1)
     else
@@ -96,15 +100,38 @@ case "$cmd" in
     printf '%s\n' "$merge_err"
 
     # Dispatch by error signature. glab/GitLab phrasing is not perfectly
-    # stable, so match on durable substrings.
+    # stable, so match on the durable *reason* words and avoid the generic
+    # envelope ("cannot be merged" appears in every reason). Order from
+    # most specific to most generic.
     lower=$(printf '%s' "$merge_err" | tr '[:upper:]' '[:lower:]')
     case "$lower" in
-      *conflict*|*"cannot be merged"*|*"merge conflicts"*)         exit 10 ;;
-      *pipeline*fail*|*"pipeline must succeed"*|*"failed pipeline"*) exit 11 ;;
-      *approval*|*"requires approval"*|*"not enough approvals"*)   exit 12 ;;
-      *protected*|*"merge method"*|*"squash"*|*"fast-forward"*)    exit 13 ;;
+      *"requires "*approval*|*"not enough approval"*|*"must be approved"*|*"approval rules"*) exit 12 ;;
+      *conflict*)                                                  exit 10 ;;
+      *pipeline*)                                                  exit 11 ;;
+      *"merge method"*|*"fast-forward"*|*"branch is protected"*)   exit 13 ;;
       *) exit 1 ;;
     esac
+    ;;
+
+  requeue-retargeted)
+    # Sweep: any open MR authored by AFK whose source branch carries the
+    # `${AFK_BRANCH_PREFIX}*-afk-*` shape, currently targets $default_branch
+    # AND lacks an active auto-merge attribute — re-issue queue-merge.
+    # Used by Phase 8 to catch children that lost auto-merge when their
+    # parent merged and GitLab retargeted them.
+    prefix=${AFK_BRANCH_PREFIX:-}
+    # GitLab field for the auto-merge attribute is `merge_when_pipeline_succeeds`.
+    # We list all open MRs targeting default_branch and re-queue any whose
+    # source branch matches the AFK pattern and where the attribute is false.
+    candidates=$(glab mr list --state opened --target-branch "$default_branch" --output json 2>/dev/null \
+                 | jq -r --arg p "$prefix" '
+                     .[]
+                     | select(.merge_when_pipeline_succeeds == false)
+                     | select((.source_branch // "") | test("^"+$p+".*-afk-[0-9]{8}$"))
+                     | .iid')
+    for mr_iid in $candidates; do
+      glab mr merge "$mr_iid" --auto-merge --remove-source-branch --yes >/dev/null 2>&1 || true
+    done
     ;;
 
   fail)
