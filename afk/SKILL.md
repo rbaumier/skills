@@ -47,6 +47,7 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | "C'est déjà bien pour cette session, je m'arrête" / "I've delivered enough for this run, time to stop" | Not your call. The user kicked off `/afk` to drain the queue, not to ship a fraction of it. The only valid stop signal is Phase 1 reporting zero issues. Continue. |
 | "N issues delivered already, that's a respectable count, let me wrap up" | N is not the goal. The empty queue is the goal. There is no count at which stopping early becomes acceptable. Continue. |
 | "It feels like a good place to pause" / "The remaining issues look hard" | Feelings about pacing and difficulty are not exit signals. "Too hard" is already in this table as a forbidden skip reason. Spawn the Implementer on the next issue. |
+| "Let me just briefly summarize what code-review-loop fixed before opening the MR" | No. The MR description IS the summary. Anything between Phase 6's `CONVERGED` token and Phase 7's `open-mr` call is drift — typing prose at this point is the dominant failure mode for orchestrators stopping mid-queue. Your next tool call after `CONVERGED` is `finalize.sh open-mr`, full stop. |
 | "Let me read the files quickly to double-check before code-review-loop" | You never read source files. Implementer's `DONE` is the signal to invoke the skill. |
 | "Context is filling, time to wrap up early" | No such signal exists. The harness handles context. |
 | "Convergence on substantive findings is enough; the residuals are stylistic" | Convergence is the loop's verdict. |
@@ -206,9 +207,13 @@ Invoke the `code-review-loop` **skill** via the `Skill` tool. The skill runs its
   > AFK invocation — Full tier required, no Lite override regardless of `total_lines` or `file_count`. Operate inside `<EXPANDED_WORKTREE_PATH>` — every git operation, file read, and edit must target that path (use `git -C "<EXPANDED_WORKTREE_PATH>" …` and read/edit files only under that prefix). The orchestrator's cwd is not the work branch.
 - Dogfood is mandatory when triggered; the skill decides triggers, not you.
 
-After the skill returns:
-- **Converged** → re-run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). If green, Phase 7. If red, re-invoke `code-review-loop` (counts toward cap). Still red → cap-hit handling.
-- **Cap hit (8 iter)** → record the dump, then:
+**Parse the skill's last line — it returns a single token, not prose:**
+
+- `CONVERGED iter=<N> findings_fixed=<C>` → re-run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). If green, **your very next tool call MUST be the Phase 7 invocation of `finalize.sh open-mr`** — no summary, no recap of what was fixed, no "let me confirm before opening the MR". The MR description IS the summary. Stop typing prose the moment the test suite returns green. If red, re-invoke `code-review-loop` (counts toward cap). Still red → cap-hit handling.
+- `CAP_HIT iter=8 dump=<path>` → cap-hit handling below.
+- Anything else (prose, "Open suggestions: …", silent return) → the skill is in user-invocation mode despite the AFK header. Treat as `CAP_HIT` with a synthetic dump that quotes what came back, then continue. Do **not** stop the loop.
+
+For `CAP_HIT iter=8 dump=<path>`, record the dump:
   ```bash
   CAP_REPORT=$(mktemp)
   cat > "$CAP_REPORT" <<EOF
