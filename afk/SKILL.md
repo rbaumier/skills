@@ -11,14 +11,14 @@ You are running unattended. The user kicked off `/afk` and stepped away. They ca
 
 **An autonomous run is the slot for the big things, not the small ones.** The user chose `/afk` so substantial work can land while they aren't watching. An issue feeling "too large" is upside-down reasoning — that's *exactly* what this run is for. The only valid skips are: confirmed-blocker (verifier-confirmed), open MR exists, or `failed-by-agent` already set.
 
-**Silence between phases.** Do not narrate "I'm starting Phase 3, now I'm spawning the Implementer, now I'm waiting...". Every line of orchestrator narration is context the next phase has to drag along. Each phase's output should be its exit signal (DONE / BLOCKER_SUSPECTED / MR URL / failed-by-agent), not a play-by-play. The user reads GitLab when they return, not your transcript.
+**Silence between phases.** Do not narrate "I'm starting Phase 3, now I'm spawning the Implementer, now I'm waiting...". Every line of orchestrator narration is context the next phase has to drag along. Each phase's output should be its exit signal (`READY_FOR_REVIEW` / `BLOCKER_SUSPECTED` / `READY_FOR_MR` / MR URL / failed-by-agent), not a play-by-play. The user reads GitLab when they return, not your transcript.
 
 ## Architecture — you are the orchestrator
 
 Two-level architecture. You orchestrate; you never read source files or edit code yourself. All code work happens in level-2 subagents. The orchestrator's context stays small so long autonomous runs do not drift, and "manual lite review" becomes structurally impossible — you have no source in context to review.
 
 - **You (orchestrator, level 1)** — manage the queue, claim, create worktree, spawn subagents, invoke skills, open MRs.
-- **Implementer subagent (level 2, Opus 4.7)** — one per issue. `cd`s into the worktree, reads files, implements, commits, pushes. Returns `DONE` or `BLOCKER_SUSPECTED`.
+- **Implementer subagent (level 2, Opus 4.7)** — one per issue. `cd`s into the worktree, reads files, implements, commits, pushes. Returns `READY_FOR_REVIEW` or `BLOCKER_SUSPECTED`.
 - **`code-review-loop` skill (invoked at level 1, spawns level-2 agents internally)** — runs full review/fix iteration to convergence inside the worktree.
 - **Blocker-verifier subagent (level 2, Opus 4.7)** — only when Implementer signals BLOCKER_SUSPECTED. Adversarial. Also `cd`s into the worktree.
 
@@ -37,7 +37,7 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | "Too large / too risky / out of scope — let me mark blocked" | Implementer raises `BLOCKER_SUSPECTED`; you spawn the verifier; neither of you decides alone. "Out of scope" → Implementer files a new issue. |
 | "This issue is too large for an autonomous run, let me skip / mark blocked" | An autonomous run *is* the slot for large work — that's the point of AFK. The size of the issue is never a reason to skip. Spawn the Implementer; it decides whether the work is actually impossible. |
 | "Let me just edit one file myself, it'll be faster than spawning a subagent" | You never touch source. Every file edit goes through the Implementer or the `code-review-loop` fix agents. One "small fix" by the orchestrator is how runs go off the rails. |
-| "Let me tell the user I'm starting Phase 4 now" | Silent execution. The phase's structured exit signal (DONE / BLOCKER_SUSPECTED / MR URL) is the output. Narration between phases is context bloat that makes later phases drift. |
+| "Let me tell the user I'm starting Phase 4 now" | Silent execution. The phase's structured exit signal (`READY_FOR_REVIEW` / `BLOCKER_SUSPECTED` / `READY_FOR_MR` / MR URL) is the output. Narration between phases is context bloat that makes later phases drift. |
 | "Depends on #N — let me mark blocked" | Phase 3 stacks on #N's open MR or branches from `$DEFAULT_BRANCH`. Never a blocker. |
 | "I'll run a lite review with one general-purpose agent — code-review-loop is overkill here" | That's a *substitute*, not the skill. Invoke `code-review-loop` via the Skill tool, Full tier. |
 | "The diff is small, Lite tier is enough" | AFK never runs Lite. Force Full regardless of diff size. |
@@ -48,7 +48,7 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | "N issues delivered already, that's a respectable count, let me wrap up" | N is not the goal. The empty queue is the goal. There is no count at which stopping early becomes acceptable. Continue. |
 | "It feels like a good place to pause" / "The remaining issues look hard" | Feelings about pacing and difficulty are not exit signals. "Too hard" is already in this table as a forbidden skip reason. Spawn the Implementer on the next issue. |
 | "Let me just briefly summarize what code-review-loop fixed before opening the MR" | No. The MR description IS the summary. Anything between Phase 6's `READY_FOR_MR` token and Phase 7's `open-mr` call is drift — empirical past runs have stopped at exactly this point. Your next tool call after `READY_FOR_MR` is `finalize.sh open-mr`, full stop. |
-| "Let me read the files quickly to double-check before code-review-loop" | You never read source files. Implementer's `DONE` is the signal to invoke the skill. |
+| "Let me read the files quickly to double-check before code-review-loop" | You never read source files. Implementer's `READY_FOR_REVIEW` is the signal to invoke the skill. |
 | "Context is filling, time to wrap up early" | No such signal exists. The harness handles context. |
 | "Convergence on substantive findings is enough; the residuals are stylistic" | Convergence is the loop's verdict. |
 | "Tests fail but probably unrelated — MR anyway" | No MR. `failed-by-agent`. |
@@ -152,17 +152,17 @@ Spawn with that prompt. The Agent's return string is the subagent's final messag
 
 Read the **first line** of the subagent's last output.
 
-- `DONE` → **first verify the Implementer actually committed in the worktree** before continuing:
+- `READY_FOR_REVIEW` (or legacy `DONE` from an old prompt — treat as identical) → **first verify the Implementer actually committed in the worktree** before continuing:
   ```bash
   WORK_SHA=$(git -C "$WORKTREE" rev-parse HEAD)
   BASE_SHA=$(git -C "$WORKTREE" rev-parse "origin/$PARENT_BRANCH")
   if [ "$WORK_SHA" = "$BASE_SHA" ]; then
     bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" \
-      "Implementer returned DONE but HEAD == $PARENT_BRANCH base ($BASE_SHA). No commits landed in worktree \`$WORKTREE\`. Likely cause: subagent forgot to \`cd\` into the worktree and operated on the launcher's cwd."
+      "Implementer returned READY_FOR_REVIEW but HEAD == $PARENT_BRANCH base ($BASE_SHA). No commits landed in worktree \`$WORKTREE\`. Likely cause: subagent forgot to \`cd\` into the worktree and operated on the launcher's cwd."
     # Continue the loop.
   fi
   ```
-  If the SHA check passes, continue to Phase 6 (parse `files_touched`, `new_issues_filed`, `notes` from subsequent lines for the MR description).
+  If the SHA check passes, continue to Phase 6 (parse `files_touched`, `new_issues_filed`, `notes` from subsequent lines for the MR description). **Your next tool call is the `Skill` invocation of `code-review-loop`** — no recap, no "alright, Implementer is done, now reviewing".
 - `BLOCKER_SUSPECTED` → Phase 5b. Parse `files_explored` from subsequent lines; the `context` line is for the user's eventual debug, not for the verifier.
 - Anything else (silent return, malformed, timeout) → terminal failure:
   ```bash
@@ -285,8 +285,8 @@ RC=$?
 | `$RC` | Cause | Action |
 |---|---|---|
 | `0` | Queued or merged | Phase 8. |
-| `10` | Conflict | Spawn `assets/prompts/conflict-resolution.md` (model `opus`). On `REBASED` re-invoke `queue-merge`. On `REBASE_FAILED` or 2nd `10` → `failed-by-agent`. |
-| `11` | Pipeline failed | Spawn `assets/prompts/ci-fix.md` (model `opus`). On `CI_FIXED`, **poll the new pipeline** (see below) before re-`queue-merge`. On `CI_FIX_FAILED`, post-fix pipeline non-success, or 2nd `11` → `failed-by-agent`. |
+| `10` | Conflict | Spawn `assets/prompts/conflict-resolution.md` (model `opus`). On `READY_FOR_MERGE_RETRY` (or legacy `REBASED`) re-invoke `queue-merge`. On `REBASE_FAILED` or 2nd `10` → `failed-by-agent`. |
+| `11` | Pipeline failed | Spawn `assets/prompts/ci-fix.md` (model `opus`). On `READY_FOR_PIPELINE_POLL` (or legacy `CI_FIXED`), **poll the new pipeline** (see below) before re-`queue-merge`. On `CI_FIX_FAILED`, post-fix pipeline non-success, or 2nd `11` → `failed-by-agent`. |
 | `12` | Approvals required | `finalize.sh fail "$IID" "Auto-merge blocked: requires human approval. $MR_URL"`. |
 | `13` | Branch protection / merge method | Retry once with `queue-merge "$IID" "$BRANCH" --squash`. 2nd `13` → `failed-by-agent` (quote `$OUT`). |
 | `1` | Unrecognised | `failed-by-agent` with `$OUT`. |
