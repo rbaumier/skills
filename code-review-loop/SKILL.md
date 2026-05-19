@@ -360,9 +360,9 @@ On bail, finalize as `failed-by-agent` (family: non-convergence) with a dump of 
 **If invoked from AFK** (the instruction string passed to the Skill tool starts with `AFK invocation`): return exactly ONE single-line token as your last assistant text. Nothing else — no prose, no markdown, no preamble, no suggestions list.
 
 - Static review passed, MR is now ready to open: `READY_FOR_MR iter=<N> findings_fixed=<C>`
-- Cap-hit (no MR possible from this branch): `CAP_HIT iter=8 dump=<absolute path to findings-dump file you wrote>`
+- 8-iter cap reached, this issue cannot ship: `READY_FOR_FAIL_LABEL iter=8 dump=<absolute path to findings-dump file you wrote>`
 
-The token is named `READY_FOR_MR`, not `CONVERGED` or `DONE`, intentionally. AFK orchestrators reading a terminal-sounding word (CONVERGED, DONE, COMPLETE, OK) treat it as a stop signal even when the SKILL says otherwise — the word's semantics override the instructions. `READY_FOR_MR` points at the next action (open the MR) instead of celebrating completion.
+Both tokens are named `READY_FOR_X`, not `CONVERGED` / `DONE` / `CAP_HIT` / `STOP`, intentionally. AFK orchestrators reading a terminal-sounding word treat it as "task complete, stop here" even when the SKILL says otherwise — the word's semantics override the instructions. `READY_FOR_X` points at the next action (open the MR, or apply the fail-label and move to the next issue) instead of celebrating or grieving completion. **Neither token ever signals end-of-run.** End-of-run is owned exclusively by AFK's Phase 1 returning zero unprocessed issues.
 
 Surviving `severity: suggestion` findings are NOT surfaced to the AFK orchestrator — they're noise for an auto-merge flow. If they're worth keeping, the orchestrator (or a separate /afk pass) can file them as `ready-for-agent` issues later from the diff comments. Do not append them to the token.
 

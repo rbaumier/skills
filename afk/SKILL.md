@@ -209,11 +209,11 @@ Invoke the `code-review-loop` **skill** via the `Skill` tool. The skill runs its
 
 **Parse the skill's last line — it returns a single token, not prose:**
 
-- `READY_FOR_MR iter=<N> findings_fixed=<C>` → the token is a **starting gun for Phase 7, not a finish line for the issue**. Re-run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). The moment tests return green, your **next tool call** is `bash "$AFK_SKILL_DIR/scripts/finalize.sh" open-mr …` — do not write a summary, do not type "Tests are green, proceeding to Phase 7", just call the tool. Past runs have repeatedly stopped here because the orchestrator paused to acknowledge the convergence; that pause is the failure mode. If tests are red, re-invoke `code-review-loop` (counts toward cap). Still red → cap-hit handling.
-- `CAP_HIT iter=8 dump=<path>` → cap-hit handling below.
-- Anything else (prose, "Open suggestions: …", silent return, the legacy token `CONVERGED`) → the skill is in user-invocation mode or is an old version. Treat as `CAP_HIT` with a synthetic dump that quotes what came back, then continue. Do **not** stop the loop.
+- `READY_FOR_MR iter=<N> findings_fixed=<C>` → starting gun for Phase 7, not a finish line for the issue. Re-run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). The moment tests return green, your **next tool call** is `bash "$AFK_SKILL_DIR/scripts/finalize.sh" open-mr …` — do not write a summary, do not type "Tests are green, proceeding to Phase 7", just call the tool. Past runs have repeatedly stopped here because the orchestrator paused to acknowledge convergence; that pause is the failure mode. If tests are red, re-invoke `code-review-loop` (counts toward cap). Still red → fail-label handling.
+- `READY_FOR_FAIL_LABEL iter=8 dump=<path>` → fail-label handling below. **This token ends one issue, never the run.** Apply the label, then go to Phase 8.
+- Anything else (prose, "Open suggestions: …", silent return, legacy tokens `CONVERGED` / `CAP_HIT`) → the skill is in user-invocation mode or is an old version. Treat as `READY_FOR_FAIL_LABEL` with a synthetic dump quoting what came back, then continue. Do **not** stop the loop.
 
-For `CAP_HIT iter=8 dump=<path>`, record the dump:
+For `READY_FOR_FAIL_LABEL iter=8 dump=<path>`, record the dump:
   ```bash
   CAP_REPORT=$(mktemp)
   cat > "$CAP_REPORT" <<EOF
@@ -233,7 +233,7 @@ For `CAP_HIT iter=8 dump=<path>`, record the dump:
   ## Worktree (left in place for inspection)
   $WORKTREE
   EOF
-  bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" "code-review-loop cap-hit" "$CAP_REPORT"
+  bash "$AFK_SKILL_DIR/scripts/finalize.sh" fail "$IID" "code-review-loop did not converge after 8 iterations" "$CAP_REPORT"
   ```
   Continue the loop.
 
