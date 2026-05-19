@@ -1,19 +1,21 @@
 ---
 name: afk
-description: Use when the user runs /afk to autonomously work through all open GitLab issues unattended, typically overnight or while away from the keyboard. Also use when the user says "AFK mode", "process issues while I'm gone", "tackle the backlog overnight", or wants sequential, full-code-review issue delivery before stepping away.
+description: Use when the user runs /afk to autonomously work through all open GitLab issues unattended. Also use when the user says "AFK mode", "process issues while I'm gone", "drain the backlog", or wants sequential, full-code-review issue delivery without supervision.
 ---
 
 # AFK — Autonomous Issue Loop
 
-You are running unattended. The user has gone to bed. They cannot rescue you. A failed MR at 3 AM is still failed at 9 AM — quality beats throughput.
+You are running unattended. The user kicked off `/afk` and stepped away. They cannot rescue you mid-run and cannot react to your hesitation. Quality beats throughput on any single issue — but **finishing the queue beats stopping early, always**.
 
-**Overnight is the slot for the big things, not the small ones.** The user is asleep for 6-9 hours and chose AFK precisely so substantial work can land. An issue feeling "too large for overnight" is upside-down reasoning — that's *exactly* what overnight is for. The only valid skips are: confirmed-blocker (verifier-confirmed), open MR exists, or `failed-by-agent` already set.
+**The queue is the only stop condition.** You keep going until Phase 1 reports zero unprocessed issues. There is no other valid termination. Every claimed issue ends in exactly one of two terminal states: an open MR queued for auto-merge (Phase 7 + 7.5), or `failed-by-agent` with a diagnostic comment. Stopping for any other reason — "I've delivered enough", "the remaining ones look risky", "this is a good place to pause", "c'est déjà bien" — is a violation of the AFK contract. The user picked AFK precisely because they trusted it to drain the queue without negotiation.
 
-**Silence between phases.** Do not narrate "I'm starting Phase 3, now I'm spawning the Implementer, now I'm waiting...". Every line of orchestrator narration is context the next phase has to drag along. Each phase's output should be its exit signal (DONE / BLOCKER_SUSPECTED / MR URL / failed-by-agent), not a play-by-play. The user reads GitLab in the morning, not your transcript.
+**An autonomous run is the slot for the big things, not the small ones.** The user chose `/afk` so substantial work can land while they aren't watching. An issue feeling "too large" is upside-down reasoning — that's *exactly* what this run is for. The only valid skips are: confirmed-blocker (verifier-confirmed), open MR exists, or `failed-by-agent` already set.
+
+**Silence between phases.** Do not narrate "I'm starting Phase 3, now I'm spawning the Implementer, now I'm waiting...". Every line of orchestrator narration is context the next phase has to drag along. Each phase's output should be its exit signal (DONE / BLOCKER_SUSPECTED / MR URL / failed-by-agent), not a play-by-play. The user reads GitLab when they return, not your transcript.
 
 ## Architecture — you are the orchestrator
 
-Two-level architecture. You orchestrate; you never read source files or edit code yourself. All code work happens in level-2 subagents. The orchestrator's context stays small so overnight runs do not drift, and "manual lite review" becomes structurally impossible — you have no source in context to review.
+Two-level architecture. You orchestrate; you never read source files or edit code yourself. All code work happens in level-2 subagents. The orchestrator's context stays small so long autonomous runs do not drift, and "manual lite review" becomes structurally impossible — you have no source in context to review.
 
 - **You (orchestrator, level 1)** — manage the queue, claim, create worktree, spawn subagents, invoke skills, open MRs.
 - **Implementer subagent (level 2, Opus 4.7)** — one per issue. `cd`s into the worktree, reads files, implements, commits, pushes. Returns `DONE` or `BLOCKER_SUSPECTED`.
@@ -33,7 +35,7 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | Temptation | Reality |
 |---|---|
 | "Too large / too risky / out of scope — let me mark blocked" | Implementer raises `BLOCKER_SUSPECTED`; you spawn the verifier; neither of you decides alone. "Out of scope" → Implementer files a new issue. |
-| "This issue is too large for an overnight run, let me skip / mark blocked" | Overnight *is* the slot for large work — that's the point of AFK. The size of the issue is never a reason to skip. Spawn the Implementer; it decides whether the work is actually impossible. |
+| "This issue is too large for an autonomous run, let me skip / mark blocked" | An autonomous run *is* the slot for large work — that's the point of AFK. The size of the issue is never a reason to skip. Spawn the Implementer; it decides whether the work is actually impossible. |
 | "Let me just edit one file myself, it'll be faster than spawning a subagent" | You never touch source. Every file edit goes through the Implementer or the `code-review-loop` fix agents. One "small fix" by the orchestrator is how runs go off the rails. |
 | "Let me tell the user I'm starting Phase 4 now" | Silent execution. The phase's structured exit signal (DONE / BLOCKER_SUSPECTED / MR URL) is the output. Narration between phases is context bloat that makes later phases drift. |
 | "Depends on #N — let me mark blocked" | Phase 3 stacks on #N's open MR or branches from `$DEFAULT_BRANCH`. Never a blocker. |
@@ -41,7 +43,10 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | "The diff is small, Lite tier is enough" | AFK never runs Lite. Force Full regardless of diff size. |
 | "Dogfood doesn't apply (fixme'd spec / small diff / obvious UI)" | The skill decides which lenses run, not you. |
 | "Je tente #X" / "Let me see how this one goes" | No hedging. Indicative only. |
-| "Should I continue? Let me ask the user" | The user is asleep. No mid-flight asks. |
+| "Should I continue? Let me ask the user" | The user has stepped away and explicitly chose not to be in the loop. No mid-flight asks. |
+| "C'est déjà bien pour cette session, je m'arrête" / "I've delivered enough for this run, time to stop" | Not your call. The user kicked off `/afk` to drain the queue, not to ship a fraction of it. The only valid stop signal is Phase 1 reporting zero issues. Continue. |
+| "N issues delivered already, that's a respectable count, let me wrap up" | N is not the goal. The empty queue is the goal. There is no count at which stopping early becomes acceptable. Continue. |
+| "It feels like a good place to pause" / "The remaining issues look hard" | Feelings about pacing and difficulty are not exit signals. "Too hard" is already in this table as a forbidden skip reason. Spawn the Implementer on the next issue. |
 | "Let me read the files quickly to double-check before code-review-loop" | You never read source files. Implementer's `DONE` is the signal to invoke the skill. |
 | "Context is filling, time to wrap up early" | No such signal exists. The harness handles context. |
 | "Convergence on substantive findings is enough; the residuals are stylistic" | Convergence is the loop's verdict. |
@@ -261,6 +266,47 @@ Where `STACK_NOTE` is either *"Independent of other cycle MRs."* or *"Stacks on 
 
 The script handles idempotence (checks for existing MR via `glab mr list --source-branch`) and removes `picked-by-agent`. Prints the MR URL.
 
+### Phase 7.5 — Land the MR (auto-merge with auto-fix on failure)
+
+AFK does not leave open MRs for a human to merge later. After Phase 7, queue auto-merge; if it fails, **fix the cause and retry**. Only escalate to `failed-by-agent` when the cause is structurally unfixable by an agent (approvals required, project-policy blocks even after `--squash` retry, or the fix attempt itself fails).
+
+```bash
+OUT=$(bash "$AFK_SKILL_DIR/scripts/finalize.sh" queue-merge "$IID" "$BRANCH")
+RC=$?
+```
+
+Dispatch on `$RC`:
+
+| Code | Meaning | What you do |
+|---|---|---|
+| `0` | Auto-merge queued (will land when CI is green) or already merged | Loop to next issue. |
+| `10` | Merge conflict with target branch | Spawn an Implementer subagent (model `opus`, prompt below) to rebase `$BRANCH` on `origin/$DEFAULT_BRANCH`, resolve conflicts, and push. Then re-invoke `queue-merge`. **One rebase attempt.** If the Implementer cannot resolve, or the second `queue-merge` still returns `10`, finalize as `failed-by-agent` (family: non-convergence). |
+| `11` | Pipeline failed | Spawn an Implementer subagent (model `opus`) with the failing job's logs (`glab ci view --branch "$BRANCH" --logs`) and a fix prompt. One fix attempt. Push, re-invoke `queue-merge`. Still `11` → `failed-by-agent` (family: non-convergence). |
+| `12` | Approvals required | Terminal. The agent cannot self-approve. Call `finalize.sh fail "$IID" "Auto-merge blocked: project requires human approval on this MR. \`$URL\`"`. This is the family "blocker externe confirmé" — needs human action. |
+| `13` | Branch protection / merge method policy | Retry once with `queue-merge "$IID" "$BRANCH" --squash`. Still `13` → `failed-by-agent` (family: blocker externe confirmé, message names the policy). |
+| `1` | Unrecognised glab error | `failed-by-agent` with `$OUT` quoted as the cause. The orchestrator must not guess a fix it doesn't understand. |
+| `2` | Infra (no MR found, network) | `failed-by-agent` with the infra error. |
+
+**Conflict-resolution Implementer prompt** (substitute `<IID>`, `<BRANCH>`, `<DEFAULT_BRANCH>`, `<WORKTREE>`):
+
+```
+You are resolving a merge conflict for AFK issue #<IID>. The branch <BRANCH> conflicts with <DEFAULT_BRANCH> and `glab mr merge` was rejected.
+
+Workspace: <WORKTREE>
+
+1. `cd "<WORKTREE>"`
+2. `git fetch origin <DEFAULT_BRANCH>`
+3. `git rebase origin/<DEFAULT_BRANCH>`
+4. For each conflict: read the file, understand BOTH sides, resolve preserving the intent of THIS branch's change AND the conflicting upstream change. No deletions to make the conflict go away. No `git checkout --ours` / `--theirs` shortcuts unless one side is structurally unrelated (e.g. lockfile vs source).
+5. Run the project's test suite. Fix breakages introduced by the rebase.
+6. `git push --force-with-lease`
+7. Return exactly one line: `REBASED` on success, or `REBASE_FAILED: <reason>` on irreconcilable conflict.
+```
+
+**CI-fix Implementer prompt** is structurally similar — instruct the subagent to read the failing job logs, identify the failing test/lint/build, fix it inside `<WORKTREE>`, push, return `CI_FIXED` or `CI_FIX_FAILED: <reason>`.
+
+**Loop discipline:** at most one auto-fix attempt per failure category. The point of AFK is to deliver a merged MR per issue, but not at any cost — when a single fix attempt doesn't land, the next-best output is a clean `failed-by-agent` with the diagnostic for human review.
+
 ### Phase 8 — Loop or end
 
 Go back to Phase 1. Refetch the queue. The queue may have grown (Implementer filed out-of-scope) or shrunk (parallel instance handled siblings).
@@ -273,7 +319,7 @@ echo "Worktrees laissés sous ~/.afk-worktrees/ (cleanup manuel : git worktree r
 exit 0
 ```
 
-No markdown report is generated. The user reviews work in GitLab in the morning. Worktrees stay on disk for post-mortem on `failed-by-agent` issues and for local inspection of merged work; the user prunes them at leisure.
+No markdown report is generated. The user reviews work in GitLab when they return. Worktrees stay on disk for post-mortem on `failed-by-agent` issues and for local inspection of merged work; the user prunes them at leisure.
 
 ## Failure handling
 
@@ -297,4 +343,4 @@ Specific cases:
 
 ## When the user asks "what do I do?"
 
-You (the human reading this) launch `/afk` and go to bed. Before launching: ensure issues to process are labeled `ready-for-agent` and `glab auth status` works. Your current checkout can be dirty — AFK uses its own worktrees under `~/.afk-worktrees/` and never touches the launcher's tree. In the morning: open GitLab, review MRs, decide what to do with `failed-by-agent` issues (read the comment AFK posted, inspect the worktree if useful, re-tag `ready-for-agent` if you want to retry). Once you're done, `git worktree remove <path>` (or `git worktree prune` for already-deleted dirs) cleans up.
+You (the human reading this) launch `/afk` and step away. Before launching: ensure issues to process are labeled `ready-for-agent` and `glab auth status` works. Your current checkout can be dirty — AFK uses its own worktrees under `~/.afk-worktrees/` and never touches the launcher's tree. When you return: open GitLab. The MRs that landed have already been merged (Phase 7.5 auto-merge); review the diffs if you want, but no clicks are required. For `failed-by-agent` issues, read the comment AFK posted, inspect the worktree if useful, and re-tag `ready-for-agent` to retry. Once you're done, `git worktree remove <path>` (or `git worktree prune` for already-deleted dirs) cleans up.

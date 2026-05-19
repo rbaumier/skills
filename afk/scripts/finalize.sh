@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
-# AFK terminal-state helpers. Two subcommands:
-#   open-mr <iid> <branch> <parent_branch> <parent_mr_iid|null> <iterations> <description_path> <worktree>
-#   fail   <iid> <reason> [<comment_path>]
+# AFK terminal-state helpers. Three subcommands:
+#   open-mr     <iid> <branch> <parent_branch> <parent_mr_iid|null> <iterations> <description_path> <worktree>
+#   queue-merge <iid> <branch> [--squash]
+#   fail        <iid> <reason> [<comment_path>]
 # Each is idempotent. open-mr prints the MR URL on stdout.
+# queue-merge returns a structured exit code so the orchestrator can dispatch
+# auto-fix flows (rebase, CI debug) instead of silently leaving open MRs:
+#   0  → auto-merge queued or already merged
+#   10 → merge conflict (orchestrator should rebase + retry)
+#   11 → pipeline failed (orchestrator should fix CI + retry)
+#   12 → approvals required (cannot self-approve → failed-by-agent)
+#   13 → branch protection / project policy (try alternate flags, then fail)
+#   1  → unrecognised glab error (failed-by-agent, dump stderr)
+#   2  → infra error
 
 . "$(dirname "$0")/lib.sh"
 
@@ -58,6 +68,43 @@ case "$cmd" in
 
     glab issue update "$iid" --unlabel picked-by-agent >/dev/null 2>&1 || true
     printf '%s\n' "$existing"
+    ;;
+
+  queue-merge)
+    iid=${1:?missing iid}
+    branch=${2:?missing branch}
+    extra_flag=${3:-}    # currently only "--squash" recognised; orchestrator
+                         # may pass it on a retry when project policy demands it
+
+    mr_iid=$(glab mr list --source-branch "$branch" --output json 2>/dev/null \
+             | jq -r '[.[] | select(.state == "opened")] | .[0].iid // empty')
+    [ -n "$mr_iid" ] || { echo "ERREUR: no open MR for branch $branch" >&2; exit 2; }
+
+    # `--auto-merge` queues the merge for after the pipeline succeeds. Stacked
+    # MRs survive parent-merge retargeting because the attribute is server-side.
+    if [ "$extra_flag" = "--squash" ]; then
+      merge_err=$(glab mr merge "$mr_iid" --auto-merge --remove-source-branch --squash --yes 2>&1)
+    else
+      merge_err=$(glab mr merge "$mr_iid" --auto-merge --remove-source-branch --yes 2>&1)
+    fi
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      exit 0
+    fi
+
+    # Print stderr so the orchestrator can re-read and quote it if needed.
+    printf '%s\n' "$merge_err"
+
+    # Dispatch by error signature. glab/GitLab phrasing is not perfectly
+    # stable, so match on durable substrings.
+    lower=$(printf '%s' "$merge_err" | tr '[:upper:]' '[:lower:]')
+    case "$lower" in
+      *conflict*|*"cannot be merged"*|*"merge conflicts"*)         exit 10 ;;
+      *pipeline*fail*|*"pipeline must succeed"*|*"failed pipeline"*) exit 11 ;;
+      *approval*|*"requires approval"*|*"not enough approvals"*)   exit 12 ;;
+      *protected*|*"merge method"*|*"squash"*|*"fast-forward"*)    exit 13 ;;
+      *) exit 1 ;;
+    esac
     ;;
 
   fail)
