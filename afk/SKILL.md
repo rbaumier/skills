@@ -19,10 +19,10 @@ Two-level architecture. You orchestrate; you never read source files or edit cod
 
 - **You (orchestrator, level 1)** — manage the queue, claim, create worktree, spawn subagents, invoke skills, open MRs.
 - **Implementer subagent (level 2, Opus 4.7)** — one per issue. `cd`s into the worktree, reads files, implements, commits, pushes. Returns `READY_FOR_REVIEW` or `BLOCKER_SUSPECTED`.
-- **`code-review-loop` skill (invoked at level 1, spawns level-2 agents internally)** — runs full review/fix iteration to convergence inside the worktree.
+- **`code-review-loop` runner subagent (level 2, Sonnet)** — one per issue. Loads the `code-review-loop` skill internally and runs it through to convergence or 8-iter cap, spawning the skill's review/fix subagents itself (level 3). Returns a single-line `READY_FOR_MR` / `READY_FOR_FAIL_LABEL` token. Wrapping code-review-loop in a subagent prevents the skill's "emit token, nothing else" instruction from overriding AFK's "next, call open-mr" (a recency clash the `Skill` tool's inline injection used to cause).
 - **Blocker-verifier subagent (level 2, Opus 4.7)** — only when Implementer signals BLOCKER_SUSPECTED. Adversarial. Also `cd`s into the worktree.
 
-Subagents never spawn further subagents. Max nesting depth = 2.
+Subagents never spawn further subagents, with **one exception**: the code-review-loop runner subagent (Phase 6) loads `code-review-loop` internally; that skill spawns its own review/fix agents at level 3. The exception is bounded — the runner returns a single-line token, nothing leaks back to AFK from level 3. Max effective nesting for code AFK reasons about = 2.
 
 **Worktree isolation.** Each issue gets its own git worktree under `~/.afk-worktrees/<repo>/<branch>/`. The launcher's checkout (where the user typed `/afk`) is never touched — dirty trees in the launcher are fine. All Implementer / verifier / code-review-loop work targets the worktree path; the orchestrator threads `$WORKTREE` through every Bash call (`git -C "$WORKTREE" ...`) and every subagent prompt.
 
@@ -39,7 +39,7 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | "Let me just edit one file myself, it'll be faster than spawning a subagent" | You never touch source. Every file edit goes through the Implementer or the `code-review-loop` fix agents. One "small fix" by the orchestrator is how runs go off the rails. |
 | "Let me tell the user I'm starting Phase 4 now" | Silent execution. The phase's structured exit signal (`READY_FOR_REVIEW` / `BLOCKER_SUSPECTED` / `READY_FOR_MR` / MR URL) is the output. Narration between phases is context bloat that makes later phases drift. |
 | "Depends on #N — let me mark blocked" | Phase 3 stacks on #N's open MR or branches from `$DEFAULT_BRANCH`. Never a blocker. |
-| "I'll run a lite review with one general-purpose agent — code-review-loop is overkill here" | That's a *substitute*, not the skill. Invoke `code-review-loop` via the Skill tool, Full tier. |
+| "I'll run a lite review with one general-purpose agent — code-review-loop is overkill here" | That's a *substitute*, not the skill. Spawn the code-review-loop runner subagent per Phase 6, Full tier. The runner loads the real skill. |
 | "The diff is small, Lite tier is enough" | AFK never runs Lite. Force Full regardless of diff size. |
 | "Dogfood doesn't apply (fixme'd spec / small diff / obvious UI)" | The skill decides which lenses run, not you. |
 | "Je tente #X" / "Let me see how this one goes" | No hedging. Indicative only. |
@@ -48,7 +48,7 @@ Announce at start: *"AFK orchestrator. Per-issue implementation and code review 
 | "N issues delivered already, that's a respectable count, let me wrap up" | N is not the goal. The empty queue is the goal. There is no count at which stopping early becomes acceptable. Continue. |
 | "It feels like a good place to pause" / "The remaining issues look hard" | Feelings about pacing and difficulty are not exit signals. "Too hard" is already in this table as a forbidden skip reason. Spawn the Implementer on the next issue. |
 | "Let me just briefly summarize what code-review-loop fixed before opening the MR" | No. The MR description IS the summary. Anything between Phase 6's `READY_FOR_MR` token and Phase 7's `open-mr` call is drift — empirical past runs have stopped at exactly this point. Your next tool call after `READY_FOR_MR` is `finalize.sh open-mr`, full stop. |
-| "Let me read the files quickly to double-check before code-review-loop" | You never read source files. Implementer's `READY_FOR_REVIEW` is the signal to invoke the skill. |
+| "Let me read the files quickly to double-check before code-review-loop" | You never read source files. Implementer's `READY_FOR_REVIEW` is the signal to spawn the runner subagent. |
 | "Context is filling, time to wrap up early" | No such signal exists. The harness handles context. |
 | "Convergence on substantive findings is enough; the residuals are stylistic" | Convergence is the loop's verdict. |
 | "Tests fail but probably unrelated — MR anyway" | No MR. `failed-by-agent`. |
@@ -197,21 +197,28 @@ Parse the first line of the verifier's return:
   ```
   Continue the loop.
 
-### Phase 6 — Invoke code-review-loop
+### Phase 6 — Spawn the code-review-loop runner subagent
 
-Invoke the `code-review-loop` **skill** via the `Skill` tool. The skill runs its own internal review/fix iteration to convergence or 8-iter cap. You receive the verdict.
+**Architectural note (the why).** Past runs repeatedly stopped here when AFK used the `Skill` tool to invoke `code-review-loop`. The `Skill` tool injects the skill's text into the orchestrator's own context — its last instruction ("emit the token, nothing else") then wins by recency over AFK Phase 7's "next, call open-mr". To break this tension, AFK spawns a **runner subagent** that owns the entire code-review-loop run; the orchestrator only sees the runner's return value, parsed exactly like the Implementer's return at Phase 5.
 
-**Invocation contract:**
-- Use the `Skill` tool. Do NOT spawn a general-purpose Agent with a review prompt — that's a substitute, not the skill.
-- Build the instruction string **with `$WORKTREE` already expanded to its concrete path** before passing it to the Skill tool — the Skill tool does no shell expansion. Concretely, if `$WORKTREE` is `/Users/foo/.afk-worktrees/12345/380-fix-bar-afk-20260518`, the instruction text you send must contain that literal path, not the string `$WORKTREE`. Template:
-  > AFK invocation — Full tier required, no Lite override regardless of `total_lines` or `file_count`. Operate inside `<EXPANDED_WORKTREE_PATH>` — every git operation, file read, and edit must target that path (use `git -C "<EXPANDED_WORKTREE_PATH>" …` and read/edit files only under that prefix). The orchestrator's cwd is not the work branch.
-- Dogfood is mandatory when triggered; the skill decides triggers, not you.
+**Invocation:**
 
-**Parse the skill's last line — it returns a single token, not prose:**
+```
+Agent({
+  subagent_type: "general-purpose",
+  model: "sonnet",                 // runner is mostly orchestrating; review subagents pick their own models per the skill
+  description: "code-review-loop runner",
+  prompt: <contents of $AFK_SKILL_DIR/assets/prompts/code-review-loop-runner.md, with <WORKTREE> substituted>
+})
+```
 
-- `READY_FOR_MR iter=<N> findings_fixed=<C>` → starting gun for Phase 7, not a finish line for the issue. Re-run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). The moment tests return green, your **next tool call** is `bash "$AFK_SKILL_DIR/scripts/finalize.sh" open-mr …` — do not write a summary, do not type "Tests are green, proceeding to Phase 7", just call the tool. Past runs have repeatedly stopped here because the orchestrator paused to acknowledge convergence; that pause is the failure mode. If tests are red, re-invoke `code-review-loop` (counts toward cap). Still red → fail-label handling.
-- `READY_FOR_FAIL_LABEL iter=8 dump=<path>` → fail-label handling below. **This token ends one issue, never the run.** Apply the label, then go to Phase 8.
-- Anything else (prose, "Open suggestions: …", silent return, legacy tokens `CONVERGED` / `CAP_HIT`) → the skill is in user-invocation mode or is an old version. Treat as `READY_FOR_FAIL_LABEL` with a synthetic dump quoting what came back, then continue. Do **not** stop the loop.
+Read the runner prompt template, substitute `<WORKTREE>` with its concrete expanded path, pass as the Agent's `prompt`. Do NOT use the `Skill` tool from the orchestrator — the runner subagent invokes it internally. Do NOT spawn a generic Agent with an ad-hoc review prompt — the runner exists so the real skill runs.
+
+**Parse the runner's return — its last line is a single token:**
+
+- `READY_FOR_MR iter=<N> findings_fixed=<C>` → run the project's full test suite once inside the worktree (`cd "$WORKTREE" && <test cmd>`). When green, **your next tool call is `bash "$AFK_SKILL_DIR/scripts/finalize.sh" open-mr …`** — no recap. If tests red, re-spawn the runner (counts toward cap). Still red → fail-label handling.
+- `READY_FOR_FAIL_LABEL iter=8 dump=<path>` → fail-label handling below. **This token ends one issue, never the run.**
+- Anything else (prose, silent return, legacy tokens `CONVERGED` / `CAP_HIT`, or a runner that returned mid-flight) → treat as `READY_FOR_FAIL_LABEL` with a synthetic dump quoting what came back, then continue. Do **not** stop the loop.
 
 For `READY_FOR_FAIL_LABEL iter=8 dump=<path>`, record the dump:
   ```bash

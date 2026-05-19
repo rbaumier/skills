@@ -362,7 +362,9 @@ On bail, finalize as `failed-by-agent` (family: non-convergence) with a dump of 
 - Static review passed, MR is now ready to open: `READY_FOR_MR iter=<N> findings_fixed=<C>`
 - 8-iter cap reached, this issue cannot ship: `READY_FOR_FAIL_LABEL iter=8 dump=<absolute path to findings-dump file you wrote>`
 
-Both tokens are named `READY_FOR_X`, not `CONVERGED` / `DONE` / `CAP_HIT` / `STOP`, intentionally. AFK orchestrators reading a terminal-sounding word treat it as "task complete, stop here" even when the SKILL says otherwise — the word's semantics override the instructions. `READY_FOR_X` points at the next action (open the MR, or apply the fail-label and move to the next issue) instead of celebrating or grieving completion. **Neither token ever signals end-of-run.** End-of-run is owned exclusively by AFK's Phase 1 returning zero unprocessed issues.
+Both tokens are named `READY_FOR_X`, not `CONVERGED` / `DONE` / `CAP_HIT` / `STOP`, intentionally. Terminal-sounding words trip the next-layer-up agent into "task complete, stop" mode even when the surrounding instructions say otherwise. `READY_FOR_X` points at the next action (open the MR, or apply the fail-label and move to the next issue) instead of celebrating or grieving completion. **Neither token ever signals end-of-run.** End-of-run is owned exclusively by AFK's Phase 1 returning zero unprocessed issues.
+
+When invoked from AFK, this skill runs inside a runner subagent — the AFK orchestrator spawns a level-2 Agent specifically to host this skill, so the "emit token, nothing else" instruction terminates the subagent's turn cleanly without leaking the recency tension into AFK's orchestration. You (this skill) don't need to know that; just emit the right token at the right time.
 
 Surviving `severity: suggestion` findings are NOT surfaced to the AFK orchestrator — they're noise for an auto-merge flow. If they're worth keeping, the orchestrator (or a separate /afk pass) can file them as `ready-for-agent` issues later from the diff comments. Do not append them to the token.
 
