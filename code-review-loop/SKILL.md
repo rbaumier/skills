@@ -123,16 +123,16 @@ The subsystem agent **adds to** (does not replace) the generic Correctness agent
 
 The "Failure modes" column is the **single source of truth** for what line-anchored agents prioritize when a boundary is active. Templates reference this table rather than duplicating the list — saves bytes per spawn over a multi-iteration loop.
 
-**Spawn by interface touched.** If the diff changes a user-facing surface, also spawn a **Dogfood** agent. Detect broadly — *err on the side of triggering*. Categories and signals:
+**Flag the dogfood gate.** If the diff changes a user-facing surface, flag the **dogfood gate** for Step 4.5 — at that point three personas (happy-path, adversarial, regression) run in parallel, not now. Detect broadly — *err on the side of triggering*. Categories and signals:
 
 - **Web UI**: `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `*.html`, CSS / design-token files (`*.css`, `*.scss`, `tokens.*`, theme files), `app/**/page.*`, `pages/**`, `src/routes/**`, server actions, i18n copy files, public/static assets that change observable behaviour.
 - **HTTP / API**: `app/**/route.*`, `middleware.*`, `server/api/**`, `api/**`, `routes/**`, tRPC routers, GraphQL resolvers/schema, WebSocket handlers, route definitions imported from `next`/`express`/`fastify`/`hono`/`koa`.
 - **CLI**: `bin/**`, `cli/**`, `src/cli/**`, files importing `commander`, `yargs`, `oclif`, `clipanion`, `cac`, `meow`.
 - **Native / desktop / mobile**: Electron/Tauri main or renderer entrypoints, React Native / Expo screens, native iOS/Android files.
 
-If you are unsure, spawn Dogfood. A spurious dogfood run is cheap; a missed runtime bug is expensive. Dogfood runs **after Step 4 static convergence**, not in parallel with the static agents — it needs the code to actually work.
+If you are unsure, flag the dogfood gate. A spurious dogfood run is cheap (the three personas dedup naturally); a missed runtime bug is expensive. The gate runs **after Step 4 static convergence**, not in parallel with the static agents — it needs the code to actually work, and you don't want personas testing intermediate states that will be rewritten by the next static iteration.
 
-**Don't rely on `git diff "$DEFAULT_BRANCH"...HEAD` alone for the dogfood trigger.** That misses uncommitted work. When deciding to spawn Dogfood, also union in `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Any of these touching a category above flags Dogfood.
+**Don't rely on `git diff "$DEFAULT_BRANCH"...HEAD` alone for the dogfood trigger.** That misses uncommitted work. When deciding whether to flag the dogfood gate, also union in `git diff --name-only` (unstaged), `git diff --name-only --staged` (staged), and `git ls-files --others --exclude-standard` (untracked). Any of these touching a category above flags the gate.
 
 **Codex:** only if the user explicitly requests it.
 
@@ -297,16 +297,63 @@ Without this, agents re-derive the same imagined failure modes every iteration a
 
 Continue fixing, committing, and re-launching until convergence.
 
-### Step 4.5 — Runtime dogfood (only if flagged in Step 0)
+### Step 4.5 — Runtime dogfood gate (3 personas, parallel — only if flagged in Step 0)
 
-Spawn the Dogfood agent once static review has converged. When it returns:
+Static review has converged. **The dogfood gate is the final validation step.** It runs only after static convergence so every persona tests the code that the static loop signed off on — never an intermediate fix that will be rewritten next iteration.
 
-1. Process its findings the same way as static findings: spawn fix agents per file group. Dogfood emits a textual contract (one-line summary, repro steps, observed vs expected, `suspected files:`) — **not** the JSON `fix_prompt` envelope. Before fanning out, the orchestrator forges a `fix_prompt` for each bug from those fields (`In {suspected_file}, {one-line summary}. Reproduce by {steps}. Expected {expected}, observed {observed}. Fix the code path so the expected behavior holds.`) and groups by suspected file. The "verbatim contract is orchestrator → fix agent" rule from Step 2 applies — fix agents still receive a single uniform `fix_prompt` shape.
-2. **Re-run the full Step 3 gate** (tests + linter, then commit) on the fixes.
-3. **Re-run static review** on the touched files until it re-converges (Step 4's discipline applies — no shortcuts because "it's just a small fix").
-4. Re-spawn Dogfood.
+**Spawn three personas in parallel** (one assistant turn, three `Agent` tool calls):
 
-Loop until Dogfood's **first line** is exactly `No findings.` **AND** the final line starts with `cleanup-complete:`. A `cleanup-incomplete` line is itself a finding — re-run Dogfood (or have the user intervene) so the run leaves no orphan processes or test data behind. A working happy path is **not** sufficient — edge-case and runtime bugs count and block convergence the same way static findings do.
+- **Happy-path** — `subagent_type: general-purpose`, **`model: sonnet`**. Walks the documented golden path end-to-end. Recipe execution, no creativity needed; Sonnet is the right cost/quality point.
+- **Adversarial** — `subagent_type: general-purpose`, **`model: opus`**. Hunts non-obvious failure modes: race conditions, refresh mid-flow, broken state machines, permission-boundary crossings, weird input combinations. Creativity is the deliverable; Opus earns its cost here.
+- **Regression** — `subagent_type: general-purpose`, **`model: sonnet`**. Walks a scripted checklist of behaviors that must keep working across releases. Deterministic checks, low ambiguity.
+
+All three load the `dogfood` skill, share the verify-not-prod / dev-server / authenticate / cleanup scaffolding, and differ only in their **Exercise focus** — see the persona blocks in the *Dogfood Agent (3 personas)* template. They run independent dev-server instances on different ports. If only one port is free, run them sequentially in the order Happy-path → Regression → Adversarial (Adversarial last because its findings are the hardest to fix and you want the cheaper personas' findings absorbed first).
+
+#### Merging and triage (orchestrator does this — no fourth subagent)
+
+Once all three personas return:
+
+1. **Deduplicate.** The same observable bug reported by two personas is one finding. Match by `suspected_file` + one-line summary slug.
+
+2. **Classify each merged finding as in-scope or out-of-scope.**
+   - **In-scope** — the bug is in a code path the current diff touches, OR the bug would NOT reproduce on `origin/$DEFAULT_BRANCH`. Verify by checking the cited files against `git diff --name-only origin/$DEFAULT_BRANCH...HEAD`, or by reasoning about the call graph when files don't overlap directly. **When uncertain, treat as in-scope** — a false in-scope is cheap (one extra fix attempt that no-ops), a false out-of-scope ships a bug.
+   - **Out-of-scope** — bug exists in code untouched by the diff and would also reproduce on `origin/$DEFAULT_BRANCH`. File a new issue:
+     ```bash
+     glab issue create --label ready-for-agent \
+       --title "<one-line summary>" \
+       --description "Found during dogfood gate on branch <BRANCH> while validating <parent issue or feature>. Suspected file(s): <files>. Reproduces on $DEFAULT_BRANCH — not introduced by this diff. Repro: <steps>. Observed: <…>. Expected: <…>."
+     ```
+     Out-of-scope findings do NOT block convergence.
+   - **Cleanup-incomplete** — any persona's final line starting with `cleanup-incomplete:` is itself a blocking finding (we must not leak processes or test data). Treat as in-scope regardless of the bug's actual location.
+
+3. **Fix in-scope findings, then loop back.**
+   - Forge `fix_prompt` envelopes from the textual findings (same machinery as the prior single-agent dogfood loop):
+     `In {suspected_file}, {one-line summary}. Reproduce by {steps}. Expected {expected}, observed {observed}. Fix the code path so the expected behavior holds.`
+   - Group by suspected file, spawn fix agents per group.
+   - Re-run Step 3 gate (tests + linter, then commit).
+   - **Re-enter Step 2-4 static review on the new commits.** A dogfood-driven fix that introduces a Correctness, Subsystem, or Skill violation is still a regression. The 8-iteration static cap applies — you do not reset it for dogfood-triggered re-review.
+   - Once static re-converges, **re-run the full dogfood gate** (all three personas again, from scratch — no previous findings injected, per the Step 4 rule below).
+
+4. **File out-of-scope findings and move on.** They land in the queue for AFK or human triage. They are not your problem for this branch.
+
+#### Convergence
+
+All three personas return exactly `No findings.` (or only out-of-scope findings, which were filed) AND every persona's final line is `cleanup-complete:`.
+
+#### When to bail (orchestrator judgment, no fixed cap)
+
+Loops that look like convergence but aren't are how overnight runs burn hours producing nothing. The orchestrator bails into the non-convergence failure family when any of these signals fire:
+
+| Signal | Why it means "not converging" |
+|---|---|
+| Same finding (matched on `suspected_file` + summary slug) reappears unchanged after a fix attempt — i.e., it survives one full loop back through static + dogfood | The fix didn't actually fix it. One more attempt is unlikely to help; a second occurrence is the call to stop. |
+| Round N+1 produces a NEW finding whose cited line is inside the commit from round N's fix | Fixes are introducing regressions faster than they resolve issues. |
+| Round N has ≥ in-scope finding count than round N-1, twice consecutively | Loop is regressing on count, not just on specific findings. |
+| Static review hits its 8-iter cap while fixing dogfood findings | Already a `failed-by-agent` path from the static loop — propagate up. |
+
+On bail, finalize as `failed-by-agent` (family: non-convergence) with a dump of the last 3 rounds of merged findings, the bail signal that fired, and the diff stats.
+
+**Dogfood findings themselves never produce `failed-by-agent`.** In-scope is fixed; out-of-scope becomes a new issue. The only `failed-by-agent` from this phase is non-convergence of the fix loop or the static-cap propagation above — both already in the documented failure taxonomy.
 
 ### Step 5 — Brief conversation summary
 
@@ -421,7 +468,9 @@ Every agent follows: role → context → task → constraints → output format
 | coding-standards (umbrella + 4 sub-skills) | `sonnet` | judgement-heavy |
 | claude-md-materiality | `haiku` | yes/no classification, no fix to derive |
 | claude-md-compliance | `sonnet` | rule walk requires judgement and code-level matching |
-| Dogfood | `sonnet` | needs to drive a real UI/CLI |
+| Dogfood — Happy-path | `sonnet` | recipe execution end-to-end, no creativity needed |
+| Dogfood — Adversarial | `opus` | creative failure-mode hunting, state reasoning |
+| Dogfood — Regression | `sonnet` | deterministic checklist against documented behaviors |
 | General Opus 4.7 | `opus` | generalist, by design |
 | Fix agents (Step 2) | `sonnet` | already specified |
 
@@ -756,23 +805,26 @@ Stay within these files: {file_list}
 {previous_findings_block}  ← only injected at iteration N>1; otherwise empty
 ```
 
-### Dogfood Agent (runtime, post-static-convergence)
+### Dogfood Agent (3 personas, post-static-convergence)
+
+One shared template. Three personas spawn in parallel with the same scaffolding (verify-not-prod, dev-server, authenticate, cleanup) and differ only in their **Exercise focus** (Step 4). The orchestrator substitutes `{persona}` and `{persona_focus}` before spawning — see the per-persona Exercise blocks immediately below the template.
 
 ```
-You exercise a user-facing surface to find runtime bugs static review can't catch.
+You are the {persona} dogfood persona — one of three runtime validators (happy-path, adversarial, regression) running in parallel against the same changed surface. You exercise a user-facing surface to find runtime bugs static review can't catch.
 
 Load the `dogfood` skill via the Skill tool. Read the project's CLAUDE.md for run instructions, dev credentials, and conventions.
 
 Changed surface(s) to exercise: {file_list}
+Your dedicated dev-server port: {port}
 
 Run in this exact order:
 
 1. **Verify you are NOT in production.** Read `.env`/`.env.local`, check the DB connection string, look for `NODE_ENV`/`APP_ENV`. If the active database, API host, or any service URL looks like a real production system, **abort** and emit one finding: `refused to run: target appears to be production`. Never mutate data on non-dev.
 
-2. **Start the dev server with PID capture and a cleanup trap.** Find the command in `package.json` scripts, Makefile, justfile, or CLAUDE.md. Use `setsid` so the server gets its own process group:
+2. **Start the dev server on your dedicated port with PID capture and a cleanup trap.** Find the command in `package.json` scripts, Makefile, justfile, or CLAUDE.md. The three personas run in parallel, so each MUST bind to its assigned `{port}` — read the project's dev-server docs for the env var or flag that overrides the default port (commonly `PORT={port}` or `--port {port}`). Use `setsid` so the server gets its own process group:
 
    ```bash
-   setsid <run-command> &
+   PORT={port} setsid <run-command> &
    SERVER_PID=$!
    SERVER_PGID=$(ps -o pgid= "$SERVER_PID" 2>/dev/null | tr -d ' ')
 
@@ -782,10 +834,8 @@ Run in this exact order:
      elif [ -n "$SERVER_PID" ]; then
        kill -TERM "$SERVER_PID" 2>/dev/null; sleep 1; kill -KILL "$SERVER_PID" 2>/dev/null
      fi
-     for port in <project-ports>; do
-       lsof -ti :"$port" 2>/dev/null | while IFS= read -r pid; do
-         [ -n "$pid" ] && kill -KILL "$pid" 2>/dev/null
-       done
+     lsof -ti :{port} 2>/dev/null | while IFS= read -r pid; do
+       [ -n "$pid" ] && kill -KILL "$pid" 2>/dev/null
      done
    }
    trap cleanup EXIT INT TERM
@@ -793,19 +843,28 @@ Run in this exact order:
 
    If `setsid` is unavailable, the fallback `<run-command> &` puts the child in the agent's own process group — negative-PGID kill would terminate the agent. Set `SERVER_PGID=""`, kill `SERVER_PID` directly, and rely on the port/pgrep checks to catch escaped watchers. Note the limitation in the "How I authenticated" output section.
 
-   Wait for readiness (poll the port, watch for a "ready" line).
+   Wait for readiness (poll `{port}`, watch for a "ready" line).
 
-3. **Authenticate.** Check CLAUDE.md for test credentials first. Otherwise in order: seed script → signup flow → magic-link / dev auth bypass → direct DB insert (confirmed-dev DB only). Use a unique identifier (`email = afk-dogfood-<YYYYMMDD-HHMMSS>-<rand>@example.invalid`). Record everything created — tables, row ids, unique identifier — to `/tmp/dogfood-created.txt`. Next run reads this list; you must too.
+3. **Authenticate.** Check CLAUDE.md for test credentials first. Otherwise in order: seed script → signup flow → magic-link / dev auth bypass → direct DB insert (confirmed-dev DB only). Use a unique identifier that encodes your persona so the three parallel runs don't collide:
+   `email = afk-dogfood-{persona}-<YYYYMMDD-HHMMSS>-<rand>@example.invalid`. Record everything created — tables, row ids, unique identifier — to `/tmp/dogfood-created-{persona}.txt`. Next run of your persona reads this list; you must too.
 
-4. **Exercise.** Drive the new code path end-to-end via the actual interface (browser for UI, terminal for CLI, HTTP for API). Happy path, then push: empty/oversized/malformed inputs, rapid clicks, race conditions, refresh mid-flow, browser back, permission boundaries.
+4. **Exercise — {persona_focus}**
 
-5. **Capture evidence.** Per bug: one-line summary, repro steps, observed vs expected, any console/network/server-log artifact.
+5. **Capture evidence.** Per bug: one-line summary, repro steps, observed vs expected, any console/network/server-log artifact, `suspected files:` (the orchestrator groups fix agents by file — attribution is required).
 
-6. **Cleanup is mandatory** — bugs, errors, crashes, anything. The trap fires; then delete every row in `/tmp/dogfood-created.txt` (report exact counts: `deleted: 3 users, 7 sessions`). Verify ports free (`lsof -i :<port>` returns nothing) and no orphans (`pgrep -f <server-command>` returns nothing). List uncleanable items under `cleanup-incomplete` — never hide them.
+6. **Cleanup is mandatory** — bugs, errors, crashes, anything. The trap fires; then delete every row in `/tmp/dogfood-created-{persona}.txt` (report exact counts: `deleted: 3 users, 7 sessions`). Verify your port is free (`lsof -i :{port}` returns nothing) and no orphans (`pgrep -f <server-command>` returns nothing). List uncleanable items under `cleanup-incomplete` — never hide them.
 
 Output (the **first line** is the convergence signal):
 - Zero bugs: line 1 is exactly `No findings.`
-- Otherwise: line 1 is `N findings.`, then a flat list. Every entry MUST include `suspected files:` (Step 4.5 groups fix agents by file — attribution is required).
-- A short "How I authenticated" note for the next run.
+- Otherwise: line 1 is `N findings.`, then a flat list. Every entry MUST include `suspected files:`.
+- A short "How I authenticated" note for the next run of this persona.
 - Final line: `cleanup-complete: server stopped (PID/PGID killed and verified), N rows deleted` OR `cleanup-incomplete: <what's left>`.
 ```
+
+**Per-persona Exercise focus** (substitute into `{persona_focus}` in Step 4):
+
+- **Happy-path** — *Drive the new code path end-to-end via the actual interface (browser for UI, terminal for CLI, HTTP for API), following the documented or obvious golden path. The user signing up, the form submitting, the file uploading, the data displaying. No creativity, no destruction — execute the recipe and verify each step lands. If the documented happy path is broken, that is your headline finding.*
+
+- **Adversarial** — *Assume a hostile or careless user. Push every edge that the diff's code path could possibly hit: empty/oversized/malformed inputs, copy-paste of multi-line text into single-line fields, rapid double-clicks, race conditions between concurrent actions, refresh mid-flow, browser back/forward, opening the same flow in two tabs, expired sessions, permission-boundary crossings (try to read/write resources you don't own), uploading files of the wrong type, network drops mid-request. Your deliverable is the failure mode a recipe-following test would never find.*
+
+- **Regression** — *Walk a scripted checklist of behaviors that must keep working across releases, in this order: (a) login/logout flows, (b) the project's documented "core flows" if any are listed in CLAUDE.md or README, (c) any feature listed in the last 5 closed MRs touching files adjacent to the diff (`git log --oneline -5 -- <dir of changed files>`), (d) any behavior the diff's commits mention preserving in their messages. For each checklist item, the question is binary: does it still work as it did before this branch? If yes, no finding. If no, that's a regression — flag it with the specific MR or commit that documents the prior behavior so the orchestrator can confirm in-scope vs out-of-scope.*
