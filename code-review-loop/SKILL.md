@@ -70,7 +70,7 @@ The `fetch` keeps the local tracking ref current against concurrent pushes; reci
 
 Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` to get all changed files. Determine which agents to spawn based on file extensions and imports.
 
-**Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by subsystem touched", "Spawn by interface touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
+**Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by surface touched", "Spawn by subsystem touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
 
 **Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, matt-review, security-defensive, Tests, Correctness.
 
@@ -81,7 +81,19 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` to get all changed files. De
 **Spawn by extension:** `.ts`/`.tsx` → language-typescript, `.rs` → language-rust, `.swift` → language-swift, `.vue` → vue.
 
 **Spawn by imports** (one agent per detected skill):
-`better-auth-best-practices`, `better-result-adopt`, `database`, `docker`, `drizzle-orm`, `frontend`, `i18n`, `kubernetes`, `react`, `react-native`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui`, `ui-animations`, `ui-ux`, `vue`, `web-performance`, `zod`
+`better-auth-best-practices`, `better-result-adopt`, `coss`, `database`, `docker`, `drizzle-orm`, `i18n`, `kubernetes`, `react`, `react-native`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui-animations`, `vue`, `zod`
+
+**Spawn by surface touched.** UI/frontend skills that have no specific import signal — they apply to entire categories of code (a component file, a stylesheet, a page route). Trigger by file-set rather than by import.
+
+**File-set for surface detection** is the same unified set used elsewhere (`"$DEFAULT_BRANCH"...HEAD` ∪ unstaged ∪ staged ∪ untracked), minus APPROVED files from Step 0.5's triage.
+
+| Trigger (path globs) | Skill agents | What they review |
+|---|---|---|
+| `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `app/**/page.*`, `pages/**`, `src/routes/**`, server actions | **ui-ux**, **frontend**, **ui**, **make-interfaces-feel-better**, **web-performance**, **web-interface-guidelines** | design quality, visual hierarchy, polish, perf budgets, layout discipline, component shape, Vercel WIG conformance |
+| `*.css`, `*.scss`, design-token files (`tokens.*`, `theme.*`), tailwind config when it changes design tokens (colors, spacing, typography) | **ui-ux**, **make-interfaces-feel-better** | spacing/color/typography rules, optical alignment, design-system drift |
+| `app/**/route.*`, `middleware.*`, `server/api/**`, `api/**`, `routes/**`, tRPC routers (files importing `@trpc/server`), GraphQL resolvers / schema files (`*.graphql`, `*.gql`, files with `buildSchema(` or `createSchema(`), OpenAPI specs (`openapi.*`, `swagger.*`) | **api-design** | contract stability, error semantics, versioning, pagination, Hyrum's Law, response shape consistency |
+
+These skills overlap with framework-specific agents (`react`, `vue`) — they review different lenses (design quality vs. framework idioms) so they coexist without duplication. Spawn one agent per skill listed in the matching row(s); dedup if the same skill appears in multiple matched rows.
 
 **Spawn by subsystem touched.** When the diff touches a high-stakes subsystem, spawn an extra **subsystem-framed agent** alongside the generic Correctness agent. The framing primes the agent for domain-specific failure modes a generic "correctness" lens misses (double-charges, refund races, signature replay, cross-tenant leaks).
 
@@ -475,8 +487,8 @@ Every agent follows: role → context → task → constraints → output format
 | matt-review | `sonnet` | two-axis review (Standards + Spec) — fans out 2 internal sub-agents; spec-drift detection needs Sonnet's reasoning |
 | Subsystem (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) | `sonnet` | domain reasoning |
 | Tests | `sonnet` | coverage gaps need code understanding |
-| Skill Agent — heavy (security-defensive, language-rust, language-typescript, language-swift, react, react-native, database, drizzle-orm, frontend, web-performance, simplify, matt-improve-codebase-architecture) | `sonnet` | dense rules, code-level violations |
-| Skill Agent — light (i18n, tailwind, ui, ui-animations, ui-ux, shadcn, vue, tanstack-query, tanstack-start-best-practices, better-auth-best-practices, better-result-adopt, docker, kubernetes, zod) | `haiku` | mostly style/usage rules, low ambiguity |
+| Skill Agent — heavy (security-defensive, language-rust, language-typescript, language-swift, react, react-native, database, drizzle-orm, frontend, web-performance, api-design, simplify, matt-improve-codebase-architecture) | `sonnet` | dense rules, code-level violations |
+| Skill Agent — light (i18n, tailwind, ui, ui-animations, ui-ux, make-interfaces-feel-better, web-interface-guidelines, shadcn, coss, vue, tanstack-query, tanstack-start-best-practices, better-auth-best-practices, better-result-adopt, docker, kubernetes, zod) | `haiku` | mostly style/usage rules, low ambiguity |
 | coding-standards (umbrella + 4 sub-skills) | `sonnet` | judgement-heavy |
 | claude-md-materiality | `haiku` | yes/no classification, no fix to derive |
 | claude-md-compliance | `sonnet` | rule walk requires judgement and code-level matching |
