@@ -1,53 +1,86 @@
-# Dogfood Report: {APP_NAME}
+# Dogfood QA Report
 
-| Field | Value |
-|-------|-------|
-| **Date** | {DATE} |
-| **App URL** | {URL} |
-| **Session** | {SESSION_NAME} |
-| **Scope** | {SCOPE} |
+**Target:** {target_url}
+**Date:** {date}
+**Scope:** {scope_description}
+**Tester:** Hermes Agent (automated exploratory QA)
 
-## Summary
+---
+
+## Executive Summary
 
 | Severity | Count |
 |----------|-------|
-| Critical | 0 |
-| High | 0 |
-| Medium | 0 |
-| Low | 0 |
-| **Total** | **0** |
+| 🔴 Critical | {critical_count} |
+| 🟠 High | {high_count} |
+| 🟡 Medium | {medium_count} |
+| 🔵 Low | {low_count} |
+| **Total** | **{total_count}** |
+
+**Overall Assessment:** {one_sentence_assessment}
+
+---
 
 ## Issues
 
-<!-- Copy this block for each issue found. Interactive issues need video + step-by-step screenshots. Static issues (typos, visual glitches) only need a single screenshot -- set Repro Video to N/A. -->
+<!-- Repeat this section for each issue found, sorted by severity (Critical first) -->
 
-### ISSUE-001: {Short title}
+### Issue #{issue_number}: {issue_title}
 
 | Field | Value |
 |-------|-------|
-| **Severity** | critical / high / medium / low |
-| **Category** | visual / functional / ux / content / performance / console / accessibility |
-| **URL** | {page URL where issue was found} |
-| **Repro Video** | {path to video, or N/A for static issues} |
+| **Severity** | {severity} |
+| **Category** | {category} |
+| **URL** | {url_where_found} |
 
-**Description**
+**Description:**
+{detailed_description_of_the_issue}
 
-{What is wrong, what was expected, and what actually happened.}
+**Steps to Reproduce:**
+1. {step_1}
+2. {step_2}
+3. {step_3}
 
-**Repro Steps**
+**Expected Behavior:**
+{what_should_happen}
 
-<!-- Each step has a screenshot. A reader should be able to follow along visually. -->
+**Actual Behavior:**
+{what_actually_happens}
 
-1. Navigate to {URL}
-   ![Step 1](screenshots/issue-001-step-1.png)
+**Screenshot:**
+MEDIA:{screenshot_path}
 
-2. {Action -- e.g., click "Settings" in the sidebar}
-   ![Step 2](screenshots/issue-001-step-2.png)
-
-3. {Action -- e.g., type "test" in the search field and press Enter}
-   ![Step 3](screenshots/issue-001-step-3.png)
-
-4. **Observe:** {what goes wrong -- e.g., the page shows a blank white screen instead of search results}
-   ![Result](screenshots/issue-001-result.png)
+**Console Errors** (if applicable):
+```
+{console_error_output}
+```
 
 ---
+
+<!-- End of per-issue section -->
+
+## Issues Summary Table
+
+| # | Title | Severity | Category | URL |
+|---|-------|----------|----------|-----|
+| {n} | {title} | {severity} | {category} | {url} |
+
+## Testing Coverage
+
+### Pages Tested
+- {list_of_pages_visited}
+
+### Features Tested
+- {list_of_features_exercised}
+
+### Not Tested / Out of Scope
+- {areas_not_covered_and_why}
+
+### Blockers
+- {any_issues_that_prevented_testing_certain_areas}
+
+---
+
+## Notes
+
+{any_additional_observations_or_recommendations}

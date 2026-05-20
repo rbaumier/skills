@@ -1,109 +1,109 @@
 # Issue Taxonomy
 
-Reference for categorizing issues found during dogfooding. Read this at the start of a dogfood session to calibrate what to look for.
-
-## Contents
-
-- [Severity Levels](#severity-levels)
-- [Categories](#categories)
-- [Exploration Checklist](#exploration-checklist)
+Use this taxonomy to classify issues found during dogfood QA testing.
 
 ## Severity Levels
 
-| Severity | Definition |
-|----------|------------|
-| **critical** | Blocks a core workflow, causes data loss, or crashes the app |
-| **high** | Major feature broken or unusable, no workaround |
-| **medium** | Feature works but with noticeable problems, workaround exists |
-| **low** | Minor cosmetic or polish issue |
+### Critical
+The issue makes a core feature completely unusable or causes data loss.
+
+**Examples:**
+- Application crashes or shows a blank white page
+- Form submission silently loses user data
+- Authentication is completely broken (can't log in at all)
+- Payment flow fails and charges the user without completing the order
+- Security vulnerability (e.g., XSS, exposed credentials in console)
+
+### High
+The issue significantly impairs functionality but a workaround may exist.
+
+**Examples:**
+- A key button does nothing when clicked (but refreshing fixes it)
+- Search returns no results for valid queries
+- Form validation rejects valid input
+- Page loads but critical content is missing or garbled
+- Navigation link leads to a 404 or wrong page
+- Uncaught JavaScript exceptions in the console on core pages
+
+### Medium
+The issue is noticeable and affects user experience but doesn't block core functionality.
+
+**Examples:**
+- Layout is misaligned or overlapping on certain screen sections
+- Images fail to load (broken image icons)
+- Slow performance (visible loading delays > 3 seconds)
+- Form field lacks proper validation feedback (no error message on bad input)
+- Console warnings that suggest deprecated or misconfigured features
+- Inconsistent styling between similar pages
+
+### Low
+Minor polish issues that don't affect functionality.
+
+**Examples:**
+- Typos or grammatical errors in text content
+- Minor spacing or alignment inconsistencies
+- Placeholder text left in production ("Lorem ipsum")
+- Favicon missing
+- Console info/debug messages that shouldn't be in production
+- Subtle color contrast issues that don't fail WCAG requirements
 
 ## Categories
 
-### Visual / UI
-
-- Layout broken or misaligned elements
-- Overlapping or clipped text
-- Inconsistent spacing, padding, or margins
-- Missing or broken icons/images
-- Dark mode / light mode rendering issues
-- Responsive layout problems (viewport sizes)
-- Z-index stacking issues (elements hidden behind others)
-- Font rendering issues (wrong font, size, weight)
-- Color contrast problems
-- Animation glitches or jank
-
 ### Functional
+Issues where features don't work as expected.
 
-- Broken links (404, wrong destination)
-- Buttons or controls that do nothing on click
-- Form validation that rejects valid input or accepts invalid input
-- Incorrect redirects
-- Features that fail silently
-- State not persisted when expected (lost on refresh, navigation)
-- Race conditions (double-submit, stale data)
-- Broken search or filtering
-- Pagination issues
-- File upload/download failures
+- Buttons/links that don't respond
+- Forms that don't submit or submit incorrectly
+- Broken user flows (can't complete a multi-step process)
+- Incorrect data displayed
+- Features that work partially
 
-### UX
+### Visual
+Issues with the visual presentation of the page.
 
-- Confusing or unclear navigation
-- Missing loading indicators or feedback after actions
-- Slow or unresponsive interactions (>300ms perceived delay)
-- Unclear error messages
-- Missing confirmation for destructive actions
-- Dead ends (no way to go back or proceed)
-- Inconsistent patterns across similar features
-- Missing keyboard shortcuts or focus management
-- Unintuitive defaults
-- Missing empty states or unhelpful empty states
-
-### Content
-
-- Typos or grammatical errors
-- Outdated or incorrect text
-- Placeholder or lorem ipsum content left in
-- Truncated text without tooltip or expansion
-- Missing or wrong labels
-- Inconsistent terminology
-
-### Performance
-
-- Slow page loads (>3s)
-- Janky scrolling or animations
-- Large layout shifts (content jumping)
-- Excessive network requests (check via console/network)
-- Memory leaks (page slows over time)
-- Unoptimized images (large file sizes)
-
-### Console / Errors
-
-- JavaScript exceptions in console
-- Failed network requests (4xx, 5xx)
-- Deprecation warnings
-- CORS errors
-- Mixed content warnings
-- Unhandled promise rejections
+- Layout problems (overlapping elements, broken grids)
+- Broken images or missing media
+- Styling inconsistencies
+- Responsive design failures
+- Z-index issues (elements hidden behind others)
+- Text overflow or truncation
 
 ### Accessibility
+Issues that prevent or hinder access for users with disabilities.
 
-- Missing alt text on images
-- Unlabeled form inputs
-- Poor keyboard navigation (can't tab to elements)
-- Focus traps
-- Insufficient color contrast
-- Missing ARIA attributes on dynamic content
-- Screen reader incompatible patterns
+- Missing alt text on meaningful images
+- Poor color contrast (fails WCAG AA)
+- Elements not reachable via keyboard navigation
+- Missing form labels or ARIA attributes
+- Focus indicators missing or unclear
+- Screen reader incompatible content
 
-## Exploration Checklist
+### Console
+Issues detected through JavaScript console output.
 
-Use this as a guide for what to test on each page/feature:
+- Uncaught exceptions and unhandled promise rejections
+- Failed network requests (4xx, 5xx errors in console)
+- Deprecation warnings
+- CORS errors
+- Mixed content warnings (HTTP resources on HTTPS page)
+- Excessive console.log output left from development
 
-1. **Visual scan** -- Take an annotated screenshot. Look for layout, alignment, and rendering issues.
-2. **Interactive elements** -- Click every button, link, and control. Do they work? Is there feedback?
-3. **Forms** -- Fill and submit. Test empty submission, invalid input, and edge cases.
-4. **Navigation** -- Follow all navigation paths. Check breadcrumbs, back button, deep links.
-5. **States** -- Check empty states, loading states, error states, and full/overflow states.
-6. **Console** -- Check for JS errors, failed requests, and warnings.
-7. **Responsiveness** -- If relevant, test at different viewport sizes.
-8. **Auth boundaries** -- Test what happens when not logged in, with different roles if applicable.
+### UX (User Experience)
+Issues where functionality works but the experience is poor.
+
+- Confusing navigation or information architecture
+- Missing loading indicators (user doesn't know something is happening)
+- No feedback after user actions (e.g., button click with no visible result)
+- Inconsistent interaction patterns
+- Missing confirmation dialogs for destructive actions
+- Poor error messages that don't help the user recover
+
+### Content
+Issues with the text, media, or information on the page.
+
+- Typos and grammatical errors
+- Placeholder/dummy content in production
+- Outdated information
+- Missing content (empty sections)
+- Broken or dead links to external resources
+- Incorrect or misleading labels
