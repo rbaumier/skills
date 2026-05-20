@@ -72,7 +72,7 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` to get all changed files. De
 
 **Apply the tier first.** Compute the tier from the "Tier classification" section above. If `Lite`, only spawn the agents listed in the Lite column — skip the "Spawn by imports", "Spawn by subsystem touched", "Spawn by interface touched", and "General Opus 4.7" rules below. Everything else in this Step 0 applies only to `Full`.
 
-**Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, security-defensive, Tests, Correctness.
+**Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, matt-review, security-defensive, Tests, Correctness.
 
 **Why Occam Razor sits alongside the funnel.** L1 asks "does this code need to exist" and L2 asks "what's the smallest perimeter" — both prose, both evaluated face-value against the abstraction's surface. Neither walks the call graph. In practice L1 will validate a wrapper that *looks* justifiable when read in isolation, even when grep would reveal one caller (or zero). Occam Razor is the mechanical check: for every exported symbol the diff introduces or modifies, enumerate call sites and prove the shape pays rent. Past misses this would have caught: a function with 0 callers, a wrapper with 1 caller, defaults reconstructed from values the caller already had.
 
@@ -472,6 +472,7 @@ Every agent follows: role → context → task → constraints → output format
 | Funnel L1, Funnel L2 | `haiku` | structural reasoning, short prompts |
 | Occam Razor | `sonnet` | grep is mechanical, but "is this default derivable from the caller?" needs reading call sites with judgement |
 | Correctness | `sonnet` | bug-hunting needs depth |
+| matt-review | `sonnet` | two-axis review (Standards + Spec) — fans out 2 internal sub-agents; spec-drift detection needs Sonnet's reasoning |
 | Subsystem (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) | `sonnet` | domain reasoning |
 | Tests | `sonnet` | coverage gaps need code understanding |
 | Skill Agent — heavy (security-defensive, language-rust, language-typescript, language-swift, react, react-native, database, drizzle-orm, frontend, web-performance, simplify, matt-improve-codebase-architecture) | `sonnet` | dense rules, code-level violations |
@@ -695,6 +696,41 @@ Your task: check the implementation against the apparent intent. Look for bugs, 
 Stay within these files: {file_list}
 
 {previous_findings_block}  ← only injected at iteration N>1; otherwise empty
+```
+
+### Matt Review Agent (matt-review)
+
+Prose output — uses Shape B for `{previous_findings_block}` (iteration N>1). Does NOT receive `{trust_boundaries}` and does NOT append the Context verification or JSON Output format blocks (its output is prose by design).
+
+```
+You run a two-axis review (Standards + Spec) on the diff. Standards = does the code follow this repo's documented conventions? Spec = does the code faithfully implement the originating issue / PRD / spec?
+
+Load the skill `matt-review` via the Skill tool, then follow its full process — pin the fixed point, identify the spec source, identify the standards sources, spawn both sub-agents in parallel, then aggregate.
+
+The fixed point is `$DEFAULT_BRANCH`. Diff command: `git diff "$DEFAULT_BRANCH"...HEAD`. Commit list: `git log "$DEFAULT_BRANCH"..HEAD --oneline`.
+
+Read the diff from {diff_file}. Read the project's CLAUDE.md / AGENTS.md / CONTEXT.md / docs/adr/ for standards sources. For the spec source, scan commit messages for issue references (`#123`, `Closes #45`, GitLab `!67`) and resolve them via the project's issue tracker if available. If no spec is discoverable, skip the Spec axis and note "no spec available".
+
+## What NOT to flag
+- Findings already covered by Correctness / Skill / Funnel / Subsystem agents — focus on what only the two-axis lens catches: spec drift (asked-for behavior missing, scope creep) and high-level standards conformance not enforced by tooling.
+- Style / formatting concerns that linters or formatters already enforce — note them as machine-enforced and move on.
+- Pre-existing violations in unchanged code — only what the diff introduces or modifies.
+
+Stay within these files: {file_list}
+
+{previous_findings_block}  ← only injected at iteration N>1; otherwise empty
+
+## Output format
+
+Return two sections — `## Standards` and `## Spec` — verbatim or lightly cleaned from the sub-agents. Each finding starts with `[must]` (concrete violation or spec drift that must be addressed before shipping) or `[suggestion]` (worth considering but the change can ship without it). A finding without a tag is invalid.
+
+Example:
+- `[must] Spec asked for "rate-limit auth endpoints to 5 req/min" (issue #142) — the diff adds the endpoints but no rate limiter is wired up.`
+- `[suggestion] CONTEXT.md describes domain term as "subscriber" but the new code uses "user" — align terminology.`
+
+If the Spec axis was skipped, emit only the `## Standards` section and note "Spec axis skipped — no spec available" under a `## Spec` header.
+
+If both axes return zero findings, say exactly: "No findings."
 ```
 
 ### Occam Razor Agent
