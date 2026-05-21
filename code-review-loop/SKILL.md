@@ -50,6 +50,20 @@ Three levels, in order. Each gates the next.
 
 **Discipline:** challenge your own proposal at each level until you can't remove anything.
 
+## Anti-shortcut — if any of these cross your mind, stop
+
+Past runs drift here. The skill's value is in the fan-out shape — collapse it and you might as well not have called the skill at all.
+
+| Temptation | Reality |
+|---|---|
+| "Le diff est petit, un seul agent suffit" | The tier classifier decides — Lite is ~8 agents, Full is 12+. Re-read "Tier classification" and apply it. AFK callers force Full regardless of size. |
+| "Je vais review moi-même dans mon propre contexte, c'est plus rapide" | You don't have the skill rule-sets loaded (security-defensive, language-*, ui-ux, coding-standards:*, etc.). Spawn the agents — that's what loads the rules at level 3. You orchestrating without them is strictly weaker. |
+| "Spawn un seul `general-purpose` agent avec un prompt 'review this diff' générique et on appelle ça un review" | That is the substitute, not the skill. The whole skill exists to avoid this shape. Use the prompt templates verbatim and the fan-out the tier prescribes. |
+| "Step 0 est long, je vais skip la détection et spawn juste les agents évidents" | Step 0 detects subsystem (billing, auth, webhook, schema-migration), surface (UI, API), and imports. Skipping = missing the high-stakes lenses where bugs hurt most. |
+| "Je vais drop les findings 'mineurs' pour converger plus vite" | Severity-based convergence (Step 4) already handles this — `suggestion` findings don't block; only `bug` / `security` / `performance` / `error_handling` do. Don't gate-keep beyond what Step 4 prescribes. |
+| "Step 1 dit 'parallel' mais émettre les Tasks une par une serait plus simple à debug" | Wall-time collapse is the only reason this skill exists. One assistant turn, N Task blocks, BEFORE any result. Re-read Step 1. |
+| "L'itération 2 va trouver les mêmes choses, autant arrêter à l'itération 1" | Convergence is the loop's verdict, not yours. Step 4's rule decides. Pre-emptive stop = silent miss. |
+
 ## Workflow
 
 ### Step 0 — Detect agents and scope files

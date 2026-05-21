@@ -19,7 +19,7 @@ Two-level architecture. You orchestrate; you never read source files or edit cod
 
 - **You (orchestrator, level 1)** — manage the queue, claim, create worktree, spawn subagents, invoke skills, open MRs.
 - **Implementer subagent (level 2, Opus 4.7)** — one per issue. `cd`s into the worktree, reads files, implements, commits, pushes. Returns `READY_FOR_REVIEW` or `BLOCKER_SUSPECTED`.
-- **`code-review-loop` runner subagent (level 2, Sonnet)** — one per issue. Loads the `code-review-loop` skill internally and runs it through to convergence or 8-iter cap, spawning the skill's review/fix subagents itself (level 3). Returns a single-line `READY_FOR_MR` / `READY_FOR_FAIL_LABEL` token. Wrapping code-review-loop in a subagent prevents the skill's "emit token, nothing else" instruction from overriding AFK's "next, call open-mr" (a recency clash the `Skill` tool's inline injection used to cause).
+- **`code-review-loop` runner subagent (level 2, Opus 4.7)** — one per issue. Loads the `code-review-loop` skill internally and runs it through to convergence or 8-iter cap, spawning the skill's review/fix subagents itself (level 3). Returns a single-line `READY_FOR_MR` / `READY_FOR_FAIL_LABEL` token. Wrapping code-review-loop in a subagent prevents the skill's "emit token, nothing else" instruction from overriding AFK's "next, call open-mr" (a recency clash the `Skill` tool's inline injection used to cause). **Opus, not Sonnet** — Sonnet drifted toward shortcut-shapes ("spawn one general-purpose agent and call it a review"), collapsing the skill's fan-out and defeating the point of the skill. Opus follows Step 0's detection and Step 1's parallel spawn more reliably.
 - **Blocker-verifier subagent (level 2, Opus 4.7)** — only when Implementer signals BLOCKER_SUSPECTED. Adversarial. Also `cd`s into the worktree.
 
 Subagents never spawn further subagents, with **one exception**: the code-review-loop runner subagent (Phase 6) loads `code-review-loop` internally; that skill spawns its own review/fix agents at level 3. The exception is bounded — the runner returns a single-line token, nothing leaks back to AFK from level 3. Max effective nesting for code AFK reasons about = 2.
@@ -206,7 +206,7 @@ Parse the first line of the verifier's return:
 ```
 Agent({
   subagent_type: "general-purpose",
-  model: "sonnet",                 // runner is mostly orchestrating; review subagents pick their own models per the skill
+  model: "opus",                   // Opus 4.7. Sonnet drifted toward "spawn one general-purpose, call it a review"; Opus follows the skill's fan-out shape. Review subagents pick their own models per the skill.
   description: "code-review-loop runner",
   prompt: <contents of $AFK_SKILL_DIR/assets/prompts/code-review-loop-runner.md, with <WORKTREE> substituted>
 })
