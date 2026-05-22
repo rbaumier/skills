@@ -23,61 +23,16 @@
  * Usage: bun ~/.claude/skills/afk/scripts/mr-discussion.ts <subcommand> [flags]
  * Requires: glab (authenticated), run from inside the target repo.
  */
-import { $ } from "bun"
-import { Cause, Data, Effect, Exit, Schedule } from "effect"
+import { Cause, Data, Effect, Exit } from "effect"
 import { toDiscussionSummary } from "../src/discussion"
+import { GlabError, parseJson, runGlab } from "../src/glab"
 
 // ─── Errors ────────────────────────────────────────────────────────────
-
-/** A `glab` invocation failed, or returned output we couldn't make sense of. */
-class GlabError extends Data.TaggedError("GlabError")<{
-  readonly args: ReadonlyArray<string>
-  readonly detail: string
-}> {}
 
 /** The CLI was invoked with missing or invalid arguments. */
 class UsageError extends Data.TaggedError("UsageError")<{
   readonly message: string
 }> {}
-
-// ─── glab runner ───────────────────────────────────────────────────────
-
-/**
- * Retry transient failures (network blips, 5xx, rate limits) with jittered
- * exponential backoff. We retry *every* failure — classifying glab errors as
- * transient-or-not is fiddly, and retrying a genuine 4xx just wastes ~1s of
- * backoff before failing anyway. 3 attempts total (1 + 2 retries).
- */
-const retryPolicy = Schedule.exponential("200 millis").pipe(
-  Schedule.jittered,
-  Schedule.intersect(Schedule.recurs(2)),
-)
-
-/** Run `glab <args>` once; fail with {@link GlabError} on a non-zero exit. */
-const runGlabOnce = (args: ReadonlyArray<string>): Effect.Effect<string, GlabError> =>
-  Effect.tryPromise({
-    // `.nothrow()` — we inspect exitCode ourselves; the promise won't reject.
-    try: () => $`glab ${args}`.nothrow().quiet(),
-    catch: (cause) => new GlabError({ args, detail: String(cause) }),
-  }).pipe(
-    Effect.flatMap((result) =>
-      result.exitCode === 0
-        ? Effect.succeed(result.stdout.toString())
-        : Effect.fail(new GlabError({ args, detail: result.stderr.toString().trim() })),
-    ),
-  )
-
-/** Run `glab <args>` with the retry policy applied. */
-const runGlab = (args: ReadonlyArray<string>): Effect.Effect<string, GlabError> =>
-  runGlabOnce(args).pipe(Effect.retry(retryPolicy))
-
-/** Parse `glab`'s stdout as JSON, or fail with {@link GlabError}. */
-const parseJson = (raw: string, args: ReadonlyArray<string>): Effect.Effect<unknown, GlabError> =>
-  Effect.try({
-    try: () => JSON.parse(raw) as unknown,
-    catch: (cause) =>
-      new GlabError({ args, detail: `expected JSON from glab (${String(cause)}); got: ${raw.slice(0, 200)}` }),
-  })
 
 // ─── Subcommands ───────────────────────────────────────────────────────
 
