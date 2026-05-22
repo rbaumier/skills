@@ -55,7 +55,8 @@
  * Requires: jq, tmux, claude, glab, git in PATH; origin/HEAD set.
  */
 import { $ } from "bun"
-import { Cause, Console, Data, Effect, Exit } from "effect"
+import { BunRuntime } from "@effect/platform-bun"
+import { Console, Data, Effect } from "effect"
 import { existsSync } from "node:fs"
 import { mkdir, writeFile, appendFile, readFile, chmod } from "node:fs/promises"
 import { join } from "node:path"
@@ -276,15 +277,15 @@ async function writeStopHookConfig(worktree: string, sentinel: string): Promise<
 // ─── Tmux session helper (fail-loud) ───────────────────────────────────
 
 /**
- * Spawn Claude Code in a fresh tmux session and paste the prompt.
+ * Boot Claude Code inside an ALREADY-CREATED tmux session and paste the prompt.
  *
- * Throws on any tmux failure — these indicate system-level issues (tmux
- * missing, paste-buffer broken) where we want to know immediately rather than
- * wait for a phase timeout.
+ * The session is created — and guaranteed to be killed — by the
+ * `acquireUseRelease` bracket in `runPhaseSession`; this only drives the
+ * already-acquired session. Throws on any tmux failure: a system-level fault
+ * we want surfaced immediately, not hidden behind a phase timeout.
  */
-async function spawnClaudeInTmux(
+async function startClaudeSession(
   sessionName: string,
-  worktree: string,
   tmuxLog: string,
   promptFile: string,
 ): Promise<void> {
@@ -295,7 +296,6 @@ async function spawnClaudeInTmux(
     }
   }
 
-  await run("new-session", $`tmux new-session -d -s ${sessionName} -c ${worktree}`)
   await run("pipe-pane", $`tmux pipe-pane -t ${sessionName} -O ${"cat >> " + tmuxLog}`)
   await run("start-claude", $`tmux send-keys -t ${sessionName} ${"claude --dangerously-skip-permissions"} Enter`)
   // Wait for the claude TUI to settle before pasting — poll capture-pane
@@ -381,10 +381,11 @@ const PROMPT_FILE: Record<Phase, string> = {
  *     the worktree so the session's final message is captured atomically.
  *  4. Read the phase's prompt template, substitute placeholders, write it to a
  *     prompt file under the run dir.
- *  5. Spawn `claude` in tmux and paste the prompt.
- *  6. Poll the sentinel every 5s. The timeout is `min(phase cap, remaining
- *     budget)` — whichever bound trips first.
- *  7. On sentinel: read it, `parseVerdict`. On timeout: kill the session.
+ *  5. Create the tmux session as an `acquireUseRelease` resource — its
+ *     `kill-session` finalizer runs on every exit path.
+ *  6. Inside the bracket: boot claude, paste the prompt, poll the sentinel
+ *     every 5s (timeout = `min(phase cap, remaining budget)`).
+ *  7. On the sentinel: read it, `parseVerdict`. On timeout: fail the phase.
  *
  * Fails with {@link PhaseError} on a timeout, a missing verdict, or a garbage
  * verdict — the handler routes that to `failed`. Succeeds with the
@@ -435,37 +436,54 @@ const runPhaseSession = (
     const promptFile = join(runDir, `prompt-${issue.iid}-${phase}-${iter}.md`)
     yield* Effect.promise(() => writeFile(promptFile, promptText))
 
-    // Spawn the session. A tmux-level failure is a system fault — surface it
-    // as a PhaseError rather than letting it crash the whole orchestrator.
-    yield* Effect.tryPromise({
-      try: () => spawnClaudeInTmux(session, worktree, tmuxLog, promptFile),
-      catch: (cause) => new PhaseError({ phase, reason: `tmux spawn failed: ${String(cause)}` }),
-    })
-
-    yield* Console.log(`  ↳ watch live: tmux attach -r -t ${session}   (detach: Ctrl-B then d)`)
-    yield* Console.log(`  ↳ raw log:    tail -f ${tmuxLog}`)
-    yield* Console.log(`  ↳ phase ${phase} — timeout ${fmtDuration(timeoutMs)}`)
-
-    // Poll the sentinel. The verdict is the clean early-exit; the timeout is
-    // the real safety net (a runaway loop never writes the sentinel).
-    const verdict = yield* pollSentinel(phase, session, sentinel, timeoutMs)
-    return verdict
+    // The tmux session is a scoped resource. `acquireUseRelease` guarantees
+    // its `kill-session` finalizer runs on EVERY exit of `use` — a verdict
+    // returned, a timeout, an unexpected defect, or interruption (Ctrl-C, via
+    // BunRuntime.runMain). No path can leak a live `claude` process.
+    return yield* Effect.acquireUseRelease(
+      // acquire — create the session, and nothing else, so a failure here has
+      // nothing to leak.
+      Effect.tryPromise({
+        try: () => $`tmux new-session -d -s ${session} -c ${worktree}`.nothrow().quiet(),
+        catch: (cause) => new PhaseError({ phase, reason: `tmux new-session failed: ${String(cause)}` }),
+      }).pipe(
+        Effect.flatMap((r) =>
+          r.exitCode === 0
+            ? Effect.succeed(session)
+            : Effect.fail(
+                new PhaseError({ phase, reason: `tmux new-session failed: ${r.stderr.toString().trim()}` }),
+              ),
+        ),
+      ),
+      // use — boot claude in the session, paste the prompt, poll for the verdict.
+      (sess) =>
+        Effect.gen(function* () {
+          yield* Effect.tryPromise({
+            try: () => startClaudeSession(sess, tmuxLog, promptFile),
+            catch: (cause) => new PhaseError({ phase, reason: `tmux spawn failed: ${String(cause)}` }),
+          })
+          yield* Console.log(`  ↳ watch live: tmux attach -r -t ${sess}   (detach: Ctrl-B then d)`)
+          yield* Console.log(`  ↳ raw log:    tail -f ${tmuxLog}`)
+          yield* Console.log(`  ↳ phase ${phase} — timeout ${fmtDuration(timeoutMs)}`)
+          return yield* pollSentinel(phase, sentinel, timeoutMs)
+        }),
+      // release — always tear the session down.
+      (sess) => Effect.promise(() => $`tmux kill-session -t ${sess}`.nothrow().quiet()),
+    )
   })
 
 /**
- * Poll `sentinel` every 5s until it appears or `timeoutMs` elapses.
+ * Poll `sentinel` every 5s until it appears or `timeoutMs` elapses, then
+ * return the verdict — or fail the phase on a timeout, or a missing/ambiguous
+ * verdict (never a false *proceed*).
  *
- * On the sentinel: read it, run the message through the strict `parseVerdict`
- * — a missing or ambiguous verdict fails the phase (never a false *proceed*).
- * On timeout: kill the tmux session and fail the phase.
- *
- * Implemented as a tail-recursive Effect loop rather than `Effect.timeout` on
- * a blocking promise: this keeps the wait interruptible at every 5s tick and
- * lets the timeout reason name the phase + the elapsed time precisely.
+ * Killing the tmux session is NOT this function's job: the `acquireUseRelease`
+ * bracket in `runPhaseSession` owns the session lifecycle and kills it on
+ * every exit. The stack-safe `Effect.iterate` loop also keeps the wait
+ * interruptible at every tick.
  */
 const pollSentinel = (
   phase: Phase,
-  session: string,
   sentinel: string,
   timeoutMs: number,
 ): Effect.Effect<VerdictToken, PhaseError> =>
@@ -480,23 +498,16 @@ const pollSentinel = (
       body: (n) => Effect.as(Effect.sleep(`${SENTINEL_POLL_MS} millis`), n + 1),
     })
 
-    // The session is over either way — kill it (finished, or a runaway).
-    const killSession = Effect.promise(() => $`tmux kill-session -t ${session}`.nothrow().quiet())
-
     if (!existsSync(sentinel)) {
-      yield* killSession
       return yield* Effect.fail(
         new PhaseError({
           phase,
-          reason: `timeout after ${fmtDuration(Date.now() - start)} — session killed (no verdict)`,
+          reason: `timeout after ${fmtDuration(Date.now() - start)} (no verdict)`,
         }),
       )
     }
 
-    // The session finished — capture its message, then tear the session down.
     const message = yield* Effect.promise(() => readFile(sentinel, "utf8"))
-    yield* killSession
-
     const verdict = parseVerdict(message)
     if (verdict === null) {
       // Empty sentinel, no `VERDICT:` line, several of them, or an unknown
@@ -1158,13 +1169,9 @@ const machine: Effect.Effect<void, GlabError> = Effect.gen(function* () {
   yield* Console.log("\nAFK done. Worktrees and run logs left under ~/.afk-runs/ and ~/.afk-worktrees/.")
 })
 
-// Run the machine. A `GlabError` reaching here is the fatal queue-read failure
-// — print it and exit non-zero; everything else routes through `failed`.
-const exit = await Effect.runPromiseExit(machine)
-Exit.match(exit, {
-  onSuccess: () => {},
-  onFailure: (cause) => {
-    console.error(Cause.pretty(cause))
-    process.exit(1)
-  },
-})
+// BunRuntime.runMain — the signal-aware entrypoint. On Ctrl-C it interrupts
+// the fiber, so every `acquireUseRelease` finalizer (the tmux kill-sessions)
+// runs before the process exits; it also sets the exit code and pretty-prints
+// a fatal cause. A `GlabError` reaching here is the fatal queue-read failure;
+// every other failure routes through the `failed` state.
+BunRuntime.runMain(machine)
