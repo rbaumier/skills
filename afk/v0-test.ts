@@ -32,7 +32,7 @@ import { $ } from "bun"
 import { existsSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { parseVerdict } from "./src/verdict"
+import { parseVerdict } from "./src/session/verdict"
 
 // ─── Configuration ─────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ await writeFile(
             hooks: [
               {
                 type: "command",
-                command: `jq -r '.last_assistant_message // empty' > ${SENTINEL}.tmp && mv ${SENTINEL}.tmp ${SENTINEL}`,
+                command: `jq -r '.last_assistant_message // empty' > "${SENTINEL}.tmp" && mv "${SENTINEL}.tmp" "${SENTINEL}"`,
               },
             ],
           },
