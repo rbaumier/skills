@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ESNext"],
+    "types": ["bun"]
+  },
+  "include": ["src/**/*.ts", "v0-test.ts", "vitest.config.ts"],
+  "exclude": ["node_modules", "effect-ref"]
+}
