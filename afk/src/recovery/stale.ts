@@ -10,8 +10,8 @@
 
 /** An issue carrying the `picked-by-agent` label, with its last-update time. */
 export interface ClaimedIssue {
-  readonly iid: number
-  readonly updatedAt: string
+  readonly iid: number;
+  readonly updatedAt: string;
 }
 
 /**
@@ -20,15 +20,15 @@ export interface ClaimedIssue {
  * we never unlabel a claim we cannot confidently date.
  */
 export function selectStale(
-  issues: ReadonlyArray<ClaimedIssue>,
+  issues: readonly ClaimedIssue[],
   nowMs: number,
   thresholdMs: number,
-): ReadonlyArray<ClaimedIssue> {
+): readonly ClaimedIssue[] {
   return issues.filter((issue) => {
-    const updatedMs = Date.parse(issue.updatedAt)
-    if (Number.isNaN(updatedMs)) return false
-    return nowMs - updatedMs > thresholdMs
-  })
+    const updatedMs = Date.parse(issue.updatedAt);
+    if (Number.isNaN(updatedMs)) {return false;}
+    return nowMs - updatedMs > thresholdMs;
+  });
 }
 
 /**
@@ -42,19 +42,19 @@ export function selectStale(
  * skipped — the orchestrator always creates a branch, so a normal orphan has
  * one; a branchless orphan is left to `git worktree prune`.
  */
-export function worktreePathsForIssue(porcelain: string, iid: number): ReadonlyArray<string> {
-  const paths: string[] = []
-  let currentPath: string | null = null
+export function worktreePathsForIssue(porcelain: string, iid: number): readonly string[] {
+  const paths: string[] = [];
+  let currentPath: string | null = null;
 
   for (const line of porcelain.split("\n")) {
     if (line.startsWith("worktree ")) {
-      currentPath = line.slice("worktree ".length).trim()
+      currentPath = line.slice("worktree ".length).trim();
     } else if (line.startsWith("branch ") && currentPath !== null) {
       // The branch line looks like: `branch refs/heads/afk/issue-5-some-slug`.
       if (line.includes(`/afk/issue-${iid}-`)) {
-        paths.push(currentPath)
+        paths.push(currentPath);
       }
     }
   }
-  return paths
+  return paths;
 }

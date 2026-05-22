@@ -19,12 +19,12 @@ export const VERDICT_TOKENS = [
   "FIX_DONE",
   "DOGFOOD_PASS",
   "DOGFOOD_FAIL",
-] as const
+] as const;
 
-export type VerdictToken = (typeof VERDICT_TOKENS)[number]
+export type VerdictToken = (typeof VERDICT_TOKENS)[number];
 
 /** A line is a verdict line iff it is exactly `VERDICT: ` + an uppercase token. */
-const VERDICT_LINE = /^VERDICT: ([A-Z_]+)$/
+const VERDICT_LINE = /^VERDICT: ([A-Z_]+)$/;
 
 /**
  * Extract the verdict a session declared, or `null` if it did not declare one
@@ -43,25 +43,23 @@ const VERDICT_LINE = /^VERDICT: ([A-Z_]+)$/
  * `null` means the caller must treat the session as failed — never proceed.
  */
 export function parseVerdict(message: string): VerdictToken | null {
-  const lines = message.split("\n")
+  const lines = message.split("\n");
 
   // Exactly one verdict line, or it is ambiguous and we refuse to guess.
-  const verdictLineCount = lines.filter((line) => VERDICT_LINE.test(line.trim())).length
-  if (verdictLineCount !== 1) return null
+  const verdictLineCount = lines.filter((line) => VERDICT_LINE.test(line.trim())).length;
+  if (verdictLineCount !== 1) {return null;}
 
   // The verdict must be the last thing the session said.
-  const lastNonEmpty = [...lines].reverse().find((line) => line.trim() !== "")
-  if (lastNonEmpty === undefined) return null
+  const lastNonEmpty = [...lines].reverse().find((line) => line.trim() !== "");
+  if (lastNonEmpty === undefined) {return null;}
 
-  const match = VERDICT_LINE.exec(lastNonEmpty.trim())
-  if (match === null) return null
+  const match = VERDICT_LINE.exec(lastNonEmpty.trim());
+  if (match === null) {return null;}
 
   // match[1] is always set when exec succeeds with a participating group;
   // the guard exists only to satisfy noUncheckedIndexedAccess.
-  const token = match[1]
-  if (token === undefined) return null
+  const token = match[1];
+  if (token === undefined) {return null;}
 
-  return (VERDICT_TOKENS as readonly string[]).includes(token)
-    ? (token as VerdictToken)
-    : null
+  return (VERDICT_TOKENS as readonly string[]).includes(token) ? (token as VerdictToken) : null;
 }

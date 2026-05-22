@@ -1,0 +1,62 @@
+# comply.toml — AFK orchestrator project configuration.
+#
+# The orchestrator is an idiomatic Effect (effect-ts) codebase. The rules
+# below are disabled in two groups: deliberate Effect conventions comply's
+# defaults do not anticipate, and false positives where comply mis-reads an
+# Effect construct (each tracked as an upstream issue on rbaumier/comply).
+# Every other comply rule is enforced.
+
+# ── Disabled: deliberate idiomatic-Effect conventions ──────────────────────
+
+[rules.top-level-function]
+# Effect codebases bind functions as `const name = (…) => …` — arrows compose
+# with `.pipe` and never need hoisting. Enforcing `function` declarations
+# would fight the entire style of this codebase.
+disabled = true
+
+[rules.no-side-effects-in-initialization]
+# Module-level `const`s for zod schemas, Effect `Schedule`s, and
+# `Data.TaggedError` classes are the standard Effect/zod module shape.
+disabled = true
+
+[rules.no-generic-names]
+# The `run` prefix matches Effect's own runtime API (`Effect.runPromise`,
+# `BunRuntime.runMain`) — it is the ecosystem convention here, not vague.
+disabled = true
+
+# ── Disabled: false positives on Effect — tracked upstream ─────────────────
+
+[rules.promise-function-async]
+# Flags functions returning `Effect.Effect<…>` as needing `async`; an Effect
+# is not a Promise. https://github.com/rbaumier/comply/issues/273
+disabled = true
+
+[rules."jsdoc/require-yields"]
+# Fires on every `Effect.gen(function* () {…})` generator.
+# https://github.com/rbaumier/comply/issues/274
+disabled = true
+
+[rules."jsdoc/require-yields-check"]
+# https://github.com/rbaumier/comply/issues/274
+disabled = true
+
+[rules.node-prefer-stream-pipeline]
+# Matches Effect's `.pipe(…)` combinator as a Node stream `.pipe()`; there
+# are no Node streams here. https://github.com/rbaumier/comply/issues/275
+disabled = true
+
+[rules.ts-no-unused-expressions]
+# Flags arrow functions with a conditional/expression body, where the
+# expression is the return value. https://github.com/rbaumier/comply/issues/276
+disabled = true
+
+[rules.unused-file]
+# The project has several entry points (src/main.ts, the scripts/ CLIs, the
+# v*-test smoke tools) the heuristic does not resolve.
+# https://github.com/rbaumier/comply/issues/277
+disabled = true
+
+[rules.security-detect-object-injection]
+# The flagged accesses are `Record<Phase, V>[phase]` with a typed enum key —
+# never untrusted input, so the prototype-pollution concern does not apply.
+disabled = true

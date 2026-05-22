@@ -5,20 +5,20 @@
  * the codebase has a single consistent boundary to the operating system
  * instead of a `$`-template scattered across a dozen call sites.
  */
-import { $ } from "bun"
-import { Effect } from "effect"
-import { COMMAND_TIMEOUT_MS } from "./config"
+import type { $ } from "bun";
+import { Effect } from "effect";
+import { COMMAND_TIMEOUT_MS } from "./config";
 
 /** The outcome of a finished command — exit code plus captured streams. */
 export interface CommandResult {
-  readonly exitCode: number
-  readonly stdout: string
-  readonly stderr: string
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
 }
 
 /** Exit codes for the two failure modes that are not a real process exit. */
-const SPAWN_FAILURE_EXIT = 127
-const TIMEOUT_EXIT = 124
+const SPAWN_FAILURE_EXIT = 127;
+const TIMEOUT_EXIT = 124;
 
 /**
  * Run a command and capture its result. The returned Effect never fails — a
@@ -39,19 +39,23 @@ const TIMEOUT_EXIT = 124
 export const runShell = (build: () => ReturnType<typeof $>): Effect.Effect<CommandResult> =>
   Effect.promise(async (): Promise<CommandResult> => {
     try {
-      const output = await build().nothrow().quiet()
+      const output = await build().nothrow().quiet();
       return {
         exitCode: output.exitCode,
         stdout: output.stdout.toString(),
         stderr: output.stderr.toString(),
-      }
+      };
     } catch (cause) {
-      return { exitCode: SPAWN_FAILURE_EXIT, stdout: "", stderr: String(cause) }
+      return { exitCode: SPAWN_FAILURE_EXIT, stdout: "", stderr: String(cause) };
     }
   }).pipe(
     Effect.timeoutTo({
       duration: `${COMMAND_TIMEOUT_MS} millis`,
       onSuccess: (result: CommandResult) => result,
-      onTimeout: (): CommandResult => ({ exitCode: TIMEOUT_EXIT, stdout: "", stderr: "command timed out" }),
+      onTimeout: (): CommandResult => ({
+        exitCode: TIMEOUT_EXIT,
+        stdout: "",
+        stderr: "command timed out",
+      }),
     }),
-  )
+  );

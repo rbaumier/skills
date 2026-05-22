@@ -12,25 +12,25 @@
 /** A GitLab issue, reduced to what the pipeline actually uses. */
 export interface IssueRef {
   /** The project-scoped issue number (GitLab's `iid`, shown as `#42`). */
-  readonly iid: number
-  readonly title: string
+  readonly iid: number;
+  readonly title: string;
   /** The issue description, or the empty string if it had none. */
-  readonly body: string
+  readonly body: string;
 }
 
 /** A wall-clock instant (epoch milliseconds) past which an issue is over budget. */
-export type Deadline = number
+export type Deadline = number;
 
 /**
  * The data every node from `open_draft_mr` onward shares: the issue, its
  * branch and worktree, the budget deadline, and the merge request.
  */
 export interface PipelineContext {
-  readonly issue: IssueRef
-  readonly branch: string
-  readonly worktree: string
-  readonly deadline: Deadline
-  readonly mergeRequestIid: number
+  readonly issue: IssueRef;
+  readonly branch: string;
+  readonly worktree: string;
+  readonly deadline: Deadline;
+  readonly mergeRequestIid: number;
 }
 
 /**
@@ -48,17 +48,17 @@ export type State =
   | { readonly kind: "claim_issue"; readonly issue: IssueRef }
   | { readonly kind: "branch_worktree"; readonly issue: IssueRef }
   | {
-      readonly kind: "run_impl"
-      readonly issue: IssueRef
-      readonly branch: string
-      readonly worktree: string
+      readonly kind: "run_impl";
+      readonly issue: IssueRef;
+      readonly branch: string;
+      readonly worktree: string;
     }
   | {
-      readonly kind: "open_draft_mr"
-      readonly issue: IssueRef
-      readonly branch: string
-      readonly worktree: string
-      readonly deadline: Deadline
+      readonly kind: "open_draft_mr";
+      readonly issue: IssueRef;
+      readonly branch: string;
+      readonly worktree: string;
+      readonly deadline: Deadline;
     }
   | ({ readonly kind: "review" } & PipelineContext & { readonly fixCycles: number })
   | ({ readonly kind: "evaluate" } & PipelineContext & { readonly fixCycles: number })
@@ -66,17 +66,17 @@ export type State =
   | ({ readonly kind: "run_dogfood" } & PipelineContext)
   | ({ readonly kind: "merge" } & PipelineContext)
   | {
-      readonly kind: "done"
-      readonly issue: IssueRef
-      readonly worktree: string
-      readonly mergeRequestIid: number
+      readonly kind: "done";
+      readonly issue: IssueRef;
+      readonly worktree: string;
+      readonly mergeRequestIid: number;
     }
   | {
-      readonly kind: "failed"
-      readonly issue: IssueRef
-      readonly branch: string | null
-      readonly worktree: string | null
-      readonly mergeRequestIid: number | null
-      readonly reason: string
+      readonly kind: "failed";
+      readonly issue: IssueRef;
+      readonly branch: string | null;
+      readonly worktree: string | null;
+      readonly mergeRequestIid: number | null;
+      readonly reason: string;
     }
-  | { readonly kind: "end" }
+  | { readonly kind: "end" };
