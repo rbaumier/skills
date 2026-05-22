@@ -111,7 +111,7 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` → changed files. Determine
 **Spawn by extension:** `.ts`/`.tsx` → language-typescript, `.rs` → language-rust, `.swift` → language-swift, `.vue` → vue.
 
 **Spawn by imports** (one agent per detected skill):
-`better-auth-best-practices`, `better-result-adopt`, `coss`, `database`, `docker`, `drizzle-orm`, `i18n`, `kubernetes`, `react`, `react-native`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui-animations`, `vue`, `zod`
+`better-result-adopt`, `database`, `docker`, `drizzle-orm`, `i18n`, `kubernetes`, `react`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui-animations`, `vue`, `zod`
 
 **Spawn by surface touched.** UI/frontend skills with no import signal — they apply to categories of code. Trigger by file-set.
 
@@ -119,7 +119,7 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` → changed files. Determine
 
 | Trigger (path globs) | Skill agents | What they review |
 |---|---|---|
-| `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `app/**/page.*`, `pages/**`, `src/routes/**`, server actions | **ui-ux**, **frontend**, **ui**, **make-interfaces-feel-better**, **web-performance**, **web-interface-guidelines** | design quality, visual hierarchy, polish, perf budgets, layout discipline, component shape, Vercel WIG conformance |
+| `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `app/**/page.*`, `pages/**`, `src/routes/**`, server actions | **ui-ux**, **frontend**, **make-interfaces-feel-better**, **web-performance** | design quality, visual hierarchy, polish, perf budgets, layout discipline, component shape |
 | `*.css`, `*.scss`, design-token files (`tokens.*`, `theme.*`), tailwind config when it changes design tokens (colors, spacing, typography) | **ui-ux**, **make-interfaces-feel-better** | spacing/color/typography rules, optical alignment, design-system drift |
 | `app/**/route.*`, `middleware.*`, `server/api/**`, `api/**`, `routes/**`, tRPC routers (files importing `@trpc/server`), GraphQL resolvers / schema files (`*.graphql`, `*.gql`, files with `buildSchema(` or `createSchema(`), OpenAPI specs (`openapi.*`, `swagger.*`) | **api-design** | contract stability, error semantics, versioning, pagination, Hyrum's Law, response shape consistency |
 
@@ -541,8 +541,8 @@ Each template lives in its own file under `templates/`. The runner reads only th
 | Fix agents (Step 2) | (composed on-the-fly from `fix_prompt`) | sonnet | code changes | — | — |
 
 **Heavy vs light Skill agents:**
-- **Heavy:** `security-defensive`, `language-rust`, `language-typescript`, `language-swift`, `react`, `react-native`, `database`, `drizzle-orm`, `frontend`, `web-performance`, `api-design`, `simplify`, `matt-improve-codebase-architecture`
-- **Light:** `i18n`, `tailwind`, `ui`, `ui-animations`, `ui-ux`, `make-interfaces-feel-better`, `web-interface-guidelines`, `shadcn`, `coss`, `vue`, `tanstack-query`, `tanstack-start-best-practices`, `better-auth-best-practices`, `better-result-adopt`, `docker`, `kubernetes`, `zod`
+- **Heavy:** `security-defensive`, `language-rust`, `language-typescript`, `language-swift`, `react`, `database`, `drizzle-orm`, `frontend`, `web-performance`, `api-design`, `simplify`, `matt-improve-codebase-architecture`
+- **Light:** `i18n`, `tailwind`, `ui-animations`, `ui-ux`, `make-interfaces-feel-better`, `shadcn`, `vue`, `tanstack-query`, `tanstack-start-best-practices`, `better-result-adopt`, `docker`, `kubernetes`, `zod`
 
 **Subsystem Agent.** Substitute `{subsystem_name}` from the Step 0 subsystem-trigger row (e.g. `billing-subsystem`) and `{failure_modes}` from that row's "Failure modes" column. Doesn't load a skill — it's a framing label only.
 
