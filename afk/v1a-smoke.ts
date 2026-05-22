@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 /**
- * V1a smoke test — verifies that every glab subcommand + flag the orchestrator
+ * V1a smoke test — verifies that every glab subcommand and flag the orchestrator
  * relies on actually exists on the user's installed glab version.
  *
- * Read-only: never creates MRs, never modifies issues. Just probes --help.
+ * Read-only: never creates MRs, never modifies issues. Probes --help only.
  *
- * Usage: bun ~/.claude/skills/afk/v1a-smoke.ts
+ * Usage: bun ~/.claude/skills/afk/v1a-smoke.ts.
  */
 import { $ } from "bun";
 
@@ -92,52 +92,66 @@ const liveChecks: LiveCheck[] = [
 
 console.log("V1a smoke test — checking glab subcommands + flags\n");
 
-let pass = 0;
-let fail = 0;
-const failures: string[] = [];
+type Result = { ok: true } | { ok: false; label: string };
 
-for (const c of checks) {
-  const r = await $`glab ${c.cmd}`.nothrow().quiet();
-  if (r.exitCode !== 0) {
-    console.log(`✗ ${c.name}`);
-    console.log(`    glab ${c.cmd.join(" ")} exited ${r.exitCode}`);
-    console.log(`    stderr: ${r.stderr.toString().trim().slice(0, 200)}`);
-    fail++;
-    failures.push(c.name);
-    continue;
+/** Check whether `output` contains `flag`. Extracted to avoid closures inside loops. */
+const outputContainsFlag = (output: string, flag: string): boolean => output.includes(flag);
+
+/** Run a single help-based check and log the result. */
+async function runCheck(check: Check): Promise<Result> {
+  const result = await $`glab ${check.cmd}`.nothrow().quiet();
+  if (result.exitCode !== 0) {
+    console.log(`✗ ${check.name}`);
+    console.log(`    glab ${check.cmd.join(" ")} exited ${result.exitCode}`);
+    console.log(`    stderr: ${result.stderr.toString().trim().slice(0, 200)}`);
+    return { ok: false, label: check.name };
   }
-  const out = r.stdout.toString() + r.stderr.toString();
-  const missing = c.mustContain.filter((flag) => !out.includes(flag));
+  const output = result.stdout.toString() + result.stderr.toString();
+  const missing = check.mustContain.filter((flag) => !outputContainsFlag(output, flag));
   if (missing.length > 0) {
-    console.log(`✗ ${c.name}`);
+    console.log(`✗ ${check.name}`);
     console.log(`    missing flags: ${missing.join(", ")}`);
-    fail++;
-    failures.push(`${c.name} (missing: ${missing.join(", ")})`);
-  } else {
-    console.log(`✓ ${c.name}`);
-    pass++;
+    return { ok: false, label: `${check.name} (missing: ${missing.join(", ")})` };
   }
+  console.log(`✓ ${check.name}`);
+  return { ok: true };
+}
+
+/** Run a single live check and log the result. */
+async function runLiveCheck(check: LiveCheck): Promise<Result> {
+  const result = await $`glab ${check.cmd}`.nothrow().quiet();
+  if (result.exitCode === 0) {
+    console.log(`✓ ${check.name}`);
+    return { ok: true };
+  }
+  console.log(`✗ ${check.name}`);
+  console.log(`    stderr: ${result.stderr.toString().trim().slice(0, 200)}`);
+  return { ok: false, label: check.name };
+}
+
+const HELP_RESULTS: Result[] = [];
+for (const check of checks) {
+  HELP_RESULTS.push(await runCheck(check));
 }
 
 console.log("\nLive calls (read-only):");
 
-for (const c of liveChecks) {
-  const r = await $`glab ${c.cmd}`.nothrow().quiet();
-  if (r.exitCode === 0) {
-    console.log(`✓ ${c.name}`);
-    pass++;
-  } else {
-    console.log(`✗ ${c.name}`);
-    console.log(`    stderr: ${r.stderr.toString().trim().slice(0, 200)}`);
-    fail++;
-    failures.push(c.name);
-  }
+const LIVE_RESULTS: Result[] = [];
+for (const check of liveChecks) {
+  LIVE_RESULTS.push(await runLiveCheck(check));
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-if (fail > 0) {
+const ALL_RESULTS = [...HELP_RESULTS, ...LIVE_RESULTS];
+const PASS_COUNT = ALL_RESULTS.filter((entry) => entry.ok).length;
+const FAILURES = ALL_RESULTS.filter((entry): entry is { ok: false; label: string } => !entry.ok);
+
+const FAIL_COUNT = FAILURES.length;
+console.log(`\n${PASS_COUNT} passed, ${FAIL_COUNT} failed`);
+if (FAIL_COUNT > 0) {
   console.log("\nFailures:");
-  failures.forEach((f) => console.log(`  • ${f}`));
+  for (const failure of FAILURES) {
+    console.log(`  • ${failure.label}`);
+  }
   console.log("\nFix the orchestrator's glab calls (or upgrade glab) before V1b.");
   process.exit(1);
 }

@@ -1,5 +1,5 @@
 /**
- * gitlab/schema.ts — zod schemas for the GitLab JSON the pipeline consumes.
+ * Gitlab/schema.ts — zod schemas for the GitLab JSON the pipeline consumes.
  *
  * `glab` output is an external, untrusted boundary: every shape that crosses
  * it is validated here rather than `as`-cast. The defaults absorb fields an
@@ -13,20 +13,17 @@ import { z } from "zod";
  */
 export const IssueSchema = z.object({
   iid: z.number(),
-  title: z.string(),
-  description: z.string().nullable().default(null),
-  labels: z.array(z.string()).default([]),
-  updated_at: z.string().default(""),
+  title: z.string().trim().min(1),
+  description: z.string().trim().min(1).nullable().default(null),
+  labels: z.array(z.string().trim().min(1)).default([]),
+  updated_at: z.string().trim().min(1).default(""),
 });
-
-/** An issue as the orchestrator consumes it. */
-export type GitLabIssue = z.infer<typeof IssueSchema>;
 
 /** A merge request from `glab mr list` / `glab mr create --output json`. */
 export const MergeRequestSchema = z.object({
   iid: z.number(),
-  web_url: z.string().default(""),
-  state: z.string().default(""),
+  web_url: z.string().trim().min(1).default(""),
+  state: z.string().trim().min(1).default(""),
 });
 
 /** A merge request as the orchestrator consumes it. */

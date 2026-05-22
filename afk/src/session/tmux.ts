@@ -1,10 +1,11 @@
 /**
- * session/tmux.ts — the tmux session lifecycle, as Effects.
+ * Session/tmux.ts — the tmux session lifecycle, as Effects.
  *
- * A phase runs inside a detached tmux session: the session is created, a
- * `claude` process is booted in it and the prompt pasted, and the session is
- * later killed. Each step is an Effect, so the lifecycle composes cleanly
- * into the `acquireUseRelease` bracket in phase.ts.
+ * A phase runs inside a detached tmux session. The session is
+ * created, a `claude` process is booted in it and the prompt
+ * pasted, and the session is later killed. Each step is an Effect,
+ * so the lifecycle composes cleanly into the `acquireUseRelease`
+ * bracket in phase.ts.
  */
 import { $ } from "bun";
 import { Effect } from "effect";
@@ -61,16 +62,19 @@ const waitForTuiReady = (session: string): Effect.Effect<void> =>
     },
   ).pipe(Effect.asVoid);
 
+/** Input for {@link bootClaudeSession}. */
+type BootClaudeSessionInput = {
+  readonly session: string;
+  readonly tmuxLogPath: string;
+  readonly promptFile: string;
+};
+
 /**
  * Boot `claude` inside an already-created session and paste the prompt.
  * The session must already exist (see {@link createSession}); this only
  * drives it.
  */
-export const startClaudeAndPaste = (input: {
-  readonly session: string;
-  readonly tmuxLogPath: string;
-  readonly promptFile: string;
-}): Effect.Effect<void, TmuxError> =>
+export const bootClaudeSession = (input: BootClaudeSessionInput): Effect.Effect<void, TmuxError> =>
   Effect.gen(function* () {
     // Mirror the pane into a log file for live tailing. The path is quoted —
     // tmux runs this string through a shell, and the path may contain spaces.

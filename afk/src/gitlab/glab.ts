@@ -1,13 +1,14 @@
 /**
- * gitlab/glab.ts — the typed, retrying boundary to the GitLab CLI (`glab`).
+ * Gitlab/glab.ts — the typed, retrying boundary to the GitLab CLI (`glab`).
  *
  * Two runners, deliberately kept separate:
  *
- *   - `runGlabRead`  retries transient failures. Safe only for reads — a
- *     retry after a lost response is harmless.
- *   - `runGlabWrite` never retries. For mutations (`mr create`, `issue note`,
- *     discussion `post`/`reply`): if the request succeeded but its response
- *     was lost, a retry would duplicate the merge request, note, or thread.
+ *   - `runGlabRead`  retries transient failures.
+ *     Safe only for reads — a retry after a lost response is harmless.
+ *   - `runGlabWrite` never retries.
+ *     Used for mutations (`mr create`, `issue note`, discussion `post`/`reply`).
+ *     If the request succeeded but its response was lost,
+ *     a retry would duplicate the mutation.
  */
 import { $ } from "bun";
 import { Effect, Schedule } from "effect";
@@ -45,9 +46,7 @@ const readRetryPolicy = Schedule.exponential("200 millis").pipe(
  * Run a glab READ command, retrying transient failures.
  * Never pass a mutation here — use {@link runGlabWrite}.
  */
-export const runGlabRead = (
-  command: readonly string[],
-): Effect.Effect<string, GlabCommandError> =>
+export const runGlabRead = (command: readonly string[]): Effect.Effect<string, GlabCommandError> =>
   runGlabOnce(command).pipe(Effect.retry(readRetryPolicy));
 
 /**
@@ -55,9 +54,17 @@ export const runGlabRead = (
  * A retry after a lost response would duplicate the mutation; the caller
  * handles a genuine failure instead.
  */
-export const runGlabWrite = (
-  command: readonly string[],
-): Effect.Effect<string, GlabCommandError> => runGlabOnce(command);
+export const runGlabWrite = (command: readonly string[]): Effect.Effect<string, GlabCommandError> =>
+  runGlabOnce(command);
+
+/** Try to parse JSON, returning a discriminated result instead of throwing. */
+function safeJsonParse(text: string): { ok: true; value: unknown } | { ok: false } {
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false };
+  }
+}
 
 /** Parse a glab command's stdout as JSON and validate it against `schema`. */
 export const parseGlabJson = <A>(
@@ -65,20 +72,23 @@ export const parseGlabJson = <A>(
   schema: z.ZodType<A>,
   command: readonly string[],
 ): Effect.Effect<A, GlabResponseError> =>
-  Effect.try({
-    try: () => JSON.parse(raw) as unknown,
-    catch: () =>
-      new GlabResponseError({ command, detail: `output was not JSON: ${raw.slice(0, 200)}` }),
-  }).pipe(
-    Effect.flatMap((parsed) => {
-      const validation = schema.safeParse(parsed);
-      return validation.success
-        ? Effect.succeed(validation.data)
-        : Effect.fail(
-            new GlabResponseError({
-              command,
-              detail: `output failed validation: ${validation.error.message.slice(0, 200)}`,
-            }),
-          );
-    }),
-  );
+  Effect.suspend(() => {
+    // Parse the raw string as JSON — failure produces a descriptive error.
+    const parseResult = safeJsonParse(raw);
+    if (!parseResult.ok) {
+      return Effect.fail(
+        new GlabResponseError({ command, detail: `output was not JSON: ${raw.slice(0, 200)}` }),
+      );
+    }
+
+    // Validate the parsed value against the caller's schema.
+    const validation = schema.safeParse(parseResult.value);
+    return validation.success
+      ? Effect.succeed(validation.data)
+      : Effect.fail(
+          new GlabResponseError({
+            command,
+            detail: `output failed validation: ${validation.error.message.slice(0, 200)}`,
+          }),
+        );
+  });

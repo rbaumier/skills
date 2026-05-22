@@ -6,10 +6,8 @@ describe("parseVerdict", () => {
     expect(parseVerdict("did the work\nVERDICT: READY_FOR_REVIEW")).toBe("READY_FOR_REVIEW");
   });
 
-  it("accepts every known token", () => {
-    for (const token of VERDICT_TOKENS) {
-      expect(parseVerdict(`summary line\nVERDICT: ${token}`)).toBe(token);
-    }
+  it.each(VERDICT_TOKENS)("accepts known token %s", (token) => {
+    expect(parseVerdict(`summary line\nVERDICT: ${token}`)).toBe(token);
   });
 
   it("ignores trailing blank / whitespace-only lines after the verdict", () => {

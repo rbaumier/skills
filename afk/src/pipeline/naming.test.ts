@@ -6,13 +6,13 @@ describe("branchName", () => {
     expect(branchName({ iid: 42, title: "Add login", body: "" })).toBe("afk/issue-42-add-login");
   });
 
-  it("lowercases and collapses non-alphanumeric runs into single hyphens", () => {
+  it("lowercases then collapses non-alphanumeric runs into single hyphens", () => {
     expect(branchName({ iid: 7, title: "Fix  the   CACHE!!", body: "" })).toBe(
       "afk/issue-7-fix-the-cache",
     );
   });
 
-  it("strips leading and trailing hyphens from the slug", () => {
+  it("strips leading/trailing hyphens from the slug", () => {
     expect(branchName({ iid: 9, title: "  ...trim me...  ", body: "" })).toBe(
       "afk/issue-9-trim-me",
     );
@@ -23,7 +23,7 @@ describe("branchName", () => {
       "afk/issue-1-",
       "",
     );
-    expect(slug.length).toBe(40);
+    expect(slug).toHaveLength(40);
   });
 
   it("yields a trailing hyphen when the title has no alphanumerics", () => {

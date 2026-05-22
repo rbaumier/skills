@@ -1,5 +1,5 @@
 /**
- * gitlab/discussion-api.ts — the `glab api` operations over MR discussions.
+ * Gitlab/discussion-api.ts — the `glab api` operations over MR discussions.
  *
  * The pipeline uses a merge request's discussions as its review medium:
  * `review` posts findings, `evaluate` replies and resolves, `fix` resolves
@@ -8,15 +8,18 @@
  */
 import { Effect } from "effect";
 import { z } from "zod";
-import { type DiscussionSummary, toDiscussionSummary } from "./discussion";
-import { type GitLabError, GlabResponseError } from "./errors";
+import type { DiscussionSummary } from "./discussion";
+import { toDiscussionSummary } from "./discussion";
+import type { GitLabError } from "./errors";
+import { GlabResponseError } from "./errors";
 import { parseGlabJson, runGlabRead, runGlabWrite } from "./glab";
 
 const discussionsEndpoint = (mergeRequestIid: number): string =>
   `projects/:id/merge_requests/${mergeRequestIid}/discussions`;
 
 /** Confirms a mutation took: the glab-api response carries an `id`. */
-const HasIdSchema = z.object({ id: z.union([z.string(), z.number()]) });
+const IdStringSchema = z.string().trim().min(1);
+const HasIdSchema = z.object({ id: z.union([IdStringSchema, z.number()]) });
 
 /** List every discussion on a merge request. */
 export const listDiscussions = (
@@ -32,9 +35,9 @@ export const listDiscussions = (
       // glab versions print nothing rather than `[]`.
       output.trim() === ""
         ? Effect.succeed<readonly unknown[]>([])
-        : parseGlabJson(output, z.array(z.unknown()), command),
+        : parseGlabJson(output, z.array(z.looseObject({})), command),
     ),
-    Effect.map((rawDiscussions) => rawDiscussions.map(toDiscussionSummary)),
+    Effect.map((rawDiscussions) => rawDiscussions.map((disc) => toDiscussionSummary(disc))),
   );
 };
 
@@ -75,8 +78,8 @@ export const replyToDiscussion = (
 };
 
 /**
- * Resolve a discussion thread, then verify it actually came back resolved —
- * a `glab` exit 0 that no-ops must not pass for a resolved thread.
+ * Resolve a discussion thread, then verify it came back resolved.
+ * A `glab` exit 0 that no-ops must not pass for a resolved thread.
  */
 export const resolveDiscussion = (
   mergeRequestIid: number,
@@ -90,17 +93,20 @@ export const resolveDiscussion = (
     "-F",
     "resolved=true",
   ];
+  // Parse the response, then verify the discussion came back resolved.
+  const DiscussionResponseSchema = z.looseObject({});
   return runGlabWrite(command).pipe(
-    Effect.flatMap((output) => parseGlabJson(output, z.unknown(), command)),
-    Effect.flatMap((raw) =>
-      toDiscussionSummary(raw).resolved
+    Effect.flatMap((output) => parseGlabJson(output, DiscussionResponseSchema, command)),
+    Effect.flatMap((raw) => {
+      const summary = toDiscussionSummary(raw);
+      return summary.resolved
         ? Effect.void
         : Effect.fail(
             new GlabResponseError({
               command,
               detail: `discussion ${discussionId} still unresolved after PUT`,
             }),
-          ),
-    ),
+          );
+    }),
   );
 };

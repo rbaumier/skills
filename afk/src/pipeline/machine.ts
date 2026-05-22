@@ -1,5 +1,5 @@
 /**
- * pipeline/machine.ts — the top-level loop that drives `step` to `end`.
+ * Pipeline/machine.ts — the top-level loop that drives `step` to `end`.
  *
  * One transition at a time: run the handler, time it, print and log the
  * transition, repeat until the machine reaches `end`.
@@ -17,21 +17,27 @@ const truncate = (text: string, maxLength: number): string =>
 
 /** Render a millisecond duration as a compact human string (`1m05s`, `4.2s`). */
 const formatDuration = (milliseconds: number): string => {
-  if (milliseconds < 1000) {return `${milliseconds}ms`;}
-  if (milliseconds < 60_000) {return `${(milliseconds / 1000).toFixed(1)}s`;}
+  if (milliseconds < 1000) {
+    return `${milliseconds}ms`;
+  }
+  if (milliseconds < 60_000) {
+    return `${(milliseconds / 1000).toFixed(1)}s`;
+  }
   const minutes = Math.floor(milliseconds / 60_000);
   const seconds = Math.floor((milliseconds % 60_000) / 1000);
   return `${minutes}m${seconds.toString().padStart(2, "0")}s`;
 };
 
-/** One console line describing a state transition. */
-const formatTransition = (transition: {
+type TransitionSummary = {
   readonly issue: IssueRef | null;
   readonly from: string;
   readonly to: string;
   readonly elapsedMs: number;
   readonly note: string | undefined;
-}): string => {
+};
+
+/** One console line describing a state transition. */
+const formatTransition = (transition: TransitionSummary): string => {
   const prefix = transition.issue
     ? `[#${transition.issue.iid} "${truncate(transition.issue.title, 50)}"]`
     : "[—]";
@@ -44,6 +50,9 @@ const formatTransition = (transition: {
 
 /** The issue a state is about, or `null` for the queue-level states. */
 const issueOf = (state: State): IssueRef | null => ("issue" in state ? state.issue : null);
+
+/** Predicate for `Effect.iterate` — keep looping until the machine reaches `end`. */
+const isNotDone = (state: State): boolean => state.kind !== "end";
 
 /** Run one handler, then print and log the transition it produced. */
 const advance = (state: State, env: Environment): Effect.Effect<State, GitLabError> =>
@@ -82,9 +91,10 @@ export const runMachine = (env: Environment): Effect.Effect<void, GitLabError> =
     yield* Console.log(`Run dir: ${runDir}\n`);
     yield* logEvent({ event: "run_start", repo: env.repoName, defaultBranch: env.defaultBranch });
 
-    yield* Effect.iterate({ kind: "fetch_queue" } as State, {
-      while: (state) => state.kind !== "end",
-      body: (state) => advance(state, env),
+    const initialState: State = { kind: "fetch_queue" };
+    yield* Effect.iterate(initialState, {
+      while: (state: State) => isNotDone(state),
+      body: (state: State) => advance(state, env),
     });
 
     yield* logEvent({ event: "run_end" });
