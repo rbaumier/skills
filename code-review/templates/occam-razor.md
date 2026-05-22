@@ -13,14 +13,14 @@ For each in-scope symbol:
 1. **Enumerate callers.** Grep whole repo (not just diff slice) for the identifier. Count distinct call sites — direct calls + re-exports forwarding unchanged. List every site with file:line + literal arg-tuple.
 2. **Bin by caller count:**
    - `0 callers` → emit `zero-callers-dead`. `severity: bug`.
-   - `1 caller` AND function body < 20 lines → emit `single-caller-inlinable`. `severity: suggestion` (wrapper may be deliberate for testability/clarity; user decides at Step 5).
+   - `1 caller` AND function body < 20 lines → emit `single-caller-inlinable`. `severity: suggestion` (wrapper may be deliberate for testability/clarity; the user decides downstream).
    - `≥ 2 callers` → step 3.
 3. **Walk each formal param.** For every param, list value each caller passes:
    - No caller passes non-default → emit `unused-param`. `severity: suggestion`.
    - Every caller computes default's input *before* calling, function uses it only to reconstruct what caller already had → emit `derivable-default`. `severity: suggestion`.
 4. **Cross-check siblings.** Diff introduces ≥2 exported functions whose bodies share ≥80% lines and whose callers are disjoint → emit `redundant-overload`. `severity: bug` (diff is the source — fixing later harder than not introducing).
 
-Use controlled-vocabulary slugs for `signature`. Step 2 dedup collapses cross-agent overlap.
+Use controlled-vocabulary slugs for `signature`. Downstream dedup collapses cross-agent overlap.
 
 ## What NOT to flag
 
@@ -36,7 +36,7 @@ Use controlled-vocabulary slugs for `signature`. Step 2 dedup collapses cross-ag
 ## Severity guide
 
 - `zero-callers-dead`, `redundant-overload` → `bug`. These block convergence — the diff ships unreachable or duplicated code.
-- `single-caller-inlinable`, `unused-param`, `derivable-default` → `suggestion`. These surface in Step 5's open-suggestions list; the user decides. Auto-deleting a 1-caller wrapper every iteration is too aggressive — many are deliberate.
+- `single-caller-inlinable`, `unused-param`, `derivable-default` → `suggestion`. These surface as open suggestions for a downstream consumer to decide. Auto-deleting a 1-caller wrapper every iteration is too aggressive — many are deliberate.
 
 ## A worked example (what good looks like)
 

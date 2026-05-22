@@ -1,542 +1,440 @@
 ---
 name: code-review
-description: Use when reviewing code, requesting a review, or receiving review feedback. Structured multi-axis evaluation.
+description: Use when you need a thorough multi-agent review of a code diff (current branch, staged changes, or a specific changeset) that returns structured findings without modifying any code. Also use when another skill or an orchestrator needs a single read-only review pass as a composable building block. To also fix findings and loop to convergence, use code-review-loop instead.
 ---
 
 # Code Review
 
-Code review has three distinct practices: (1) Requesting reviews, (2) Conducting reviews, (3) Receiving feedback. Each has different rules and failure modes.
+One read-only review pass over a diff. Detect which review lenses apply, fan specialized agents out in parallel, collect every finding into one structured object. The working tree is never modified — `diff in → findings out`.
 
-**The approval standard:** Approve a change when it definitively improves overall code health, even if it is not perfect. Perfect code does not exist — the goal is continuous improvement.
+`code-review-loop` composes this skill: it runs the pass, fixes the findings, and re-runs to convergence. Invoke `code-review` directly when you want the findings and will act on them yourself.
 
----
+## Inputs
 
-## Part 1: Requesting Code Review
+All optional — `code-review` detects everything else from the working tree.
 
-Dispatch a code-reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history.
+| Input | Purpose |
+|---|---|
+| `DEFAULT_BRANCH` (env) | Base ref for every diff. Auto-detected in Step 0 if unset. |
+| `RUN_ID` (env) | Optional. Identifies this pass and names its output files. `code-review` mints one when unset, and always returns it in the review object. |
+| `previous_findings_file` | Path to the prior pass's findings (re-review only) — drives `{previous_findings_block}` injection. |
+| `only_agents` | Restrict the fan-out to a named subset of agents (re-review narrows the panel). Full tier-derived panel if absent. |
 
-**Core principle:** Review early, review often.
+The *When not to use* gate runs on every invocation, including programmatic ones — there is no `force` override. A caller that has already decided to review will, on the same diff, get the same gate verdict.
 
-### When to Request Review
+## Output
 
-**Pre-condition:** CI checks MUST pass (linter, type checker, formatter, test suite) before requesting review. Never send a review request with failing CI. The reviewer's time is for design and logic issues, not syntax errors.
+The **review object** — returned in context and written to `/tmp/code-review-findings-<sanitized-branch>-<run_id>.json`. Schema in Step 2.
 
-**Mandatory:**
-- After each task in subagent-driven development
-- After completing a major feature
-- Before merge to main
+## When not to use
 
-**Optional but valuable:**
-- When stuck (fresh perspective)
-- Before refactoring (baseline check)
-- After fixing a complex bug
+Standard = **shape, not size**. 500-line mechanical rename safer than a 3-line operator flip on permissions.
 
-### Triage Before Requesting Review
+**Skip when genuinely trivial**: single-word doc typos, whitespace/comment-only, lockfile or generated-code regeneration, mechanical renames with import-path-only effect, low-risk dep patch bumps, docs-only, inert config (linter/formatter rules with no runtime effect), or user wants quick opinion not a full review.
 
-The standard for "is this worth a review request" is **shape, not size**. A 500-line mechanical rename is safer than a 3-line operator flip on a permissions check. Apply this filter before the self-check.
+**Don't skip when small but high blast radius** — any 1-line change to SQL/regex/auth/billing/permission/signature-verification code; flipping a feature-flag default, retry/timeout, or auth callback URL; money/tax/currency/fee constants; HTTP method, redirect URL, status enum; tightening/loosening a comparison operator (`<` ↔ `<=`, `==` ↔ `!=`); renaming a public API surface; new direct dependency (supply-chain); user-facing copy that changes meaning ("approved" → "denied"); mixed diff with a semantic 1-liner buried in whitespace.
 
-**Skip the review entirely** when the diff is genuinely trivial:
+"Config-only" isn't a blanket skip — config flipping a feature-flag default, retry/timeout, auth callback URL, or secrets wiring is runtime-affecting.
 
-- single-word doc typo, whitespace/format-only, or comment-only
-- lockfile or generated-code regeneration
-- mechanical rename whose only effect is import-path updates
-- low-risk dependency patch bump
+Unsure → run. Spurious run costs minutes; missed billing bug costs much more.
 
-**Do NOT skip** when the diff looks trivial but isn't — small diff, big blast radius:
+When the gate decides skip, do not abandon the contract: still build the review object with `tier: "trivial"`, empty `agent_roster`, empty `findings` (Step 2), so a programmatic caller gets a consistent shape. Then stop.
 
-- any 1-line change to SQL, regex, auth, billing, permission, or signature-verification code
-- flipping a feature-flag default, a config default, or a retry/timeout constant
-- changing a money, tax, currency, or fee constant by any amount
-- changing an HTTP method, redirect URL, response code, or status enum
-- tightening or loosening a comparison operator (`<` ↔ `<=`, `==` ↔ `!=`)
-- renaming a public API surface (the shape is trivial; the blast radius is not)
-- adding a new direct dependency (supply-chain surface)
-- a "typo fix" in user-facing copy that changes meaning ("approved" → "denied")
-- mixed diffs where a semantic 1-liner is buried in whitespace/formatting changes
+## Tier classification
 
-When unsure, request the review.
+Once running, classify to pick fan-out shape. Mid-ground between "skip" and "full review" — many real diffs (≤100 lines, no high-stakes path) don't justify twelve agents.
 
-### Pre-Review Self-Check
+Compute from the unified file-set (`"$DEFAULT_BRANCH"...HEAD` ∪ unstaged ∪ staged ∪ untracked):
 
-Before dispatching the code-reviewer subagent, do a personal pass — **read every changed line as if you were explaining it out loud to a teammate who hadn't seen the work yet**. The mental act of explaining catches more silly bugs than any linter: wrong variable name, missing `await`, swapped arguments, copy-paste residue, off-by-one in a loop. Cheap, fast, surprisingly effective.
+- `total_lines` = added + removed across non-noise files (after Step 0.5 filter)
+- `file_count` = unique non-noise files
+- `high_stakes` = ANY subsystem trigger fires (billing, auth, schema-migration, webhook, RBAC, multi-tenant, cron) OR security-sensitive paths (`**/auth/**`, `**/crypto/**`, `**/permissions/**`, `**/migrations/**`) OR signature-verification code
 
-1. No debug/console.log left
-2. No commented-out code
-3. No TODO without issue reference
-4. All new functions have tests
-5. Error paths handled
-6. Variable names make sense out of context
+| Tier | Condition | Fan-out |
+|---|---|---|
+| **Lite** | `total_lines ≤ 50` AND `file_count ≤ 5` AND `high_stakes = false` | Funnel L1, L2, Occam Razor, **one** Correctness, **one** language agent (dominant ext), simplify, coding-standards (umbrella only), Tests. No subsystem, no general Opus. ~8 agents. |
+| **Full** | otherwise — any high_stakes, OR `file_count > 5`, OR `total_lines > 50` | Everything in Step 0. ~12+ agents. |
 
-This catches 30-50% of issues before wasting reviewer context.
+**Override:** explicit user request for deep review → force `Full`. Tier = default, not ceiling.
 
-### Scope Guard
+Lite shrinks Step 0's "Always spawn" to the Lite column; "Spawn by imports", "Spawn by surface touched", "Spawn by subsystem touched" don't apply (Lite ≡ no high-stakes by construction).
 
-If the diff touches more than 3 files unrelated to the stated goal, STOP. Split into separate commits/PRs. Review one concern at a time. Mixed-concern reviews miss bugs because reviewers lose focus.
+## The Funnel
 
-### Diff Size Awareness
+Three levels, in order. Each gates the next.
 
-If the diff exceeds ~400 lines, reviewer effectiveness drops sharply.
+**L1 — Question the need.** Does this code need to exist? Framework or dep already solves this? Start from problem, not existing code. What's missing?
 
-```
-~100 lines changed   -> Good. Reviewable in one sitting.
-~300 lines changed   -> Acceptable if it is a single logical change.
-~400+ lines changed  -> Split it.
-```
+**L2 — Reduce scope.** Smallest perimeter solving the validated need. Inline, merge, remove wrappers. Every abstraction justifies itself through concrete usage.
 
-**Splitting strategies:**
+**L3 — Minimize code + review tests.** Shortest correct typed code. No duplicate data. Missing tests? Useless tests? Improvable tests?
 
-| Strategy | How | When |
-|----------|-----|------|
-| **Stack** | Submit a small change, start the next based on it | Sequential dependencies |
-| **By file group** | Separate changes for groups needing different reviewers | Cross-cutting concerns |
-| **Horizontal** | Create shared code/stubs first, then consumers | Layered architecture |
-| **Vertical** | Break into smaller full-stack slices | Feature work |
+**Discipline:** challenge your own proposal at each level until you can't remove anything.
 
-For unavoidably large changes: (1) stacked commits with clear boundaries, (2) provide a reading order, (3) flag which files are mechanical (renames, imports) vs logic changes.
+## Anti-shortcut — stop if any cross mind
 
-### How to Request
+Past runs drift here. This skill's value = the fan-out shape — collapse it and you might as well not call it.
 
-**1. Get git SHAs:**
+| Temptation | Reality |
+|---|---|
+| "Diff petit, un seul agent suffit" | Tier decides. Lite = ~8, Full = 12+. AFK forces Full. |
+| "Je review moi-même, c'est plus rapide" | You don't have rule-sets loaded (security-defensive, language-*, ui-ux, coding-standards:*). Spawn agents — they load rules at L3. |
+| "Spawn un `general-purpose` avec prompt review générique" | Substitute, not skill. Templates verbatim, fan-out per tier. |
+| "Step 0 long, je skip et spawn les évidents" | Step 0 detects subsystem (billing/auth/webhook), surface (UI/API), imports. Skip = miss high-stakes lenses. |
+| "Step 1 dit parallel mais une par une = plus simple à debug" | Wall-time collapse = the only reason this skill exists. One turn, N Task blocks, BEFORE any result. |
+
+## Workflow
+
+### Step 0 — Detect agents and scope files
+
+**Establish `RUN_ID`** — honor a `RUN_ID` exported by a script-driven caller, else mint one:
+
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
-HEAD_SHA=$(git rev-parse HEAD)
+RUN_ID="${RUN_ID:-$(git rev-parse --short=8 HEAD)-$(date +%s)-$(openssl rand -hex 2)}"
 ```
 
-**2. Dispatch code-reviewer subagent** with these placeholders:
-- `{PLAN_OR_REQUIREMENTS}` — The spec the change is meant to satisfy (what it should do, not what you built)
-- `{BASE_SHA}` / `{HEAD_SHA}` — Commit range
-- `{TESTING_DONE}` — A tight summary of how you verified the change (tests added, manual checks, fixes you applied during build with their root causes). Lets the reviewer check that fixes addressed root causes rather than suppressed symptoms.
-- `{RISKS}` — Known risks, areas of uncertainty, things you want scrutinized
+Every `git diff` uses `"$DEFAULT_BRANCH"...HEAD`, never hardcoded `main`. If the caller hasn't exported `DEFAULT_BRANCH`, detect:
 
-### Delegation Discipline
+```bash
+if [ -z "$DEFAULT_BRANCH" ]; then
+  DEFAULT_BRANCH=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+  [ -z "$DEFAULT_BRANCH" ] && DEFAULT_BRANCH=$(glab repo view --output json 2>/dev/null | jq -r '.default_branch // empty')
+  [ -z "$DEFAULT_BRANCH" ] && DEFAULT_BRANCH=$(git for-each-ref --format='%(refname:short)' refs/heads/main refs/heads/master refs/heads/develop 2>/dev/null | head -1)
+  test -n "$DEFAULT_BRANCH" || { echo "ERREUR : default branch introuvable. code-review ne démarre pas." >&2; exit 1; }
+fi
+git fetch origin "$DEFAULT_BRANCH"
+```
 
-A reviewer finds more when it discovers scope on its own. Four biases to avoid:
+`fetch` keeps the local tracking ref current vs concurrent pushes. The resolved `DEFAULT_BRANCH` goes into the review object (Step 2) — env vars don't survive a skill boundary, so a caller that needs it must read it from the object or re-derive it with this same snippet.
 
-- **Don't summarize what you implemented.** Summaries bias the reviewer toward validating the shape of your solution instead of questioning whether the solution is right.
-- **Don't curate a reading list.** Let the reviewer discover scope from the diff and the codebase. A reading list reflects the files YOU touched, not the files affected.
-- **Don't pre-shape findings with a severity schema.** That leaks your hypotheses about what matters. Severity is your call at evaluation time, not the reviewer's.
-- **Don't defect-hunt in parallel with the reviewer.** Your role is dispatch + evaluation. Hunting bugs alongside the reviewer reintroduces the implementation bias the reviewer is meant to mitigate.
+Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` → changed files. Determine agents from extensions and imports.
 
-For diffs that depend on third-party API contracts, SDK semantics, framework directives, or DB-engine specifics, explicitly instruct the reviewer to **verify load-bearing claims via web search and quote source URLs** rather than trust training data. This is the single most common review-quality failure mode: an "I'm pretty sure Stripe does X" that turns out wrong in production.
+**Apply the tier first.** Compute tier from "Tier classification" above. Lite → spawn only Lite column agents, skip "Spawn by imports", "Spawn by surface touched", "Spawn by subsystem touched", "General Opus 4.7". Rest of Step 0 = Full only.
 
-### Change Descriptions
+**Always spawn** — every entry below MUST fire on every Full-tier run. Tick through this list explicitly before moving on; an unbulleted prose form is too easy to skim past and silently drop an agent:
 
-Every change needs a description that stands alone in version control history.
+- [ ] Funnel L1
+- [ ] Funnel L2
+- [ ] Occam Razor
+- [ ] Correctness
+- [ ] Tests
+- [ ] simplify
+- [ ] matt-improve-codebase-architecture
+- [ ] matt-review
+- [ ] thermo-nuclear-code-quality-review
+- [ ] security-defensive
+- [ ] coding-standards (umbrella)
+- [ ] coding-standards:design
+- [ ] coding-standards:errors
+- [ ] coding-standards:hygiene
+- [ ] coding-standards:style
 
-**First line:** Short, imperative, standalone. "Delete the FizzBuzz RPC" not "Deleting the FizzBuzz RPC." Informative enough that someone searching history can understand the change without reading the diff.
+**Why Occam Razor sits alongside the funnel.** L1 ("must exist?") and L2 ("smallest perimeter?") are prose, evaluated face-value, neither walks the call graph. Occam Razor is the mechanical check: for every exported symbol the diff introduces/modifies, enumerate call sites, prove shape pays rent. Past misses: 0-caller function, 1-caller wrapper, defaults reconstructed from caller's known values.
 
-**Body:** What is changing and why. Include context, decisions, and reasoning not visible in the code. Link to bug numbers, benchmark results, or design docs.
+**Spawn when `CLAUDE.md` exists** (repo root or any monorepo workspace root): **claude-md-compliance** — reads file(s), extracts rules, walks diff for violations introduced. Distinct from claude-md-materiality (doc staleness); compliance flags code breaking rules. Required: most repos document conventions no language/framework skill checks for. Multiple CLAUDE.md → one agent handles all.
 
-**Anti-patterns:** "Fix bug," "Fix build," "Add patch," "Moving code from A to B," "Phase 1," "Add convenience functions."
+**Spawn by extension:** `.ts`/`.tsx` → language-typescript, `.rs` → language-rust, `.swift` → language-swift, `.vue` → vue.
+
+**Spawn by imports** (one agent per detected skill):
+`better-result-adopt`, `database`, `docker`, `drizzle-orm`, `i18n`, `kubernetes`, `react`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui-animations`, `vue`, `zod`
+
+**Spawn by surface touched.** UI/frontend skills with no import signal — they apply to categories of code. Trigger by file-set.
+
+**File-set** = same unified set (`"$DEFAULT_BRANCH"...HEAD` ∪ unstaged ∪ staged ∪ untracked), minus Step 0.5 APPROVED files.
+
+| Trigger (path globs) | Skill agents | What they review |
+|---|---|---|
+| `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `app/**/page.*`, `pages/**`, `src/routes/**`, server actions | **ui-ux**, **frontend**, **make-interfaces-feel-better**, **web-performance** | design quality, visual hierarchy, polish, perf budgets, layout discipline, component shape |
+| `*.css`, `*.scss`, design-token files (`tokens.*`, `theme.*`), tailwind config when it changes design tokens (colors, spacing, typography) | **ui-ux**, **make-interfaces-feel-better** | spacing/color/typography rules, optical alignment, design-system drift |
+| `app/**/route.*`, `middleware.*`, `server/api/**`, `api/**`, `routes/**`, tRPC routers (files importing `@trpc/server`), GraphQL resolvers / schema files (`*.graphql`, `*.gql`, files with `buildSchema(` or `createSchema(`), OpenAPI specs (`openapi.*`, `swagger.*`) | **api-design** | contract stability, error semantics, versioning, pagination, Hyrum's Law, response shape consistency |
+
+These skills overlap with framework agents (`react`, `vue`) — different lenses (design vs. framework idioms), coexist. One agent per skill per matching row; dedup across rows.
+
+**Spawn by subsystem touched.** Diff touches high-stakes subsystem → spawn **subsystem-framed agent** alongside generic Correctness. Framing primes for domain failure modes a generic lens misses (double-charges, refund races, signature replay, cross-tenant leaks).
+
+**File-set for subsystem detection** = same Dogfood rule: union `"$DEFAULT_BRANCH"...HEAD` + unstaged + staged + untracked. Else uncommitted auth/billing/schema edits silently bypass lenses.
+
+**Pass unified file-set to agent**, not just the `"$DEFAULT_BRANCH"...HEAD` slice. Uncommitted files → agent must read directly. Replace `rtk proxy git diff "$DEFAULT_BRANCH"...HEAD -- {files}` in the subsystem prompt with `read current contents of {files} directly, and run \`git diff -- {files}\` for unstaged delta`.
+
+Triggers specific enough to avoid UI tokens / ARIA roles / job listings / generic "workspace" UI. A row fires only when ≥1 concrete signal is present.
+
+Path globs recursive — `**/billing/**` matches `apps/api/src/billing/prices.ts` AND `billing/index.ts`. Modern monorepos rarely place subsystem code at repo root.
+
+| Trigger (recursive path globs, imports, or code patterns) | Subsystem agent | Failure modes it should hunt |
+|---|---|---|
+| files under `**/billing/**`, `**/payments/**`, `**/invoices/**`, `**/subscriptions/**`; OR imports of `stripe`, `@paddle/`, `@lemonsqueezy/`; OR code with `chargeAmount`, `refundAmount`, `idempotencyKey`, `invoice.*total` | **billing-subsystem** | double-charge, refund races, currency rounding, dispute flows, idempotency keys |
+| files under `**/auth/**`, `**/session/**`; OR imports of `better-auth`, `next-auth`, `lucia`, `@clerk/`, `@auth/`; OR code with `signIn(`, `signUp(`, `getSession(`, `verifyJwt`, `bcrypt`, `argon2` | **auth-subsystem** | session fixation, token leak, replay, MFA bypass, account takeover |
+| files under `**/migrations/**`, `**/drizzle/migrations/**`, `**/prisma/migrations/**`; OR `**/*.sql` schema files; OR Drizzle/Prisma `**/schema.ts` edits that alter columns | **schema-migration-subsystem** | forward + rollback safety, column-nullability flips, data loss, downtime |
+| files with `webhook` anywhere in the path (`**/webhook*/**`, `**/*webhook*.ts`); OR code with `verifySignature`, `crypto.createHmac`, `crypto.timingSafeEqual` | **webhook-subsystem** | signature verification, replay protection, timing-attack-safe compare |
+| files under `**/policies/**`, `**/permissions/**`, `**/rbac/**`; OR imports of `casl`, `@casl/`; OR code with `hasPermission(`, `canAccess(`, `authorize(`, `Policy.` | **rbac-subsystem** | privilege escalation, cross-role data leaks, policy drift |
+| code that filters DB queries by `tenantId`, `organizationId`, or `workspaceId`; OR middleware that resolves a current tenant/org/workspace | **multi-tenant-subsystem** | cross-tenant leaks, missing tenant filters on shared tables |
+| files under `**/cron/**`, `**/jobs/**`, `**/workers/**`; OR imports of `bullmq`, `bull`, `agenda`, `node-cron`, `@trigger.dev/`, `inngest`; OR code with `defineJob(`, `enqueue(`, `.cron(` | **cron-subsystem** | duplicate execution, missed runs, ordering, dead-letter handling |
+
+A subsystem agent **adds to** (doesn't replace) Correctness. Use the **Subsystem Agent** template — not Skill Agent (which would try to load a non-existent skill).
+
+**Compute active trust boundaries.** The same triggers identify the boundaries the diff crosses, even without a full subsystem agent. Union: zero or more of `user-input | network | filesystem | secrets | process-exec | database | auth | permissions | concurrency | external-api | serialization`. Pass as `{trust_boundaries}` into every line-anchored template (Correctness, Tests, Skill, Subsystem). No boundary → `none`. **Runs for Lite and Full** — Lite diffs touching `network`/`serialization`/`external-api` get the lens (boundaries don't gate high_stakes, survive Lite filtering).
+
+The trust-boundaries table:
+
+| Boundary | Signals (path globs / imports / code patterns) | Failure modes (used by line-anchored agents when boundary is in `{trust_boundaries}`) |
+|---|---|---|
+| `user-input` | HTTP handlers, form parsers, CLI argv, request-body deserialization, `req.body`/`req.query`/`params` | injection (SQL/command/template), unsanitized rendering, missing length/shape validation |
+| `network` | `fetch(`, `http.get(`, `axios`, `got`, `undici`, `reqwest`, raw sockets | unbounded retries, missing timeouts, leaked credentials in URLs/headers, silent failure on non-2xx |
+| `filesystem` | `fs.readFile`/`writeFile`, `std::fs`, `path.join` from user input, archive extraction | path traversal, symlink races, missing `O_NOFOLLOW`, unbounded reads |
+| `secrets` | `.env*`, env reads of `*_KEY`/`*_SECRET`/`*_TOKEN`, JWT secret loading, KMS/Vault | secret printed to logs/errors, secret committed to fixtures, secret in URL query string |
+| `process-exec` | `child_process.exec`/`spawn`, `std::process::Command`, shell-string concatenation | shell-string concatenation, missing arg array, unescaped user input as command parts |
+| `database` | ORM imports (drizzle, prisma, typeorm, sqlx, sea-orm), `db.query`/`pool.execute`, SQL templates | missing tenant/owner filter, raw SQL with interpolation, N+1, missing transaction on multi-step writes |
+| `auth` | session lookup, `getSession(`, JWT verification, `bcrypt`/`argon2`, OAuth callback handlers | session fixation, missing rotation, JWT verification skipped or with wrong key, replay |
+| `permissions` | role checks, RBAC predicates, `can(`/`authorize(`, policy lookups | check-then-use TOCTOU, wrong role for the operation, missing check on shared resource |
+| `concurrency` | `Promise.all` with side effects, mutexes, atomics, worker threads, channels, `tokio::spawn` | unsynchronized shared state, dropped futures, non-atomic compound ops, deadlock potential |
+| `external-api` | third-party SDK imports (Stripe, Twilio, S3 client, OpenAI, etc.) | missing rate-limit handling, retry-without-idempotency-key, sensitive payload not redacted |
+| `serialization` | `JSON.parse` of untrusted input, `serde` derives, protobuf encode/decode, `pickle.loads`, YAML loaders | trusting parsed shape without validation, prototype pollution, deserialization of untrusted blobs |
+
+The "Failure modes" column is the **single source of truth** for line-anchored agents when a boundary is active. Templates reference this table, don't duplicate it.
+
+**Record the dogfood gate.** Diff changes a user-facing surface → set `dogfood_required: true` in the review object and list the matching categories in `dogfood_surfaces[]`. `code-review` only *detects and records*; running the runtime 3-persona gate is the consuming loop's job (it runs after static convergence, on signed-off code). Detect broadly, *err toward triggering*. Categories:
+
+- **web-ui**: `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `*.html`, CSS / design-token files (`*.css`, `*.scss`, `tokens.*`, theme files), `app/**/page.*`, `pages/**`, `src/routes/**`, server actions, i18n copy files, public/static assets that change observable behaviour.
+- **http-api**: `app/**/route.*`, `middleware.*`, `server/api/**`, `api/**`, `routes/**`, tRPC routers, GraphQL resolvers/schema, WebSocket handlers, route definitions imported from `next`/`express`/`fastify`/`hono`/`koa`.
+- **cli**: `bin/**`, `cli/**`, `src/cli/**`, files importing `commander`, `yargs`, `oclif`, `clipanion`, `cac`, `meow`.
+- **native**: Electron/Tauri main or renderer entrypoints, React Native / Expo screens, native iOS/Android files.
+
+Unsure → set the flag. A spurious persona run is cheap (personas dedup); a missed runtime bug is expensive.
+
+**Don't rely on `git diff "$DEFAULT_BRANCH"...HEAD` alone for dogfood detection.** It misses uncommitted work. Union in unstaged + staged + untracked too.
+
+**Codex:** only if the user explicitly requests it.
+
+**General Opus 4.7:** always spawn. Generalist reviewer, no skill loaded. `general-purpose` subagent, `model: opus`.
+
+**Spawn by materiality.** Diff touches something that should be in `CLAUDE.md` / `AGENTS.md` but those files are unchanged → spawn **claude-md-materiality** (haiku). Tight signals to avoid firing on routine config tweaks:
+
+- package manager switch (`package.json` `packageManager` field changed, OR lockfile family added/removed: `pnpm-lock.yaml` ↔ `package-lock.json` ↔ `yarn.lock` ↔ `bun.lock`)
+- test framework swap (a `vitest.config.*` / `jest.config.*` / `playwright.config.*` file added or removed — not edited)
+- build tool added or removed (new `vite.config.*` / `webpack.config.*` / `rollup.config.*` / `next.config.*` file, OR an existing one deleted)
+- `tsconfig.json` change to `module`, `moduleResolution`, or addition of a *new top-level alias prefix* in `paths` (NOT path tweaks, NOT `target`/`lib`/`strict` flag toggles)
+- new top-level dir (root of repo or root of a monorepo workspace)
+- new required env var (additions in `.env.example` — not removals, not renames)
+- CI/CD workflow file added or removed (NOT edited — workflow tweaks rarely invalidate docs)
+
+The agent's only job: flag the gap, don't write the doc. Skip materiality entirely under Lite (cost low but consistency matters — Lite ≡ no structural change).
+
+### Step 0.2 — Write shared diff to disk
+
+Write the full diff once to `/tmp/review-diff-<sanitized-branch>-<run_id>.patch`. Sanitize the branch name (a `/` in `feature/x` breaks the path); the `RUN_ID` keeps concurrent runs on the same branch from colliding; write to a `.tmp` sibling then rename so an agent never reads a half-written patch:
+
+```bash
+SANITIZED_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+DIFF_FILE="/tmp/review-diff-$SANITIZED_BRANCH-$RUN_ID.patch"
+rtk proxy git diff "$DEFAULT_BRANCH"...HEAD > "$DIFF_FILE.tmp" && mv "$DIFF_FILE.tmp" "$DIFF_FILE"
+```
+
+Pass `$DIFF_FILE` to every agent as `{diff_file}`. Agents read the file instead of re-running `git diff`.
+
+**Why:** on large diffs (>500 lines) with 10+ agents, a per-agent `git diff` duplicates the same bytes through every subagent context. Write once, read N times → saves tokens, avoids subprocess overhead. Replaces `rtk proxy git diff "$DEFAULT_BRANCH"...HEAD -- {files}` in templates — agents `grep` the patch scoped to their files.
+
+If the file-set includes untracked/unstaged content (subsystem agents on uncommitted edits), the agent reads those directly per Step 0 — the patch file only covers the `"$DEFAULT_BRANCH"...HEAD` slice.
+
+**Scope files per agent:**
+- Language agents: files matching the extension
+- Framework/lib agents: files importing the framework
+- Tests agent: test files + source files they test
+- Other: all changed files
+
+### Step 0.5 — Pre-triage with cheap model
+
+Many diffs have a long tail of routine files (config additions, pure renames, formatting, generated regeneration, simple field additions). Sending those to 10+ specialized agents wastes wall time + tokens. Filter once cheaply before fan-out.
+
+Spawn ONE `general-purpose` subagent, `model: haiku` (fallback `sonnet` if Haiku unavailable), with prompt:
+
+```
+You classify file diffs in a merge request as NEEDS_REVIEW or APPROVED.
+
+NEEDS_REVIEW: potential bugs, security issues, non-trivial logic, new API endpoints, error-handling changes, complex refactoring, schema/migration changes, auth changes, billing changes, signature-verification code, anything touching a high-stakes subsystem, **any added or changed field on a serialized type** (DTO, schema, API response, persisted struct — these need validation/test coverage), **any new defaulted value** (constants, config defaults, fallback values, enum defaults).
+
+APPROVED: only the non-semantic tail — lockfile updates, generated-code regeneration, reordering of *named* import bindings (NOT side-effect imports like `import './polyfill'`, bare `import 'x'`, or any CSS/SCSS `@import` whose cascade is order-sensitive), whitespace/formatting-only changes, file renames whose only effect is updating import paths.
+
+When in doubt → NEEDS_REVIEW. The downstream funnel and bloat-filter handle false positives; missed bugs are expensive. The triage's job is to skip lockfile churn and rename-only diffs, not to substitute its own judgement for the deep review on anything carrying semantics.
+
+Diff to classify:
+{full_diff}
+
+Output a single JSON object, no markdown, no preamble:
+{"verdicts": [{"file": "path/to/file.rs", "verdict": "NEEDS_REVIEW"}, ...]}
+```
+
+**Subtract APPROVED files from every agent's scoped file list before Step 1.** Exception: a file matching any subsystem trigger or any Dogfood category in Step 0 stays regardless of triage verdict. Cheap-model + high-stakes path = trust the path, not the model.
+
+Triage = one shared round for the whole diff, not per agent. Run once, subtract, fan out. Not a replacement for the funnel's "is this code necessary" — only to skip lockfile churn and rename-only diffs.
+
+### Step 1 — Spawn all agents in a single message block
+
+**`code-review` emits no `<crl:...>` data-capture markers.** Those bound a *loop* run and must pair within one session; a composing loop owns them. Invoked standalone, this skill emits none.
+
+**Parallelism is the only reason this skill exists.** Default tool-call behavior is serial: one Task → await → next. That collapses the fan-out into `N × (think-time + agent-time)` and defeats the point. **Override it.** Emit ALL Task tool_use blocks in the SAME assistant message, BEFORE any result.
+
+- ✅ **Right:** one turn, N parallel Tasks → wait → N results → assemble.
+- ❌ **Wrong:** turn 1 = Task(L1) → turn 2 = Task(L2) → … If you catch yourself, stop and re-issue together.
+
+Your own `read`/`grep`/`webfetch` calls go in the SAME turn — concurrent, zero extra wall time.
+
+Use the templates below. Pass each agent its scoped file list. When `only_agents` was supplied, spawn only those agents; otherwise the full tier-derived panel.
+
+### Step 2 — Assemble and emit the review object
+
+Every agent has returned. Build one structured object — the single contract every caller (a human, `code-review-loop`, or a script-driven orchestrator) consumes.
+
+**Build `agent_roster`.** One entry per agent you spawned in Step 1:
+
+`{"agent": "correctness", "template": "templates/correctness.md", "model": "sonnet", "result": "findings" | "no-findings" | "error"}`
+
+- `no-findings` — the agent returned exactly `No findings.`
+- `findings` — the agent returned ≥1 finding.
+- `error` — the agent failed, timed out, or returned unparseable output.
+
+The roster is load-bearing: it lets a caller's convergence check tell "agent ran, clean" apart from "agent never spawned". Never omit an agent that was spawned.
+
+**Collect `findings`.** Flatten every finding from every agent into one array. Tag each with the emitting `agent`. Line-anchored findings keep their full JSON-envelope shape (see *Output format* below); a prose finding becomes `{"agent": "...", "kind": "prose", "tag": "must" | "suggestion", "text": "..."}`. Do not dedupe, triage, or drop here — assembly is lossless; triage belongs to the consumer.
+
+**Assemble the object:**
+
+```json
+{
+  "run_id": "<this run's id>",
+  "branch": "<current branch>",
+  "head_sha": "<full HEAD sha>",
+  "default_branch": "<branch detected in Step 0>",
+  "tier": "lite | full | trivial",
+  "trust_boundaries": ["network", "auth"],
+  "changed_files": ["src/a.ts", "src/b.ts"],
+  "dogfood_required": true,
+  "dogfood_surfaces": ["web-ui", "http-api"],
+  "agent_roster": [ ... ],
+  "findings": [ ... ]
+}
+```
+
+`trust_boundaries` is `[]` when none; `dogfood_surfaces` is `[]` when `dogfood_required` is false. `changed_files` is the unified file-set from Step 0 (committed ∪ unstaged ∪ staged ∪ untracked) — a consumer that needs the changed surfaces (e.g. a dogfood gate) reads it from here rather than re-deriving the union and risking a miss on uncommitted files.
+
+**Write it atomically to `/tmp/`.** Sanitize the branch name (a `/` breaks the path); the `run_id` keeps concurrent runs from colliding. Write to a `.tmp` sibling first, then rename — a reader must never see a half-written file:
+
+```bash
+SANITIZED_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+FINDINGS_FILE="/tmp/code-review-findings-$SANITIZED_BRANCH-$RUN_ID.json"
+# Write the review object with the Write tool to "$FINDINGS_FILE.tmp", then:
+mv "$FINDINGS_FILE.tmp" "$FINDINGS_FILE"
+```
+
+**Surface both** the object (an in-context caller reads it directly) and `$FINDINGS_FILE` (a cross-session caller reads the file — and must verify the file's `run_id` field matches the `run_id` it expects before trusting possibly-stale `/tmp/` content).
+
+When the *When not to use* gate skipped the review, this object is still built — `tier: "trivial"`, empty `agent_roster`, empty `findings` — and written. The caller reads `tier: "trivial"` and does nothing further.
 
 ---
 
-## Part 2: Conducting Code Review (Five-Axis Review)
+## Context verification protocol
 
-Every review evaluates code across five dimensions. Review the tests first — they reveal intent and coverage — then walk through the implementation.
+Inject verbatim into every line-anchored prompt (Correctness, Subsystem, Tests, Skill, CLAUDE.md Compliance, Occam Razor). Funnel L1/L2 don't need it (structural, not failure-mode-inferred).
 
-### Step 1: Understand the Context
+```
+## Context verification — MANDATORY before reporting any finding
 
-Before looking at code, understand the intent: What is this change trying to accomplish? What spec or task does it implement? What is the expected behavior change?
+For every potential finding, answer these questions. If any answer kills the finding, drop it silently.
 
-### Step 2: Review the Tests First
+1. **Callers/callees** — is the missing validation/conversion/error-handling already done at the call site or in a visible wrapper? If yes, drop.
+2. **Test context** — does the path contain a *segment* (between `/` separators) named exactly `tests`, `test`, `__tests__`, `spec`, `specs`, `fixtures`, `mocks`, OR a filename matching `*_test.*` / `*.test.*` / `*.spec.*` / `test_*.py` / `*_spec.rb`, OR code inside `#[cfg(test)]` / `describe(` / `test(` / `it(` / `def test_`? Substring matches don't count — `src/prospecting/`, `src/mockingbird/` are production. In test code, `.unwrap()` / `panic!` / missing validation are normal — drop unless it's a genuine logic bug.
+3. **Intentional comments** — is there a `// SAFETY:` / `// intentionally` / `// fallback` / `# noqa` that *specifically* addresses the failure mode you would flag? A `// SAFETY:` justifying an unchecked-bounds index does NOT silence a race condition on the same line. Match must be specific.
+4. **Diff is the fix** — does the added code resolve the same failure mode you're about to flag, or only a different aspect? `.unwrap()` → `?` resolves panic-on-None; `format!` → bind params resolves SQL injection but does NOT resolve a missing tenant filter. Drop only when the diff addresses your specific failure mode.
+5. **Type tracing** — for a claimed type mismatch (`f64` vs `i64`, `Option<T>` vs `T`, `&str` vs `String`), trace the value flow through the diff. If a conversion exists anywhere on the path, the types are consistent — drop.
+```
 
-- Do tests exist for the change?
-- Do they test behavior (not implementation details)?
-- Are edge cases covered?
-- Do tests have descriptive names?
-- Would the tests catch a regression if the code changed?
-- **Is the prod diff invisible to tests?** Every commit that changes production code should change tests, OR be a pure refactor (no behavior change), OR be specially scrutinized. A commit with prod-code changes and zero test changes falls in one of those three categories — your job as reviewer is to decide which. "It's hard to test" is not category four. Reviews: prod-code diff with zero test diff and no "refactor" label -> flag "explain why no test, or add one"
+## Output format for line-anchored findings
 
-### Step 3: Review the Implementation (Five Axes)
+Agents anchoring findings to `file:line` emit a **lean JSON envelope** — enough for downstream triage and verbatim fix-prompt forwarding, nothing more. Verbose audit trails (`inspected` file lists, separate test-coverage prose, redundant scope restatements) multiply across a 12-agent fan-out and are the largest controllable drain on the orchestrator's context. Keep the payload tight.
 
-#### Axis 1: Correctness
+Funnel L1/L2 stay textual (structural, not file:line-anchored). Dogfood (run by the composing loop) keeps its own contract.
 
-Does the code do what it claims to do?
+Zero findings → respond exactly `No findings.` (textual, not JSON — preserves the convergence signal the consumer reads).
 
-- Does it match the spec or task requirements?
-- Are edge cases handled (null, empty, boundary values)?
-- Are error paths handled (not just the happy path)?
-- Are there off-by-one errors, race conditions, or state inconsistencies?
-- Does it pass all tests? Are the tests actually testing the right things?
+Else **respond with ONLY the JSON object**: first character `{`, last character `}`. No prose preamble, no reasoning narration, no markdown fence. The reasoning belongs in `analysis_chain` and nowhere else — a walkthrough before the JSON is pure wasted context across a 12-agent fan-out.
 
-#### Axis 2: Readability and Simplicity
+```json
+{
+  "findings": [
+    {
+      "file": "src/auth/session.rs",
+      "line": 42,
+      "severity": "bug",
+      "confidence": "high",
+      "signature": "src/auth/session.rs:42:unwrap-on-user-header",
+      "title": "unwrap() on user-supplied header",
+      "analysis_chain": [
+        ".unwrap() on req.headers.get(\"X-Token\") — Option, missing header panics the handler",
+        "X-Token is attacker-controlled",
+        "no caller-site guard"
+      ],
+      "fix_prompt": "In src/auth/session.rs line 42, replace .unwrap() with .ok_or(AuthError::MissingToken)? to propagate instead of panic. Add a non-regression test: POST /session without X-Token expects 401, not 500."
+    }
+  ]
+}
+```
 
-Can another engineer understand this code without the author explaining it?
+**Field rationales:**
 
-- Are names descriptive and consistent with project conventions? (No `temp`, `data`, `result` without context)
-- Is the control flow straightforward (avoid nested ternaries, deep callbacks)?
-- Could this be done in fewer lines? (1000 lines where 100 suffice is a failure)
-- Are abstractions earning their complexity? (Do not generalize until the third use case)
-- Are there dead code artifacts: no-op variables, backwards-compat shims, `// removed` comments?
-- Would comments help clarify non-obvious intent? (But do not comment obvious code.)
+- `analysis_chain` — auditable trace, **≤ 3 bullets, each ≤ 25 words**. The triage pass re-reads the cited code; a chain that doesn't survive that re-read = hallucination → dropped. This is the *only* reasoning channel — there is no separate prose section.
+- `fix_prompt` — consumed verbatim by per-file fix agents; state the concrete line and concrete replacement. For `bug`/`security`/`performance`/`error_handling`, **append the non-regression test to add** in the same string (`Add a test: …`) — the fix agent's TDD step reads it from here.
+- `signature` — dedup key `<file>:<line>:<failure-mode-slug>`. Controlled vocabulary when applicable: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation` · `zero-callers-dead` · `single-caller-inlinable` · `unused-param` · `derivable-default` · `redundant-overload`. Else a free 3-5 kebab-token slug. The downstream dedup matcher: same file, line ±3, same slug OR title-token Jaccard ≥ 0.6.
+- `confidence` — `high|medium|low`, separate from severity. `severity: bug, confidence: low` survives downstream triage only with an airtight analysis_chain. Low-confidence security findings still warrant a 2nd look — don't merge with severity.
 
-#### Axis 3: Architecture
+Severity: `bug` | `security` | `performance` | `error_handling` | `suggestion`. Suggestions are usually dropped at Context verification question 1.
 
-Does the change fit the system's design?
+Confidence: `high` | `medium` | `low`. Default `high` only when analysis_chain survives independent re-derivation.
 
-- Does it follow existing patterns or introduce a new one? If new, is it justified?
-- Does it maintain clean module boundaries?
-- Is there code duplication that should be shared?
-- Are dependencies flowing in the right direction (no circular dependencies)?
-- Is the abstraction level appropriate (not over-engineered, not too coupled)?
+**Two checks done silently — discipline kept, fields dropped** (were `why_tests_dont_cover` / `inspected`):
 
-#### Axis 4: Security
-
-- Is user input validated and sanitized?
-- Are secrets kept out of code, logs, and version control?
-- Is authentication/authorization checked where needed?
-- Are SQL queries parameterized (no string concatenation)?
-- Are outputs encoded to prevent XSS?
-- Is data from external sources (APIs, logs, user content, config files) treated as untrusted?
-
-#### Axis 5: Performance
-
-- Any N+1 query patterns?
-- Any unbounded loops or unconstrained data fetching?
-- Any synchronous operations that should be async?
-- Any unnecessary re-renders in UI components?
-- Any missing pagination on list endpoints?
-- Any large objects created in hot paths?
-
-### Step 4: Categorize Findings
-
-Label every comment with severity so the author knows what is required vs optional:
-
-| Prefix | Meaning | Author Action |
-|--------|---------|---------------|
-| **[BUG]** | Logic errors, security holes, data loss, race conditions | Fix immediately — blocks merge |
-| **[FIX]** | Type gaps, missing error handling, test gaps | Fix before proceeding |
-| **[AUTO]** | Unused imports, dead code, typos, console.log — zero-risk, <5s | Reviewer auto-fixes these |
-| **[CONSIDER]** | Refactors, style opinions, nice-to-have | Note for later, do not block |
-| **[NIT]** | Style preferences, formatting, naming opinions | Fix if <5s, otherwise skip |
-| **[QUESTION]** | Clarifications, "why did you..." | Answer in thread, no code change |
-| **[FYI]** | Informational only | No action needed |
-
-### The Bloat Filter (run before submitting any finding)
-
-Reviewers — human and AI alike — bias toward *recommending additions*. Before a finding leaves your draft, run it through this filter:
-
-A finding is worth submitting only if applying its fix would leave the code more **sound + correct + elegant**. Two-out-of-three is a signal to keep looking for a fix that gets all three, not to ship the two-out-of-three change.
-
-Drop findings that propose:
-
-- defensive checks for cases that can't happen (e.g. null guards on values the type system already proves non-null)
-- abstractions used only once
-- comments restating obvious code
-- tests asserting tautologies (language semantics, type guards, "it returns a string when given a string")
-- "just-in-case" guards added without an identified failure mode
-
-A change that nominally improves correctness by degrading elegance usually makes the codebase worse, not better. The smallest diff that fixes the real defect almost always wins. Authors who receive bloat-shaped suggestions should push back using the same filter — see the *Bloat Check on Incoming Feedback* subsection in Part 3.
-
-### Step 5: Verify the Verification
-
-Check the author's verification story: What tests were run? Did the build pass? Was it tested manually? Are there screenshots for UI changes? Is there a before/after comparison?
-
-### Dead Code Hygiene
-
-After any refactoring or implementation change, check for orphaned code:
-
-1. Identify code that is now unreachable or unused
-2. List it explicitly
-3. Ask before deleting: "Should I remove these now-unused elements: [list]?"
-
-Do not leave dead code lying around — it confuses future readers and agents. But do not silently delete things you are not sure about.
-
-### Dependency Review
-
-Before approving any new dependency:
-1. Does the existing stack solve this? (Often it does.)
-2. How large is the dependency? (Check bundle impact.)
-3. Is it actively maintained? (Check last commit, open issues.)
-4. Does it have known vulnerabilities?
-5. What is the license? (Must be compatible.)
-
-**Rule:** Prefer standard library and existing utilities over new dependencies. Every dependency is a liability.
-
-### Review Anti-Patterns
-
-| Anti-Pattern | Problem |
-|---|---|
-| **Rubber-stamping** | "LGTM" without evidence of review helps no one |
-| **Nitpicking** | Blocking merge over style preferences wastes everyone's time |
-| **Scope creep** | Requesting unrelated improvements in the review |
-| **Softening real issues** | "This might be a minor concern" when it is a production bug is dishonest |
-| **Accepting "I'll fix it later"** | It never happens. Require cleanup before merge |
-
-### Honesty in Review
-
-- Do not rubber-stamp. "LGTM" without evidence of review helps no one.
-- Do not soften real issues. Quantify problems when possible: "This N+1 query will add ~50ms per item" beats "this could be slow."
-- Push back on approaches with clear problems. Sycophancy is a failure mode.
-- Accept override gracefully. If the author has full context and disagrees, defer to their judgment.
-- Comment on code, not people.
-
-### Communicating Review Severity (GitHub Alert Ladder)
-
-When the review lands on a GitHub PR, the callout intensity is the **first** thing the author sees — it sets the next action they'll take. The `approved` flag is the second lever: GitHub renders a "Fix" button on every non-approving review, so `approved: false` invites the author to click Fix, and `approved: true` suppresses it.
-
-Pick the tier that matches the action the author's situation actually justifies:
-
-| Tier | Callout | Use for | `approved` | Inline comments |
-|---|---|---|---|---|
-| **Critical** | `> [!CAUTION]` (large red — "this will break something") | Bugs, security holes, data loss, broken core flows | `false` | yes — anchor every finding |
-| **Must-address** | `> [!IMPORTANT]` (large purple — "look at this before merging") | Real consequences if shipped: incorrect behavior, missing validation, regressions the author should fix before merge | `false` | yes |
-| **Minor only** | *no callout* (plain text) | Single-line nits, doc polish, defer-able observations, "rough edges" | `false` | yes |
-| **Informational** | `> [!NOTE]` (small blue — "FYI") | Mergeable as-is, nothing actionable, surfacing a noteworthy observation | `true` | **no** |
-| **Clean** | "No new issues found." | No findings worth surfacing | `true` | no |
-
-**Why the two levers matter together.** Wrapping mergeable feedback in `[!IMPORTANT]` trains authors to click Fix on reviews that don't actually need fixing — they stop trusting the callout. Reserve `[!CAUTION]` and `[!IMPORTANT]` for findings with concrete fallout; downgrade to plain text for nits and "consider also" suggestions.
-
-**Why `[!NOTE]` excludes inline comments.** Inline anchors signal "act on this," which contradicts `[!NOTE]`'s "no action needed." If a point is concrete enough to anchor to a line, downgrade the whole review to **minor only** (`approved: false`, no callout) instead of mixing `[!NOTE]` with inline comments.
+- *Test coverage* — before emitting a `bug`/`security`/`performance`/`error_handling` finding, grep the test suite. A test already exercising this exact failure mode means it's covered → drop the finding.
+- *Read what you flag* — only flag a file you have actually read in full this session. A finding inferred from the diff slice without reading the implementation is a hallucination → don't emit it.
 
 ---
 
-## Part 3: Receiving Code Review Feedback
+## Agent Prompt Templates
 
-Code review requires technical evaluation, not emotional performance.
+Each template lives in its own file under `templates/`. Read only the templates for the agents Step 0 detected — parallel reads, ~zero wall-time cost. Substitute placeholders before passing the text as the Agent's `prompt`.
 
-**Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
+**Line-anchored templates** (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance, Occam Razor) require the Context verification + Output format blocks appended verbatim before spawning. **Funnel L1/L2, Materiality, Matt Review** are self-contained — don't append.
 
-### The Response Pattern
+**Model assignment.** Heavy reasoning → `sonnet`, structural/textual lifts → `haiku`. The orchestrator (you) stays on the session model.
 
-```
-WHEN receiving code review feedback:
+| Agent | Template | Model | Output | Trust boundaries | Prev-findings shape |
+|---|---|---|---|---|---|
+| Pre-triage (Step 0.5) | `templates/pre-triage.md` | haiku | JSON | — | — |
+| Funnel L1 | `templates/funnel-l1.md` | haiku | prose tagged | — | B |
+| Funnel L2 | `templates/funnel-l2.md` | haiku | prose tagged | — | B |
+| Occam Razor | `templates/occam-razor.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| Correctness | `templates/correctness.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| matt-review | `templates/matt-review.md` | sonnet | prose Standards/Spec | — | B |
+| thermo-nuclear-code-quality-review | `templates/thermo-nuclear-review.md` | sonnet | prose tagged | — | B |
+| Subsystem (billing/auth/schema-migration/webhook/RBAC/multi-tenant/cron) | `templates/subsystem-agent.md` + `{subsystem_name}` + `{failure_modes}` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| Tests | `templates/tests-agent.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| Skill — heavy | `templates/skill-agent.md` + `{skill_name}` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| Skill — light | `templates/skill-agent.md` + `{skill_name}` | haiku | JSON line-anchored | `{trust_boundaries}` | A |
+| coding-standards (umbrella + 4 sub-skills) | `templates/skill-agent.md` + `{skill_name}` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| claude-md-materiality | `templates/materiality.md` | haiku | prose tagged | — | B |
+| claude-md-compliance | `templates/claude-md-compliance.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
+| General Opus 4.7 | (no template, generalist prompt) | opus | line-anchored or prose | — | — |
 
-1. READ: Complete feedback without reacting
-2. UNDERSTAND: Restate requirement in own words (or ask)
-3. VERIFY: Check against codebase reality
-4. EVALUATE: Technically sound for THIS codebase?
-5. RESPOND: For each item — Status (AGREE/DISAGREE/NEED-CLARIFICATION) + Evidence (file:line) + Action taken
-6. IMPLEMENT: One item at a time, test each
-```
+**Heavy vs light Skill agents:**
+- **Heavy:** `security-defensive`, `language-rust`, `language-typescript`, `language-swift`, `react`, `database`, `drizzle-orm`, `frontend`, `web-performance`, `api-design`, `simplify`, `matt-improve-codebase-architecture`
+- **Light:** `i18n`, `tailwind`, `ui-animations`, `ui-ux`, `make-interfaces-feel-better`, `shadcn`, `vue`, `tanstack-query`, `tanstack-start-best-practices`, `better-result-adopt`, `docker`, `kubernetes`, `zod`
 
-**Iron Law:** Never dismiss review feedback without re-reading the flagged code. Always respond to each finding with file:line evidence for your position.
+**Subsystem Agent.** Substitute `{subsystem_name}` from the Step 0 subsystem-trigger row (e.g. `billing-subsystem`) and `{failure_modes}` from that row's "Failure modes" column. It doesn't load a skill — it's a framing label only.
 
-### Forbidden Responses
+**Shared diff file.** Step 0.2 wrote the full diff to `/tmp/review-diff-<sanitized-branch>-<run_id>.patch`. Templates use `{diff_file}` — substitute the resolved path. Agents grep/filter the patch rather than re-running `git diff`. File-set with uncommitted files → agent reads those directly per Step 0.
 
-**NEVER:**
-- "You're absolutely right!" (performative)
-- "Great point!" / "Excellent feedback!" (performative)
-- "Let me implement that now" (before verification)
-- Any gratitude expression — actions speak, just fix it
+**Trust-boundaries placeholder.** Line-anchored templates use `{trust_boundaries}` for the comma-separated list from Step 0 (e.g. `secrets, network, auth`) or literal `none`. Substitute before spawning; never leave the placeholder literal.
 
-**INSTEAD:**
-- Restate the technical requirement
-- Ask clarifying questions
-- Push back with technical reasoning if wrong
-- Just start working (actions > words)
+**Previous findings injection** (re-review only). When invoked with `previous_findings_file`, read it — a JSON array of the prior pass's findings, each a **full finding object** annotated with `disposition` (`fixed` | `dropped-by-triage` | `unfixed`) and a cumulative `attempts` counter. For each agent you re-spawn, build `{previous_findings_block}` from *that agent's own* prior findings, using its shape from the table's last column:
 
-### Handling Unclear Feedback
+- **Shape A** (line-anchored agents): `templates/previous-findings-shape-a.md`
+- **Shape B** (prose agents): `templates/previous-findings-shape-b.md`
 
-```
-IF any item is unclear:
-  STOP - do not implement anything yet
-  ASK for clarification on unclear items
-
-WHY: Items may be related. Partial understanding = wrong implementation.
-```
-
-**Example:**
-```
-Feedback: "Fix items 1-6"
-You understand 1,2,3,6. Unclear on 4,5.
-
-WRONG: Implement 1,2,3,6 now, ask about 4,5 later
-RIGHT: "Understand 1,2,3,6. Need clarification on 4 and 5 before implementing."
-```
-
-### Source-Specific Handling
-
-**From your human partner:**
-- Trusted — implement after understanding
-- Still ask if scope unclear
-- No performative agreement — skip to action or technical acknowledgment
-
-**From external reviewers:**
-```
-BEFORE implementing:
-  1. Technically correct for THIS codebase?
-  2. Breaks existing functionality?
-  3. Reason for current implementation?
-  4. Works on all platforms/versions?
-  5. Does reviewer understand full context?
-
-IF suggestion seems wrong: Push back with technical reasoning
-IF conflicts with human partner's prior decisions: Stop and discuss first
-```
-
-### YAGNI Check for "Professional" Features
-
-```
-IF reviewer suggests "implementing properly":
-  grep codebase for actual usage
-
-  IF unused: "This endpoint isn't called. Remove it (YAGNI)?"
-  IF used: Then implement properly
-```
-
-### Bloat Check on Incoming Feedback
-
-Reviewers — including AI ones — bias toward recommending additions. Before applying any feedback, run it through the **Bloat Filter from Part 2**: would applying this fix leave the code more *sound + correct + elegant*? Two-out-of-three is a signal that the suggestion is bloat-shaped.
-
-Push back (technically, not defensively) when the feedback proposes:
-
-- defensive checks for cases that can't happen (e.g. null guards on type-guaranteed values)
-- an abstraction used only once
-- comments restating obvious code
-- tests asserting tautologies (language semantics, type guards)
-- "just-in-case" guards without a named failure mode
-
-The push-back form is: "Applying this would add X without addressing a real failure mode I can identify. Concretely, [reasoning]. Happy to apply if you can name the scenario." Then either the reviewer names the scenario (and the change earns its place) or the suggestion is withdrawn.
-
-This is the same filter the reviewer should have applied before submitting. Applying it on receipt catches what slipped through.
-
-### Implementation Order
-
-```
-FOR multi-item feedback:
-  1. Clarify anything unclear FIRST
-  2. Triage by severity:
-     - [BUG]: Blocking issues (breaks, security) -> fix immediately
-     - [FIX]: Important fixes (error handling, test gaps) -> fix before proceeding
-     - [AUTO]: Zero-risk cleanups -> fix inline
-     - [CONSIDER]: Nice-to-have -> note for later
-     - [NIT]: Style preferences -> fix if <5s, skip otherwise
-  3. Test each fix individually
-  4. Verify no regressions
-  5. Fix everything valid — including nitpicks. Agent time is cheap, tech debt is expensive
-```
-
-### CI Verification After Fixes
-
-After implementing review feedback, poll CI checks before marking resolved: `gh run list --branch <branch> --limit 5`. Never claim fixes are done while CI is red. If CI fails on something unrelated to your fix, note it explicitly.
-
-### When to Push Back
-
-Push back when:
-- Suggestion breaks existing functionality
-- Reviewer lacks full context
-- Violates YAGNI (unused feature)
-- Technically incorrect for this stack
-- Legacy/compatibility reasons exist
-- Conflicts with human partner's architectural decisions
-
-**How to push back:**
-- Use technical reasoning, not defensiveness
-- Ask specific questions
-- Reference working tests/code
-- Involve human partner if architectural
-
-### Gracefully Correcting Your Pushback
-
-If you pushed back and were wrong:
-```
-RIGHT: "You were right - I checked [X] and it does [Y]. Implementing now."
-WRONG: Long apology, defending why you pushed back, over-explaining
-```
-
-State the correction factually and move on.
-
-### GitHub Thread Replies
-
-For each review comment: (1) evaluate validity, (2) fix if valid or push back if not, (3) reply IN THE THREAD with what was done and file:line evidence, (4) mark resolved only after fix is verified. Use `gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`.
-
-### Parallel Thread Resolution
-
-When receiving multiple review comments, spawn parallel agents to evaluate and fix each thread independently, then consolidate changes. Ensures each thread gets full attention without sequential bottleneck.
-
----
-
-## Part 4: Handling Disagreements
-
-When resolving review disputes, apply this hierarchy:
-
-1. **Technical facts and data** override opinions and preferences
-2. **Style guides** are the absolute authority on style matters
-3. **Software design** must be evaluated on engineering principles, not personal preference
-4. **Codebase consistency** is acceptable if it does not degrade overall health
-
----
-
-## Part 5: Review Workflow Integration
-
-### Subagent-Driven Development
-- Review after EACH task
-- Catch issues before they compound
-- Fix before moving to next task
-
-### Executing Plans
-- Review after each batch (3 tasks)
-- Get feedback, apply, continue
-
-### Ad-Hoc Development
-- Review before merge
-- Review when stuck
-
-### Multi-Model Review Pattern
-
-```
-Model A writes the code
-    |
-    v
-Model B reviews for correctness and architecture
-    |
-    v
-Model A addresses the feedback
-    |
-    v
-Human makes the final call
-```
-
-Different models have different blind spots — cross-model review catches issues a single model misses.
-
-### Review Response Time-Box
-
-After receiving review feedback, respond within the same session. Do not let comments go stale. If a FIX item requires significant rework, acknowledge immediately and provide an ETA or create a follow-up task.
-
----
-
-## Universal Review Questions
-
-Ask yourself these BEFORE requesting review. If you cannot answer "yes" to all, you have more work to do. These are also what the reviewer will check.
-
-0. **Is the scope clean?** — Does the diff touch only files related to the stated goal?
-1. **Can this be simpler?** — Unnecessary abstraction? Helpers for one-time ops? Over-engineered error handling?
-2. **Can we remove code?** — Dead code, unused exports, commented-out blocks, backwards-compat shims?
-3. **Is it DRY without premature abstraction?** — Copy-paste of entire functions = refactor. But 2-3 similar lines are fine — the wrong abstraction is worse than duplication.
-4. **Does the change match the stated goal?** — No scope creep, no "while I'm here" refactors mixed in.
-
-## Common Rationalizations
-
-| Rationalization | Reality |
-|---|---|
-| "It works, that's good enough" | Working code that is unreadable, insecure, or architecturally wrong creates debt that compounds |
-| "I wrote it, so I know it's correct" | Authors are blind to their own assumptions. Every change benefits from another set of eyes |
-| "We'll clean it up later" | Later never comes. The review is the quality gate — use it |
-| "AI-generated code is probably fine" | AI code needs more scrutiny, not less. It is confident and plausible, even when wrong |
-| "The tests pass, so it's good" | Tests are necessary but not sufficient. They do not catch architecture problems, security issues, or readability concerns |
-
-## Learnings Check
-
-After every review cycle, ask:
-
-- Did this review reveal a pattern we keep hitting? -> Document it in project conventions
-- Did the reviewer flag something our linter/tests should catch automatically? -> Add the rule/test
-- Did we learn a new gotcha about our stack? -> Add to relevant skill file
-
-**Goal:** Each review makes the next one shorter. If you are getting the same feedback twice, the process is broken — fix the root cause (missing lint rule, missing test, missing documentation).
-
-## Red Flags
-
-- PRs merged without any review
-- Skipping review because "it's simple"
-- "LGTM" without evidence of actual review
-- Review that only checks if tests pass (ignoring other axes)
-- Security-sensitive changes without security-focused review
-- Large PRs that are "too big to review properly" (split them)
-- No regression tests with bug fix PRs
-- Review comments without severity labels
-- Ignoring Critical/BUG issues
-- Proceeding with unfixed FIX issues
-- Arguing with valid technical feedback instead of verifying
+No `previous_findings_file` (first pass) → `{previous_findings_block}` is the empty string, no header. The cumulative `attempts` counter must survive every hop — it is what lets a consumer escalate a finding that has failed too many fix attempts. The consumer (e.g. `code-review-loop`) produces `previous_findings_file`; `code-review` only reads and injects it.
