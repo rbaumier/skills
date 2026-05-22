@@ -86,7 +86,7 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` → changed files. Determine
 
 **Apply the tier first.** Compute tier from "Tier classification" above. Lite → spawn only Lite column agents, skip "Spawn by imports", "Spawn by surface touched", "Spawn by subsystem touched", "General Opus 4.7". Rest of Step 0 = Full only.
 
-**Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, matt-review, security-defensive, Tests, Correctness.
+**Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, matt-review, thermo-nuclear-code-quality-review, security-defensive, Tests, Correctness.
 
 **Why Occam Razor sits alongside the funnel.** L1 ("must exist?") and L2 ("smallest perimeter?") are prose, evaluated face-value, neither walks the call graph. Occam Razor is the mechanical check: for every exported symbol the diff introduces/modifies, enumerate call sites, prove shape pays rent. Past misses: 0-caller function, 1-caller wrapper, defaults reconstructed from caller's known values.
 
@@ -522,6 +522,7 @@ Each template lives in its own file under `templates/`. The runner reads only th
 | Occam Razor | `templates/occam-razor.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
 | Correctness | `templates/correctness.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
 | matt-review | `templates/matt-review.md` | sonnet | prose Standards/Spec | — | B |
+| thermo-nuclear-code-quality-review | `templates/thermo-nuclear-review.md` | sonnet | prose tagged | — | B |
 | Subsystem (billing/auth/schema-migration/webhook/RBAC/multi-tenant/cron) | `templates/subsystem-agent.md` + `{subsystem_name}` + `{failure_modes}` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
 | Tests | `templates/tests-agent.md` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
 | Skill — heavy | `templates/skill-agent.md` + `{skill_name}` | sonnet | JSON line-anchored | `{trust_boundaries}` | A |
