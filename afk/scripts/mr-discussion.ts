@@ -10,9 +10,10 @@
  * hand-build API calls.
  *
  * Subcommands:
- *   post    --mr <iid> --body <text> [--dry-run]   create a general resolvable discussion
- *   list    --mr <iid>                             all discussions as JSON
- *   resolve --mr <iid> --discussion <id>           resolve one thread
+ *   post    --mr <iid> --body <text> [--dry-run]        create a general resolvable discussion
+ *   list    --mr <iid>                                  all discussions as JSON
+ *   resolve --mr <iid> --discussion <id>                resolve one thread
+ *   reply   --mr <iid> --discussion <id> --body <text>  add a note to an existing thread
  *
  * Only **general** discussions are used — no diff-position objects (those
  * break on every rebase). The finding's `file:line` lives in the body text.
@@ -96,6 +97,23 @@ const resolve = (mr: string, discussionId: string): Effect.Effect<string, GlabEr
   )
 }
 
+/**
+ * Add a note to an existing discussion thread — a *reply*, not a new
+ * discussion. `evaluate` and `fix` use this to answer a finding in place;
+ * `post` would instead create an orphan top-level discussion.
+ */
+const reply = (mr: string, discussionId: string, body: string): Effect.Effect<string, GlabError> => {
+  const args = [
+    "api",
+    `${discussionsEndpoint(mr)}/${discussionId}/notes`,
+    "-X",
+    "POST",
+    "-f",
+    `body=${body}`,
+  ]
+  return runGlab(args).pipe(Effect.as(`replied on discussion ${discussionId}`))
+}
+
 // ─── CLI argument parsing ──────────────────────────────────────────────
 
 interface Args {
@@ -161,10 +179,16 @@ const program: Effect.Effect<string, GlabError | UsageError> = Effect.gen(functi
       const discussion = yield* require_(args.discussion, "discussion")
       return yield* resolve(mr, discussion)
     }
+    case "reply": {
+      const mr = yield* requireMr(args.mr)
+      const discussion = yield* require_(args.discussion, "discussion")
+      const body = yield* require_(args.body, "body")
+      return yield* reply(mr, discussion, body)
+    }
     default:
       return yield* Effect.fail(
         new UsageError({
-          message: `unknown subcommand ${JSON.stringify(args.command)} — expected post | list | resolve`,
+          message: `unknown subcommand ${JSON.stringify(args.command)} — expected post | list | resolve | reply`,
         }),
       )
   }
