@@ -35,7 +35,9 @@ describe("toDiscussionSummary", () => {
       id: "x",
       notes: [{ body: "b", resolvable: true, resolved: false, author: null }],
     };
-    expect(toDiscussionSummary(raw).notes[0]?.author).toBe("unknown");
+    const notes = toDiscussionSummary(raw).notes;
+    expect(notes).toHaveLength(1);
+    expect(notes.at(0)?.author).toBe("unknown");
   });
 
   it("keeps every note (resolvable or not) in the summary", () => {

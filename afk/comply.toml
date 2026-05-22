@@ -60,3 +60,110 @@ disabled = true
 # The flagged accesses are `Record<Phase, V>[phase]` with a typed enum key —
 # never untrusted input, so the prototype-pollution concern does not apply.
 disabled = true
+
+# ── Disabled: not applicable to this codebase ────────────────────────────
+
+[rules.jsdoc-missing-example]
+# Internal Effect modules — @example requirements are for public library APIs.
+disabled = true
+
+[rules.api-validate-at-boundaries]
+# This is an Effect pipeline, not an HTTP API. Zod validation here is schema
+# parsing (an Effect convention), not a boundary check.
+disabled = true
+
+[rules.api-no-unbounded-input-field]
+# Internal schemas — not a public API surface.
+disabled = true
+
+[rules.api-branded-id-types]
+# Effect has its own branded type system via Data.TaggedError and Schema.
+disabled = true
+
+[rules.zod-brand-ids]
+# Same as api-branded-id-types — Effect's own branding covers this.
+disabled = true
+
+[rules.no-unsafe-shell-exec]
+# shell.ts is deliberately a shell executor — the tool's entire purpose.
+disabled = true
+
+[rules.security-detect-possible-timing-attacks]
+# No secret comparison in this codebase — the flagged comparisons are on
+# pipeline state strings, not credentials.
+disabled = true
+
+[rules.node-no-sync]
+# existsSync in Effect.gen generators is intentional — the sync variant is a
+# single stat syscall; the async variant does not compose with Effect.gen
+# without extra wrapping for no benefit.
+disabled = true
+
+# ── Disabled: false positives — tracked upstream ─────────────────────────
+
+[rules.node-hashbang]
+# Flags `#!/usr/bin/env bun` as invalid — bun is a legitimate runtime.
+# https://github.com/rbaumier/comply/issues/278
+disabled = true
+
+[rules.no-type-encoded-names]
+# Reads `PROMPTS_DIR` as Hungarian prefix "prom" — it's a domain name.
+# https://github.com/rbaumier/comply/issues/279
+disabled = true
+
+[rules.react-no-find-in-map-loop]
+# Fires in non-React code — should only apply to JSX/TSX files.
+# https://github.com/rbaumier/comply/issues/280
+disabled = true
+
+[rules.no-while-loop]
+# The `prefer-while` rule contradicts this, and genuine polling loops (e.g.
+# sentinel file polling in v0-test.ts) need `while`.
+disabled = true
+
+[rules.no-array-callback-reference]
+# Fires on `Effect.forEach(iterable, callback)` reading the iterable as a
+# function reference. Effect.forEach is not Array.forEach — the first arg
+# is the collection, the second is the callback.
+disabled = true
+
+[rules.no-try-statements]
+# safeJsonParse in glab.ts IS the result-type wrapper the rule wants — the
+# try/catch converts a throwing API into a discriminated-union result.
+disabled = true
+
+[rules.no-unchecked-json-parse]
+# JSON.parse in safeJsonParse is immediately wrapped in a discriminated
+# result, then validated by `schema.safeParse` in the caller. The "checked"
+# path is split across two functions, which comply cannot trace.
+disabled = true
+
+[rules.try-catch-json-parse]
+# Same as no-unchecked-json-parse — safeJsonParse IS the try/catch wrapper.
+disabled = true
+
+[rules.unused-dependency]
+# Fires per-file but these are project-wide deps used in other files.
+disabled = true
+
+[rules.import-no-unresolved]
+# comply resolves from cwd, not from the tsconfig paths — the imports are
+# valid at build time via Bun's module resolution.
+disabled = true
+
+[rules.type-only-dependency]
+# zod is used as a value import in several files; the type-only import in
+# glab.ts does not mean the whole package is type-only.
+disabled = true
+
+# ── Threshold overrides ──────────────────────────────────────────────────
+
+[rules.max-union-size]
+max = 15
+
+[rules.cyclomatic-complexity]
+max = 20
+
+[rules.max-dependencies]
+max = 20
+

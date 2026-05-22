@@ -1,22 +1,33 @@
 /**
- * run-artifacts.ts — the run's footprint on disk.
+ * Run-artifacts.ts — the run's footprint on disk.
  *
- * Owns the per-run directory and every path beneath it (the JSONL event log,
- * the per-phase sentinels, tmux logs, and rendered prompts), plus the
- * structured logger. Cross-cutting: both the session and pipeline slices
- * write here, so it sits at the top level rather than inside either.
+ * Owns the per-run directory and every path beneath it (the JSONL
+ * event log, per-phase sentinels, tmux logs, and rendered prompts),
+ * plus the structured logger.
+ *
+ * Cross-cutting: both the session and pipeline slices write here,
+ * so it sits at the top level rather than inside either.
  */
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Effect } from "effect";
-import { type Phase, RUNS_DIR } from "./config";
+import type { Phase } from "./config";
+import { RUNS_DIR } from "./config";
+
+/** Identifies one phase run — unique per issue, phase, iteration. */
+export type PhaseRef = {
+  readonly issueIid: number;
+  readonly phase: Phase;
+  readonly iteration: number;
+};
 
 /**
- * This run's unique directory under ~/.afk-runs/. The timestamp carries a
- * random suffix so two orchestrators started in the same second never share a
- * directory — and so never interleave their logs and sentinels.
+ * This run's unique directory under ~/.afk-runs/.
+ * The timestamp plus random suffix prevents collisions when two
+ * orchestrators start in the same second.
  */
-const startedAt = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_");
+const COLON_OR_DOT_RE = /[:.]/g;
+const startedAt = new Date().toISOString().replaceAll(COLON_OR_DOT_RE, "-").replace("T", "_");
 const randomSuffix = Math.random().toString(16).slice(2, 8);
 export const runDir = join(RUNS_DIR, `${startedAt}-${randomSuffix}`);
 
@@ -25,21 +36,21 @@ export const runLogPath = join(runDir, "run.jsonl");
 
 /**
  * The sentinel file a phase's Stop hook writes its final message into.
- * `iteration` keeps the review⇄fix loop's repeated phases from colliding.
+ * `iteration` keeps the review/fix loop's repeated phases from colliding.
  */
-export const sentinelPath = (issueIid: number, phase: Phase, iteration: number): string =>
+export const sentinelPath = ({ issueIid, phase, iteration }: PhaseRef): string =>
   join(runDir, `sentinel-${issueIid}-${phase}-${iteration}.flag`);
 
 /** The file a phase's tmux pane is mirrored into, for live tailing. */
-export const tmuxLogPath = (issueIid: number, phase: Phase, iteration: number): string =>
+export const tmuxLogPath = ({ issueIid, phase, iteration }: PhaseRef): string =>
   join(runDir, `tmux-${issueIid}-${phase}-${iteration}.log`);
 
 /** The rendered prompt handed to a phase's claude session. */
-export const promptFilePath = (issueIid: number, phase: Phase, iteration: number): string =>
+export const promptFilePath = ({ issueIid, phase, iteration }: PhaseRef): string =>
   join(runDir, `prompt-${issueIid}-${phase}-${iteration}.md`);
 
 /** The tmux session name for one phase run — unique per issue, phase, iteration. */
-export const sessionName = (issueIid: number, phase: Phase, iteration: number): string =>
+export const sessionName = ({ issueIid, phase, iteration }: PhaseRef): string =>
   `afk-${issueIid}-${phase}-${iteration}`;
 
 /**

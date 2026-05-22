@@ -1,47 +1,44 @@
 /**
- * pipeline/state.ts — the orchestrator's state machine, as data.
+ * Pipeline/state.ts — the orchestrator's state machine, as data.
  *
- * `State` is a discriminated union: one variant per node in the pipeline.
- * Each variant carries exactly the data that node needs and nothing more, so
- * the type system proves a handler can never read a field that is not there
- * yet (no `mergeRequestIid` before the MR is opened, for instance).
+ * `State` is a discriminated union with one variant per pipeline node.
+ * Each variant carries exactly the data that node needs, nothing more.
+ * The type system proves a handler can never read a field that is not
+ * there yet (no `mergeRequestIid` before the MR is opened, for instance).
  *
  * Pure type declarations — no logic, no imports.
  */
 
 /** A GitLab issue, reduced to what the pipeline actually uses. */
-export interface IssueRef {
+export type IssueRef = {
   /** The project-scoped issue number (GitLab's `iid`, shown as `#42`). */
   readonly iid: number;
   readonly title: string;
   /** The issue description, or the empty string if it had none. */
   readonly body: string;
-}
+};
 
 /** A wall-clock instant (epoch milliseconds) past which an issue is over budget. */
 export type Deadline = number;
 
 /**
- * The data every node from `open_draft_mr` onward shares: the issue, its
- * branch and worktree, the budget deadline, and the merge request.
+ * The data every node from `open_draft_mr` onward shares.
+ * Includes the issue, branch, worktree, budget deadline, and MR iid.
  */
-export interface PipelineContext {
+export type PipelineContext = {
   readonly issue: IssueRef;
   readonly branch: string;
   readonly worktree: string;
   readonly deadline: Deadline;
   readonly mergeRequestIid: number;
-}
+};
 
 /**
- * Every node of the pipeline. The machine starts at `fetch_queue`, walks the
- * graph one transition at a time, and terminates at `end`.
+ * Every node of the pipeline.
  *
- *   fetch_queue → claim_issue → branch_worktree → run_impl → open_draft_mr
- *     → review ⇄ evaluate → fix → … → run_dogfood → merge → done → fetch_queue
- *
- * `failed` is reachable from any pipeline node; `done` and `failed` both loop
- * back to `fetch_queue` to pick up the next issue.
+ * The machine starts at `fetch_queue` and terminates at `end`.
+ * `failed` is reachable from any node.
+ * Both `done` and `failed` loop back to `fetch_queue`.
  */
 export type State =
   | { readonly kind: "fetch_queue" }

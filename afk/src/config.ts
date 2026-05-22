@@ -1,12 +1,11 @@
 /**
- * config.ts — every tunable constant for the AFK orchestrator, in one place.
+ * Config.ts — every tunable constant for the AFK orchestrator, in one place.
  *
- * No logic and no dependencies beyond the standard library — just the dials.
- * Anything a future operator might want to change lives here and nowhere else.
+ * No logic beyond the standard library — only the dials.
+ * Anything a future operator might want to change lives here.
  */
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 /** The GitLab issue labels the orchestrator reads and writes. */
 export const LABELS = {
@@ -47,9 +46,9 @@ export const ISSUE_BUDGET_MS = 90 * 60 * 1000;
 export const SENTINEL_POLL_MS = 5000;
 
 /**
- * Hard ceiling on any single shell-out (git, glab, jq, tmux). A hung command
- * — a `glab` call to an unreachable server, a `git push` to a dead remote —
- * must not freeze the orchestrator; past this, the command is abandoned.
+ * Hard ceiling on any single shell-out (git, glab, jq, tmux).
+ * A hung command must not freeze the orchestrator.
+ * Past this duration, the command is abandoned.
  */
 export const COMMAND_TIMEOUT_MS = 2 * 60 * 1000;
 
@@ -63,10 +62,9 @@ export const WORKTREES_DIR = join(homedir(), ".afk-worktrees");
 export const RUNS_DIR = join(homedir(), ".afk-runs");
 
 /**
- * The directory holding the five phase prompt templates. Resolved relative to
- * this file (`afk/src/config.ts` → `afk/assets/prompts`) via `import.meta.url`
- * — which works under both Bun and Node — so the orchestrator runs wherever
- * the skill is installed, and this module stays importable by the test runner.
+ * The directory holding the five phase prompt templates.
+ * Resolved relative to this file (`afk/src/config.ts` →
+ * `afk/assets/prompts`) via `import.meta.dirname`.
+ * Works under both Bun and Node.
  */
-const moduleDir = dirname(fileURLToPath(import.meta.url));
-export const PROMPTS_DIR = join(moduleDir, "..", "assets", "prompts");
+export const PROMPTS_DIR = join(import.meta.dirname, "..", "assets", "prompts");

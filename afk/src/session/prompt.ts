@@ -1,10 +1,11 @@
 /**
- * session/prompt.ts — load a phase's prompt template and fill its placeholders.
+ * Session/prompt.ts — load a phase's prompt template and fill its placeholders.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Effect } from "effect";
-import { type Phase, PROMPTS_DIR } from "../config";
+import type { Phase } from "../config";
+import { PROMPTS_DIR } from "../config";
 import { PromptError } from "./errors";
 
 /** The template file backing each phase. */
@@ -19,13 +20,26 @@ const TEMPLATE_FILE: Record<Phase, string> = {
 /** A `{placeholder}` token — lowercase letters and underscores between braces. */
 const PLACEHOLDER = /\{[a-z_]+\}/g;
 
+/** Replace every `{key}` in `text` with the corresponding value. */
+const applyReplacements = (
+  text: string,
+  entries: readonly (readonly [string, string])[],
+): string => {
+  const first = entries.at(0);
+  if (first === undefined) {
+    return text;
+  }
+  const [key, value] = first;
+  return applyReplacements(text.replaceAll(`{${key}}`, value), entries.slice(1));
+};
+
 /**
- * Read the `phase` template and substitute every `{placeholder}` from
- * `replacements`.
+ * Read the `phase` template and substitute every `{placeholder}`.
  *
- * Fails with {@link PromptError} if the template cannot be read, or if any
- * `{placeholder}` is left unresolved — a literal `{worktree}` reaching the
- * claude session would be a silently wrong prompt, caught here instead.
+ * Fails with {@link PromptError} if the template cannot be read,
+ * or if any `{placeholder}` is left unresolved. A literal
+ * `{worktree}` reaching the claude session would be a silently
+ * wrong prompt, caught here instead.
  */
 export const renderPrompt = (
   phase: Phase,
@@ -41,10 +55,7 @@ export const renderPrompt = (
         }),
     });
 
-    let rendered = template;
-    for (const [key, value] of Object.entries(replacements)) {
-      rendered = rendered.replaceAll(`{${key}}`, value);
-    }
+    const rendered = applyReplacements(template, Object.entries(replacements));
 
     const unresolved = rendered.match(PLACEHOLDER);
     if (unresolved !== null) {

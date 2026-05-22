@@ -2,9 +2,10 @@
 /**
  * V0 — integration POC for the AFK completion mechanism.
  *
- * The whole decomposed pipeline rests on ONE mechanism: a phase session ends
- * its final message with `VERDICT: <TOKEN>`, a non-blocking Stop hook captures
- * that message into a sentinel file, and the orchestrator reads + parses it.
+ * The whole decomposed pipeline rests on ONE mechanism.
+ * A phase session ends its final message with `VERDICT: <TOKEN>`.
+ * A non-blocking Stop hook captures that message into a sentinel file.
+ * The orchestrator reads and parses it.
  *
  * This proves the load-bearing, environment-dependent half end-to-end:
  *
@@ -44,16 +45,22 @@ const SENTINEL = join(TEST_DIR, "sentinel.flag");
 const PROMPT_FILE = join(TEST_DIR, "prompt.txt");
 const TIMEOUT_MS = 3 * 60 * 1000; // 3 min — generous for a one-shot `pwd`
 const POLL_MS = 2000;
+const TUI_STARTUP_MS = 4000;
+const PASTE_SETTLE_MS = 500;
+const MS_PER_SECOND = 1000;
 const EXPECTED = "READY_FOR_REVIEW";
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 async function which(cmd: string): Promise<boolean> {
-  return (await $`which ${cmd}`.nothrow().quiet()).exitCode === 0;
+  const result = await $`which ${cmd}`.nothrow().quiet();
+  return result.exitCode === 0;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+async function sleep(ms: number): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<undefined>();
+  setTimeout(resolve, ms);
+  await promise;
 }
 
 async function cleanup(): Promise<void> {
@@ -125,7 +132,7 @@ await writeFile(
 console.log("→ spawning tmux + claude…");
 await $`tmux new-session -d -s ${SESSION_NAME} -c ${TEST_DIR}`;
 await $`tmux send-keys -t ${SESSION_NAME} ${"claude --dangerously-skip-permissions"} Enter`;
-await sleep(4000); // let the TUI come up (POC-only fixed sleep — see file header)
+await sleep(TUI_STARTUP_MS); // let the TUI come up (POC-only fixed sleep — see file header)
 
 await writeFile(
   PROMPT_FILE,
@@ -137,21 +144,24 @@ await writeFile(
 console.log("→ pasting prompt…");
 await $`tmux load-buffer ${PROMPT_FILE}`;
 await $`tmux paste-buffer -t ${SESSION_NAME}`;
-await sleep(500);
+await sleep(PASTE_SETTLE_MS);
 await $`tmux send-keys -t ${SESSION_NAME} Enter`;
 
 // ─── Poll the sentinel ─────────────────────────────────────────────────
 
 console.log(`\nPolling for the sentinel… (watch: tmux attach -r -t ${SESSION_NAME})`);
 const start = Date.now();
+// Polling loop: sentinel appears asynchronously via tmux Stop hook.
 while (!existsSync(SENTINEL)) {
-  if (Date.now() - start > TIMEOUT_MS) {
-    await fail(`timeout after ${TIMEOUT_MS / 1000}s — the Stop hook never wrote the sentinel.`);
+  if (TIMEOUT_MS < Date.now() - start) {
+    await fail(
+      `timeout after ${TIMEOUT_MS / MS_PER_SECOND}s — the Stop hook never wrote the sentinel.`,
+    );
   }
-  process.stdout.write(".");
+  void process.stdout.write(".");
   await sleep(POLL_MS);
 }
-console.log(`\n✓ Sentinel written after ${((Date.now() - start) / 1000).toFixed(1)}s`);
+console.log(`\n✓ Sentinel written after ${((Date.now() - start) / MS_PER_SECOND).toFixed(1)}s`);
 
 // ─── Verify: the hook delivered last_assistant_message, and it parses ──
 
@@ -162,7 +172,8 @@ if (captured.trim() === "") {
       "This is the gate: the hook cannot rely on that field. Fallback: parse `transcript_path`.",
   );
 }
-console.log(`✓ Hook delivered last_assistant_message (${captured.length} chars)`);
+const capturedLen = captured.length;
+console.log(`✓ Hook delivered last_assistant_message (${capturedLen} chars)`);
 
 const verdict = parseVerdict(captured);
 if (verdict !== EXPECTED) {

@@ -1,28 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { selectStale, worktreePathsForIssue } from "./stale";
 
-const HOUR = 60 * 60 * 1000;
-const NOW = Date.parse("2026-05-22T12:00:00Z");
-
 describe("selectStale", () => {
+  const HOUR_MS = 60 * 60 * 1000;
+  const NOW_MS = Date.parse("2026-05-22T12:00:00Z");
+
   it("selects a claim older than the threshold", () => {
     const issues = [{ iid: 1, updatedAt: "2026-05-22T09:00:00Z" }]; // 3h ago
-    expect(selectStale(issues, NOW, 2 * HOUR).map((i) => i.iid)).toEqual([1]);
+    expect(selectStale(issues, NOW_MS, 2 * HOUR_MS).map((issue) => issue.iid)).toEqual([1]);
   });
 
   it("keeps a fresh claim", () => {
     const issues = [{ iid: 2, updatedAt: "2026-05-22T11:00:00Z" }]; // 1h ago
-    expect(selectStale(issues, NOW, 2 * HOUR)).toEqual([]);
+    expect(selectStale(issues, NOW_MS, 2 * HOUR_MS)).toEqual([]);
   });
 
   it("is exclusive at exactly the threshold", () => {
     const issues = [{ iid: 3, updatedAt: "2026-05-22T10:00:00Z" }]; // exactly 2h ago
-    expect(selectStale(issues, NOW, 2 * HOUR)).toEqual([]);
+    expect(selectStale(issues, NOW_MS, 2 * HOUR_MS)).toEqual([]);
   });
 
   it("never selects an issue with an unparseable date", () => {
     const issues = [{ iid: 4, updatedAt: "not-a-date" }];
-    expect(selectStale(issues, NOW, 2 * HOUR)).toEqual([]);
+    expect(selectStale(issues, NOW_MS, 2 * HOUR_MS)).toEqual([]);
   });
 
   it("filters a mixed list", () => {
@@ -31,7 +31,7 @@ describe("selectStale", () => {
       { iid: 2, updatedAt: "2026-05-22T11:30:00Z" }, // 30m — fresh
       { iid: 3, updatedAt: "2026-05-21T12:00:00Z" }, // 24h — stale
     ];
-    expect(selectStale(issues, NOW, 2 * HOUR).map((i) => i.iid)).toEqual([1, 3]);
+    expect(selectStale(issues, NOW_MS, 2 * HOUR_MS).map((issue) => issue.iid)).toEqual([1, 3]);
   });
 });
 
@@ -71,7 +71,7 @@ describe("worktreePathsForIssue", () => {
     expect(worktreePathsForIssue("", 5)).toEqual([]);
   });
 
-  it("skips detached / branchless and bare worktree blocks", () => {
+  it("skips detached, branchless, bare worktree blocks", () => {
     const odd = [
       "worktree /home/u/detached",
       "HEAD dddd",

@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
 /**
- * sweep-stale-claims.ts — standalone AFK crash recovery.
+ * Sweep-stale-claims.ts — standalone AFK crash recovery.
  *
- * A crashed orchestrator strands its issue as `picked-by-agent`, which the
- * queue read filters out. This sweep — run on its own schedule (cron, ~3h),
- * never by the orchestrator — unlabels `picked-by-agent` issues idle longer
- * than the per-issue budget + margin, and force-removes the orphan worktree,
+ * A crashed orchestrator strands its issue as `picked-by-agent`.
+ * The queue read filters those out.
+ * This sweep runs on its own schedule (cron, ~3h), never by the orchestrator.
+ * It unlabels `picked-by-agent` issues idle longer than the budget + margin.
+ * It also force-removes the orphan worktree,
  * so the next run re-picks them from scratch.
  *
  * Usage: bun ~/.claude/skills/afk/scripts/sweep-stale-claims.ts [--dry-run]
@@ -19,7 +20,8 @@ import { LABELS } from "../src/config";
 import { describeGitLabError } from "../src/gitlab/errors";
 import { parseGlabJson, runGlabRead, runGlabWrite } from "../src/gitlab/glab";
 import { IssueSchema } from "../src/gitlab/schema";
-import { type ClaimedIssue, selectStale, worktreePathsForIssue } from "../src/recovery/stale";
+import type { ClaimedIssue } from "../src/recovery/stale";
+import { selectStale, worktreePathsForIssue } from "../src/recovery/stale";
 import { runShell } from "../src/shell";
 
 /** Staleness threshold — 2h, safely above the 90-minute per-issue budget. */
@@ -45,6 +47,17 @@ const listClaimedIssues = Effect.gen(function* () {
   return issues.map((issue): ClaimedIssue => ({ iid: issue.iid, updatedAt: issue.updated_at }));
 });
 
+/** Remove a single worktree by path. Logs success or failure. */
+const removeOneWorktree = (path: string): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    const removed = yield* runShell(() => $`git worktree remove --force ${path}`);
+    if (removed.exitCode === 0) {
+      yield* Console.log(`    removed worktree ${path}`);
+    } else {
+      yield* Console.error(`    could not remove worktree ${path}: ${removed.stderr.trim()}`);
+    }
+  });
+
 /** Force-remove an issue's orphan worktree(s). Best-effort, and logged. */
 const removeOrphanWorktrees = (iid: number): Effect.Effect<void> =>
   Effect.gen(function* () {
@@ -54,9 +67,7 @@ const removeOrphanWorktrees = (iid: number): Effect.Effect<void> =>
       return;
     }
     for (const path of worktreePathsForIssue(listed.stdout, iid)) {
-      const removed = yield* runShell(() => $`git worktree remove --force ${path}`);
-      if (removed.exitCode === 0) {yield* Console.log(`    removed worktree ${path}`);}
-      else {yield* Console.error(`    could not remove worktree ${path}: ${removed.stderr.trim()}`);}
+      yield* removeOneWorktree(path);
     }
     yield* runShell(() => $`git worktree prune`);
   });
@@ -81,17 +92,18 @@ const recoverIssue = (issue: ClaimedIssue): Effect.Effect<void> =>
 
 const program = Effect.gen(function* () {
   const claimed = yield* listClaimedIssues;
-  const stale = selectStale(claimed, Date.now(), STALE_THRESHOLD_MS);
+  const staleIssues = selectStale(claimed, Date.now(), STALE_THRESHOLD_MS);
 
-  if (stale.length === 0) {
+  if (staleIssues.length === 0) {
     yield* Console.log("No stale claims.");
     return;
   }
 
-  yield* Console.log(`${stale.length} stale claim(s)${dryRun ? " — dry-run, no changes:" : ":"}`);
+  const staleCount = staleIssues.length;
+  yield* Console.log(`${staleCount} stale claim(s)${dryRun ? " — dry-run, no changes:" : ":"}`);
   if (dryRun) {
     yield* Effect.forEach(
-      stale,
+      staleIssues,
       (issue) => Console.log(`  #${issue.iid} — idle since ${issue.updatedAt}`),
       {
         discard: true,
@@ -100,7 +112,7 @@ const program = Effect.gen(function* () {
     return;
   }
   // Recover each — one issue's failure must not abort the others.
-  yield* Effect.forEach(stale, recoverIssue, { discard: true });
+  yield* Effect.forEach(staleIssues, (issue) => recoverIssue(issue), { discard: true });
 });
 
 BunRuntime.runMain(program);

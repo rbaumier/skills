@@ -1,5 +1,5 @@
 /**
- * gitlab/errors.ts — the failure modes of the GitLab boundary.
+ * Gitlab/errors.ts — the failure modes of the GitLab boundary.
  *
  * Error policy (consistent across every slice):
  *  - One tagged error per *distinct* failure mode — never a single catch-all.
@@ -32,10 +32,8 @@ export type GitLabError = GlabCommandError | GlabResponseError;
 
 /** A one-line, human-readable description of a GitLab error. */
 export function describeGitLabError(error: GitLabError): string {
-  switch (error._tag) {
-    case "GlabCommandError":
-      return `glab ${error.command.join(" ")} exited ${error.exitCode}: ${error.stderr.slice(0, 200)}`;
-    case "GlabResponseError":
-      return `glab ${error.command.join(" ")} returned unexpected output: ${error.detail.slice(0, 200)}`;
+  if (error._tag === "GlabCommandError") {
+    return `glab ${error.command.join(" ")} exited ${error.exitCode}: ${error.stderr.slice(0, 200)}`;
   }
+  return `glab ${error.command.join(" ")} returned unexpected output: ${error.detail.slice(0, 200)}`;
 }

@@ -9,20 +9,34 @@
  *
  * Usage:
  *   bun ~/.claude/skills/afk/v1b-sandbox-setup.ts            # dry-run
- *   bun ~/.claude/skills/afk/v1b-sandbox-setup.ts --confirm  # creates issue
+ *   bun ~/.claude/skills/afk/v1b-sandbox-setup.ts --confirm  # creates issue.
  */
 import { $ } from "bun";
+import { z } from "zod";
 
-const repoJson = (await $`glab repo view --output json`.nothrow().text()).trim();
+const repoRaw = await $`glab repo view --output json`.nothrow().text();
+const repoJson = repoRaw.trim();
 if (!repoJson) {
   console.error("ERROR: glab repo view failed. Run this from within a GitLab repo.");
   process.exit(2);
 }
 
-const project = JSON.parse(repoJson) as {
-  path_with_namespace: string;
-  web_url: string;
-};
+const REPO_SCHEMA = z.object({
+  path_with_namespace: z.string().trim().min(1),
+  web_url: z.string().trim().min(1),
+});
+
+/** Parse raw JSON string into an unknown value for schema validation. */
+function safeParseJson(raw: string): unknown {
+  return JSON.parse(raw);
+}
+
+const validated = REPO_SCHEMA.safeParse(safeParseJson(repoJson));
+if (!validated.success) {
+  console.error("ERROR: glab repo view returned invalid or unexpected JSON.");
+  process.exit(2);
+}
+const project = validated.data;
 
 console.log("Sandbox setup target:");
 console.log(`  Project: ${project.path_with_namespace}`);
