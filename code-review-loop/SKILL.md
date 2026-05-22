@@ -266,8 +266,6 @@ Read all reports. Process in funnel order:
 
 Dedup before bloat filter. Else fix fan-out gets N copies of same `fix_prompt`, rewrites same line N times (sometimes inconsistently).
 
-**Audit `inspected.files` against `finding.file`.** Line-anchored finding citing a file not in `inspected.files` = agent generalizing from diff slice, not code → drop. Catches common hallucination (agent infers bug from grep without reading the implementation). Audit applies to line-anchored only; prose findings (Funnel L1/L2, Materiality) exempt.
-
 **Filter bloat-shaped findings first.** Review agents bias toward additions. Bar = **sound + correct + elegant** — 2/3 is a signal to look harder, not to mechanically apply.
 
 Two-step triage per finding:
@@ -464,13 +462,13 @@ For every potential finding, answer these questions. If any answer kills the fin
 
 ## Output format for line-anchored findings
 
-Agents anchoring findings to `file:line` emit JSON. Carries auditable reasoning chain + fix prompt consumed verbatim by per-file fix agent — no re-interpretation between finding and fix.
+Agents anchoring findings to `file:line` emit a **lean JSON envelope** — enough for Step 2 triage and verbatim fix-prompt forwarding, nothing more. Verbose audit trails (`inspected` file lists, separate test-coverage prose, redundant scope restatements) multiply across a 12-agent fan-out and are the largest controllable drain on the orchestrator's context. Keep the payload tight.
 
 Funnel L1/L2 stay textual (structural, not file:line-anchored). Dogfood keeps its own contract (`cleanup-complete` line load-bearing for convergence).
 
 Zero findings → respond exactly `No findings.` (textual, not JSON — preserves convergence signal Step 4 reads).
 
-Else single JSON object, no markdown, no preamble:
+Else **respond with ONLY the JSON object**: first character `{`, last character `}`. No prose preamble, no reasoning narration, no markdown fence. The reasoning belongs in `analysis_chain` and nowhere else — a walkthrough before the JSON is pure wasted context across a 12-agent fan-out.
 
 ```json
 {
@@ -478,46 +476,36 @@ Else single JSON object, no markdown, no preamble:
     {
       "file": "src/auth/session.rs",
       "line": 42,
-      "end_line": 45,
       "severity": "bug",
       "confidence": "high",
       "signature": "src/auth/session.rs:42:unwrap-on-user-header",
       "title": "unwrap() on user-supplied header",
       "analysis_chain": [
-        "Line 42 calls .unwrap() on req.headers.get(\"X-Token\")",
-        "HeaderMap::get returns Option<&HeaderValue>",
-        "Header is attacker-controlled — missing header panics the handler"
+        ".unwrap() on req.headers.get(\"X-Token\") — Option, missing header panics the handler",
+        "X-Token is attacker-controlled",
+        "no caller-site guard"
       ],
-      "why_tests_dont_cover": "tests/auth/session_test.rs only covers the happy path with X-Token present; no test sends a request without the header",
-      "minimum_fix_scope": "replace .unwrap() with .ok_or(AuthError::MissingToken)? on line 42",
-      "suggested_regression_test": "POST /session without X-Token header expects 401, not 500",
-      "fix_prompt": "In src/auth/session.rs line 42, replace .unwrap() with .ok_or(AuthError::MissingToken)? to propagate instead of panic."
+      "fix_prompt": "In src/auth/session.rs line 42, replace .unwrap() with .ok_or(AuthError::MissingToken)? to propagate instead of panic. Add a non-regression test: POST /session without X-Token expects 401, not 500."
     }
-  ],
-  "inspected": {
-    "files": ["src/auth/session.rs", "src/auth/errors.rs", "tests/auth/session_test.rs"],
-    "symbols": ["validate_session", "AuthError"],
-    "notes": ["middleware in src/middleware/auth.rs already returns 401 on AuthError; no double-handling risk"]
-  }
+  ]
 }
 ```
 
 **Field rationales:**
 
-- `analysis_chain` — auditable trace. Chain not surviving re-read of cited code = hallucination; Step 2 drops without re-reading diff.
-- `fix_prompt` — consumed verbatim by per-file fix agents. No re-interpretation.
+- `analysis_chain` — auditable trace, **≤ 3 bullets, each ≤ 25 words**. Step 2 re-reads the cited code; a chain that doesn't survive that re-read = hallucination → dropped. This is the *only* reasoning channel — there is no separate prose section.
+- `fix_prompt` — consumed verbatim by per-file fix agents; state the concrete line and concrete replacement. For `bug`/`security`/`performance`/`error_handling`, **append the non-regression test to add** in the same string (`Add a test: …`) — the fix agent's TDD step reads it from here.
 - `signature` — dedup key `<file>:<line>:<failure-mode-slug>`. Controlled vocabulary when applicable: `panic-on-none` · `missing-validation` · `injection-sql` · `injection-shell` · `injection-template` · `missing-tenant-filter` · `secret-leak-log` · `unawaited-promise` · `dropped-future` · `race-shared-state` · `missing-timeout` · `unbounded-retry` · `path-traversal` · `toctou` · `wrong-role-check` · `missing-permission-check` · `n-plus-one` · `missing-transaction` · `replay-attack` · `session-fixation` · `zero-callers-dead` · `single-caller-inlinable` · `unused-param` · `derivable-default` · `redundant-overload`. Else free 3-5 kebab-token slug. Step 2 dedup matcher: same file, line ±3, same slug OR title-token Jaccard ≥ 0.6.
 - `confidence` — `high|medium|low`, separate from severity. `severity: bug, confidence: low` survives Step 2 only with airtight analysis_chain. Low-confidence security findings still warrant 2nd look — don't merge with severity.
-- `why_tests_dont_cover` — forces agent to grep test suite before emitting. Existing tests cover failure mode → finding = test, not bug → drop. Proof you looked.
-- `suggested_regression_test` — consumed by fix agent for TDD step (Step 2 mandates non-regression test for bugs). Pre-articulating saves re-derivation.
-- `minimum_fix_scope` — anti-bloat at emission, not just triage. Can't state small scope → finding probably not ready.
-- `inspected` — audit surface. `finding.file` not in `inspected.files` → agent claimed insight without reading → drop.
-
-`why_tests_dont_cover`, `suggested_regression_test`, `minimum_fix_scope` apply to `bug`/`security`/`performance`/`error_handling`. `suggestion` → `null`.
 
 Severity: `bug` | `security` | `performance` | `error_handling` | `suggestion`. Suggestions usually dropped at Context verification step 1.
 
 Confidence: `high` | `medium` | `low`. Default `high` only when analysis_chain survives independent re-derivation.
+
+**Two checks done silently — discipline kept, fields dropped** (were `why_tests_dont_cover` / `inspected`):
+
+- *Test coverage* — before emitting a `bug`/`security`/`performance`/`error_handling` finding, grep the test suite. A test already exercising this exact failure mode means it's covered → drop the finding.
+- *Read what you flag* — only flag a file you have actually read in full this session. A finding inferred from the diff slice without reading the implementation is a hallucination → don't emit it.
 
 ---
 

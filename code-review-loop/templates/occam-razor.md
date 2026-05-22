@@ -38,8 +38,6 @@ Use controlled-vocabulary slugs for `signature`. Step 2 dedup collapses cross-ag
 - `zero-callers-dead`, `redundant-overload` → `bug`. These block convergence — the diff ships unreachable or duplicated code.
 - `single-caller-inlinable`, `unused-param`, `derivable-default` → `suggestion`. These surface in Step 5's open-suggestions list; the user decides. Auto-deleting a 1-caller wrapper every iteration is too aggressive — many are deliberate.
 
-`why_tests_dont_cover`, `suggested_regression_test`, `minimum_fix_scope` apply when severity is `bug`. For `suggestion`, set them to `null`.
-
 ## A worked example (what good looks like)
 
 Diff introduces `enumFilter(values, options, opts = defaults)` in `src/filters/enum.ts`.
