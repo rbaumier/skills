@@ -14,7 +14,7 @@ import { z } from "zod";
 export const IssueSchema = z.object({
   iid: z.number(),
   title: z.string().trim().min(1),
-  description: z.string().trim().min(1).nullable().default(null),
+  description: z.string().trim().nullable().default(null),
   labels: z.array(z.string().trim().min(1)).default([]),
   updated_at: z.string().trim().min(1).default(""),
 });

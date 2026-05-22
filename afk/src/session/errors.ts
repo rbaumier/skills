@@ -63,7 +63,7 @@ const MS_PER_SECOND = 1000;
 const MAX_CAPTURED_CHARS = 120;
 
 /** A one-line, human-readable description of a phase error. */
-export function describePhaseError(error: PhaseError): string {
+export const describePhaseError = (error: PhaseError): string => {
   switch (error._tag) {
     case "TmuxError": {
       return `tmux ${error.step} failed: ${error.stderr.slice(0, MAX_STDERR_CHARS)}`;
@@ -84,8 +84,8 @@ export function describePhaseError(error: PhaseError): string {
       return `stopped without a clean verdict (got: ${error.captured.slice(0, MAX_CAPTURED_CHARS)})`;
     }
     default: {
-      // Exhaustive — all PhaseError tags are covered above.
-      return `unknown phase error: ${String(error)}`;
+      const _exhaustive: never = error;
+      return `unknown phase error: ${String(_exhaustive)}`;
     }
   }
-}
+};
