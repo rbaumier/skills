@@ -50,8 +50,11 @@ Every Bash call runs from inside `{worktree}`.
      **verified fix instruction**, and leave the thread UNRESOLVED — that is
      `fix`'s work.
 
-       bun ~/.claude/skills/afk/scripts/mr-discussion.ts post    --mr {mr_iid} --body "<reply>"
+       bun ~/.claude/skills/afk/scripts/mr-discussion.ts reply   --mr {mr_iid} --discussion <id> --body "<reply>"
        bun ~/.claude/skills/afk/scripts/mr-discussion.ts resolve --mr {mr_iid} --discussion <id>
+
+   Use `reply` (a note ON the finding's thread), never `post` — `post` would
+   create an orphan discussion instead of answering the finding in place.
 
    If a `resolve` call exits non-zero, retry it once; if it still fails, end
    with the `NEEDS_FIX` verdict — a thread you could not resolve still blocks.

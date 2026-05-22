@@ -36,7 +36,7 @@ Every Bash call runs from inside `{worktree}`.
 5. **Resolve each fixed thread** — reply with the real pushed commit SHA,
    then resolve it:
 
-       bun ~/.claude/skills/afk/scripts/mr-discussion.ts post    --mr {mr_iid} --body "fixed in <sha>: …"
+       bun ~/.claude/skills/afk/scripts/mr-discussion.ts reply   --mr {mr_iid} --discussion <id> --body "fixed in <sha>: …"
        bun ~/.claude/skills/afk/scripts/mr-discussion.ts resolve --mr {mr_iid} --discussion <id>
 
    If a `resolve` call exits non-zero, retry it once.
@@ -46,7 +46,7 @@ Every Bash call runs from inside `{worktree}`.
 You do not re-judge whether a finding is real — `evaluate` decided that. But
 if a verified instruction genuinely cannot be applied — it breaks the build,
 contradicts the code, or is incoherent — do NOT force a wrong change and do
-NOT silently skip it. Instead: post a reply on that thread explaining exactly
+NOT silently skip it. Instead: `reply` on that thread explaining exactly
 why it cannot be applied, and leave the thread unresolved. The next
 `evaluate` pass re-judges it. (If the loop still cannot converge, the
 orchestrator's fix-cycle cap ends the issue for a human — the intended
