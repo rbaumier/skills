@@ -5,7 +5,8 @@
  * Anything a future operator might want to change lives here and nowhere else.
  */
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 /** The GitLab issue labels the orchestrator reads and writes. */
 export const LABELS = {
@@ -45,6 +46,13 @@ export const ISSUE_BUDGET_MS = 90 * 60 * 1000
 /** How often the orchestrator polls a phase's sentinel file. */
 export const SENTINEL_POLL_MS = 5000
 
+/**
+ * Hard ceiling on any single shell-out (git, glab, jq, tmux). A hung command
+ * — a `glab` call to an unreachable server, a `git push` to a dead remote —
+ * must not freeze the orchestrator; past this, the command is abandoned.
+ */
+export const COMMAND_TIMEOUT_MS = 2 * 60 * 1000
+
 /** The most review→fix cycles allowed before the issue is failed for a human. */
 export const MAX_FIX_CYCLES = 3
 
@@ -54,5 +62,11 @@ export const WORKTREES_DIR = join(homedir(), ".afk-worktrees")
 /** Where per-run logs live — one timestamped subdirectory per run. */
 export const RUNS_DIR = join(homedir(), ".afk-runs")
 
-/** The directory holding the five phase prompt templates. */
-export const PROMPTS_DIR = join(homedir(), ".claude/skills/afk/assets/prompts")
+/**
+ * The directory holding the five phase prompt templates. Resolved relative to
+ * this file (`afk/src/config.ts` → `afk/assets/prompts`) via `import.meta.url`
+ * — which works under both Bun and Node — so the orchestrator runs wherever
+ * the skill is installed, and this module stays importable by the test runner.
+ */
+const moduleDir = dirname(fileURLToPath(import.meta.url))
+export const PROMPTS_DIR = join(moduleDir, "..", "assets", "prompts")
