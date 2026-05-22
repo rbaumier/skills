@@ -73,7 +73,7 @@ const checks: Check[] = [
   {
     name: "api — discussions endpoint (mr-discussion.ts)",
     cmd: ["api", "--help"],
-    mustContain: ["--paginate", "--field", "--raw-field"],
+    mustContain: ["--paginate", "--method", "--field", "--raw-field"],
   },
 ]
 

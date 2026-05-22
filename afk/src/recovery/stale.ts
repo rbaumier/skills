@@ -1,11 +1,11 @@
 /**
- * stale.ts — pure logic for the crash-recovery sweep.
+ * recovery/stale.ts — pure logic for the crash-recovery sweep.
  *
  * When the orchestrator crashes mid-run it leaves the issue labelled
- * `picked-by-agent`, which `onFetchQueue` filters out — silently stranding it.
- * The standalone sweep recovers those. This module is the pure decision logic
- * (which claims are stale, which worktrees belong to an issue) — unit-tested
- * without `glab` or `git`.
+ * `picked-by-agent`, which the queue read filters out — silently stranding
+ * it. The standalone sweep recovers those. This module is the pure decision
+ * logic (which claims are stale, which worktrees belong to an issue),
+ * unit-tested without `glab` or `git`.
  */
 
 /** An issue carrying the `picked-by-agent` label, with its last-update time. */
@@ -25,9 +25,9 @@ export function selectStale(
   thresholdMs: number,
 ): ReadonlyArray<ClaimedIssue> {
   return issues.filter((issue) => {
-    const updated = Date.parse(issue.updatedAt)
-    if (Number.isNaN(updated)) return false
-    return nowMs - updated > thresholdMs
+    const updatedMs = Date.parse(issue.updatedAt)
+    if (Number.isNaN(updatedMs)) return false
+    return nowMs - updatedMs > thresholdMs
   })
 }
 
@@ -50,7 +50,7 @@ export function worktreePathsForIssue(porcelain: string, iid: number): ReadonlyA
     if (line.startsWith("worktree ")) {
       currentPath = line.slice("worktree ".length).trim()
     } else if (line.startsWith("branch ") && currentPath !== null) {
-      // branch line looks like: `branch refs/heads/afk/issue-5-some-slug`
+      // The branch line looks like: `branch refs/heads/afk/issue-5-some-slug`.
       if (line.includes(`/afk/issue-${iid}-`)) {
         paths.push(currentPath)
       }

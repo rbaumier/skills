@@ -12,7 +12,7 @@ The orchestrator — not Claude — owns the state machine: the queue, claims, w
 ## Run it
 
 ```bash
-bun ~/.claude/skills/afk/orchestrator.ts
+bun ~/.claude/skills/afk/src/main.ts
 ```
 
 It runs to completion on its own — kick it off, step away. Worktrees and run logs are left under `~/.afk-worktrees/` and `~/.afk-runs/` for post-mortem.
@@ -26,6 +26,12 @@ It runs to completion on its own — kick it off, step away. Worktrees and run l
 
 ## Architecture
 
-`orchestrator.ts` is the whole system. Design and rationale: [`docs/2026-05-22-orchestrator-decomposition.md`](docs/2026-05-22-orchestrator-decomposition.md).
+The orchestrator lives under `src/`, organised into feature slices:
 
-`verify-crl-witness.sh`, `v0-test.ts`, `v1a-smoke.ts`, `v1b-sandbox-setup.ts` are validation/smoke tools — not part of a run.
+- `src/gitlab/` — the GitLab boundary (the `glab` runner, schemas, MR discussions).
+- `src/session/` — running one phase as a `claude` tmux session (verdict, prompt, tmux, the `acquireUseRelease` phase runner).
+- `src/pipeline/` — the state machine (state, handlers, the run loop).
+- `src/recovery/` — crash-recovery sweep logic.
+- `src/main.ts` — the entry point; `src/preflight.ts`, `src/config.ts`, `src/shell.ts`, `src/run-artifacts.ts` are cross-cutting.
+
+`scripts/mr-discussion.ts` and `scripts/sweep-stale-claims.ts` are CLIs (the phase prompts and a recovery cron call them). `v0-test.ts`, `v1a-smoke.ts`, `v1b-sandbox-setup.ts` are validation/smoke tools — not part of a run.
