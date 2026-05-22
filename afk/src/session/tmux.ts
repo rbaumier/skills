@@ -6,10 +6,10 @@
  * later killed. Each step is an Effect, so the lifecycle composes cleanly
  * into the `acquireUseRelease` bracket in phase.ts.
  */
-import { $ } from "bun"
-import { Effect } from "effect"
-import { runShell } from "../shell"
-import { TmuxError } from "./errors"
+import { $ } from "bun";
+import { Effect } from "effect";
+import { runShell } from "../shell";
+import { TmuxError } from "./errors";
 
 /** Run one tmux command, failing {@link TmuxError} on a non-zero exit. */
 const tmuxStep = (
@@ -22,19 +22,19 @@ const tmuxStep = (
         ? Effect.void
         : Effect.fail(new TmuxError({ step, stderr: result.stderr.trim() })),
     ),
-  )
+  );
 
 /** Create a detached tmux session rooted at `worktree`. */
 export const createSession = (session: string, worktree: string): Effect.Effect<void, TmuxError> =>
-  tmuxStep("new-session", () => $`tmux new-session -d -s ${session} -c ${worktree}`)
+  tmuxStep("new-session", () => $`tmux new-session -d -s ${session} -c ${worktree}`);
 
 /** Kill a tmux session. Best-effort — a missing session is not an error. */
 export const killSession = (session: string): Effect.Effect<void> =>
-  runShell(() => $`tmux kill-session -t ${session}`).pipe(Effect.asVoid)
+  runShell(() => $`tmux kill-session -t ${session}`).pipe(Effect.asVoid);
 
 /** Capture the visible content of a session's pane. */
 const capturePane = (session: string): Effect.Effect<string> =>
-  runShell(() => $`tmux capture-pane -p -t ${session}`).pipe(Effect.map((result) => result.stdout))
+  runShell(() => $`tmux capture-pane -p -t ${session}`).pipe(Effect.map((result) => result.stdout));
 
 /**
  * Wait for the `claude` TUI to settle before pasting into it.
@@ -59,7 +59,7 @@ const waitForTuiReady = (session: string): Effect.Effect<void> =>
           })),
         ),
     },
-  ).pipe(Effect.asVoid)
+  ).pipe(Effect.asVoid);
 
 /**
  * Boot `claude` inside an already-created session and paste the prompt.
@@ -67,22 +67,24 @@ const waitForTuiReady = (session: string): Effect.Effect<void> =>
  * drives it.
  */
 export const startClaudeAndPaste = (input: {
-  readonly session: string
-  readonly tmuxLogPath: string
-  readonly promptFile: string
+  readonly session: string;
+  readonly tmuxLogPath: string;
+  readonly promptFile: string;
 }): Effect.Effect<void, TmuxError> =>
   Effect.gen(function* () {
     // Mirror the pane into a log file for live tailing. The path is quoted —
     // tmux runs this string through a shell, and the path may contain spaces.
-    yield* tmuxStep("pipe-pane", () =>
-      $`tmux pipe-pane -t ${input.session} -O ${`cat >> "${input.tmuxLogPath}"`}`,
-    )
-    yield* tmuxStep("start-claude", () =>
-      $`tmux send-keys -t ${input.session} ${"claude --dangerously-skip-permissions"} Enter`,
-    )
-    yield* waitForTuiReady(input.session)
-    yield* tmuxStep("load-buffer", () => $`tmux load-buffer ${input.promptFile}`)
-    yield* tmuxStep("paste-buffer", () => $`tmux paste-buffer -t ${input.session}`)
-    yield* Effect.sleep("500 millis")
-    yield* tmuxStep("send-enter", () => $`tmux send-keys -t ${input.session} Enter`)
-  })
+    yield* tmuxStep(
+      "pipe-pane",
+      () => $`tmux pipe-pane -t ${input.session} -O ${`cat >> "${input.tmuxLogPath}"`}`,
+    );
+    yield* tmuxStep(
+      "start-claude",
+      () => $`tmux send-keys -t ${input.session} ${"claude --dangerously-skip-permissions"} Enter`,
+    );
+    yield* waitForTuiReady(input.session);
+    yield* tmuxStep("load-buffer", () => $`tmux load-buffer ${input.promptFile}`);
+    yield* tmuxStep("paste-buffer", () => $`tmux paste-buffer -t ${input.session}`);
+    yield* Effect.sleep("500 millis");
+    yield* tmuxStep("send-enter", () => $`tmux send-keys -t ${input.session} Enter`);
+  });

@@ -7,9 +7,9 @@
  *
  * Usage: bun ~/.claude/skills/afk/v1a-smoke.ts
  */
-import { $ } from "bun"
+import { $ } from "bun";
 
-type Check = { name: string; cmd: string[]; mustContain: string[] }
+type Check = { name: string; cmd: string[]; mustContain: string[] };
 
 const checks: Check[] = [
   {
@@ -75,10 +75,10 @@ const checks: Check[] = [
     cmd: ["api", "--help"],
     mustContain: ["--paginate", "--method", "--field", "--raw-field"],
   },
-]
+];
 
 // Live calls (safe: read-only, no project mutations)
-type LiveCheck = { name: string; cmd: string[] }
+type LiveCheck = { name: string; cmd: string[] };
 const liveChecks: LiveCheck[] = [
   {
     name: "glab auth status",
@@ -88,57 +88,57 @@ const liveChecks: LiveCheck[] = [
     name: "glab repo view (current repo recognized)",
     cmd: ["repo", "view"],
   },
-]
+];
 
-console.log("V1a smoke test — checking glab subcommands + flags\n")
+console.log("V1a smoke test — checking glab subcommands + flags\n");
 
-let pass = 0
-let fail = 0
-const failures: string[] = []
+let pass = 0;
+let fail = 0;
+const failures: string[] = [];
 
 for (const c of checks) {
-  const r = await $`glab ${c.cmd}`.nothrow().quiet()
+  const r = await $`glab ${c.cmd}`.nothrow().quiet();
   if (r.exitCode !== 0) {
-    console.log(`✗ ${c.name}`)
-    console.log(`    glab ${c.cmd.join(" ")} exited ${r.exitCode}`)
-    console.log(`    stderr: ${r.stderr.toString().trim().slice(0, 200)}`)
-    fail++
-    failures.push(c.name)
-    continue
+    console.log(`✗ ${c.name}`);
+    console.log(`    glab ${c.cmd.join(" ")} exited ${r.exitCode}`);
+    console.log(`    stderr: ${r.stderr.toString().trim().slice(0, 200)}`);
+    fail++;
+    failures.push(c.name);
+    continue;
   }
-  const out = r.stdout.toString() + r.stderr.toString()
-  const missing = c.mustContain.filter((flag) => !out.includes(flag))
+  const out = r.stdout.toString() + r.stderr.toString();
+  const missing = c.mustContain.filter((flag) => !out.includes(flag));
   if (missing.length > 0) {
-    console.log(`✗ ${c.name}`)
-    console.log(`    missing flags: ${missing.join(", ")}`)
-    fail++
-    failures.push(`${c.name} (missing: ${missing.join(", ")})`)
+    console.log(`✗ ${c.name}`);
+    console.log(`    missing flags: ${missing.join(", ")}`);
+    fail++;
+    failures.push(`${c.name} (missing: ${missing.join(", ")})`);
   } else {
-    console.log(`✓ ${c.name}`)
-    pass++
+    console.log(`✓ ${c.name}`);
+    pass++;
   }
 }
 
-console.log("\nLive calls (read-only):")
+console.log("\nLive calls (read-only):");
 
 for (const c of liveChecks) {
-  const r = await $`glab ${c.cmd}`.nothrow().quiet()
+  const r = await $`glab ${c.cmd}`.nothrow().quiet();
   if (r.exitCode === 0) {
-    console.log(`✓ ${c.name}`)
-    pass++
+    console.log(`✓ ${c.name}`);
+    pass++;
   } else {
-    console.log(`✗ ${c.name}`)
-    console.log(`    stderr: ${r.stderr.toString().trim().slice(0, 200)}`)
-    fail++
-    failures.push(c.name)
+    console.log(`✗ ${c.name}`);
+    console.log(`    stderr: ${r.stderr.toString().trim().slice(0, 200)}`);
+    fail++;
+    failures.push(c.name);
   }
 }
 
-console.log(`\n${pass} passed, ${fail} failed`)
+console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) {
-  console.log("\nFailures:")
-  failures.forEach((f) => console.log(`  • ${f}`))
-  console.log("\nFix the orchestrator's glab calls (or upgrade glab) before V1b.")
-  process.exit(1)
+  console.log("\nFailures:");
+  failures.forEach((f) => console.log(`  • ${f}`));
+  console.log("\nFix the orchestrator's glab calls (or upgrade glab) before V1b.");
+  process.exit(1);
 }
-console.log("\nAll glab calls validated. Ready for V1b.")
+console.log("\nAll glab calls validated. Ready for V1b.");

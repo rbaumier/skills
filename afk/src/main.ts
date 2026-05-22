@@ -17,11 +17,11 @@
  *
  * Usage: bun ~/.claude/skills/afk/src/main.ts   (run from inside the repo)
  */
-import { BunRuntime } from "@effect/platform-bun"
-import { Effect } from "effect"
-import { runMachine } from "./pipeline/machine"
-import { preflight } from "./preflight"
+import { BunRuntime } from "@effect/platform-bun";
+import { Effect } from "effect";
+import { runMachine } from "./pipeline/machine";
+import { preflight } from "./preflight";
 
-const program = preflight.pipe(Effect.flatMap(runMachine))
+const program = preflight.pipe(Effect.flatMap(runMachine));
 
-BunRuntime.runMain(program)
+BunRuntime.runMain(program);

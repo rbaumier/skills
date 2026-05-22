@@ -8,17 +8,17 @@
 
 /** A discussion reduced to what the pipeline reasons about. */
 export interface DiscussionSummary {
-  readonly id: string
-  readonly resolved: boolean
-  readonly notes: ReadonlyArray<{ readonly author: string; readonly body: string }>
+  readonly id: string;
+  readonly resolved: boolean;
+  readonly notes: readonly { readonly author: string; readonly body: string }[];
 }
 
 /** The fields of a raw GitLab note we look at — every value is untrusted. */
 interface RawNote {
-  readonly body: unknown
-  readonly resolvable: unknown
-  readonly resolved: unknown
-  readonly author: { readonly username: unknown } | null
+  readonly body: unknown;
+  readonly resolvable: unknown;
+  readonly resolved: unknown;
+  readonly author: { readonly username: unknown } | null;
 }
 
 /**
@@ -30,13 +30,13 @@ interface RawNote {
  * convergence. Pure and garbage-safe — non-object entries are dropped.
  */
 export function toDiscussionSummary(raw: unknown): DiscussionSummary {
-  const object = (raw ?? {}) as { id: unknown; notes: unknown }
-  const rawNotes: ReadonlyArray<RawNote> = (Array.isArray(object.notes) ? object.notes : []).filter(
+  const object = (raw ?? {}) as { id: unknown; notes: unknown };
+  const rawNotes: readonly RawNote[] = (Array.isArray(object.notes) ? object.notes : []).filter(
     (note): note is RawNote => typeof note === "object" && note !== null,
-  )
+  );
 
-  const resolvableNotes = rawNotes.filter((note) => note.resolvable === true)
-  const resolved = resolvableNotes.every((note) => note.resolved === true)
+  const resolvableNotes = rawNotes.filter((note) => note.resolvable === true);
+  const resolved = resolvableNotes.every((note) => note.resolved === true);
 
   return {
     id: String(object.id ?? ""),
@@ -45,5 +45,5 @@ export function toDiscussionSummary(raw: unknown): DiscussionSummary {
       author: typeof note.author?.username === "string" ? note.author.username : "unknown",
       body: typeof note.body === "string" ? note.body : "",
     })),
-  }
+  };
 }

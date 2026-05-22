@@ -6,49 +6,49 @@
  * what it fixed. The CLI in `scripts/mr-discussion.ts` exposes these to the
  * phase prompts.
  */
-import { Effect } from "effect"
-import { z } from "zod"
-import { type DiscussionSummary, toDiscussionSummary } from "./discussion"
-import { type GitLabError, GlabResponseError } from "./errors"
-import { parseGlabJson, runGlabRead, runGlabWrite } from "./glab"
+import { Effect } from "effect";
+import { z } from "zod";
+import { type DiscussionSummary, toDiscussionSummary } from "./discussion";
+import { type GitLabError, GlabResponseError } from "./errors";
+import { parseGlabJson, runGlabRead, runGlabWrite } from "./glab";
 
 const discussionsEndpoint = (mergeRequestIid: number): string =>
-  `projects/:id/merge_requests/${mergeRequestIid}/discussions`
+  `projects/:id/merge_requests/${mergeRequestIid}/discussions`;
 
 /** Confirms a mutation took: the glab-api response carries an `id`. */
-const HasIdSchema = z.object({ id: z.union([z.string(), z.number()]) })
+const HasIdSchema = z.object({ id: z.union([z.string(), z.number()]) });
 
 /** List every discussion on a merge request. */
 export const listDiscussions = (
   mergeRequestIid: number,
-): Effect.Effect<ReadonlyArray<DiscussionSummary>, GitLabError> => {
+): Effect.Effect<readonly DiscussionSummary[], GitLabError> => {
   // `?per_page=100` over `--paginate`: `glab api --paginate` concatenates each
   // page's JSON array (`[…][…]`), which is not valid JSON. One page of 100
   // covers any realistic discussion count on an AFK merge request.
-  const command = ["api", `${discussionsEndpoint(mergeRequestIid)}?per_page=100`]
+  const command = ["api", `${discussionsEndpoint(mergeRequestIid)}?per_page=100`];
   return runGlabRead(command).pipe(
     Effect.flatMap((output) =>
       // An MR with no discussions is a normal state, not an error — and some
       // glab versions print nothing rather than `[]`.
       output.trim() === ""
-        ? Effect.succeed<ReadonlyArray<unknown>>([])
+        ? Effect.succeed<readonly unknown[]>([])
         : parseGlabJson(output, z.array(z.unknown()), command),
     ),
     Effect.map((rawDiscussions) => rawDiscussions.map(toDiscussionSummary)),
-  )
-}
+  );
+};
 
 /** Create a new general, resolvable discussion carrying `body`. */
 export const postDiscussion = (
   mergeRequestIid: number,
   body: string,
 ): Effect.Effect<void, GitLabError> => {
-  const command = ["api", discussionsEndpoint(mergeRequestIid), "-X", "POST", "-f", `body=${body}`]
+  const command = ["api", discussionsEndpoint(mergeRequestIid), "-X", "POST", "-f", `body=${body}`];
   return runGlabWrite(command).pipe(
     Effect.flatMap((output) => parseGlabJson(output, HasIdSchema, command)),
     Effect.asVoid,
-  )
-}
+  );
+};
 
 /**
  * Add a note (a reply) to an existing discussion thread. The response is
@@ -67,12 +67,12 @@ export const replyToDiscussion = (
     "POST",
     "-f",
     `body=${body}`,
-  ]
+  ];
   return runGlabWrite(command).pipe(
     Effect.flatMap((output) => parseGlabJson(output, HasIdSchema, command)),
     Effect.asVoid,
-  )
-}
+  );
+};
 
 /**
  * Resolve a discussion thread, then verify it actually came back resolved —
@@ -89,7 +89,7 @@ export const resolveDiscussion = (
     "PUT",
     "-F",
     "resolved=true",
-  ]
+  ];
   return runGlabWrite(command).pipe(
     Effect.flatMap((output) => parseGlabJson(output, z.unknown(), command)),
     Effect.flatMap((raw) =>
@@ -102,5 +102,5 @@ export const resolveDiscussion = (
             }),
           ),
     ),
-  )
-}
+  );
+};
