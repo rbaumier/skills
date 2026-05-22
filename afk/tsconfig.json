@@ -14,6 +14,6 @@
     "lib": ["ESNext"],
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts", "v0-test.ts", "vitest.config.ts"],
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "orchestrator.ts", "v0-test.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "effect-ref"]
 }
