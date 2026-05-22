@@ -86,7 +86,23 @@ Run `git diff --name-only "$DEFAULT_BRANCH"...HEAD` → changed files. Determine
 
 **Apply the tier first.** Compute tier from "Tier classification" above. Lite → spawn only Lite column agents, skip "Spawn by imports", "Spawn by surface touched", "Spawn by subsystem touched", "General Opus 4.7". Rest of Step 0 = Full only.
 
-**Always spawn:** Funnel L1, Funnel L2, Occam Razor, coding-standards (umbrella + 4 sub-skills), simplify, matt-improve-codebase-architecture, matt-review, thermo-nuclear-code-quality-review, security-defensive, Tests, Correctness.
+**Always spawn** — every entry below MUST fire on every Full-tier run. Tick through this list explicitly before moving on; an unbulleted prose form is too easy to skim past and silently drop an agent:
+
+- [ ] Funnel L1
+- [ ] Funnel L2
+- [ ] Occam Razor
+- [ ] Correctness
+- [ ] Tests
+- [ ] simplify
+- [ ] matt-improve-codebase-architecture
+- [ ] matt-review
+- [ ] thermo-nuclear-code-quality-review
+- [ ] security-defensive
+- [ ] coding-standards (umbrella)
+- [ ] coding-standards:design
+- [ ] coding-standards:errors
+- [ ] coding-standards:hygiene
+- [ ] coding-standards:style
 
 **Why Occam Razor sits alongside the funnel.** L1 ("must exist?") and L2 ("smallest perimeter?") are prose, evaluated face-value, neither walks the call graph. Occam Razor is the mechanical check: for every exported symbol the diff introduces/modifies, enumerate call sites, prove shape pays rent. Past misses: 0-caller function, 1-caller wrapper, defaults reconstructed from caller's known values.
 
