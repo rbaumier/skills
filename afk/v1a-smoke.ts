@@ -18,49 +18,62 @@ const checks: Check[] = [
     mustContain: ["glab"],
   },
   {
-    name: "issue list (read queue)",
+    name: "issue list (fetch_queue / sweep)",
     cmd: ["issue", "list", "--help"],
     mustContain: ["--label", "--not-label", "--per-page", "--output"],
   },
   {
-    name: "issue update (claim/unclaim/fail-label)",
+    name: "issue update (claim / unclaim / fail-label)",
     cmd: ["issue", "update", "--help"],
     mustContain: ["--label", "--unlabel"],
   },
   {
-    name: "issue note (FAILED comment)",
+    name: "issue create (out-of-scope discoveries)",
+    cmd: ["issue", "create", "--help"],
+    mustContain: ["--label", "--title", "--description"],
+  },
+  {
+    name: "issue note (failed-issue comment)",
     cmd: ["issue", "note", "--help"],
     mustContain: ["--message"],
   },
   {
-    name: "mr list (idempotent MR check)",
+    name: "mr list (idempotent open_draft_mr check)",
     cmd: ["mr", "list", "--help"],
     mustContain: ["--source-branch", "--output"],
   },
   {
-    name: "mr create (OPEN_MR)",
+    name: "mr create — draft + cleanup flags (open_draft_mr)",
     cmd: ["mr", "create", "--help"],
-    mustContain: ["--source-branch", "--target-branch", "--title", "--description"],
+    mustContain: [
+      "--draft",
+      "--source-branch",
+      "--target-branch",
+      "--title",
+      "--description",
+      "--remove-source-branch",
+      "--squash-before-merge",
+    ],
   },
   {
-    name: "mr create — auto-cleanup + squash flags",
-    cmd: ["mr", "create", "--help"],
-    mustContain: ["--remove-source-branch", "--squash-before-merge"],
+    name: "mr update — --ready (un-draft in merge)",
+    cmd: ["mr", "update", "--help"],
+    mustContain: ["--ready"],
   },
   {
-    name: "mr merge (MERGE)",
+    name: "mr merge (merge)",
     cmd: ["mr", "merge", "--help"],
     mustContain: ["--squash", "--auto-merge", "--yes"],
   },
   {
-    name: "mr close (RETRY cleanup)",
-    cmd: ["mr", "close", "--help"],
-    mustContain: [],
-  },
-  {
-    name: "mr view --output json (status check after merge)",
+    name: "mr view --output json (merge status verify)",
     cmd: ["mr", "view", "--help"],
     mustContain: ["--output"],
+  },
+  {
+    name: "api — discussions endpoint (mr-discussion.ts)",
+    cmd: ["api", "--help"],
+    mustContain: ["--paginate", "--field", "--raw-field"],
   },
 ]
 
