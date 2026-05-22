@@ -58,13 +58,13 @@ export const runGlabWrite = (command: readonly string[]): Effect.Effect<string, 
   runGlabOnce(command);
 
 /** Try to parse JSON, returning a discriminated result instead of throwing. */
-function safeJsonParse(text: string): { ok: true; value: unknown } | { ok: false } {
+const safeJsonParse = (text: string): { ok: true; value: unknown } | { ok: false } => {
   try {
     return { ok: true, value: JSON.parse(text) };
   } catch {
     return { ok: false };
   }
-}
+};
 
 /** Parse a glab command's stdout as JSON and validate it against `schema`. */
 export const parseGlabJson = <A>(

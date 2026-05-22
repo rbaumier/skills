@@ -21,19 +21,18 @@ export type ClaimedIssue = {
  * `thresholdMs` ago. An issue whose `updatedAt` cannot be parsed
  * is treated as NOT stale: we never unlabel an undateable claim.
  */
-export function selectStale(
+export const selectStale = (
   issues: readonly ClaimedIssue[],
   nowMs: number,
   thresholdMs: number,
-): readonly ClaimedIssue[] {
-  return issues.filter((issue) => {
+): readonly ClaimedIssue[] =>
+  issues.filter((issue) => {
     const updatedMs = Date.parse(issue.updatedAt);
     if (Number.isNaN(updatedMs)) {
       return false;
     }
     return updatedMs < nowMs - thresholdMs;
   });
-}
 
 /**
  * Parse `git worktree list --porcelain` output and return the
@@ -49,7 +48,7 @@ export function selectStale(
  * `git worktree prune`.
  */
 /** Extract the worktree path from a porcelain block if its branch contains `needle`. */
-function matchingWorktreePath(block: string, needle: string): string | null {
+const matchingWorktreePath = (block: string, needle: string): string | null => {
   const lines = block.split("\n");
   const wt = lines.find((ln) => ln.startsWith("worktree "));
   const br = lines.find((ln) => ln.startsWith("branch "));
@@ -58,9 +57,9 @@ function matchingWorktreePath(block: string, needle: string): string | null {
     return null;
   }
   return path;
-}
+};
 
-export function worktreePathsForIssue(porcelain: string, iid: number): readonly string[] {
+export const worktreePathsForIssue = (porcelain: string, iid: number): readonly string[] => {
   const needle = `/afk/issue-${iid}-`;
 
   // Parse each porcelain block; keep paths whose branch matches the issue.
@@ -68,4 +67,4 @@ export function worktreePathsForIssue(porcelain: string, iid: number): readonly 
     const path = matchingWorktreePath(block, needle);
     return path === null ? [] : [path];
   });
-}
+};
