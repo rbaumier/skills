@@ -77,8 +77,8 @@ function extractMarkers(transcriptLines) {
     const msg = (d && d.message) ? d.message : {};
     const text = extractText(msg.content);
     if (!text) continue;
-    const startRe = /<crl:run_start\s+([^>]*?)\/?>/g;
-    const endRe = /<crl:run_end\s+([^>]*?)\/?>/g;
+    const startRe = /<crl:run_start\s*([^>]*?)\/?>/g;
+    const endRe = /<crl:run_end\s*([^>]*?)\/?>/g;
     let m;
     while ((m = startRe.exec(text)) !== null) {
       starts.push({ ts: d.timestamp || null, sessionId: d.sessionId, attrs: parseAttrs(m[1]) });
@@ -186,7 +186,11 @@ function buildReport(pair, sessionId, hookEntries) {
     cache_creation_input_tokens: (acc.cache_creation_input_tokens || 0) + (a.cache_creation_input_tokens || 0),
   }), {});
 
-  const trustBoundaries = (start.attrs.trust_boundaries || '')
+  // tier + trust_boundaries ride on the END marker: code-review-loop emits
+  // <crl:run_start> before code-review resolves them, so they are not known at
+  // start time. An orphan (no end marker) therefore has null tier/boundaries.
+  const endAttrs = end ? end.attrs : {};
+  const trustBoundaries = (endAttrs.trust_boundaries || '')
     .split(',').map(s => s.trim()).filter(s => s && s !== 'none');
 
   return {
@@ -195,7 +199,7 @@ function buildReport(pair, sessionId, hookEntries) {
     started_at: startTs,
     completed_at: endTs,
     end_marker_present: !!end,
-    tier: start.attrs.tier || null,
+    tier: endAttrs.tier || null,
     trust_boundaries: trustBoundaries,
     outcome: end ? (end.attrs.outcome || null) : null,
     iters: end && end.attrs.iters ? parseInt(end.attrs.iters, 10) : null,

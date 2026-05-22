@@ -4,7 +4,7 @@ Read CLAUDE.md for conventions.
 
 Read diff from {diff_file}, filtered to {file_list}. Read full files as needed.
 
-Trust boundaries crossed: {trust_boundaries}. For each boundary, apply failure modes from Step 0's trust-boundaries table ("Failure modes" column) as prioritized lens — more likely than generic bugs. `none` → focus generic correctness. Subsystem agent spawned for a boundary → it owns depth there; you skim for cross-cutting interactions only.
+Trust boundaries crossed: {trust_boundaries}. For each boundary, apply failure modes from the trust-boundaries table ("Failure modes" column) as prioritized lens — more likely than generic bugs. `none` → focus generic correctness. Subsystem agent spawned for a boundary → it owns depth there; you skim for cross-cutting interactions only.
 
 Task: check implementation vs apparent intent. Bugs, missing edge cases, race conditions, incomplete error handling, logic gaps. Permission checks → verify role is correct for the operation.
 
