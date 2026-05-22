@@ -80,6 +80,3 @@ export type State =
       readonly reason: string
     }
   | { readonly kind: "end" }
-
-/** The discriminant of {@link State}. */
-export type StateKind = State["kind"]

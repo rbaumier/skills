@@ -69,11 +69,10 @@ export const phaseTimeoutMs = (phase: Phase, deadlineMs: number): number =>
 const pollSentinel = (
   phase: Phase,
   sentinel: string,
+  startedAt: number,
   timeoutMs: number,
 ): Effect.Effect<VerdictToken, SessionTimedOut | NoVerdict | WorkspaceError> =>
   Effect.gen(function* () {
-    const startedAt = Date.now()
-
     // Stack-safe poll loop: sleep one interval per tick until the sentinel
     // appears or the timeout elapses. The interruptible sleep also lets a
     // Ctrl-C unwind the wait promptly.
@@ -143,9 +142,13 @@ export const runPhaseSession = (input: {
       createSession(session, worktree),
       () =>
         Effect.gen(function* () {
+          // Start the phase clock before booting claude — the TUI-readiness
+          // wait counts against the budget, so the cap is a true wall-clock
+          // bound on the whole session.
+          const startedAt = Date.now()
           yield* startClaudeAndPaste({ session, tmuxLogPath: tmuxLog, promptFile })
           yield* Console.log(`  ↳ ${phase}: tmux attach -r -t ${session}   ·   tail -f ${tmuxLog}`)
-          return yield* pollSentinel(phase, sentinel, timeoutMs)
+          return yield* pollSentinel(phase, sentinel, startedAt, timeoutMs)
         }),
       () => killSession(session),
     )

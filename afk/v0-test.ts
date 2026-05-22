@@ -19,7 +19,7 @@
  * This is the gate for the whole implementation.
  *
  * The pure half of the contract — strict verdict parsing, all its edge cases —
- * is covered exhaustively by `src/verdict.test.ts` (no spawning needed).
+ * is covered exhaustively by `src/session/verdict.test.ts` (no spawning needed).
  *
  * NOTE: this POC uses fixed sleeps for tmux/TUI readiness. That is acceptable
  * for a one-shot POC; the real orchestrator (S5) must NOT — it should poll

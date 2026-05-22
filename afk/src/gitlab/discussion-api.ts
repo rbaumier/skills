@@ -22,7 +22,10 @@ const HasIdSchema = z.object({ id: z.union([z.string(), z.number()]) })
 export const listDiscussions = (
   mergeRequestIid: number,
 ): Effect.Effect<ReadonlyArray<DiscussionSummary>, GitLabError> => {
-  const command = ["api", "--paginate", discussionsEndpoint(mergeRequestIid)]
+  // `?per_page=100` over `--paginate`: `glab api --paginate` concatenates each
+  // page's JSON array (`[…][…]`), which is not valid JSON. One page of 100
+  // covers any realistic discussion count on an AFK merge request.
+  const command = ["api", `${discussionsEndpoint(mergeRequestIid)}?per_page=100`]
   return runGlabRead(command).pipe(
     Effect.flatMap((output) =>
       // An MR with no discussions is a normal state, not an error — and some

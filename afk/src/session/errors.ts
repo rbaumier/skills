@@ -68,7 +68,7 @@ export function describePhaseError(error: PhaseError): string {
     case "WorkspaceError":
       return `${error.operation} failed: ${error.reason}`
     case "BudgetExhausted":
-      return "per-issue budget exhausted before this phase could start"
+      return `per-issue budget exhausted before the ${error.phase} phase could start`
     case "SessionTimedOut":
       return `timed out after ${Math.round(error.elapsedMs / 1000)}s without a verdict`
     case "NoVerdict":

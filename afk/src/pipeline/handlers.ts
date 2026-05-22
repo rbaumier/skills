@@ -32,21 +32,26 @@ type PhaseOutcome =
   | { readonly ok: true; readonly verdict: VerdictToken }
   | { readonly ok: false; readonly reason: string }
 
-/** Build a `failed` state from whatever the failing handler knew. */
+/**
+ * Build a `failed` state. Every field is explicit — `null` for what the
+ * failing handler did not yet know — so no optional markers leak into the
+ * State type. A pipeline-stage handler can pass its own state variable, which
+ * already carries non-null branch/worktree/mergeRequestIid.
+ */
 const failedState = (
   known: {
     readonly issue: IssueRef
-    readonly branch?: string
-    readonly worktree?: string
-    readonly mergeRequestIid?: number
+    readonly branch: string | null
+    readonly worktree: string | null
+    readonly mergeRequestIid: number | null
   },
   reason: string,
 ): State => ({
   kind: "failed",
   issue: known.issue,
-  branch: known.branch ?? null,
-  worktree: known.worktree ?? null,
-  mergeRequestIid: known.mergeRequestIid ?? null,
+  branch: known.branch,
+  worktree: known.worktree,
+  mergeRequestIid: known.mergeRequestIid,
   reason,
 })
 
@@ -185,7 +190,10 @@ const onClaimIssue = (issue: IssueRef): Effect.Effect<State> =>
       "issue", "update", String(issue.iid), "--label", LABELS.pickedByAgent,
     ]).pipe(Effect.either)
     if (claim._tag === "Left") {
-      return failedState({ issue }, `claim_issue: ${describeGitLabError(claim.left)}`)
+      return failedState(
+        { issue, branch: null, worktree: null, mergeRequestIid: null },
+        `claim_issue: ${describeGitLabError(claim.left)}`,
+      )
     }
 
     const banner = "─".repeat(80)
@@ -205,22 +213,44 @@ const onBranchWorktree = (issue: IssueRef, env: Environment): Effect.Effect<Stat
       mkdir(join(WORKTREES_DIR, env.repoName), { recursive: true }),
     ).pipe(Effect.either)
     if (parentReady._tag === "Left") {
-      return failedState({ issue }, "branch_worktree: could not create the worktree parent directory")
+      return failedState(
+        { issue, branch: null, worktree: null, mergeRequestIid: null },
+        "branch_worktree: could not create the worktree parent directory",
+      )
     }
 
-    yield* runShell(() => $`git fetch origin ${env.defaultBranch}`)
+    // Re-entrancy: a crashed prior run may have left this branch and worktree
+    // behind (the sweep removes only the worktree, not the branch). Clear both
+    // — best-effort — so the `git worktree add -b` below starts from a clean
+    // slate instead of failing because the branch already exists.
+    yield* runShell(() => $`git worktree remove --force ${worktree}`)
+    yield* runShell(() => $`git worktree prune`)
+    yield* runShell(() => $`git branch -D ${branch}`)
+
+    const fetched = yield* runShell(() => $`git fetch origin ${env.defaultBranch}`)
+    if (fetched.exitCode !== 0) {
+      yield* Console.error(
+        `  ⚠ git fetch failed — branching off a possibly-stale origin/${env.defaultBranch}`,
+      )
+    }
     const added = yield* runShell(() =>
       $`git worktree add -b ${branch} ${worktree} origin/${env.defaultBranch}`,
     )
     if (added.exitCode !== 0) {
-      return failedState({ issue }, `branch_worktree: worktree add failed — ${added.stderr.trim()}`)
+      return failedState(
+        { issue, branch: null, worktree: null, mergeRequestIid: null },
+        `branch_worktree: worktree add failed — ${added.stderr.trim()}`,
+      )
     }
 
     yield* excludeStopHookConfig(worktree)
 
     const pushed = yield* runShellGit(worktree, ["push", "-u", "origin", branch])
     if (pushed.exitCode !== 0) {
-      return failedState({ issue, branch, worktree }, `branch_worktree: push failed — ${pushed.stderr.trim()}`)
+      return failedState(
+        { issue, branch, worktree, mergeRequestIid: null },
+        `branch_worktree: push failed — ${pushed.stderr.trim()}`,
+      )
     }
     return { kind: "run_impl", issue, branch, worktree }
   })
@@ -244,11 +274,15 @@ const onRunImpl = (state: Extract<State, { kind: "run_impl" }>): Effect.Effect<S
         body: issue.body || "(no description)",
       },
     })
-    if (!outcome.ok) return failedState({ issue, branch, worktree }, `run_impl: ${outcome.reason}`)
+    const known = { issue, branch, worktree, mergeRequestIid: null }
+    if (!outcome.ok) return failedState(known, `run_impl: ${outcome.reason}`)
     if (outcome.verdict === "READY_FOR_REVIEW") {
       return { kind: "open_draft_mr", issue, branch, worktree, deadline }
     }
-    return failedState({ issue, branch, worktree }, `run_impl: unexpected verdict ${outcome.verdict}`)
+    if (outcome.verdict === "BLOCKER_SUSPECTED") {
+      return failedState(known, "run_impl: the implementer reported a blocker")
+    }
+    return failedState(known, `run_impl: unexpected verdict ${outcome.verdict}`)
   })
 
 /** open_draft_mr — open the Draft MR (idempotent), recording its iid. */
@@ -277,14 +311,20 @@ const onOpenDraftMr = (
       "--remove-source-branch", "--squash-before-merge",
     ]).pipe(Effect.either)
     if (created._tag === "Left") {
-      return failedState({ issue, branch, worktree }, `open_draft_mr: ${describeGitLabError(created.left)}`)
+      return failedState(
+        { issue, branch, worktree, mergeRequestIid: null },
+        `open_draft_mr: ${describeGitLabError(created.left)}`,
+      )
     }
 
     // Read the iid back from `mr list` rather than scraping `mr create`'s
     // stdout — a structured query, not a brittle URL regex.
     const opened = yield* findOpenMergeRequest(branch)
     if (opened === undefined) {
-      return failedState({ issue, branch, worktree }, "open_draft_mr: MR created but could not be found")
+      return failedState(
+        { issue, branch, worktree, mergeRequestIid: null },
+        "open_draft_mr: MR created but could not be found",
+      )
     }
     yield* Console.log(`  ↳ Draft MR !${opened.iid} created for ${branch}`)
     return { kind: "review", issue, branch, worktree, deadline, mergeRequestIid: opened.iid, fixCycles: 0 }
@@ -339,6 +379,9 @@ const onRunDogfood = (state: Extract<State, { kind: "run_dogfood" }>): Effect.Ef
     if (!outcome.ok) return failedState(state, `run_dogfood: ${outcome.reason}`)
     if (outcome.verdict === "DOGFOOD_PASS") {
       return { kind: "merge", ...pipelineContext(state) }
+    }
+    if (outcome.verdict === "DOGFOOD_FAIL") {
+      return failedState(state, "run_dogfood: the runtime dogfood gate found an in-scope bug")
     }
     return failedState(state, `run_dogfood: unexpected verdict ${outcome.verdict}`)
   })

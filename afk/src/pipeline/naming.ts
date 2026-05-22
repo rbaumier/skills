@@ -7,7 +7,7 @@ import { WORKTREES_DIR } from "../config"
 import type { IssueRef } from "./state"
 
 /** Turn an issue title into a lowercase, hyphenated, length-capped slug. */
-export function slugify(title: string): string {
+function slugify(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
