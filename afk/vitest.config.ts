@@ -4,6 +4,6 @@ import { defineConfig } from "vitest/config"
 // effect-ref/ is a read-only pattern reference, not part of this project.
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["{src,scripts}/**/*.test.ts"],
   },
 })
