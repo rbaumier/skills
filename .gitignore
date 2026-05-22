@@ -5,6 +5,10 @@ node_modules/
 *.pem
 *.key
 .cursor/
-index.ts
-tsconfig.json
-README.md
+# root-level bun-init scaffolding (anchored — must not ignore afk/'s real files)
+/index.ts
+/tsconfig.json
+/README.md
+
+# Effect source — shallow clone, pattern reference only. Never committed.
+afk/effect-ref/
