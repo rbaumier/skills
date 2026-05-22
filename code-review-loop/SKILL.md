@@ -218,6 +218,14 @@ Triage = one shared round for whole diff, not per agent. Run once, subtract, fan
 
 ### Step 1 — Spawn all agents in a single message block
 
+**Data-capture marker — emit FIRST, before any Task spawn.** On its own line in your assistant text:
+
+```
+<crl:run_start tier="<lite|full>" trust_boundaries="<csv|none>" />
+```
+
+Substitute values resolved in Step 0. The post-process at Step 5 pairs this with `<crl:run_end>` to bound the run. Don't emit it elsewhere — only here, once per run.
+
 **Parallelism = the only reason this skill exists.** Default tool-call behavior is serial: one Task → await → next. Collapses fan-out into `N × (think-time + agent-time)`, defeats the point. **Override.** Emit ALL Task tool_use blocks in the SAME assistant message, BEFORE any result.
 
 - ✅ **Right:** one turn, N parallel Tasks → wait → N results → aggregate.
@@ -382,6 +390,20 @@ Bail → finalize as `failed-by-agent` (family: non-convergence) with last 3 rou
 **Dogfood findings themselves never produce `failed-by-agent`.** In-scope fixed; out-of-scope → new issue. Only `failed-by-agent` from this phase = non-convergence or static-cap propagation.
 
 ### Step 5 — Final output
+
+**Data-capture marker + post-process — fire FIRST, before AFK token or summary.** In the SAME assistant turn:
+
+```
+<crl:run_end outcome="<converged|capped|aborted>" iters="<N>" />
+```
+
+Then a Bash call (still same turn, before the terminal token line for AFK or before the summary for direct mode):
+
+```bash
+node "$HOME/.claude/skills/code-review-loop/process-run.js"
+```
+
+Script is idempotent — scans recent transcripts for unprocessed `<crl:run_start>`/`<crl:run_end>` pairs, writes one raw-data report per pair to `~/.claude/data/code-review-loop/runs/`. Already-processed pairs are skipped. Failure is non-fatal: just rerun manually. **Do not pass any args** — the script auto-detects.
 
 **If invoked from AFK** (instruction string starts with `AFK invocation`): return exactly ONE single-line token as last assistant text. Nothing else.
 
