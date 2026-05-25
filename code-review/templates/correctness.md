@@ -15,6 +15,4 @@ Task: check implementation vs apparent intent. Bugs, missing edge cases, race co
 - Edge cases requiring conditions that the calling contract already prevents (read the call sites before flagging)
 - Theoretical race conditions without a concrete two-thread interleaving demonstrating the bug
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}

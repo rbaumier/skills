@@ -12,9 +12,7 @@ Your task: does each piece of code need to exist? Does the framework or a depend
 - Test coverage gaps — Tests owns those
 - "Consider extracting X for reusability" without a concrete second caller in the diff
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}
 
 ## Output format
 

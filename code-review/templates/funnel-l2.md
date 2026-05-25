@@ -12,9 +12,7 @@ Your task: find the smallest perimeter. Can files be inlined? Can queries be mer
 - Anything requiring a file-level rewrite the user didn't ask for — propose a smaller perimeter, not a refactor of the whole module
 - Defensive "factor this out in case we need it later" reasoning — concrete current usage only
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}
 
 ## Output format
 

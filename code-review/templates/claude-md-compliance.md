@@ -14,6 +14,4 @@ Trust boundaries crossed: {trust_boundaries}. Rules touching these (auth convent
 - Pre-existing violations in unchanged code
 - "We tend to..." mentions without a rule (not "you must...")
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}
