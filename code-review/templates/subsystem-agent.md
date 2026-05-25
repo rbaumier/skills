@@ -17,6 +17,4 @@ Your task: walk the diff and, for each listed failure mode, ask whether the chan
 - Theoretical attack chains requiring multiple unlikely preconditions to land
 - Pre-existing failure modes in unchanged code — only what the diff introduces or amplifies counts
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}

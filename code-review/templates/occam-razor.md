@@ -33,10 +33,7 @@ Use controlled-vocabulary slugs for `signature`. Downstream dedup collapses cros
 - Params looking unused but required by interface/trait/abstract class — signature fixed by contract. Grep interface before emitting `unused-param`.
 - Intentional-comment signals: `// keep: testability`, `// future caller in <branch>`, `// API surface — do not inline`. Context verification "intentional comments" question must specifically match.
 
-## Severity guide
-
-- `zero-callers-dead`, `redundant-overload` → `bug`. These block convergence — the diff ships unreachable or duplicated code.
-- `single-caller-inlinable`, `unused-param`, `derivable-default` → `suggestion`. These surface as open suggestions for a downstream consumer to decide. Auto-deleting a 1-caller wrapper every iteration is too aggressive — many are deliberate.
+Severity is derived from the slug (see `reference/output-format.md`): `zero-callers-dead` and `redundant-overload` are `bug` (diff ships unreachable or duplicated code, blocks convergence); `single-caller-inlinable` / `unused-param` / `derivable-default` are `suggestion` (deliberate wrappers exist — downstream consumer decides).
 
 ## A worked example (what good looks like)
 
@@ -48,6 +45,4 @@ Diff introduces `enumFilter(values, options, opts = defaults)` in `src/filters/e
 
 If instead the grep had returned 0 distinct call sites (only the definition), severity would be `bug` with slug `zero-callers-dead`.
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}

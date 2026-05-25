@@ -11,9 +11,7 @@ Read diff from {diff_file}. Read CLAUDE.md / AGENTS.md / CONTEXT.md / docs/adr/ 
 - Linter/formatter-enforced style — note as machine-enforced, move on.
 - Pre-existing violations in unchanged code.
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}
 
 ## Output format
 

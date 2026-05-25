@@ -18,6 +18,4 @@ Your task:
 - Pre-existing patterns in unchanged code — only flag what the diff introduces or modifies
 - Theoretical risks requiring unlikely preconditions when the primary defense in the diff is adequate
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}

@@ -18,6 +18,4 @@ Your task:
 - E2E tests when the change is pure logic — match test shape to the change
 - Tests for code that's deleted in this diff
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}

@@ -12,9 +12,7 @@ Focus exclusively on what TNQR uniquely catches: code-judo moves that delete com
 - Pre-existing structural debt in unchanged code, unless this diff materially worsens it.
 - Low-value nits when larger structural issues exist (TNQR rule: "do not flood the review with low-value nits if there are larger structural issues").
 
-Stay within these files: {file_list}
-
-{previous_findings_block}  ← injected at iter N>1 only; else empty
+{previous_findings_block}
 
 ## Output format
 
