@@ -28,7 +28,7 @@ Run a `code-review` pass, fix every finding, re-run to convergence. The user doe
 <crl:run_start />
 ```
 
-This marker must be emitted by *this* skill, in *this* session, before `code-review` spawns any agent. `process-run.js` (Step 5) bounds the run's data window from this marker and pairs it with `<crl:run_end>` by session id. A marker emitted *inside* `code-review` would land in a different session on the script-driven path and orphan the report; a marker emitted *after* `code-review` already spawned its agents would leave those agents outside the data window. `tier` and `trust_boundaries` aren't known yet — they ride on `<crl:run_end>` instead.
+The marker must be emitted by *this* skill, in *this* session, before `code-review` spawns any agent. Pairing rules, session-id binding, and why `tier`/`trust_boundaries` ride on `run_end` instead: `reference/data-capture-markers.md`.
 
 **Invoke `code-review`** via the Skill tool. It mints a `run_id` for the pass and returns the **review object**:
 
@@ -89,27 +89,7 @@ Survivors: fix every one regardless of vote count. A single-agent finding is as 
 
 ### Step 3 — Revalidate, verify, and commit
 
-1. **Revalidate fixed findings before tests.** Scope: only `severity: bug | security | performance | error_handling` that entered the fix queue. Suggestions never fixed in the loop → never revalidated. Spawn ONE `general-purpose` subagent (`haiku`) receiving `signature`, `file`, `line`, `analysis_chain`, and the fix diff per finding. Prompt:
-
-   ```
-   You revalidate code-review findings against the fixes applied to them.
-
-   For each finding below, read the cited file at its current state and the fix diff. Answer one of: `fixed` (the original failure mode is no longer reachable in the new code), `open` (original failure mode still reachable — fix is superficial: comment added, variable renamed, guard placed before the wrong line, or change in unrelated location), or `uncertain` (the fix is plausible but you cannot confirm without running it).
-
-   ## What NOT to do
-   - Do NOT flag new defects. Stay strictly within the listed signatures.
-   - Do NOT mark `open` for stylistic disagreement with the fix — `open` is reserved for the original failure mode still being reachable.
-   - If the fix lives in a different file than the signature's file (caller-site fix), follow the diff and revalidate against the actual changed code.
-   - If the signature's file was deleted by the fix (L1/L2 structural delete), mark `fixed`.
-
-   Return strict JSON, no markdown:
-   {"revalidations": [{"signature": "...", "status": "fixed|open|uncertain", "why": "one sentence"}]}
-
-   Findings to revalidate:
-   {findings_with_diffs}
-   ```
-
-   One agent handles all — a single Haiku call is cheaper than N parallel for a checklist.
+1. **Revalidate fixed findings before tests.** Scope: only `severity: bug | security | performance | error_handling` that entered the fix queue. Suggestions never fixed in the loop → never revalidated. Spawn ONE `general-purpose` subagent (`haiku`) using `templates/revalidation.md` — pass `signature`, `file`, `line`, `analysis_chain`, and the fix diff per finding by substituting `{findings_with_diffs}`. One agent handles all — a single Haiku call is cheaper than N parallel for a checklist.
 
 2. **`open`/`uncertain` re-enter the fix queue.** Build new fix prompts from the original `fix_prompt` + a one-line note (`previous attempt failed revalidation: <why>`), spawn per-file fix agents, revalidate. Bound: max 3 attempts within a single Step 3 call (1 initial + 2 re-fixes). Track `attempts: N` per signature **across outer iterations** — write this cumulative counter into the previous-findings handoff file (Step 4) so it survives a re-invocation of `code-review`. Total ≥ 5 → stop fix-looping that finding, surface it in Step 5's open-suggestions with the failure trail. This is the only safeguard against the outer loop spinning on a stubborn finding.
 3. Run the test suite.
@@ -117,7 +97,7 @@ Survivors: fix every one regardless of vote count. A single-agent finding is as 
 5. Fix failures.
 6. Commit, describing what + why.
 
-**Why dedicated revalidation.** Tests catch regressions but not pass-by-coincidence fixes (comment next to the bug, guard before the wrong line, rename suppressing a linter warning without fixing the logic). A fresh model re-reads against the original `analysis_chain` and asks: "is the failure mode gone?" Cheaper than slipping to the next iteration where the original reviewer re-derives its chain.
+Dedicated revalidation exists because tests catch regressions but not pass-by-coincidence fixes (comment next to the bug, guard before the wrong line, rename suppressing a linter warning without fixing the logic). A fresh model asks "is the failure mode gone?" against the original `analysis_chain` — cheaper than slipping to the next iteration.
 
 ### Step 4 — Loop or stop
 
@@ -149,96 +129,39 @@ Converged → Step 4.5 (if `dogfood_required`) or Step 5.
 - `disposition` — `fixed` (a commit touched the cited line), `dropped-by-triage` (with the reason: imagined / bloat), or `unfixed` (still present).
 - `attempts` — the **cumulative** fix-and-revalidate count for this signature, carried across every iteration. Step 3's `attempts ≥ 5` escalation reads this; if the counter resets each pass, a stubborn finding loops forever.
 
-`code-review` reads this file and injects each agent's own prior findings as `{previous_findings_block}`. Agents then: don't re-emit a `dropped-by-triage` finding unless the cited code materially changed (re-verify first); verify `fixed` findings actually resolved (catch superficial fixes); emit genuinely new findings introduced by the fix commit. Without this handoff, agents re-derive the same imagined modes every iteration and the loop only terminates because the orchestrator keeps dropping them — wasting one round-trip per loop.
+`code-review` reads this file and injects each agent's own prior findings as `{previous_findings_block}` so agents skip already-dropped findings, verify `fixed` ones actually resolved (catch superficial fixes), and emit genuinely new findings introduced by the fix commit.
 
 Continue fixing, committing, and re-launching until convergence.
 
-### Step 4.5 — Runtime dogfood gate (3 personas parallel — only if `dogfood_required` in the review object)
+### Step 4.5 — Runtime dogfood gate (only if `dogfood_required` in the review object)
 
-Static converged. **The dogfood gate = final validation.** It runs only after static convergence, so personas test signed-off code, never intermediate fixes that get rewritten next iteration. The surfaces to exercise are in the review object's `dogfood_surfaces`.
+Static converged. The dogfood gate is the final validation — 3 personas (Happy-path/sonnet, Adversarial/opus, Regression/sonnet) spawned in parallel against the surfaces listed in `dogfood_surfaces`. Full protocol (persona spawn, in-scope vs out-of-scope triage, fix → loop-back into Step 2–4, convergence, non-convergence bail signals): `reference/dogfood-gate.md`.
 
-**Spawn 3 personas in parallel** (one turn, 3 Agent calls):
-
-- **Happy-path** — `general-purpose`, **`sonnet`**. Walks the documented golden path end-to-end. Recipe execution, no creativity. Sonnet = the right cost/quality.
-- **Adversarial** — `general-purpose`, **`opus`**. Hunts non-obvious failures: race conditions, refresh mid-flow, broken state machines, permission-boundary crossings, weird input combos. Creativity is the deliverable; Opus earns its cost.
-- **Regression** — `general-purpose`, **`sonnet`**. Scripted checklist of behaviors that must keep working across releases. Deterministic, low ambiguity.
-
-All 3 load the `dogfood` skill, share the verify-not-prod / dev-server / authenticate / cleanup scaffolding, and differ only in **Exercise focus** (see the persona blocks in the *Dogfood Agent* template). Independent dev-server instances on different ports. Only one port free → sequential Happy-path → Regression → Adversarial (Adversarial last — hardest findings, absorb the cheaper personas' findings first).
-
-#### Merging and triage (orchestrator, no fourth subagent)
-
-All 3 return:
-
-1. **Dedupe.** The same observable bug from 2 personas = one finding. Match by `suspected_file` + a one-line summary slug.
-
-2. **Classify in-scope vs out-of-scope.**
-   - **In-scope** — bug in a code path the diff touches, OR a bug that wouldn't reproduce on `origin/$DEFAULT_BRANCH`. Verify via `git diff --name-only origin/$DEFAULT_BRANCH...HEAD` or call-graph reasoning. **Uncertain → in-scope** (false in-scope = a cheap no-op fix attempt; false out-of-scope = ship a bug).
-   - **Out-of-scope** — bug in code untouched by the diff AND reproduces on `origin/$DEFAULT_BRANCH`. File a new issue:
-     ```bash
-     glab issue create --label ready-for-agent \
-       --title "<one-line summary>" \
-       --description "Found during dogfood gate on branch <BRANCH> while validating <parent issue or feature>. Suspected file(s): <files>. Reproduces on $DEFAULT_BRANCH — not introduced by this diff. Repro: <steps>. Observed: <…>. Expected: <…>."
-     ```
-     Out-of-scope doesn't block convergence.
-   - **Cleanup-incomplete** — a persona's final line starting `cleanup-incomplete:` is itself blocking (no process/data leak allowed). In-scope regardless of bug location.
-
-3. **Fix in-scope, loop back.**
-   - Forge a `fix_prompt` from the textual findings:
-     `In {suspected_file}, {one-line summary}. Reproduce by {steps}. Expected {expected}, observed {observed}. Fix the code path so the expected behavior holds.`
-   - Group by file, spawn fix agents.
-   - Re-run the Step 3 gate (tests + linter, commit).
-   - **Re-enter the Step 2–4 static review on the new commits.** A dogfood-driven fix introducing a Correctness/Subsystem/Skill violation is a regression. The 8-iter static cap applies — don't reset it for dogfood-triggered re-review.
-   - Once static re-converges, **re-run the full dogfood gate** (3 personas from scratch — no previous findings injected, per the Step 4 rule).
-
-4. **File out-of-scope and move on.** They land in the queue for AFK or human triage. Not your problem for this branch.
-
-#### Convergence
-
-All 3 personas return exactly `No findings.` (or only out-of-scope, filed) AND every persona's final line is `cleanup-complete:`.
-
-#### When to bail (orchestrator judgment, no fixed cap)
-
-Loops that look like convergence but aren't = how overnight runs burn hours producing nothing. Bail into the non-convergence failure family on any signal:
-
-| Signal | Why "not converging" |
-|---|---|
-| Same finding (matched on `suspected_file` + summary slug) reappears unchanged after a fix attempt — survives a full loop through static + dogfood | Fix didn't fix. 2nd occurrence = stop. |
-| Round N+1 produces a NEW finding whose cited line is inside round N's fix commit | Fixes introducing regressions faster than they resolve. |
-| Round N has ≥ in-scope count vs N-1, twice consecutively | Regressing on count. |
-| Static hits the 8-iter cap while fixing dogfood findings | Already `failed-by-agent` from static — propagate. |
-
-Bail → finalize as `failed-by-agent` (family: non-convergence) with the last 3 rounds of merged findings + the bail signal + diff stats.
-
-**Dogfood findings themselves never produce `failed-by-agent`.** In-scope is fixed; out-of-scope → a new issue. The only `failed-by-agent` from this phase = non-convergence or static-cap propagation.
+Key cross-step rules to know without reading the reference:
+- The 8-iter static cap applies to dogfood-triggered re-review — don't reset it.
+- Re-running the dogfood gate after fixes uses no previous findings (each persona run is empirical, fresh).
+- In-scope is fixed, out-of-scope is filed as a new issue; `failed-by-agent` from this phase only comes from non-convergence or static-cap propagation.
 
 ### Step 5 — Final output
 
-**Data-capture marker + post-process — fire FIRST, before the AFK token or summary.** In the SAME assistant turn:
+**Fire the end marker + post-process FIRST**, in the SAME assistant turn, before any token or summary:
 
 ```
 <crl:run_end outcome="<converged|capped|aborted>" iters="<N>" tier="<lite|full|trivial>" trust_boundaries="<csv|none>" />
 ```
 
-`tier` and `trust_boundaries` come from the review object — they ride on this end marker, not `run_start`, because `run_start` is emitted before `code-review` resolves them. `process-run.js` reads them here.
-
-Then a Bash call (still the same turn, before the terminal token line for AFK or before the summary for direct mode):
-
 ```bash
 node "$HOME/.claude/skills/code-review-loop/process-run.js"
 ```
 
-The script is idempotent — it scans recent transcripts for unprocessed `<crl:run_start>`/`<crl:run_end>` pairs and writes one raw-data report per pair to `~/.claude/data/code-review-loop/runs/`. Already-processed pairs are skipped. Failure is non-fatal: just rerun manually. **Do not pass any args** — the script auto-detects.
+`tier` and `trust_boundaries` come from the review object. Why they ride on `run_end` (not `run_start`) and the full marker contract: `reference/data-capture-markers.md`.
 
-**If invoked from AFK** (the instruction string starts with `AFK invocation`): return exactly ONE single-line token as the last assistant text. Nothing else.
+**If invoked from AFK** (instruction string starts with `AFK invocation`): emit exactly ONE single-line token as the last assistant text, nothing else.
 
-- Static converged, MR ready: `READY_FOR_MR iter=<N> findings_fixed=<C>`
-- 8-iter cap reached: `READY_FOR_FAIL_LABEL iter=8 dump=<absolute path to findings-dump>`
+- Static converged: `READY_FOR_MR iter=<N> findings_fixed=<C>`
+- 8-iter cap: `READY_FOR_FAIL_LABEL iter=8 dump=<absolute path to findings-dump>`
 
-The tokens are named `READY_FOR_X`, not `CONVERGED`/`DONE`/`CAP_HIT`/`STOP`, intentionally. Terminal-sounding words trip the layer above into "task complete, stop" even when surrounding instructions say otherwise. `READY_FOR_X` points at the next action (open the MR, or apply the fail-label and move to the next issue). **Neither token signals end-of-run.** End-of-run is owned exclusively by AFK Phase 1 returning zero issues.
-
-From AFK, this skill runs inside a runner subagent — AFK spawns an L2 Agent to host this skill, so "emit token, nothing else" terminates the subagent's turn cleanly without leaking recency into AFK's orchestration. You don't need to know that; just emit the right token.
-
-Surviving `severity: suggestion` findings are NOT surfaced to AFK — noise for auto-merge. Worth keeping → the orchestrator (or a separate /afk pass) files them as `ready-for-agent` from diff comments later. Don't append them to the token.
+Naming rationale (`READY_FOR_X` rather than `CONVERGED` / `DONE`), why the runner subagent expects "token, nothing else", and what never goes in the token: `reference/afk-output.md`.
 
 **Otherwise** (direct user invocation): a short summary in the conversation. No file artifact.
 
