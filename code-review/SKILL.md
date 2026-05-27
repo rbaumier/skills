@@ -70,7 +70,8 @@ This skill's value = the fan-out shape. Collapse it and you might as well not ca
 | "Diff petit, un seul agent suffit" | Tier decides — Lite ≈ 8 agents, Full ≥ 12. |
 | "Je review moi-même, plus rapide" | You don't have the rule-sets loaded (security-defensive, language-*, ui-ux, coding-standards:*). The agents do, at L3. |
 | "Step 0 long, je skip les évidents" | Step 0 detects subsystem (billing/auth/webhook), surface (UI/API), imports. Skipping = missed high-stakes lenses. |
-| "Parallel one-by-one = plus simple à debug" | Serialising collapses wall-time gains, the only reason this skill exists. One turn, N Task blocks, **before** any result. |
+| "Je rédige les prompts inline, plus rapide que lire les templates" | Measured: 60–70s burnt composing 8 prompts inline. Scaffold + 8 templates read in one parallel block ≈ zero. Substitute, don't compose. |
+| "Parallel one-by-one = plus simple à debug" | Measured: 8 Task calls × 8 turns burns ~115s (15–22s/gap). One turn, N Tasks, zero extra wall-time. **Serial spawn defeats the skill.** |
 
 ## Workflow
 
@@ -117,39 +118,94 @@ Occam Razor sits alongside the Funnel: L1/L2 are prose evaluated face-value, Occ
 
 **Record the dogfood gate.** Diff changes a user-facing surface → set `dogfood_required: true` and list the matching categories in `dogfood_surfaces[]`. `code-review` only *detects and records*; the runtime 3-persona gate is the consuming loop's job. Categories (`web-ui` / `http-api` / `cli` / `native`) and the broad-detection rule: `reference/surfaces-and-dogfood.md`. Uses the same unified file-set as every other Step 0 trigger.
 
-**Spawn by materiality.** Diff touches something that should be in `CLAUDE.md` / `AGENTS.md` but those files are unchanged → spawn **claude-md-materiality** (haiku). The agent only flags the gap, doesn't write the doc. Skip materiality entirely under Lite. Tight trigger signals (designed to avoid routine config noise): `reference/materiality-signals.md`.
+**Spawn by materiality.** Diff touches something that should be in `CLAUDE.md` / `AGENTS.md` but those files are unchanged → spawn **claude-md-materiality** with `model="haiku"`. The agent only flags the gap, doesn't write the doc. Skip materiality entirely under Lite. Tight trigger signals (designed to avoid routine config noise): `reference/materiality-signals.md`.
 
-### Step 0.2 — Write shared diff to disk
+### Step 0.2 — Write per-agent diff slices to disk
 
-Write the full diff once to `/tmp/review-diff-<sanitized-branch>-<run_id>.patch`. Sanitize the branch name (a `/` in `feature/x` breaks the path); the `RUN_ID` keeps concurrent runs on the same branch from colliding; write to a `.tmp` sibling then rename so an agent never reads a half-written patch:
+Measured: 29-agent fan-out @ ~73k tokens/agent → ~2.1M tokens. The biggest controllable lever is shrinking each agent's `{diff_file}` to *just its scoped files*. Full patch ≈ 50k tokens. Per-agent slice ≈ 2–5k. Same agent count, ~30× less diff payload per agent.
 
-```bash
-SANITIZED_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
-DIFF_FILE="/tmp/review-diff-$SANITIZED_BRANCH-$RUN_ID.patch"
-rtk proxy git diff "$DEFAULT_BRANCH"...HEAD > "$DIFF_FILE.tmp" && mv "$DIFF_FILE.tmp" "$DIFF_FILE"
-```
+Two patch types:
 
-Pass `$DIFF_FILE` to every agent as `{diff_file}` — agents grep/scope the patch instead of re-running `git diff` (write-once / read-N saves the duplicated bytes across a 12-agent fan-out).
+1. **Shared full patch** — for Funnel L1/L2 only (they need cross-file view). Written once:
+   ```bash
+   SANITIZED_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+   FULL_DIFF="/tmp/review-diff-$SANITIZED_BRANCH-$RUN_ID-full.patch"
+   rtk proxy git diff "$DEFAULT_BRANCH"...HEAD > "$FULL_DIFF.tmp" && mv "$FULL_DIFF.tmp" "$FULL_DIFF"
+   ```
 
-If the file-set includes untracked/unstaged content (subsystem agents on uncommitted edits), the agent reads those directly per Step 0 — the patch file only covers the `"$DEFAULT_BRANCH"...HEAD` slice.
+2. **Per-agent slice** — for every line-anchored agent (Correctness, Skill, Tests, CLAUDE.md Compliance, Occam Razor, Subsystem) and every framework/lib skill agent. Written in parallel inside one Bash batch:
+   ```bash
+   for AGENT in correctness language-typescript security-defensive ...; do
+     SLICE="/tmp/review-diff-$SANITIZED_BRANCH-$RUN_ID-$AGENT.patch"
+     rtk proxy git diff "$DEFAULT_BRANCH"...HEAD -- <files-for-this-agent> > "$SLICE.tmp" && mv "$SLICE.tmp" "$SLICE"
+   done
+   ```
+
+Pass the matching path as `{diff_file}` per agent (full to Funnel L1/L2, slice to the rest). `.tmp` + rename so no agent reads a half-written patch.
+
+Untracked/unstaged content: agents read it directly per Step 0 — patch slices cover only `"$DEFAULT_BRANCH"...HEAD`.
 
 **Scope files per agent:**
 - Language agents: files matching the extension
 - Framework/lib agents: files importing the framework
 - Tests agent: test files + source files they test
-- Other: all changed files
+- Subsystem agents: files matching the subsystem trigger paths
+- Funnel L1/L2: all changed files (use full patch)
 
 ### Step 0.5 — Pre-triage with cheap model
 
-Many diffs have a long tail of routine files (config additions, pure renames, formatting, generated regeneration). Filter once cheaply before fan-out — spawn ONE `general-purpose` subagent, `model: haiku` (fallback `sonnet`), with the prompt from `templates/pre-triage.md` (substitute `{full_diff}` with the patch contents).
+Many diffs have a long tail of routine files (config additions, pure renames, formatting, generated regeneration). Filter once cheaply before fan-out — spawn ONE `general-purpose` subagent **with `model="haiku"` passed explicitly to `Task()`** (fallback `sonnet` only if haiku rate-limits, never opus — pre-triage on opus defeats the whole step), with the prompt from `templates/pre-triage.md` (substitute `{full_diff}` with the patch contents).
 
 **Subtract APPROVED files from every agent's scoped file list before Step 1.** Exception: a file matching any subsystem trigger or any Dogfood category in Step 0 stays regardless of triage verdict — cheap model + high-stakes path = trust the path, not the model. Triage is not a substitute for the Funnel's "is this code necessary?" — only a filter for lockfile churn and rename-only diffs.
 
-### Step 1 — Spawn all agents in a single message block
+### Step 1 — Compose mechanically, spawn in ONE message
 
-Emit ALL Task blocks (plus your own `read`/`grep`/`webfetch`) in the SAME assistant turn, before any result. Serialising = no fan-out, defeats the skill (see *Anti-shortcut*). When `only_agents` was supplied, spawn only those; else the full tier-derived panel. Pass each agent its scoped file list.
+Two measured failure modes: inline prompt composition (~67s) + serial spawn (~115s). Both avoidable.
 
-`code-review` emits no `<crl:...>` data-capture markers — those bound a *loop* run and are owned by the composing loop, not this skill.
+**1.1 — Read templates in parallel. Substitute mechanically.**
+
+Line-anchored agents (Correctness, Skill, Tests, CLAUDE.md Compliance, Occam Razor, Subsystem): prompt = `_line-anchored-scaffold.md` with `{role_specific}` swapped for the role template. Self-contained agents (Funnel L1/L2, Materiality, Matt Review): prompt = role template alone.
+
+One assistant turn, all template reads parallel:
+
+```
+Read(_line-anchored-scaffold.md)
+Read(correctness.md)
+Read(skill-agent.md)         × N (one per skill)
+Read(tests-agent.md)
+Read(claude-md-compliance.md)
+Read(occam-razor.md)
+Read(subsystem-agent.md)     × N (one per subsystem)
+Read(funnel-l1.md)
+Read(funnel-l2.md)
+Read(matt-review.md)
+…
+```
+
+Then mechanical substitution: `{role_specific}`, `{file_list}`, `{diff_file}`, `{trust_boundaries}`, `{skill_name}`, `{subsystem_name}`, `{failure_modes}`, `{previous_findings_block}`. No rewriting. No "let me improve this template". Templates already carry the rules.
+
+**1.2 — Spawn every agent in ONE assistant turn.**
+
+Single `<function_calls>` block, every Task inside, alongside your own reads/greps. **Every `Task()` MUST carry `model=...` explicitly** — without it the subagent inherits the orchestrator's model (often Opus), silently burning 5× the cost of the prescribed Sonnet/Haiku. The model column in `reference/agent-table.md` is the source of truth.
+
+```
+<function_calls>
+  Task(subagent_type=..., model="sonnet", prompt=<scaffold+correctness>)
+  Task(subagent_type=..., model="sonnet", prompt=<scaffold+skill-agent for language-typescript>)
+  Task(subagent_type=..., model="sonnet", prompt=<scaffold+skill-agent for security-defensive>)
+  Task(subagent_type=..., model="sonnet", prompt=<scaffold+tests-agent>)
+  Task(subagent_type=..., model="haiku",  prompt=<funnel-l1>)
+  Task(subagent_type=..., model="haiku",  prompt=<funnel-l2>)
+  Task(subagent_type=..., model="opus",   prompt=<generalist Opus 4.7 pass>)
+  … every other agent, each with its prescribed model …
+</function_calls>
+```
+
+NOT 8 turns × 1 Task. NOT 3 turns × 3 Tasks. Serial-spawn cost: 15–22s per gap, measured. One turn, every Task, before any result. **No bare `Task(...)` without `model=`** — measured leak: ~15–30% of agents that should be Sonnet/Haiku ran on Opus when this was implicit, and `pre-triage` ran on Opus 60% of the time despite being the cheapest cog of the pipeline.
+
+`only_agents` supplied → those only. Else full tier-derived panel. Pass each its scoped file list.
+
+`code-review` emits no `<crl:...>` markers — those bound a *loop* run.
 
 ### Step 2 — Assemble and emit the review object
 
@@ -164,11 +220,11 @@ Quick orientation:
 
 ## Context verification protocol
 
-A 5-question gate (callers/callees, test context, intentional comments, diff-is-the-fix, type tracing) injected verbatim into every line-anchored prompt (Correctness, Subsystem, Tests, Skill, CLAUDE.md Compliance, Occam Razor). Funnel L1/L2 don't need it (structural, not failure-mode-inferred). Full block to inject: `reference/context-verification.md`.
+A 5-question gate (callers/callees, test context, intentional comments, diff-is-the-fix, type tracing) is inlined in `templates/_line-anchored-scaffold.md` — every line-anchored prompt picks it up via the scaffold wrapper. Funnel L1/L2 don't need it (structural, not failure-mode-inferred). Prose source of truth (referenced when editing the scaffold): `reference/context-verification.md`.
 
 ## Output format for line-anchored findings
 
-The exact JSON envelope, the controlled vocabulary for `signature`, severity/confidence semantics, and the two silent checks (test-coverage grep, "read what you flag") live in `reference/output-format.md`. Read that file once before injecting the block into a line-anchored template — it is the source the agents must reproduce.
+The exact JSON envelope, the controlled vocabulary for `signature`, severity/confidence semantics, and the two silent checks (test-coverage grep, "read what you flag") are inlined in `templates/_line-anchored-scaffold.md`. Prose source of truth (referenced when editing the scaffold): `reference/output-format.md`.
 
 Zero findings → respond exactly `No findings.` (textual, not JSON — preserves the convergence signal). Funnel L1/L2 stay textual; Dogfood keeps its own contract.
 
@@ -176,10 +232,10 @@ Zero findings → respond exactly `No findings.` (textual, not JSON — preserve
 
 ## Agent Prompt Templates
 
-Each template lives in its own file under `templates/`. Read only the templates Step 0 detected — parallel reads, ~zero wall-time cost. Substitute placeholders before passing the text as the Agent's `prompt`.
+Each template lives in its own file under `templates/`. Read only the templates Step 0 detected — parallel reads in one tool_use block, ~zero wall-time cost. Substitute placeholders before passing the text as the Agent's `prompt`.
 
 The full mapping (template → model → output shape → trust-boundaries injection → prev-findings shape), the **Heavy vs Light** skill partition, the substitution rules for `{subsystem_name}` / `{failure_modes}` / `{diff_file}` / `{trust_boundaries}`, and the **previous-findings injection contract** for re-review live in `reference/agent-table.md`. Read it once per run when fanning out — it is the source of truth.
 
 Two rules small enough to keep inline:
-- **Line-anchored templates** (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance, Occam Razor) require the Context verification + Output format blocks appended verbatim before spawning. **Funnel L1/L2, Materiality, Matt Review** are self-contained.
-- Heavy reasoning → `sonnet`, structural/textual lifts → `haiku`, generalist Opus pass → `opus`. The orchestrator stays on the session model.
+- **Line-anchored** (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance, Occam Razor): role-specific body only. Wrapped by `templates/_line-anchored-scaffold.md` (inlines `Read CLAUDE.md`, `Read diff from {diff_file}`, Context verification, Output format, `{previous_findings_block}`). Read both in parallel, swap `{role_specific}` for the role body, substitute the rest. One pass. **Self-contained** (Funnel L1/L2, Materiality, Matt Review): skip the scaffold.
+- Heavy reasoning → `sonnet`, structural/textual → `haiku`, generalist Opus pass → `opus`. **Always pass `model=...` to `Task()` — omission inherits the orchestrator's model and silently runs your "haiku" agents on Opus.** Orchestrator stays on session model.
