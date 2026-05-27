@@ -4,7 +4,7 @@ Each template lives in its own file under `templates/`. Read only the templates 
 
 **Line-anchored templates** (Skill, Tests, Subsystem, Correctness, CLAUDE.md Compliance, Occam Razor) require the Context verification + Output format blocks appended verbatim before spawning. **Funnel L1/L2, Materiality, Matt Review** are self-contained — don't append.
 
-**Model assignment.** Heavy reasoning → `sonnet`, structural/textual lifts → `haiku`. The orchestrator (you) stays on the session model.
+**Model assignment.** Heavy reasoning → `sonnet`, structural/textual lifts → `haiku`. The orchestrator (you) stays on the session model. **The Model column below is binding only if you pass `model="<value>"` to every `Task()`** — omission inherits the orchestrator's model, so "haiku" agents silently run on Opus when the orchestrator is on Opus. Always pass it.
 
 | Agent | Template | Model | Output | Trust boundaries | Prev-findings shape |
 |---|---|---|---|---|---|

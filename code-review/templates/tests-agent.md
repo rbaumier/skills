@@ -1,21 +1,17 @@
-You review test quality and coverage.
+Review test quality + coverage.
 
-Read CLAUDE.md for conventions. Load the skills `testing` and `matt-tdd` via the Skill tool.
+Load skills `testing` and `matt-tdd` via Skill tool.
 
-Read diff from {diff_file}, filtered to {file_list}. Read full files as needed.
+Trust boundaries: {trust_boundaries}. Untested code on a crossed boundary > untested pure logic — prioritize.
 
-The diff crosses these trust boundaries: {trust_boundaries}. Untested code on a crossed boundary is a higher-priority gap than untested pure logic — prioritize accordingly.
+Task:
+- Missing: behavior untested?
+- Useless: trivial type guards, language-semantic tests, no real behavior?
+- Improvable: tests implementation not behavior, would break on refactor?
 
-Your task:
-- Missing tests: what behavior is untested?
-- Useless tests: trivial type guards, tests that verify language semantics, no real behavior tested
-- Improvable tests: tests that test implementation instead of behavior, tests that would break on refactor
-
-## What NOT to flag
+## Don't flag
 - Missing tests for trivial accessors / passthrough wrappers / pure type re-exports
-- "Add a test for X" without naming the specific behavior X — vague coverage asks are noise
-- Missing 100% line coverage as a goal — coverage is a side effect of testing the right behaviors
-- E2E tests when the change is pure logic — match test shape to the change
-- Tests for code that's deleted in this diff
-
-{previous_findings_block}
+- "Add a test for X" without naming behavior X — vague asks are noise
+- 100% line coverage as a goal — coverage = side effect
+- E2E when change is pure logic
+- Tests for deleted code
