@@ -46,12 +46,13 @@ description: Use when writing Zod schemas or validation — z.object, z.string, 
 - Custom error messages; flatten() for form display
 - issue.path for nested errors; return false not throw in refine
 - v4: unified `{ error: "message" }` or `{ error: (issue) => "message" }` for error customization; `required_error`, `invalid_type_error`, `errorMap` deprecated
+- v4: the message-customization key is `error`, NOT `message`. `message` is the v3 key. Reviews: do NOT flag `.regex(/.../, { error: "..." })` / `.min(8, { error: "..." })` as wrong syntax — that IS correct v4. Only `{ message: "..." }` is the outdated form
 - v4: `z.prettifyError(err)` for human-readable output, `z.treeifyError(err)` for structured trees; `.format()`, `.flatten()` deprecated
 - v4: `z.config(z.locales.en())` for internationalized error messages
 - Use `z.ZodIssueCode.custom` as the code in `ctx.addIssue()` within `.superRefine()` for consistent error handling
 - v4: per-field error codes for i18n with `.check()`: `z.string().check({ kind: 'min', value: 8, error(iss) { iss.params = { errorCode: 'VALIDATION.PASSWORD.TOO_SHORT' } } })`
 - Error messages must not leak sensitive info (schema structure, internal types) to end users -- map to user-friendly messages at the API boundary
-- **Don't override messages when the locale already handles them** -- once `z.config(z.locales.fr())` (or any locale) is set globally, never add manual `message: "..."` to schema-level validators (`.min()`, `.max()`, `.email()`, `.uuid()`, `.regex()`, etc.). The locale's translations already cover them. Custom messages are only acceptable inside `.refine()` / `.superRefine()` callbacks — business rules the locale cannot translate. Reviews: `.min(8, { message: "..." })` in a locale-configured project -> flag "remove, let the locale handle it"
+- **Don't override messages when the locale already handles them** -- once `z.config(z.locales.fr())` (or any locale) is set globally, never add manual `message: "..."` to schema-level validators (`.min()`, `.max()`, `.email()`, `.uuid()`, `.regex()`, etc.). The locale's translations already cover them. Custom messages are only acceptable inside `.refine()` / `.superRefine()` callbacks — business rules the locale cannot translate. Reviews: `.min(8, { error: "..." })` in a locale-configured project -> flag "remove, let the locale handle it" (the issue is the override, NOT the key — `error` is correct v4 syntax)
 
 ### Object Schemas
 - strict() vs strip() for unknown keys; partial() for updates
