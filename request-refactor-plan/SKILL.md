@@ -37,7 +37,20 @@ Work out what you plan to change and what you plan NOT to change. Scope discipli
 
 Look at test coverage for the area being refactored. **Refactoring without tests is rewriting.** If coverage is insufficient, ask the user what their testing plan is — do we add characterization tests first?
 
-### 7. Break into tiny commits
+### 7. Pressure-test the approach (soundness gate)
+
+Before breaking into commits, judge the *approach itself* — a wrong approach caught here is free; caught after an 80-commit branch it's a rewrite. Walk these, roughly in order:
+
+1. **Meets the goal, including unhappy paths?** Trace the plan against the failure modes, not just the happy path — concurrency, partial failure, the old and new paths diverging mid-migration, a consumer you forgot to flip. A happy-path-only approach is unsound.
+2. **Fits what already exists?** Reuse over reinvent — **check the actual code, don't assume.** Reinventing infra the codebase already has is the most common avoidable flaw.
+3. **Simplest approach that works?** Flag over-engineering and gold-plating *and* missing pieces. Right-sized, not bigger or smaller than the problem.
+4. **Load-bearing decisions pinned?** Identify the irreversible / architecture-determining choices and make them *now*; defer the reversible ones to implementation.
+5. **Right altitude?** Approach + architecture, not line-level minutiae — and not so vague you can't tell whether it's wrong.
+6. **Risks and unknowns named?** The hard parts and the one or two things most likely to be wrong are called out, not glossed.
+
+**The decisive test — deferred detail vs. unspecified decision.** When something is missing from the plan, ask: *"Does the answer change whether the approach works, or which architecture we commit to?"* **Yes → pin it now** (where shared state lives with multiple replicas, which entity is the key, fail-open vs fail-closed when a store is down). **No → defer it** (variable names, file layout, error-message wording). Demanding the reversible at plan stage is itself a planning error; hand-waving a load-bearing decision because the plan "reads well" is the failure this gate exists to catch.
+
+### 8. Break into tiny commits
 
 Break the implementation into a plan of **tiny commits**. Each commit should leave the codebase in a working state. If a commit can't be independently green, it's too big — split it.
 
@@ -61,7 +74,7 @@ Good — parallel pipeline:
 
 Benefits: every commit ships independently, the old path is always available for revert, divergences surface within hours not weeks, and the refactor never blocks unrelated work in the same area.
 
-### 8. Write the doc
+### 9. Write the doc
 
 **Default location**: `docs/rfcs/YYYY-MM-DD-refactor-{slug}.md` at repo root. Create `docs/rfcs/` if missing.
 
@@ -131,6 +144,9 @@ Anything else worth capturing.
 - **Refactoring without tests** — add characterization tests first. Don't plan a refactor assuming tests will be written alongside.
 - **Scope creep** — "while I'm in there..." is the enemy. Stay in scope.
 - **File paths in the doc** — they rot. Describe behavior.
+- **Approving on vibes** — the plan reads plausibly but you never traced it against the failure modes or checked it against the real code. Reading well ≠ working.
+- **Hand-waving a load-bearing decision** — "we'll store it somewhere appropriate" defers the choice the whole approach hinges on. Pin it now (step 7).
+- **Nitpicking deferred detail** — sending the plan back over variable names or file layout that should be decided while coding, not at plan stage.
 
 ## Cross-References
 
