@@ -1,0 +1,1 @@
+{"skill":"web-performance","eval":"e1","iter":2,"passed":26,"total":35,"fails":["responsive-images","preconnect","scroll-listener-passive","scroll-listener-throttle","scroll-listener-cleanup","code-split-components","inline-critical-css","emdash-overuse","lazy-load-everything-upfront"]}

@@ -1,0 +1,24 @@
+Review this TDD approach and list all issues:
+
+I'm building a shopping cart. Here's my plan:
+1. Write ALL tests first (addItem, removeItem, updateQuantity, calculateTotal, applyDiscount, checkout) — all 6 at once
+2. Then implement all methods
+3. calculateTotal test is failing due to rounding, so I'll refactor the implementation now
+4. Once all tests pass, ship it
+
+Here's my test file so far (all tests written, all RED):
+
+```typescript
+describe('ShoppingCart', () => {
+  it('addItem adds product', () => { /* RED */ });
+  it('removeItem removes product', () => { /* RED */ });
+  it('updateQuantity changes count', () => { /* RED */ });
+  it('calculateTotal sums prices', () => { /* RED */ });
+  it('applyDiscount reduces total', () => { /* RED */ });
+  it('checkout creates order', () => { /* RED */ });
+});
+```
+
+Is this the right approach?
+
+Output your review listing every issue.

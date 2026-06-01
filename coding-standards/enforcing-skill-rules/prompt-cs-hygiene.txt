@@ -1,0 +1,38 @@
+Fix all issues:
+
+```typescript
+export async function summarizeOrders(orders, isUrgent, sendEmail, emailTo, taxRate, discountCode) {
+  let total = 0;
+  let count = 0;
+  const lines = [];
+  for (let i = 0; i < orders.length; i++) {
+    const order = orders[i];
+    if (order.qty > 0 && order.active) {
+      const amount = order.qty * order.price * (taxRate ? 1 + taxRate : 1) - (discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0);
+      if (amount > 0) {
+        total += amount;
+        count++;
+        lines.push(`${order.id}: ${amount}`);
+        const stock = await db.query('SELECT qty FROM stock WHERE id = $1', [order.id]);
+        if (stock.rows[0]) {
+          lines.push(`stock ${stock.rows[0].qty}`);
+        }
+      }
+    }
+  }
+  // const oldTotal = orders.reduce((s, o) => s + o.price, 0);
+  // TODO: handle refunds later
+  if (total > 1000) {
+    await mailer.send(emailTo, `Big batch: ${total}`);
+  }
+  if (isUrgent) {
+    total = total * 2;
+  }
+  if (sendEmail) {
+    await mailer.send(emailTo, `Summary: ${count} orders, ${total}`);
+  }
+  return { total, count, lines };
+}
+```
+
+Output fixed code only.

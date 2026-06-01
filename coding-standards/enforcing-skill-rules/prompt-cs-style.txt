@@ -1,0 +1,48 @@
+Fix all issues:
+
+```typescript
+// Was originally a class-based OrderService, refactored to functions in Q3
+import { db } from './db';
+import { cache } from './cache';
+
+// These values are exposed because the admin dashboard needs them on the instance settings page
+export function getInstanceConfig(): InstanceConfig {
+  return {
+    health_monitor_warning_failure_percent: 0.1,
+    health_monitor_disable_failure_percent: 0.3,
+  };
+}
+
+// Process orders
+export async function handleOrderData(user: User, order: Order): Promise<OrderRow> {
+  // Get user
+  const u = user;
+
+  // Process items
+  const amt = order.total;
+  const ct = order.itemCount;
+
+  // Check stock
+  const s = await db.query('SELECT qty FROM stock WHERE id = $1', [order.id]);
+
+  // Notify
+  if (order.urgent) {
+    await mailer.send(u.email, 'Urgent order placed');
+  } else {
+    await mailer.send(u.email, 'Order placed');
+  }
+
+  // Create order
+  const created = await db.query(
+    'INSERT INTO big_orders (user_id, total, item_count) VALUES ($1, $2, $3) RETURNING *',
+    [u.id, amt, ct],
+  );
+
+  // Update cache
+  cache.set(`user:${u.id}:lastOrder`, created.rows[0].id);
+
+  return created.rows[0];
+}
+```
+
+Output fixed code only.

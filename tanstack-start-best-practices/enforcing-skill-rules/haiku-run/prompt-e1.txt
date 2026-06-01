@@ -1,0 +1,61 @@
+Fix all issues in this TanStack Start app:
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/posts")({
+  component: PostList,
+});
+function PostList() {
+  const params = new URLSearchParams(window.location.search);
+  const page = parseInt(params.get("page") || "1");
+  return <div>Page {page}</div>;
+}
+
+import { Link } from "@tanstack/react-router";
+export function Nav() {
+  return (
+    <nav>
+      <Link to="/">Home</Link>
+      <Link to="/posts">Posts</Link>
+      <Link to="/admin/logs">Audit</Link>
+    </nav>
+  );
+}
+
+
+import { useForm } from "@tanstack/react-form";
+export function CreatePost() {
+  const form = useForm({
+    defaultValues: { title: "", body: "" },
+    onSubmit: ({ value }) => createPost(value),
+  });
+  return <form>...</form>;
+}
+
+export const Route = createFileRoute("/posts")({
+  loader: async () => {
+    const posts = await queryClient.prefetchQuery({
+      queryKey: ["posts"],
+      queryFn: fetchPosts,
+    });
+    return { posts };
+  },
+});
+
+import { Suspense } from "react";
+export function PostPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <PostContent />
+    </Suspense>
+  );
+}
+
+export const Route = createFileRoute("/api/health")({
+  loader: async () => {
+    return Response.json({ ok: true });
+  },
+});
+```
+
+Output fixed code only.

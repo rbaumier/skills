@@ -34,7 +34,7 @@ Before shipping any UI, run this checklist. If 3+ items are true, the design loo
 **The test**: If someone saw this UI and said "AI made this", would they be right? A distinctive interface makes someone ask "how was this made?" not "which AI made this?"
 
 ## Gotchas
-- `"use client"` only for hooks/event handlers/browser APIs — over-marking kills SSR
+- `"use client"` only for hooks/event handlers/browser APIs — over-marking kills SSR. Never blanket-mark a whole page; push the directive down to the smallest interactive leaf and keep the page/shell a server component
 - `useEffect` for derived state = anti-pattern. Compute inline during render, never sync with effects
 - `key={index}` dynamic lists = silent bugs on reorder/delete. Stable IDs only
 - Next.js `fetch()` Server Components caches by default prod. `{ cache: 'no-store' }` or `revalidate`
@@ -104,6 +104,32 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
     <ul role="list" className="divide-y">
       {tasks.map(task => <TaskItem key={task.id} task={task} />)}
     </ul>
+  );
+}
+```
+
+**Error Boundary with retry** — any subtree that fetches/renders remote data MUST be wrapped in an Error Boundary that exposes a retry action. An inline `if (error) return ...` is NOT an Error Boundary (it can't catch render-time throws); you need both. Use `react-error-boundary` — the canonical one-pass pattern:
+```tsx
+import { ErrorBoundary } from 'react-error-boundary';
+
+// Fallback gets the error + a reset fn that re-mounts the boundary's children
+function TaskListError({ error, resetErrorBoundary }: FallbackProps) {
+  return (
+    <div role="alert" className="rounded border border-danger bg-surface p-4">
+      <p className="text-danger">Failed to load tasks: {error.message}</p>
+      <button onClick={resetErrorBoundary}>Retry</button>
+    </div>
+  );
+}
+
+// Wrap the data-fetching subtree. onReset clears stale state so retry refetches.
+export function TaskListSection() {
+  return (
+    <ErrorBoundary FallbackComponent={TaskListError} onReset={() => { /* invalidate/refetch */ }}>
+      <Suspense fallback={<TaskListSkeleton />}>
+        <TaskListContainer />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 ```
@@ -192,7 +218,7 @@ Test at these breakpoints: 320px, 768px, 1024px, 1440px.
 ### Project Structure
 - Feature-based: `features/{name}/api/`, `components/`, `hooks/`, `types/`, `index.ts`
 - Shared UI `components/ui/`, layouts `components/layout/`. `@/` = src/
-- Types colocated with feature, NOT global `types/` dump
+- Types colocated with feature (`./types`/`../types`), NOT global `@/types/` dump — if you see a type imported from a global `@/types/...` path, move it to the feature folder
 - No feature logic in shared components; use hooks/context not prop drilling
 - TS strict, no `any`, `import type`, JSDoc public APIs. Folder-based routing, lazy-load routes
 - **Micro-frontend decision gate** -- micro-frontends only when: 3+ teams own distinct UI areas AND teams deploy at different cadences AND coordination cost exceeds MFE overhead. Do NOT use when: single team, early-stage product, strong UI cohesion needed (cross-boundary animations), or performance is critical (extra network round-trips). Wrong splits are expensive to undo.
@@ -222,9 +248,13 @@ Test at these breakpoints: 320px, 768px, 1024px, 1440px.
 - **Anchor Positioning for tooltips/popovers** -- CSS `anchor()` function positions elements relative to another element without JS. Replaces Floating UI/Popper for most tooltip/popover cases. `position-anchor: --my-trigger; top: anchor(bottom); left: anchor(center);`. Progressive enhancement: fall back to fixed positioning.
 
 ### Performance
-- Virtualize >50 items: `@tanstack/react-virtual`. No barrel imports; direct imports
+- Virtualize >50 items with `@tanstack/react-virtual` (`useVirtualizer`); if a mapped list's length is unbounded, assume it can grow long and virtualize. No barrel imports; direct imports
 - `Promise.all()` independent ops, start early/await late. Debounce search 300-500ms, cleanup effects
-- next/dynamic heavy components, lazy load routes/charts/modals. Core Web Vitals (LCP/INP/CLS)
+- Heavy/below-fold component (chart, rich editor, map, modal body, any large dep) → load it with `next/dynamic`, NEVER delete it and NEVER describe it in prose. Embody the import in the code:
+  ```tsx
+  const ProductChart = dynamic(() => import('./ProductChart'), { ssr: false, loading: () => <Skeleton /> });
+  ```
+  The component stays a separate module — `dynamic(() => import('./X'))` references it without inlining its body. Lazy-load routes too. Core Web Vitals (LCP/INP/CLS)
 - Profile before optimizing. Performance regressions = bugs
 - **PWA baseline for any web app** -- every web app should have: `manifest.json` (name, icons 192+512, display: standalone, theme_color), a service worker with cache-first for static assets + network-first for API, and `<meta name='theme-color'>`. Test with DevTools Application panel. This is progressive enhancement -- costs nothing if unused, massive UX win when installed.
 
@@ -243,6 +273,22 @@ Test at these breakpoints: 320px, 768px, 1024px, 1440px.
 - React Flow: memo nodes, NodeResizer, typed data. Scaffold: component/types/styles/tests/stories/barrel
 - No silent errors; surface via toast/UI. Vue 3: composables+provide/inject. Svelte 5: runes+snippets
 - FFCI (Fit+Reuse+Perf-Complexity-Maintenance): proceed >=6, redesign <=2
+
+### Pre-Output Trigger Checklist (STOP — scan before you emit code)
+
+These are the rules most often missed. Each is a concrete IF → THEN. Scan your draft against every trigger; if the trigger fires and you didn't do the THEN, fix it before output.
+
+- **`'use client'` at top of a file** → only keep it if the file itself uses hooks/event handlers/browser APIs. If the page is mostly data display, split: keep the interactive leaf as the only `'use client'` component, make the page/shell a server component. Never blanket-mark a whole page client.
+- **A type imported from `@/types/...` (global dump)** → colocate it: define/import the type from the feature folder (e.g. `./types` or `../types`), not a global `types/`. If only an import line is shown, change it to a feature-local path and define the type inline if needed.
+- **`if (isLoading) return <Spinner/>` / `if (loading) ...` early return** → replace with Suspense-first: `useSuspenseQuery` + `<Suspense fallback={<Skeleton/>}>`. If you must keep a flag, gate it `if (loading && !data)` so cached data never flashes. The bare `if (isLoading) return` early-return is the trap — remove it.
+- **Search/filter input whose `onChange` updates query/filter state every keystroke** → debounce 300–500ms (`useDebouncedValue`, `useDeferredValue`, or a `setTimeout` cleanup). Raw `onChange={e => setSearch(e.target.value)}` driving a filter/fetch is the trap.
+- **`fetch(...)` written inside a component or `useEffect`** → move it to the feature `api/` layer and call it via a typed function (and a query hook). No inline `fetch`/`await fetch` in component bodies — this includes form submit handlers, not just data loads.
+- **A component's body mixes types, hooks, and JSX out of order** → enforce order inside every component: types → hooks (useState/useQuery) → useMemo → useCallback → render/JSX → default export. No module-level mutable `let`, no hooks/refs declared outside a component.
+- **Any element with `onClick` that is not a native `<button>`/`<a>`** (e.g. `<div>`, `<article>`, `<li>` onClick) → make it a real `<button>`, OR add ALL of: `role="button"`, `tabIndex={0}`, and an `onKeyDown` handling Enter/Space. A clickable non-button without keyboard support is the trap — applies to clickable cards/rows too.
+- **Component tree that fetches/renders remote data** → wrap it in an Error Boundary with a retry action — import `{ ErrorBoundary }` from `react-error-boundary`, give it a `FallbackComponent` whose fallback renders a Retry button wired to `resetErrorBoundary`, and an `onReset` that refetches. See the canonical "Error Boundary with retry" example above. An inline `if (error) return ...` is NOT an Error Boundary (it can't catch render throws) — you need the actual `<ErrorBoundary>` wrapper AND a retry button.
+- **A list that can exceed ~50 items** (any `.map` over fetched/filtered data with no fixed small cap) → virtualize with `@tanstack/react-virtual` (`useVirtualizer`). When item count is unbounded, assume it can be long and virtualize.
+- **A heavy or below-fold component** (chart, rich editor, map, large modal body, any 100KB+ dependency, or one flagged "heavy") → wrap it in `next/dynamic`, JAMAIS le supprimer ni le décrire en prose. Replace the static import with `const X = dynamic(() => import('./X'), { ssr: false, loading: () => <Skeleton/> })` and keep rendering `<X .../>` exactly where it was. Deleting the component, or writing "would use next/dynamic" / "à loader si lourd" instead of the actual `dynamic(() => import(...))` call, is the trap. The component remains its own module — you do NOT inline its body.
+- **A modal/dialog/overlay** → mandatory minimum, never ship without BOTH: (a) close on `Escape` (keydown listener, cleaned up on unmount), and (b) move focus into the dialog (close button or first focusable element) on open. Overlay-click-only close is the trap. Then add the two best-practice mechanisms for a complete dialog: trap Tab focus inside (Tab/Shift+Tab cycle within, never escape behind) and restore focus to the trigger element on close (save `document.activeElement` on open, `.focus()` it on cleanup).
 
 ### Verification Checklist
 After building UI:

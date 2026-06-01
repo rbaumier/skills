@@ -1,0 +1,82 @@
+Fix all issues:
+
+```tsx
+import { useSearchParams } from "next/navigation";
+
+export default function Page() {
+  const [params] = useSearchParams();
+  return <div>Filter: {params.get("q")}</div>;
+}
+
+"use client";
+import { useState } from "react";
+
+export function ContactForm() {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    try {
+      await submitContact(new FormData(e.target as HTMLFormElement));
+    } catch (err) {
+      setError("Failed");
+    } finally {
+      setPending(false);
+    }
+  }
+  
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+
+export function App() {
+  return (
+    <div>
+      <Header />
+      <UserProfile userId={123} />
+      <Footer />
+    </div>
+  );
+}
+
+"use client";
+import { useState } from "react";
+
+export function ProductList({ products }: { products: Product[] }) {
+  const [query, setQuery] = useState("");
+  const filtered = products.filter(p => p.name.includes(query));
+  return (
+    <div>
+      <input value={query} onChange={e => setQuery(e.target.value)} />
+      {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+    </div>
+  );
+}
+
+export function EditableList({ items }: { items: Item[] }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  return (
+    <div>
+      {items.map((item, index) => (
+        <div key={index}>
+          {editingId === item.id ? (
+            <EditForm item={item} onDone={() => setEditingId(null)} />
+          ) : (
+            <ItemDisplay item={item} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+"use server";
+export async function updateProfile(formData: FormData) {
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  await db.users.update({ name, email });
+}
+```
+
+Output fixed code only.

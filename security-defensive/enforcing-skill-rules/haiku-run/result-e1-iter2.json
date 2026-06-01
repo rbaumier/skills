@@ -1,0 +1,1 @@
+{"skill":"security-defensive","eval":"e1","iter":2,"passed":18,"total":23,"fails":["csp-nonce-based","idor-documents","csrf-token-state-changes","structured-audit-logs","admin-input-validation"]}

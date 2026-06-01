@@ -20,12 +20,6 @@
           "category": "behavior"
         },
         {
-          "id": "scroll-restoration",
-          "trap": "No scroll restoration config",
-          "description": "Configure scrollRestoration with getKey for search-param routes",
-          "category": "behavior"
-        },
-        {
           "id": "server-form-validation",
           "trap": "Form without server-side validation",
           "description": "createServerValidate() from @tanstack/start for server-side form validation",
@@ -45,8 +39,8 @@
         },
         {
           "id": "createAPIFileRoute",
-          "trap": "Raw Response.json in loader instead of API route",
-          "description": "createAPIFileRoute for typed API route definitions with HTTP method exports",
+          "trap": "Raw Response.json in a route loader instead of a server route handler",
+          "description": "Server route via createFileRoute with server.handlers (GET/POST/...) returning Response/json -- not data in a loader",
           "category": "architecture"
         }
       ]

@@ -1,0 +1,1 @@
+{"skill":"ui-ux","eval":"e1","iter":2,"passed":27,"total":35,"fails":["search-input-no-label","empty-state-centered","too-many-text-colors","heading-hierarchy-size-only","no-loading-state","no-error-state","no-reduced-motion","status-text-not-badge"]}

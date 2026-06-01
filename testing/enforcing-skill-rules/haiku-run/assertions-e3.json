@@ -1,0 +1,44 @@
+[
+  {
+    "id": "msw-not-vi-mock-fetch",
+    "trap": "vi.mock(\"node-fetch\") instead of MSW",
+    "description": "Use MSW for network mocking, not vi.mock on fetch/axios",
+    "category": "behavior"
+  },
+  {
+    "id": "userEvent-not-fireEvent",
+    "trap": "fireEvent.click() and fireEvent.change() in RTL",
+    "description": "userEvent over fireEvent -- simulates real browser event sequence",
+    "category": "behavior"
+  },
+  {
+    "id": "contract-test-external-api",
+    "trap": "Real Stripe API call in test without contract testing",
+    "description": "Contract tests with MSW for external API boundaries, never call real APIs",
+    "category": "behavior"
+  },
+  {
+    "id": "coverage-ratchet",
+    "trap": "Hardcoded coverage thresholds (80/80/80/80)",
+    "description": "Coverage as ratchet (autoUpdate: true), not hardcoded threshold",
+    "category": "behavior"
+  },
+  {
+    "id": "visual-screenshot-not-html-snapshot",
+    "trap": "toMatchSnapshot() on HTML content instead of toHaveScreenshot()",
+    "description": "Visual regression: toHaveScreenshot() not toMatchSnapshot() on HTML",
+    "category": "behavior"
+  },
+  {
+    "id": "flaky-retries-flagged",
+    "trap": "retries: 3 in Playwright config with no explanatory comment",
+    "description": "Flag unexplained retries in config -- retries mask real regressions",
+    "category": "gotcha"
+  },
+  {
+    "id": "test-each-data-driven",
+    "trap": "5 near-identical formatCurrency tests differing only in input",
+    "description": "test.each for data-driven tests instead of duplicated test bodies",
+    "category": "format"
+  }
+]

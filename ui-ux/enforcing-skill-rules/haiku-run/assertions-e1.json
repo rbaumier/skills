@@ -1,0 +1,212 @@
+[
+  {
+    "id": "no-inter-font",
+    "trap": "fontFamily: 'Inter, system-ui, sans-serif' — Inter is the most common AI default",
+    "description": "Inter is banned for premium/creative work. Use Geist, Outfit, Cabinet Grotesk, or Satoshi",
+    "category": "format"
+  },
+  {
+    "id": "max-2-font-weights",
+    "trap": "Uses 3 font weights: font-semibold (600), font-bold (700), font-medium (500)",
+    "description": "2 font weights for UI: normal (400/500) and bold (600/700). Pick one from each tier, not three",
+    "category": "format"
+  },
+  {
+    "id": "weight-contrast-too-narrow",
+    "trap": "font-semibold (600) paired with font-medium (500) — only 100 weight apart",
+    "description": "Dramatic weight pairing: 400+700, not 600+500. Weight contrast must be visible",
+    "category": "format"
+  },
+  {
+    "id": "no-3col-equal-grid",
+    "trap": "grid grid-cols-3 gap-4 for project cards — the classic AI card grid",
+    "description": "3-column equal card grids are banned. Use asymmetric grid, zig-zag, or auto-fit minmax",
+    "category": "format"
+  },
+  {
+    "id": "no-filler-copy-seamlessly",
+    "trap": "'Manage and track all your projects seamlessly in one place' — filler with 'seamlessly'",
+    "description": "Filler words banned: 'seamlessly', 'elevate', 'unleash', 'next-gen'. Use concrete verbs",
+    "category": "format"
+  },
+  {
+    "id": "no-learn-more-link",
+    "trap": "'Learn More' link on project cards — generic, says nothing about the destination",
+    "description": "Button/link text must be specific verb+noun: 'View details', 'Open project', not 'Learn More'",
+    "category": "format"
+  },
+  {
+    "id": "no-pure-black-shadow-css",
+    "trap": "rgba(0, 0, 0, 0.3) in the hover-card CSS — pure black shadow",
+    "description": "Never pure black shadows. Tint to background hue: rgba(17, 24, 39, 0.08) or similar",
+    "category": "format"
+  },
+  {
+    "id": "no-direct-shadow-animation",
+    "trap": "transition: box-shadow 0.3s ease in CSS and transition-shadow on cards",
+    "description": "Never transition box-shadow directly. Use pseudo-element opacity technique",
+    "category": "behavior"
+  },
+  {
+    "id": "icon-buttons-need-aria-label",
+    "trap": "Bell and Settings icon buttons have no aria-label",
+    "description": "Icon buttons must have aria-label for screen reader users",
+    "category": "security"
+  },
+  {
+    "id": "search-input-no-label",
+    "trap": "Search input uses placeholder only, no associated <label> or aria-label",
+    "description": "Form inputs need associated labels for accessibility. Placeholder is not a label",
+    "category": "security"
+  },
+  {
+    "id": "no-outline-none-without-focus-visible",
+    "trap": "outline-none on search input without :focus-visible ring replacement",
+    "description": "Never outline-none without a :focus-visible replacement. Keyboard users need visible focus",
+    "category": "security"
+  },
+  {
+    "id": "focus-border-not-ring",
+    "trap": "focus:border-indigo-500 — using border change for focus instead of ring",
+    "description": "Use focus-visible:ring-2 ring-offset, not border color change, for focus indication",
+    "category": "gotcha"
+  },
+  {
+    "id": "empty-state-missing-elements",
+    "trap": "Empty state is just 2 lines of text — no icon, no CTA, no illustration",
+    "description": "Empty states need: icon/illustration, why it's empty, CTA to take action, help link. This is an onboarding moment",
+    "category": "behavior"
+  },
+  {
+    "id": "empty-state-centered",
+    "trap": "Empty state is text-center with no visual weight — looks like an afterthought",
+    "description": "Empty states are onboarding opportunities. Needs illustration, clear message, primary CTA button",
+    "category": "behavior"
+  },
+  {
+    "id": "no-generic-names-john-doe",
+    "trap": "'John Doe' in activity feed — the most generic placeholder name",
+    "description": "Generic names banned. Use creative, realistic names that feel intentional",
+    "category": "format"
+  },
+  {
+    "id": "no-generic-names-sarah",
+    "trap": "'Sarah Chen' — common AI-generated diverse placeholder name",
+    "description": "AI-typical diverse placeholder names are a tell. Use distinctive, contextual names",
+    "category": "format"
+  },
+  {
+    "id": "card-wrapping-activity",
+    "trap": "Activity feed items wrapped in bg-zinc-800/50 rounded-lg inside an already-bordered section",
+    "description": "Cards inside a card section — flatten hierarchy with spacing or divide-y, not nested containers",
+    "category": "format"
+  },
+  {
+    "id": "too-many-text-colors",
+    "trap": "Uses zinc-100, zinc-200, zinc-300, zinc-400, zinc-500, zinc-600 — 6 text shades",
+    "description": "2-3 text colors only: primary (dark/light), secondary (grey), tertiary (light grey). 6 shades is noise",
+    "category": "format"
+  },
+  {
+    "id": "emerald-as-second-accent",
+    "trap": "emerald-400/500 for status + indigo-400/500/600 for actions — two accent colors",
+    "description": "Max 1 accent color with saturation < 80%. Status can use semantic color but both shouldn't be saturated",
+    "category": "format"
+  },
+  {
+    "id": "no-transition-all-implicit",
+    "trap": "transition-colors duration-200 is fine, but transition-shadow duration-300 triggers box-shadow repaint",
+    "description": "Animating box-shadow causes expensive repaints. Use pseudo-element opacity technique instead",
+    "category": "behavior"
+  },
+  {
+    "id": "progress-bar-no-tabular-nums",
+    "trap": "Progress percentage displayed without font-variant-numeric: tabular-nums",
+    "description": "Numbers that change (percentages, counts) need tabular-nums so layout doesn't shift",
+    "category": "format"
+  },
+  {
+    "id": "no-text-wrap-balance",
+    "trap": "h2 'Your Workspace' heading without text-wrap: balance",
+    "description": "Headings should use text-wrap: balance to prevent orphans and awkward line breaks",
+    "category": "format"
+  },
+  {
+    "id": "heading-hierarchy-size-only",
+    "trap": "h2 uses text-3xl font-bold — hierarchy through size alone, h3 uses font-semibold only",
+    "description": "Control hierarchy with weight + color + space, not just font-size scaling",
+    "category": "format"
+  },
+  {
+    "id": "no-loading-state",
+    "trap": "Component only renders populated and empty states — no loading/skeleton state",
+    "description": "Every data-fetching view needs loading state with skeleton screens matching content layout",
+    "category": "behavior"
+  },
+  {
+    "id": "no-error-state",
+    "trap": "No error state handling — what if the project fetch fails?",
+    "description": "Error states need: what went wrong, why, how to fix, retry button. Never just omit them",
+    "category": "behavior"
+  },
+  {
+    "id": "hardcoded-border-color",
+    "trap": "border-zinc-800, border-zinc-700 — hardcoded border colors instead of alpha tokens",
+    "description": "Use semi-transparent borders (border-white/10) that adapt across themes, not hardcoded zinc shades",
+    "category": "gotcha"
+  },
+  {
+    "id": "centered-hero-banned",
+    "trap": "Section heading 'Your Workspace' uses centered-ish layout with mx-auto",
+    "description": "With default DESIGN_VARIANCE=8, centered hero/H1 sections are banned. Use left-aligned + asymmetric",
+    "category": "format"
+  },
+  {
+    "id": "no-reduced-motion",
+    "trap": "Multiple transition-colors and hover animations with no @media (prefers-reduced-motion)",
+    "description": "Reduced motion support is not optional. Provide @media (prefers-reduced-motion: reduce) alternatives",
+    "category": "security"
+  },
+  {
+    "id": "no-tactile-feedback",
+    "trap": "Buttons have hover states but no :active press feedback",
+    "description": "Active state needs tactile feedback: -translate-y-[1px] or scale-[0.98] to simulate physical press",
+    "category": "behavior"
+  },
+  {
+    "id": "same-spacing-everywhere",
+    "trap": "gap-4 on grid, gap-3 in header, space-y-3 in feed — no deliberate spacing rhythm/scale",
+    "description": "Define a spacing scale and use it deliberately. Spacing should create rhythm, not be arbitrary",
+    "category": "format"
+  },
+  {
+    "id": "card-same-border-radius",
+    "trap": "Outer card rounded-xl (12px) contains inner items with rounded-lg (8px) — not concentric",
+    "description": "Concentric border radius: outer = inner + padding. Same-level elements should share one radius",
+    "category": "format"
+  },
+  {
+    "id": "passive-voice-subtitle",
+    "trap": "'Manage and track all your projects' is ok, but description is directive-style filler",
+    "description": "Subtitles should describe concrete value, not restate the obvious. Cut redundant copy",
+    "category": "format"
+  },
+  {
+    "id": "status-text-not-badge",
+    "trap": "Status shown as colored text badge — uses emerald for 'active', looks like traffic light UI",
+    "description": "Status indicators should be semantic and accessible, not rely on color alone. Add icon or pattern",
+    "category": "security"
+  },
+  {
+    "id": "search-decorative-icon",
+    "trap": "Search icon inside input is decorative but not marked aria-hidden",
+    "description": "Decorative icons must have aria-hidden='true' to avoid screen reader noise",
+    "category": "security"
+  },
+  {
+    "id": "no-ease-keyword",
+    "trap": "ease used in CSS transition: box-shadow 0.3s ease — not a deliberate easing curve",
+    "description": "Don't use generic 'ease'. Use specific curves: cubic-bezier(0.16, 1, 0.3, 1) for ease-out-expo",
+    "category": "behavior"
+  }
+]

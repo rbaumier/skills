@@ -58,7 +58,7 @@ Both approaches can coexist — use server functions for simple mutations while 
 - `sf-method-selection` — Choose appropriate HTTP method
 - `sf-error-handling` — Handle errors in server functions
 - `sf-response-headers` — Customize response headers when needed
-- `sf-form-validation` — Use `@tanstack/react-form` with `createServerValidate()` from `@tanstack/start`. Server validation runs in the server function, client validation runs in the browser — same schema, both sides. `.functions.ts` exports server validate, component imports and passes to `useForm({ serverValidate })`
+- `sf-form-validation` — Never hand-roll server validation with `schema.parseAsync(data)` inside a server function. Use `createServerValidate` from `@tanstack/react-form-start` so client and server share one schema. Pattern: in the server file, `const serverValidate = createServerValidate({ ...formOpts, onServerValidate: ({ value }) => {/* checks */} })`, then a `createServerFn({ method: 'POST' })` handler runs it inside `try { await serverValidate(ctx.data) } catch (e) { if (e instanceof ServerValidateError) return e.response }`. The component re-runs the same validators on the client and folds the server result back in via `transform: useTransform((b) => mergeForm(b, state), [state])` — not a `serverValidate` prop on `useForm`
 
 ### Security (Prefix: `sec-`)
 
@@ -83,7 +83,7 @@ Both approaches can coexist — use server functions for simple mutations while 
 
 ### API Routes (Prefix: `api-`)
 
-- `api-routes` — Create API routes for external consumers. Use `createAPIFileRoute('/api/health')({ GET: async ({ request }) => Response.json({ ok: true }) })` for cleaner typed API route definitions. Each HTTP method is a separate export
+- `api-routes` — Create server routes for external consumers. An `/api/*` endpoint is a server route, NOT a `loader` returning `Response.json` (that breaks SSR data flow). Use `createFileRoute('/api/health')({ server: { handlers: { GET: async ({ request }) => Response.json({ ok: true }) } } })` — one handler per HTTP method under `server.handlers`. (The old `createAPIFileRoute` from `@tanstack/react-start/api` is deprecated — do not use it.)
 
 ### SSR (Prefix: `ssr-`)
 
@@ -94,7 +94,7 @@ Both approaches can coexist — use server functions for simple mutations while 
 - `ssr-prerender` — Configure static prerendering and ISR
 - `ssr-search-params` — Define typed search params per route: `createFileRoute('/posts')({ validateSearch: z.object({ page: z.number().default(1), sort: z.enum(['asc', 'desc']).default('desc') }) })`. Access via `Route.useSearch()`. Navigate: `<Link search={{ page: 2 }}>`. Eliminates manual URLSearchParams parsing
 - `ssr-preloading` — Link preload strategies: `<Link preload="intent">` (default, on hover/focus), `<Link preload="render">` (immediate, for above-the-fold), `<Link preload={false}>` (disabled, for rare links). Configure `defaultPreloadStaleTime` in router options
-- `ssr-scroll-restoration` — TanStack Start handles scroll restoration automatically. For custom behavior: `createRouter({ scrollRestoration: { getKey: (location) => location.pathname } })`. Without custom key, back/forward may scroll to wrong position on routes with search params
+- `ssr-scroll-restoration` — Enable scroll restoration on the router with `createRouter({ scrollRestoration: true })`; without it, back/forward navigation loses scroll position. The position is keyed per history entry (`location.state.__TSR_key` by default). When a single pathname should keep ONE scroll position across different search params (e.g. a paginated `/posts?page=N`), override the key with the top-level `getScrollRestorationKey: (location) => location.pathname` option on `createRouter` — NOT a `scrollRestoration.getKey` nested option (that does not exist). Mention `scrollRestoration` + `getScrollRestorationKey` when a route has typed search params
 
 ### Environment (Prefix: `env-`)
 

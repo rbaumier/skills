@@ -1,0 +1,1 @@
+{"skill":"language-swift","eval":"e1","iter":2,"passed":29,"total":33,"fails":["environment-dependency-injection","sheet-item-over-ispresented","protocol-conformance-extension","single-source-of-truth"]}

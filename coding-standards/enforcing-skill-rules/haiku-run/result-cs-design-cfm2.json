@@ -1,0 +1,1 @@
+{"skill":"coding-standards","eval":"cs-design","iter":"cfm2","passed":9,"total":13,"fails":["fs-extract-by-responsibility","fs-srp-cqs","fs-exports-at-top","fs-divergent-change-business-domain"]}

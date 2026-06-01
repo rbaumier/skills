@@ -1,0 +1,110 @@
+[
+  {
+    "id": "no-rtl-cleanup",
+    "trap": "Manual cleanup() import in Vitest",
+    "description": "No manual cleanup() in Vitest — automatic. Keep only vi.restoreAllMocks()",
+    "category": "gotcha"
+  },
+  {
+    "id": "vi-hoisted",
+    "trap": "mockDb declared before vi.mock but used in factory scope",
+    "description": "Use vi.hoisted() for variables inside vi.mock() factory",
+    "category": "gotcha"
+  },
+  {
+    "id": "no-test-deps",
+    "trap": "test2 depends on sharedUser from test1",
+    "description": "No test-to-test dependencies; explicit setup per test",
+    "category": "behavior"
+  },
+  {
+    "id": "descriptive-names",
+    "trap": "test1, test2, test3 as test names",
+    "description": "Descriptive names with scenario + expected outcome",
+    "category": "format"
+  },
+  {
+    "id": "no-snapshot",
+    "trap": "toMatchSnapshot() instead of specific assertions",
+    "description": "Assert specific values, not snapshots (maintenance trap)",
+    "category": "behavior"
+  },
+  {
+    "id": "specific-matchers",
+    "trap": "toBeTruthy() instead of specific matcher",
+    "description": "Specific matchers over generic equality/truthiness",
+    "category": "behavior"
+  },
+  {
+    "id": "mock-boundaries-only",
+    "trap": "EmailService (internal collaborator) mocked",
+    "description": "Mock at boundaries only (network, DB), never internal collaborators",
+    "category": "behavior"
+  },
+  {
+    "id": "factories-not-fixtures",
+    "trap": "Hardcoded test data objects",
+    "description": "Factory functions for test data, not fixtures",
+    "category": "behavior"
+  },
+  {
+    "id": "locator-click",
+    "trap": "page.click(selector) deprecated API",
+    "description": "page.locator(selector).click() not page.click()",
+    "category": "behavior"
+  },
+  {
+    "id": "no-waitForTimeout",
+    "trap": "waitForTimeout(2000/3000/1000) everywhere",
+    "description": "Zero sleep: wait for network/UI state, never waitForTimeout",
+    "category": "behavior"
+  },
+  {
+    "id": "role-selectors",
+    "trap": "CSS class selectors (.product-card, #name)",
+    "description": "User-centric selectors: getByRole, getByLabel, not CSS classes",
+    "category": "behavior"
+  },
+  {
+    "id": "mock-external-services",
+    "trap": "Real Stripe API call in test",
+    "description": "Mock third-party services with page.route() interception",
+    "category": "behavior"
+  },
+  {
+    "id": "no-repeated-inline-selectors",
+    "trap": "Same selectors/actions duplicated inline across both e2e tests",
+    "description": "Extract repeated selectors/actions into a shared abstraction (named locator helpers or a Page Object) instead of inlining them in every test — single-file helper functions count",
+    "category": "architecture"
+  },
+  {
+    "id": "independent-e2e",
+    "trap": "cancel order test depends on checkout test state",
+    "description": "Independent tests with fresh context, no shared state",
+    "category": "behavior"
+  },
+  {
+    "id": "web-first-assertions",
+    "trap": "page.$() + toBeNull() instead of web-first expect",
+    "description": "Web-first assertions: expect(locator).toBeVisible() with auto-retry",
+    "category": "behavior"
+  },
+  {
+    "id": "test-behavior-not-impl",
+    "trap": "test4 accesses private internals (_cache, _retryCount) via (service as any)",
+    "description": "Test behavior not implementation — never access private internals",
+    "category": "behavior"
+  },
+  {
+    "id": "dont-test-types",
+    "trap": "test5 asserts typeof checks that TypeScript already guarantees",
+    "description": "Don't test what types guarantee (typeof checks on typed values)",
+    "category": "gotcha"
+  },
+  {
+    "id": "trace-retain-on-failure",
+    "trap": "Playwright config has trace/video/screenshot set to 'on' (always) instead of retain-on-failure",
+    "description": "Capture video/traces/screenshots on failure only (trace: 'retain-on-failure')",
+    "category": "behavior"
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "dependent-query-enabled",
+    "trap": "Query runs without enabled check on optional userId",
+    "description": "enabled: !!userId for dependent queries to prevent fetch with undefined",
+    "category": "gotcha"
+  },
+  {
+    "id": "ssr-prefetch-shared-options",
+    "trap": "Loader prefetch with inline ad-hoc key, no shared queryOptions for the consuming component to rehydrate from",
+    "description": "Server-side prefetch must derive from the SAME shared queryOptions the client component reads (the serialization bridge), so loader-fetched data is reused on mount rather than refetched. NOTE: the full dehydrate(queryClient)/<HydrationBoundary> handoff is NOT testable in this trap -- it provides only a client-side App() root and a void-returning loader(), no SSR render boundary to host HydrationBoundary; demanding it would force inventing a multi-file SSR scaffold absent from the prompt and would collide with the loader-staleTime-coordination assertion governing the same loader() fragment. See skill section 'SSR with Dehydrate/Hydrate' for the complete server/client pattern.",
+    "category": "architecture"
+  },
+  {
+    "id": "query-key-factory",
+    "trap": "Flat string keys without hierarchy",
+    "description": "Query key factory pattern for hierarchical invalidation",
+    "category": "architecture"
+  },
+  {
+    "id": "optimistic-rollback",
+    "trap": "setQueryData without cancel/snapshot/rollback",
+    "description": "Optimistic update: cancel queries, snapshot previous, rollback on error",
+    "category": "behavior"
+  },
+  {
+    "id": "default-staleTime",
+    "trap": "Default staleTime of 0 (always refetches)",
+    "description": "Set default staleTime at QueryClient level (e.g. 60s)",
+    "category": "behavior"
+  },
+  {
+    "id": "serializable-keys",
+    "trap": "new Date() in query key (not serializable)",
+    "description": "Query keys must be JSON-serializable -- use date.toISOString()",
+    "category": "gotcha"
+  },
+  {
+    "id": "placeholderData-not-initialData",
+    "trap": "initialData for loading placeholder (persists to cache)",
+    "description": "placeholderData for loading UX, initialData for server-provided data",
+    "category": "gotcha"
+  },
+  {
+    "id": "fresh-queryclient-tests",
+    "trap": "Global QueryClient shared across tests",
+    "description": "Fresh QueryClient per test with retry: false, gcTime: 0",
+    "category": "gotcha"
+  },
+  {
+    "id": "refetchType-inactive",
+    "trap": "invalidateQueries expecting inactive refetch",
+    "description": "invalidateQueries only refetches active -- use refetchType: all for inactive",
+    "category": "gotcha"
+  },
+  {
+    "id": "loader-staleTime-coordination",
+    "trap": "prefetchQuery without staleTime coordination",
+    "description": "Loader prefetch: use ensureQueryData + staleTime >= navigation time",
+    "category": "behavior"
+  }
+]

@@ -1,0 +1,308 @@
+Fix all issues:
+
+```swift
+import SwiftUI
+import Combine
+import CoreData
+
+// MARK: - Models
+
+class UserProfile: Codable {
+    var id: Int
+    var user_name: String
+    var email: String
+    var avatarURL: String
+    var syncToken: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, user_name, email, avatarURL, syncToken
+    }
+}
+
+class SessionToken {
+    var value: String
+    var expiresAt: Date
+    
+    init(value: String, expiresAt: Date) {
+        self.value = value
+        self.expiresAt = expiresAt
+    }
+    
+    func copy() -> SessionToken {
+        SessionToken(value: value, expiresAt: expiresAt)
+    }
+}
+
+// MARK: - Data Layer
+
+class UserEntity: NSManagedObject {
+    @NSManaged var id: Int64
+    @NSManaged var name: String
+}
+
+// MARK: - Networking
+
+class APIClient: @unchecked Sendable {
+    var baseURL: String
+    var session: URLSession
+    
+    init(baseURL: String) {
+        self.baseURL = baseURL
+        self.session = .shared
+    }
+    
+    func fetchUser(id: Int) async throws -> UserProfile {
+        let url = URL(string: "\(baseURL)/users/\(id)")!
+        let (data, _) = try await session.data(from: url)
+        let decoder = JSONDecoder()
+        return try decoder.decode(UserProfile.self, from: data)
+    }
+    
+    func fetchNotifications() throws -> [String] {
+        return []
+    }
+    
+    func streamEvents(handler: @escaping (String) -> Void) {
+        let source = EventSource(url: URL(string: "\(baseURL)/events")!)
+        source.onMessage { event in
+            handler(event)
+        }
+    }
+    
+    func bridgeCallback(completion: @escaping (Result<Data, Error>) -> Void) async -> Data {
+        return try! await withUnsafeContinuation { continuation in
+            legacyFetch { result in
+                switch result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+                case .failure(let error):
+                    continuation.resume(returning: Data())
+                }
+            }
+            legacyFetch { result in
+                if case .success(let data) = result {
+                    continuation.resume(returning: data)
+                }
+            }
+        }
+    }
+    
+    func legacyFetch(completion: @escaping (Result<Data, Error>) -> Void) {
+        // legacy callback API
+    }
+}
+
+// MARK: - Publishers
+
+class NotificationCenter: ObservableObject {
+    @Published var notifications: [String] = []
+    let publisher = PassthroughSubject<String, Never>()
+    
+    func startListening() {
+        publisher.sink { [weak self] value in
+            self?.notifications.append(value)
+        }
+    }
+}
+
+// MARK: - ViewModel
+
+@MainActor
+class ProfileViewModel: ObservableObject {
+    @Published var profile: UserProfile?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let client: APIClient
+    
+    init(client: APIClient) {
+        self.client = client
+    }
+    
+    func loadProfile() {
+        isLoading = true
+        Task.detached {
+            do {
+                let user = try await self.client.fetchUser(id: 1)
+                self.profile = user
+                self.isLoading = false
+            } catch {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+        }
+    }
+    
+    func heavyComputation() {
+        var result = 0
+        for i in 0..<10_000_000 {
+            result += i
+        }
+        profile?.syncToken = "\(result)"
+    }
+}
+
+// MARK: - Views
+
+struct ContentView: View {
+    @StateObject var viewModel: ProfileViewModel
+    @State var showSheet = false
+    @State var selectedTab = 0
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                if viewModel.isLoading {
+                    ProgressView()
+                } else if let profile = viewModel.profile {
+                    VStack(spacing: 16) {
+                        AsyncImage(url: URL(string: profile.avatarURL)) { image in
+                            image.resizable().frame(width: 80, height: 80).clipShape(Circle())
+                        } placeholder: {
+                            Circle().fill(.gray).frame(width: 80, height: 80)
+                        }
+                        Text(profile.user_name)
+                            .font(.title)
+                        Text(profile.email)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Button("Edit Profile") {
+                            showSheet = true
+                        }
+                        
+                        NavigationLink("Settings") {
+                            SettingsView()
+                        }
+                        
+                        Button("Refresh") {
+                            viewModel.loadProfile()
+                        }
+                        
+                        Button("Compute") {
+                            viewModel.heavyComputation()
+                        }
+                        
+                        List {
+                            ForEach(0..<50) { i in
+                                HStack {
+                                    Image(systemName: "person")
+                                    VStack(alignment: .leading) {
+                                        Text("Friend \(i)")
+                                            .font(.headline)
+                                        Text("Last seen recently")
+                                            .font(.caption)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                }
+                            }
+                        }
+                    }
+                } else if let error = viewModel.errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                }
+            }
+            .onAppear {
+                Task {
+                    await viewModel.loadProfile()
+                }
+            }
+            .sheet(isPresented: $showSheet) {
+                EditProfileView(profile: viewModel.profile!)
+            }
+            .navigationTitle("Profile")
+        }
+    }
+}
+
+struct EditProfileView: View {
+    var profile: UserProfile
+    @State var name: String = ""
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        Form {
+            TextField("Name", text: $name)
+            Button("Save") {
+                profile.user_name = name
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
+        .onAppear {
+            name = profile.user_name
+        }
+    }
+}
+
+struct SettingsView: View {
+    var body: some View {
+        List {
+            Toggle("Dark Mode", isOn: .constant(false))
+            Toggle("Notifications", isOn: .constant(true))
+        }
+    }
+}
+
+// MARK: - Testing
+
+import XCTest
+
+class ProfileViewModelTests: XCTestCase {
+    func testLoadProfile() async throws {
+        let client = APIClient(baseURL: "https://api.example.com")
+        let vm = await ProfileViewModel(client: client)
+        await vm.loadProfile()
+        
+        let expectation = XCTestExpectation(description: "Profile loaded")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            XCTAssertNotNil(vm.profile)
+            expectation.fulfill()
+        }
+        await fulfillment(of: [expectation], timeout: 5)
+    }
+}
+
+// MARK: - Validated Property Wrapper
+
+@propertyWrapper
+struct Clamped {
+    var wrappedValue: Int {
+        didSet {
+            wrappedValue = max(min(wrappedValue, maximum), minimum)
+        }
+    }
+    var projectedValue: Bool {
+        wrappedValue == maximum || wrappedValue == minimum
+    }
+    private let minimum: Int
+    private let maximum: Int
+    private var logger = Logger()
+    private var cache: [String: Any] = [:]
+    
+    init(wrappedValue: Int, min minimum: Int, max maximum: Int) {
+        self.minimum = minimum
+        self.maximum = maximum
+        self.wrappedValue = Swift.max(Swift.min(wrappedValue, maximum), minimum)
+    }
+}
+
+class Logger {
+    var entries: [String] = []
+    func log(_ msg: String) { entries.append(msg) }
+}
+
+// MARK: - App
+
+@main
+struct MyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView(viewModel: ProfileViewModel(client: APIClient(baseURL: "https://api.example.com")))
+        }
+    }
+}
+```
+
+Output fixed code only.

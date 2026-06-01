@@ -14,9 +14,9 @@
           "category": "gotcha"
         },
         {
-          "id": "ssr-dehydrate-hydrate",
-          "trap": "No dehydrate/HydrationBoundary for SSR",
-          "description": "SSR: prefetchQuery + dehydrate on server, HydrationBoundary on client",
+          "id": "ssr-prefetch-shared-options",
+          "trap": "Loader prefetch with inline ad-hoc key, no shared queryOptions for the consuming component to rehydrate from",
+          "description": "Server-side prefetch must derive from the SAME shared queryOptions the client component reads (the serialization bridge), so loader-fetched data is reused on mount rather than refetched. NOTE: the full dehydrate(queryClient)/<HydrationBoundary> handoff is NOT testable in this trap -- it provides only a client-side App() root and a void-returning loader(), no SSR render boundary to host HydrationBoundary; demanding it would force inventing a multi-file SSR scaffold absent from the prompt and would collide with the loader-staleTime-coordination assertion governing the same loader() fragment. See skill section 'SSR with Dehydrate/Hydrate' for the complete server/client pattern.",
           "category": "architecture"
         },
         {

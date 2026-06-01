@@ -1,0 +1,1 @@
+{"skill":"database","eval":"e1","iter":4,"passed":29,"total":38,"fails":["expand-contract","lock-timeout","concurrent-index","not-valid-validate","no-disable-autovacuum","least-privilege","rls","drizzle-cli-review","exhaustive-match"]}

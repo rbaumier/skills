@@ -1,0 +1,42 @@
+Refactor these files. Assume this is the ENTIRE codebase — there are NO other callers beyond what's shown here.
+
+```typescript
+// src/features/signup/signup-handler.ts
+import { validateEmail } from '../../utils/email-validator';
+import { formatWelcomeMessage } from '../../utils/welcome-formatter';
+import { hashPassword } from '../../utils/password-hasher';
+import { Database, Mailer } from '../../types';
+
+export async function signupUser(db: Database, mailer: Mailer, email: string, password: string) {
+  if (!validateEmail(email)) throw new Error('invalid email');
+  const hashed = await hashPassword(password);
+  const welcome = formatWelcomeMessage(email);
+  await db.insert('users', { email, password: hashed });
+  await mailer.send(email, 'Welcome', welcome);
+  return { email };
+}
+```
+
+```typescript
+// src/utils/email-validator.ts
+export function validateEmail(email: string): boolean {
+  return email.includes('@') && email.length > 3;
+}
+```
+
+```typescript
+// src/utils/welcome-formatter.ts
+export function formatWelcomeMessage(email: string): string {
+  return `Welcome ${email}! Thanks for signing up.`;
+}
+```
+
+```typescript
+// src/utils/password-hasher.ts
+import * as crypto from 'crypto';
+export async function hashPassword(password: string): Promise<string> {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+```
+
+Output the final file structure (list of files) and the full contents of each file after refactoring. Fix everything wrong with these files.

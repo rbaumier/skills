@@ -1,0 +1,1 @@
+{"skill":"coding-standards","eval":"e12","iter":6,"passed":44,"total":53,"fails":["fs-module-orientation","fs-boolean-prefix","fs-factory-di","fs-crosscutting-wrapper","fs-dto-mapping","fs-exports-at-top","fs-pipeline-flow-documented","fs-enduring-reader","fs-divergent-change-business-domain"]}

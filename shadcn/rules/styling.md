@@ -46,6 +46,10 @@ For positive, negative, or status indicators, use Badge variants, semantic token
 <span className="text-emerald-600">+20.1%</span>
 <span className="text-green-500">Active</span>
 <span className="text-red-600">-3.2%</span>
+
+// Also wrong: right component, raw color className.
+<Alert className="border-green-200 bg-green-50 text-green-900">…</Alert>
+<Alert className={cn(ok && "bg-green-50 text-green-900")}>…</Alert>
 ```
 
 **Correct:**
@@ -54,9 +58,12 @@ For positive, negative, or status indicators, use Badge variants, semantic token
 <Badge variant="secondary">+20.1%</Badge>
 <Badge>Active</Badge>
 <span className="text-destructive">-3.2%</span>
+
+// Use the component's variant, not raw color classes.
+<Alert variant={ok ? "default" : "destructive"}>…</Alert>
 ```
 
-If you need a success/positive color that doesn't exist as a semantic token, use a Badge variant or ask the user about adding a custom CSS variable to the theme (see [customization.md](../customization.md)).
+Choosing the right component (`Alert`, `Badge`, …) does **not** license raw color classes on it. The raw-color ban applies everywhere — in `className`, inside `cn()`, and on every component. Scan for color suffixes (`-50`, `-100`, `-200`, `-500`, `-600`, `-800`, `-900`) and remove them. If you need a success/positive color that doesn't exist as a semantic token, use a Badge variant or ask the user about adding a custom CSS variable to the theme (see [customization.md](../customization.md)).
 
 ---
 

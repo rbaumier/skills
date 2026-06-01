@@ -1,0 +1,220 @@
+Fix all security issues:
+
+```typescript
+import express from 'express';
+import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
+import { execFile } from 'child_process';
+import path from 'path';
+import fs from 'fs/promises';
+import crypto from 'crypto';
+import { db } from './db';
+
+const app = express();
+
+// --- Security middleware ---
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
+app.use(express.json({ limit: '10kb' }));
+
+// --- Schemas ---
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+const UpdateProfileSchema = z.object({
+  name: z.string().max(100),
+  email: z.string().email(),
+  bio: z.string().max(500),
+});
+
+// --- Auth ---
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+app.post('/api/auth/login', async (req, res) => {
+  const parsed = LoginSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+
+  const { email, password } = parsed.data;
+  const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const token = jwt.sign(
+    { sub: user.id, role: user.role },
+    JWT_SECRET,
+    { algorithm: 'HS256', expiresIn: '7d' }
+  );
+
+  res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  const parsed = LoginSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+
+  const { email, password } = parsed.data;
+  const hashed = await bcrypt.hash(password, 10);
+  const user = await db.query(
+    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
+    [email, hashed]
+  );
+
+  res.status(201).json({ user });
+});
+
+// --- Middleware ---
+function authenticate(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET);
+    req.user = payload as { sub: string; role: string };
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// --- Profile ---
+app.get('/api/users/:id', authenticate, async (req, res) => {
+  const user = await db.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
+  if (!user) return res.status(404).json({ error: 'Not found' });
+
+  const { passwordHash, resetToken, ...publicFields } = user;
+  res.json(publicFields);
+});
+
+app.put('/api/users/:id', authenticate, async (req, res) => {
+  const parsed = UpdateProfileSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+
+  const updated = await db.query(
+    'UPDATE users SET name = $1, email = $2, bio = $3 WHERE id = $4 RETURNING id, name, email, bio',
+    [parsed.data.name, parsed.data.email, parsed.data.bio, req.params.id]
+  );
+
+  res.json(updated);
+});
+
+// --- Documents ---
+app.get('/api/documents/:id', authenticate, async (req, res) => {
+  const doc = await db.query('SELECT * FROM documents WHERE id = $1', [req.params.id]);
+  if (!doc) return res.status(404).json({ error: 'Not found' });
+  res.json(doc);
+});
+
+app.get('/api/files/:name', authenticate, async (req, res) => {
+  const UPLOAD_DIR = path.resolve('./uploads');
+  const filePath = path.join(UPLOAD_DIR, req.params.name);
+  if (!filePath.startsWith(UPLOAD_DIR)) return res.status(403).json({ error: 'Forbidden' });
+
+  const data = await fs.readFile(filePath);
+  res.send(data);
+});
+
+// --- Admin ---
+app.post('/api/admin/convert', authenticate, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+
+  const { inputFile, format } = req.body;
+  execFile('convert', [inputFile, `output.${format}`], (err, stdout) => {
+    if (err) return res.status(500).json({ error: 'Conversion failed' });
+    res.json({ output: stdout });
+  });
+});
+
+// --- Rendering ---
+app.get('/api/preview/:id', authenticate, async (req, res) => {
+  const page = await db.query('SELECT * FROM pages WHERE id = $1', [req.params.id]);
+  if (!page) return res.status(404).json({ error: 'Not found' });
+
+  const sanitizedContent = page.content
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  res.send(`<html><body><div>${sanitizedContent}</div></body></html>`);
+});
+
+// --- OAuth callback ---
+app.get('/api/auth/github/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.status(400).json({ error: 'Missing code' });
+
+  const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      code,
+    }),
+  });
+
+  const { access_token } = await tokenResponse.json();
+  const userResponse = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `Bearer ${access_token}` },
+  });
+  const githubUser = await userResponse.json();
+
+  const user = await db.query(
+    'INSERT INTO users (github_id, name, email) VALUES ($1, $2, $3) ON CONFLICT (github_id) DO UPDATE SET name = $2 RETURNING *',
+    [githubUser.id, githubUser.name, githubUser.email]
+  );
+
+  const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
+  res.cookie('session', token, { httpOnly: true, secure: true, sameSite: 'lax' });
+  res.redirect('/dashboard');
+});
+
+// --- Webhook ---
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const event = JSON.parse(req.body.toString());
+  console.log('Stripe webhook received:', JSON.stringify(event));
+
+  if (event.type === 'payment_intent.succeeded') {
+    await db.query('UPDATE orders SET status = $1 WHERE stripe_id = $2', ['paid', event.data.object.id]);
+  }
+
+  res.json({ received: true });
+});
+
+// --- Search ---
+app.get('/api/search', authenticate, async (req, res) => {
+  const query = req.query.q as string;
+  if (!query || query.length > 100) return res.status(400).json({ error: 'Invalid query' });
+
+  const pattern = new RegExp(query, 'i');
+  const results = await db.query('SELECT * FROM articles WHERE title ILIKE $1', [`%${query}%`]);
+  res.json(results);
+});
+
+// --- Error handler ---
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const requestId = crypto.randomUUID();
+  console.error(`[${requestId}] Error:`, err.message, err.stack);
+  res.status(500).json({ error: 'Internal server error', requestId });
+});
+
+app.listen(3000);
+```
+
+Output fixed code only.

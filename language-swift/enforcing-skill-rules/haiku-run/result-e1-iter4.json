@@ -1,0 +1,1 @@
+{"skill":"language-swift","eval":"e1","iter":4,"passed":26,"total":33,"fails":["unchecked-sendable-last-resort","task-cancellation","environment-dependency-injection","navigation-destination-typed","swiftdata-over-coredata","protocol-conformance-extension","single-source-of-truth"]}

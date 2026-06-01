@@ -1,0 +1,1 @@
+{"skill":"language-swift","eval":"e1","iter":6,"passed":26,"total":32,"fails":["task-cancellation","async-stream-over-combine","environment-dependency-injection","sheet-item-over-ispresented","swiftdata-over-coredata","protocol-conformance-extension"]}

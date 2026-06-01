@@ -8,6 +8,18 @@ user-invocable: false
 
 A framework for building ui, components and design systems. Components are added as source code to the user's project via the CLI.
 
+## ⚠️ PRE-OUTPUT CHECKLIST — verify EVERY item before returning code
+
+Choosing the right wrapper component is not optional. Run this scan over your output before you finish. Each line is a frequent miss — do not skip any.
+
+- [ ] **Every label+input pair is wrapped in `Field`, inside a `FieldGroup`.** A bare `<div><label/><Input/></div>` is wrong even when it uses `gap-*`. Convert every one.
+- [ ] **A heading above a group of checkboxes/radios/switches → `FieldSet` + `FieldLegend`.** This is the exact trigger: any `<h2>`/`<h3>`/`<p>`/label text sitting above 2+ related checkboxes, radios, or switches. The fix is the shadcn `FieldSet` + `FieldLegend` components imported from the Field module — **not** a `<div>` with a heading, and **not** the native HTML `<fieldset>`/`<legend>` elements. Native `<fieldset>` is still a violation.
+- [ ] **A single-choice set of 2–7 options is a `ToggleGroup` + `ToggleGroupItem`** — not `.map()` over `Button` with a manual `variant={selected === x ? ... : ...}` active state. If you wrote that ternary on a mapped Button, replace the whole block with `ToggleGroup`.
+- [ ] **An empty / "nothing here yet" state is the `Empty` component** — not a custom centered `<div>` with a `<p>`. Any "no items" / "no results" placeholder uses `Empty`.
+- [ ] **No raw color classes anywhere — including inside `cn()` and on a component you already picked correctly.** Choosing `Alert` then adding `className="bg-green-50 text-green-900 border-green-200"` is still a violation. Use the component's `variant`, semantic tokens (`text-destructive`, `text-muted-foreground`), or a Badge. Scan for `-50/-100/-200/-500/-600/-800/-900` color suffixes and delete them.
+
+If any box is unchecked, fix it before returning. These are wrapper/structure choices, not styling polish — they are the difference between correct and incorrect shadcn code.
+
 > **IMPORTANT:** Run all CLI commands using the project's package runner: `npx shadcn@latest`, `pnpm dlx shadcn@latest`, or `bunx --bun shadcn@latest` — based on the project's `packageManager`. Examples below use `npx shadcn@latest` but substitute the correct runner for the project.
 
 ## Current Project Context
@@ -23,7 +35,7 @@ The JSON above contains the project config and installed components. Use `npx sh
 1. **Use existing components first.** Use `npx shadcn@latest search` to check registries before writing custom UI. Check community registries too.
 2. **Compose, don't reinvent.** Settings page = Tabs + Card + form controls. Dashboard = Sidebar + Card + Chart + Table.
 3. **Use built-in variants before custom styles.** `variant="outline"`, `size="sm"`, etc.
-4. **Use semantic colors.** `bg-primary`, `text-muted-foreground` — never raw values like `bg-blue-500`.
+4. **Use semantic colors.** `bg-primary`, `text-muted-foreground` — never raw values like `bg-blue-500` or `bg-green-50`. This holds even inside `cn()` and even on a component you already picked correctly: an `Alert` with `className="border-green-200 bg-green-50 text-green-900"` is still wrong — use its `variant` instead.
 
 ## Critical Rules
 
@@ -41,11 +53,11 @@ These rules are **always enforced**. Each links to a file with Incorrect/Correct
 
 ### Forms & Inputs → [forms.md](./rules/forms.md)
 
-- **Forms use `FieldGroup` + `Field`.** Never use raw `div` with `space-y-*` or `grid gap-*` for form layout.
+- **Forms use `FieldGroup` + `Field`.** Never use raw `div` with `space-y-*` or `grid gap-*` for form layout. A `<div className="flex flex-col gap-2"><label/><Input/></div>` is still wrong — `gap-*` does not make a raw div acceptable. Every label+control pair → `Field`.
 - **`InputGroup` uses `InputGroupInput`/`InputGroupTextarea`.** Never raw `Input`/`Textarea` inside `InputGroup`.
 - **Buttons inside inputs use `InputGroup` + `InputGroupAddon`.**
-- **Option sets (2–7 choices) use `ToggleGroup`.** Don't loop `Button` with manual active state.
-- **`FieldSet` + `FieldLegend` for grouping related checkboxes/radios.** Don't use a `div` with a heading.
+- **Single-choice option sets (2–7 choices) use `ToggleGroup`.** Don't `.map()` over `Button` with a manual `variant={selected === x ? "default" : "outline"}` active state — that exact pattern is the signal to switch to `ToggleGroup` + `ToggleGroupItem`. (For independent on/off toggles like notification prefs, use `Switch`/`Checkbox` instead.)
+- **`FieldSet` + `FieldLegend` for grouping related checkboxes/radios.** A heading (`h2`/`h3`) sitting above a group of checkboxes/radios/switches means `FieldSet` + `FieldLegend` — never a plain `div` with a heading.
 - **Field validation uses `data-invalid` + `aria-invalid`.** `data-invalid` on `Field`, `aria-invalid` on the control. For disabled: `data-disabled` on `Field`, `disabled` on the control.
 
 ### Component Structure → [composition.md](./rules/composition.md)
@@ -62,7 +74,7 @@ These rules are **always enforced**. Each links to a file with Incorrect/Correct
 
 - **Use existing components before custom markup.** Check if a component exists before writing a styled `div`.
 - **Callouts use `Alert`.** Don't build custom styled divs.
-- **Empty states use `Empty`.** Don't build custom empty state markup.
+- **Empty states use `Empty`.** Any "no items" / "no results" / "nothing here yet" placeholder uses `Empty` (+ `EmptyHeader`/`EmptyTitle`/`EmptyDescription`) — not a centered `div` with a `<p>`.
 - **Toast via `sonner`.** Use `toast()` from `sonner`.
 - **Use `Separator`** instead of `<hr>` or `<div className="border-t">`.
 - **Use `Skeleton`** for loading placeholders. No custom `animate-pulse` divs.
@@ -96,6 +108,22 @@ Wrap the app in a ThemeProvider that toggles `.dark` class on `documentElement`.
     <Input id="email" />
   </Field>
 </FieldGroup>
+
+// Grouped checkboxes/radios/switches under a heading: FieldSet + FieldLegend.
+// NOT <div><h3>Notifications</h3>...</div> and NOT native <fieldset>/<legend>.
+<FieldSet>
+  <FieldLegend variant="label">Notifications</FieldLegend>
+  <FieldGroup className="gap-3">
+    <Field orientation="horizontal">
+      <Checkbox id="email-notif" />
+      <FieldLabel htmlFor="email-notif" className="font-normal">Email</FieldLabel>
+    </Field>
+    <Field orientation="horizontal">
+      <Checkbox id="sms-notif" />
+      <FieldLabel htmlFor="sms-notif" className="font-normal">SMS</FieldLabel>
+    </Field>
+  </FieldGroup>
+</FieldSet>
 
 // Validation: data-invalid on Field, aria-invalid on the control.
 <Field data-invalid>

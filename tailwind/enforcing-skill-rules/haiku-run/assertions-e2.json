@@ -1,0 +1,38 @@
+[
+  {
+    "id": "read-theme-first",
+    "trap": "bg-blue-500 instead of project design tokens",
+    "description": "Iron Law: read @theme config before applying utilities -- use project tokens",
+    "category": "behavior"
+  },
+  {
+    "id": "oklch-double-wrap",
+    "trap": "oklch(oklch(...)) double-wrapping in @theme",
+    "description": "Define raw OKLCH values in @theme -- Tailwind wraps oklch() automatically",
+    "category": "gotcha"
+  },
+  {
+    "id": "cva-3-variant-threshold",
+    "trap": "CVA for only 2 variants",
+    "description": "3+ variants threshold: inline utilities for <3 variants, CVA for 3+",
+    "category": "behavior"
+  },
+  {
+    "id": "z-index-tokens",
+    "trap": "Arbitrary z-[999] and z-[1000] values",
+    "description": "Define z-index tokens in @theme (--z-dropdown, --z-modal etc.)",
+    "category": "format"
+  },
+  {
+    "id": "tw-animate-css",
+    "trap": "Custom @keyframes for standard fade animation",
+    "description": "Prefer tw-animate-css package for standard entrance animations",
+    "category": "behavior"
+  },
+  {
+    "id": "plugin-directive",
+    "trap": "tailwind.config.js plugins array instead of @plugin",
+    "description": "v4: @plugin directive in CSS replaces plugins array in config",
+    "category": "architecture"
+  }
+]

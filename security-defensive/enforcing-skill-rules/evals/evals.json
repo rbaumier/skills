@@ -198,7 +198,7 @@
         {
           "id": "supply-chain-beyond-audit",
           "trap": "Only npm audit for security",
-          "description": "Supply chain: lockfile-lint, Socket.dev, or Snyk beyond npm audit",
+          "description": "Supply chain: adds at least one measure BEYOND `npm audit` itself — a dedicated tool (lockfile-lint, Socket.dev, Snyk) OR digest-pinned CI images, OR install-script detection (npm query preinstall/postinstall). `npm audit signatures` alone does NOT count (still npm audit).",
           "category": "security"
         }
       ]

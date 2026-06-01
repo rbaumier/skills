@@ -1,0 +1,88 @@
+Refactor this Vue component. Fix everything wrong with it:
+
+```vue
+<template>
+  <div>
+    <div class="page__header">
+      <h1 class="page__title">Products</h1>
+      <span>{{ products.length }} items</span>
+    </div>
+
+    <div v-for="product in products" :key="product">
+      <div class="product-card">
+        <div class="product-card__name">{{ product.name }}</div>
+        <div class="product-card__price">${{ product.price * (1 + taxRate) }}</div>
+        <div class="product-card__stock">
+          <span v-if="product.stock > 0">In stock</span>
+          <span v-if="product.stock <= 0">Out of stock</span>
+        </div>
+        <div class="product-card__row"><span>Category</span><span>{{ product.category }}</span></div>
+        <div class="product-card__row"><span>Weight</span><span>{{ product.weight }}kg</span></div>
+        <div class="product-card__row"><span>Rating</span><span>{{ product.rating }}/5</span></div>
+        <button @click="addToCart(product)" v-if="product.stock > 0">Add to Cart</button>
+      </div>
+    </div>
+
+    <div v-html="userBio"></div>
+
+    <div class="cart-summary">
+      <h2>Cart ({{ cart.length }})</h2>
+      <div v-for="item in cart">
+        <span>{{ item.name }} x{{ item.qty }}</span>
+        <span>{{ item.qty * item.price }}</span>
+      </div>
+      <div>Total: ${{ cart.reduce((sum, i) => sum + i.qty * i.price, 0) }}</div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { inject } from 'vue';
+
+export default {
+  data() {
+    return {
+      products: [],
+      cart: reactive([]),
+      taxRate: 0.1,
+      userBio: '',
+    };
+  },
+  created() {
+    this.fetchProducts();
+  },
+  methods: {
+    async fetchProducts() {
+      const res = await fetch('/api/products');
+      this.products = await res.json();
+    },
+    addToCart(product) {
+      const existing = this.cart.find(i => i.id === product.id);
+      if (existing) {
+        existing.qty++;
+      } else {
+        this.cart.push({ ...product, qty: 1 });
+      }
+      this.$emit('cart-updated', this.cart);
+    },
+    removeFromCart(productId) {
+      const idx = this.cart.findIndex(i => i.id === productId);
+      if (idx > -1) this.cart.splice(idx, 1);
+    },
+  },
+  provide() {
+    return { cart: this.cart };
+  },
+};
+</script>
+
+<style scoped>
+.page__header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+.page__title { font-size: 1.5rem; }
+.product-card { border: 1px solid #ccc; padding: 1rem; margin: 0.5rem 0; }
+.product-card__row { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+.cart-summary { margin-top: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }
+</style>
+```
+
+Output ONLY the refactored code (all files if splitting into components). Do not write files to disk.

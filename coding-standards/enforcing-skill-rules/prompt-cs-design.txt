@@ -1,0 +1,45 @@
+Fix all issues:
+
+```typescript
+import { db } from './db';
+import { cache } from './cache';
+import { mailer } from './mailer';
+
+function formatEmail(to: string, name: string, amount: number, currency: string) {
+  return `To: ${to}\nDear ${name}, your total is ${amount} ${currency}`;
+}
+
+function formatReceipt(to: string, name: string, amount: number, currency: string) {
+  return `Receipt for ${name}: ${amount} ${currency}\nSent to: ${to}`;
+}
+
+function formatInvoice(to: string, name: string, amount: number, currency: string) {
+  return `Invoice for ${name}: ${amount} ${currency}\nBilling: ${to}`;
+}
+
+function getShippingLabel(order: any) {
+  return `${order.customer.address.street}, ${order.customer.address.city}, ${order.customer.address.zip}`;
+}
+
+export async function placeOrder(userId: string, items: any[]) {
+  const userResult = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+  const user = userResult.rows[0];
+
+  const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+  const order = await db.query(
+    'INSERT INTO orders (user_id, total, status) VALUES ($1, $2, $3) RETURNING *',
+    [userId, total, 'pending'],
+  );
+
+  await mailer.send(user.email, 'Order placed', formatEmail(user.email, user.name, total, 'USD'));
+  cache.set(`user:${userId}:lastOrder`, order.rows[0].id);
+  return order.rows[0];
+}
+
+export function applyBulkDiscount(items: any[], retryCount: number, retryDelayMs: number, maxRetries: number) {
+  return items.map((item) => ({ ...item, price: item.price * 0.9 }));
+}
+```
+
+Output fixed code only.

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "fs-result-not-throw",
+    "trap": "throw new Error('not found'), throw new Error('blocked'), throw new Error('stock')",
+    "description": "Errors returned as Result, no throw",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-preserve-cause",
+    "trap": "throw new Error('stock') is a bare string with no original cause or context",
+    "description": "Errors preserve original cause/context",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-bound-inputs",
+    "trap": "No validation on qty (could be negative), items array (could be empty)",
+    "description": "Input validation rejects invalid values (negative qty, empty items) \u2014 no ?? fallback",
+    "category": "security"
+  },
+  {
+    "id": "fs-timeout-io",
+    "trap": "db.query calls have no timeout \u2014 can hang forever",
+    "description": "Timeout on every I/O call",
+    "category": "gotcha"
+  },
+  {
+    "id": "fs-structured-api-errors",
+    "trap": "throw new Error('not found') \u2014 bare string, no type/code/status",
+    "description": "Structured errors: { type, code, status, detail } not bare { message }",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-define-errors-out-of-existence",
+    "trap": "removeCartItem throws 'item not in cart' when removing an item that doesn't exist \u2014 but the postcondition is the same: item is not in cart",
+    "description": "removeCartItem redesigned to succeed even if item absent \u2014 guarantees 'after call, item is not in cart' instead of throwing",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-impossible-state-documented",
+    "trap": "if (total <= 0) throw new Error('invalid total') in validateOrder \u2014 a negative total after summing valid items is a programmer bug, but the code treats it like a normal error with no explanation",
+    "description": "Impossible-state check returns Result error (not throw) AND has a comment explaining why this state should never occur \u2014 the comment documents the invariant",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-parse-dont-validate",
+    "trap": "userId: any, items: any[] \u2014 accepted without parsing into typed domain objects",
+    "description": "Parse, don't validate \u2014 construct typed domain objects at boundary, reject invalid",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-barricade-boundary",
+    "trap": "Validation scattered: usr.blocked checked in main function AND redundantly inside loop (itm.qty > 0 && itm.active && !usr.blocked)",
+    "description": "Validation consolidated at boundary \u2014 usr.blocked checked once at entry (barricade), not re-checked inside loop",
+    "category": "security"
+  },
+  {
+    "id": "fs-invalid-states-unrepresentable",
+    "trap": "OrderStatus = string instead of union type; status 'pending' is a raw string",
+    "description": "Make invalid states unrepresentable \u2014 union types for status, not bare strings",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-strict-typing",
+    "trap": "userId: any, items: any[] accept anything; OrderStatus = string is untyped",
+    "description": "Explicit types/interfaces for all params and returns, no any",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-inaction-justified",
+    "trap": "throw new Error('blocked') exits early with no explanation of why blocked users are rejected",
+    "description": "If any no-op/early-return, justified with why",
+    "category": "format"
+  }
+]

@@ -1,0 +1,140 @@
+[
+  {
+    "id": "bcrypt-rounds-12",
+    "trap": "bcrypt.hash(password, 10) — uses 10 rounds instead of 12+",
+    "description": "Skill requires bcrypt(12+). 10 rounds is the common default but the skill mandates 12 minimum",
+    "category": "security"
+  },
+  {
+    "id": "jwt-in-cookie-not-body",
+    "trap": "Login returns JWT in response body (res.json({ token })) implying localStorage storage",
+    "description": "Skill says JWTs in httpOnly Secure SameSite=Strict cookies, never in response body for client-side storage",
+    "category": "security"
+  },
+  {
+    "id": "jwt-rs256-public-api",
+    "trap": "Uses HS256 for a public-facing API login endpoint",
+    "description": "Skill requires RS256 for public APIs, HS256 only for internal services",
+    "category": "security"
+  },
+  {
+    "id": "jwt-validate-iss-aud",
+    "trap": "jwt.verify does not validate issuer or audience claims",
+    "description": "Skill requires validating iss/aud/exp on JWT verification",
+    "category": "security"
+  },
+  {
+    "id": "jwt-short-lived-refresh",
+    "trap": "Token expiresIn 7d with no refresh rotation mechanism",
+    "description": "Skill requires short-lived tokens + refresh token rotation",
+    "category": "security"
+  },
+  {
+    "id": "sameSite-strict-not-lax",
+    "trap": "OAuth callback cookie uses sameSite: 'lax' instead of 'strict'",
+    "description": "Skill specifies SameSite=Strict for session/token cookies",
+    "category": "security"
+  },
+  {
+    "id": "cors-credentials-missing",
+    "trap": "CORS config omits credentials: true despite using cookie-based auth in OAuth flow",
+    "description": "Skill CORS example includes credentials: true when cookies are used cross-origin",
+    "category": "security"
+  },
+  {
+    "id": "helmet-security-headers",
+    "trap": "No helmet() or security headers middleware (CSP, HSTS, X-Frame-Options, nosniff)",
+    "description": "Skill requires security headers on every response via helmet: CSP, HSTS, X-Frame-Options, nosniff",
+    "category": "security"
+  },
+  {
+    "id": "csp-nonce-based",
+    "trap": "No Content-Security-Policy configured at all",
+    "description": "Skill requires nonce/hash-based CSP with no unsafe-inline or unsafe-eval",
+    "category": "security"
+  },
+  {
+    "id": "rate-limit-auth-stricter",
+    "trap": "Single rate limit for all endpoints — no stricter limit on /api/auth/*",
+    "description": "Skill requires separate stricter rate limits on auth endpoints (10 req/15min) vs general API (100 req/15min)",
+    "category": "security"
+  },
+  {
+    "id": "idor-user-profile",
+    "trap": "GET /api/users/:id has no ownership check — any authenticated user can read any profile",
+    "description": "Skill IDOR rule: verify authenticated user owns or has access to the requested resource",
+    "category": "security"
+  },
+  {
+    "id": "idor-user-update",
+    "trap": "PUT /api/users/:id updates any user if authenticated — no ownership check (req.params.id vs req.user.sub)",
+    "description": "Skill requires ownership validation before every data mutation",
+    "category": "security"
+  },
+  {
+    "id": "idor-documents",
+    "trap": "GET /api/documents/:id returns any document to any authenticated user — no ownership filter",
+    "description": "Skill: add ownership filter to every query (WHERE id = $1 AND owner_id = $currentUser)",
+    "category": "security"
+  },
+  {
+    "id": "oauth-state-csrf",
+    "trap": "GitHub OAuth callback does not validate a state parameter",
+    "description": "Skill requires state parameter validation in OAuth callbacks to prevent CSRF",
+    "category": "security"
+  },
+  {
+    "id": "oauth-pkce",
+    "trap": "OAuth flow has no PKCE (code_verifier/code_challenge)",
+    "description": "Skill requires PKCE for all OAuth flows to prevent authorization code interception",
+    "category": "security"
+  },
+  {
+    "id": "csrf-token-state-changes",
+    "trap": "State-changing POST/PUT endpoints have no CSRF token verification",
+    "description": "Skill requires CSRF tokens on all state-changing operations, not just SameSite cookies",
+    "category": "security"
+  },
+  {
+    "id": "webhook-signature-verify",
+    "trap": "Stripe webhook parses body without verifying webhook signature",
+    "description": "Webhook payloads must be verified with signature (Stripe-Signature header) to prevent forgery",
+    "category": "security"
+  },
+  {
+    "id": "webhook-log-sensitive",
+    "trap": "console.log('Stripe webhook received:', JSON.stringify(event)) logs full payment data",
+    "description": "Skill: never log PII or payment info. Webhook events contain sensitive payment details",
+    "category": "security"
+  },
+  {
+    "id": "structured-audit-logs",
+    "trap": "console.log/console.error used for logging — no structured audit log with required fields",
+    "description": "Skill requires structured audit logs with timestamp, user_id, action, resource, result, IP — not console.log",
+    "category": "security"
+  },
+  {
+    "id": "redos-user-regex",
+    "trap": "new RegExp(query, 'i') — user input used directly in regex constructor",
+    "description": "Skill: never use user input in regex patterns — causes ReDoS. Use re2 or safe-regex",
+    "category": "security"
+  },
+  {
+    "id": "path-traversal-basename",
+    "trap": "path.join(UPLOAD_DIR, req.params.name) without path.basename() — ../etc/passwd bypasses startsWith check after join",
+    "description": "Skill: use path.basename() to strip directory components, then resolve and verify prefix",
+    "category": "security"
+  },
+  {
+    "id": "admin-input-validation",
+    "trap": "Admin /convert endpoint does not validate inputFile or format with schema allowlist",
+    "description": "Skill: validate all external input at system boundary with schema allowlists — admin endpoints included",
+    "category": "security"
+  },
+  {
+    "id": "html-sanitize-dompurify",
+    "trap": "Manual regex replace for HTML escaping instead of DOMPurify with explicit allowed tags",
+    "description": "Skill: use DOMPurify with explicit allowed tags for HTML sanitization, not manual regex",
+    "category": "security"
+  }
+]

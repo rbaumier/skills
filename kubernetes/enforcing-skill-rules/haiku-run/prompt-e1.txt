@@ -1,0 +1,137 @@
+Fix all issues:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: default
+  labels:
+    app: api-server
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: api-server
+        tier: backend
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: api
+          image: mycompany/api-server:latest
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /api/v1/orders
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DATABASE_URL
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+data:
+  DATABASE_URL: "postgresql://admin:s3cret@postgres:5432/mydb"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: api-svc
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: default
+spec:
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 80
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-server-binding
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-server
+  minReplicas: 1
+  maxReplicas: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: api-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from: []
+      ports:
+        - port: 80
+```
+
+Output fixed code only.

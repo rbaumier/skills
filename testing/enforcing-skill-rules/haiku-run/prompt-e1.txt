@@ -1,0 +1,96 @@
+Fix all issues:
+
+```typescript
+// user-service.test.ts
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import { UserService } from './user-service';
+import { EmailService } from './email-service';
+import { Database } from './database';
+
+const mockDb = vi.fn();
+vi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));
+
+let sharedUser: any;
+
+describe('UserService', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('test1', async () => {
+    mockDb.mockResolvedValue({ id: 1, name: 'Alice' });
+    const service = new UserService(new Database(), new EmailService());
+    const user = await service.getUser(1);
+    sharedUser = user;
+    expect(user).toEqual({ id: 1, name: 'Alice' });
+  });
+
+  it('test2', async () => {
+      expect(sharedUser.name).toBe('Alice');
+    const updated = await service.updateName(sharedUser.id, 'Bob');
+    expect(updated).toBeTruthy();
+  });
+
+  it('test3', async () => {
+    const users = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const service = new UserService(new Database(), new EmailService());
+    const result = await service.processUsers(users);
+    expect(result).toMatchSnapshot();
+  });
+
+  it('test4', async () => {
+    const service = new UserService(new Database(), new EmailService());
+    expect((service as any)._cache.size).toBe(0);
+    expect((service as any)._retryCount).toBe(3);
+  });
+
+  it('test5', () => {
+    const user = { id: 1, name: 'Alice' };
+    expect(typeof user.id).toBe('number');
+    expect(typeof user.name).toBe('string');
+  });
+});
+
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+export default defineConfig({
+  use: {
+    trace: 'on',
+    video: 'on',
+    screenshot: 'on',
+  },
+});
+
+// checkout.e2e.ts (Playwright)
+import { test, expect } from '@playwright/test';
+
+test('complete checkout flow', async ({ page }) => {
+  await page.goto('/products');
+  await page.click('.product-card:first-child .add-to-cart');
+  await page.waitForTimeout(2000);
+  await page.click('.cart-icon');
+  
+  // Fill shipping
+  await page.fill('#name', 'John Doe');
+  await page.fill('#address', '123 Main St');
+  await page.fill('#card-number', '4242424242424242');
+  await page.click('#submit-order');
+  await page.waitForTimeout(3000);
+  
+  // Verify with Stripe (real API)
+  const response = await page.request.get('https://api.stripe.com/v1/charges');
+  expect(response.ok()).toBeTruthy();
+  
+  const confirmation = await page.$('.confirmation-message');
+  expect(confirmation).not.toBeNull();
+});
+
+test('cancel order', async ({ page }) => {
+  await page.click('.cancel-order');
+  await page.waitForTimeout(1000);
+  expect(await page.$('.cancelled-badge')).not.toBeNull();
+});
+```
+
+Output fixed code only.

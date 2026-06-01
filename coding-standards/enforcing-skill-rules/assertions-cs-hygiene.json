@@ -1,0 +1,80 @@
+[
+  {
+    "id": "fs-guard-clauses",
+    "trap": "if (itm.qty > 0 && itm.active && !usr.blocked) nested inside for loop with inner if (amt > 0)",
+    "description": "Nested if/else flattened to guard clauses, max 3 indent levels",
+    "category": "format"
+  },
+  {
+    "id": "fs-switch-or-map",
+    "trap": "discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0 nested ternary chain",
+    "description": "discountCode if/else chain replaced with object map or switch",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-immutable",
+    "trap": "let total = 0; total += amt; let ct = 0; ct++ mutate accumulators inside loop",
+    "description": "No mutation of items array or item objects",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-promise-all",
+    "trap": "await db.query('SELECT qty FROM stock...') called sequentially inside for loop",
+    "description": "Independent stock checks run in parallel (Promise.all)",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-no-boolean-flags",
+    "trap": "isUrgent and sendEmail are boolean params that branch internal behavior",
+    "description": "isUrgent and sendEmail boolean params split into separate functions or options object",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-max-3-args",
+    "trap": "handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) has 7 positional args",
+    "description": "7 positional args replaced with options object",
+    "category": "format"
+  },
+  {
+    "id": "fs-named-constants",
+    "trap": "1000, 50, 20 are magic numbers used inline without named constants",
+    "description": "Magic numbers (1000, 50, 20) extracted to named constants",
+    "category": "format"
+  },
+  {
+    "id": "fs-intermediate-vars",
+    "trap": "itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === ...) is one compound expression",
+    "description": "Compound expressions (tax calc, discount) extracted to named variables",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-clever-code",
+    "trap": "discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0 nested ternary",
+    "description": "Nested ternary for discounts removed, replaced with clear logic",
+    "category": "format"
+  },
+  {
+    "id": "fs-blank-lines",
+    "trap": "Dense code blocks with inconsistent spacing between logical sections",
+    "description": "Logical blocks separated with blank lines",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-commented-code",
+    "trap": "// Log inside business logic comment labels dead-weight code that should be removed",
+    "description": "Commented-out old approach removed",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-todo-without-issue",
+    "trap": "No existing TODOs but refactoring should not introduce any without issue links",
+    "description": "TODO/FIXME without tracking issue removed",
+    "category": "format"
+  },
+  {
+    "id": "fs-limits-explained",
+    "trap": "if (total > 1000) has no explanation of why 1000 is the threshold for big orders",
+    "description": "The 1000 threshold for big orders explained with why",
+    "category": "format"
+  }
+]

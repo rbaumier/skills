@@ -8,7 +8,7 @@ description: Use when writing Kubernetes manifests, configuring RBAC/networking/
 - Privileged ports (<1024) require root. Use `>=1024` with `runAsNonRoot: true`, remap via Service `port:80 -> targetPort:8080`.
 - Liveness probe on a heavy endpoint: cascading restarts under load. Use a dedicated lightweight `/healthz`.
 - Missing resource limits: one pod starves the entire node. Always set requests AND limits.
-- `kubectl apply` without `--namespace`: silently deploys to `default`. Always explicit.
+- `namespace: default` is NEVER acceptable. Declare a dedicated `Namespace` and set `metadata.namespace` to it on EVERY namespaced resource. `kubectl apply` without `--namespace` silently lands in `default` — always be explicit, in both manifests and commands.
 - Selector mismatch between Service and Deployment labels: zero endpoints, zero traffic, zero errors in logs. Verify with `kubectl get endpoints`.
 - Secrets in ConfigMaps: no encryption at rest. Use `Secret` (or sealed-secrets/external-secrets in prod).
 - Single replica + rolling update = downtime. Min 2 replicas for zero-downtime deploys.
@@ -50,8 +50,8 @@ initContainers:
 - `terminationGracePeriodSeconds: 30` + `preStop` sleep = graceful drain of in-flight requests.
 - Pin image tags to immutable versions (SHA or semver), never `latest`.
 - Labels: use `app.kubernetes.io/*` standard labels for tooling compatibility.
-- PodDisruptionBudget (PDB) for every production Deployment — `minAvailable: 50%` or `maxUnavailable: 1` prevents node drains (upgrades, scaling) from killing all pods simultaneously. Without PDB, `kubectl drain` respects nothing. PDB is mentioned in our checklist but has no dedicated section or example.
-- Topology Spread Constraints — spread pods across zones/nodes: `topologySpreadConstraints: [{maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule}]`. Prevents all replicas landing on one node/zone. Use with HPA for zone-aware autoscaling.
+- **Every Deployment MUST ship a PodDisruptionBudget. Default to `minAvailable: 50%` — not `minAvailable: 1`.** A PDB at `minAvailable: 1` lets a node drain take a 2-replica app down to a single pod, defeating the point. Use `50%` (or `maxUnavailable: 1` only when replicas are large). Without a PDB, `kubectl drain` (upgrades, autoscaler, spot reclaim) evicts every pod at once. See the dedicated PDB example below.
+- **Every Deployment MUST set `topologySpreadConstraints` to spread replicas across zones/nodes.** Do not omit it — without it the scheduler can stack all replicas on one node/zone, so a single failure takes the whole app down. Minimum: `topologySpreadConstraints: [{maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {...}}}]`. Use with HPA for zone-aware autoscaling. See the example below.
 - Pod affinity/anti-affinity for co-location and spreading — `podAntiAffinity: preferredDuringSchedulingIgnoredDuringExecution` with `topologyKey: kubernetes.io/hostname` spreads replicas across nodes. `podAffinity` co-locates related pods (app + cache) for low latency. Use `preferred` not `required` to avoid scheduling deadlocks.
 
 ```yaml
@@ -60,6 +60,35 @@ strategy:
   rollingUpdate:
     maxSurge: 1          # At most replicas+1 pods during update
     maxUnavailable: 0    # All current replicas stay up (zero downtime)
+
+---
+# Spread replicas across zones AND nodes so one failure can't take all of them.
+# Goes inside the pod template spec (template.spec).
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone   # spread across zones
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: my-app
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname        # and across nodes
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: my-app
+
+---
+# PodDisruptionBudget — one per Deployment. Default minAvailable: 50%, NOT 1.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: my-app-pdb
+spec:
+  minAvailable: 50%        # keep at least half the replicas during a drain
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: my-app   # MUST match the Deployment's pod labels
 ```
 
 ### Services & Networking
@@ -236,6 +265,7 @@ roleRef:
 
 ### Network Policies
 - Default deny all ingress/egress, then allowlist specific paths.
+- **An empty `from`/`to` is allow-all and so is an empty selector — both defeat the policy.** `ingress: [{from: []}]`, `from: [{podSelector: {}}]`, and `from: [{namespaceSelector: {}}]` all let *every* source reach the pod. Every ingress/egress rule MUST name a concrete `podSelector` (or `namespaceSelector`) with `matchLabels`. Restrict to the actual caller — never leave it open.
 - `podSelector` + `namespaceSelector` for fine-grained control.
 - Always allow monitoring namespace to scrape metrics.
 - Without a CNI that supports NetworkPolicy (Calico, Cilium), policies are silently ignored.
@@ -320,6 +350,18 @@ helm rollback my-db 1    # Revision number from helm history
 - GitOps with ArgoCD/Flux — store manifests in git, let ArgoCD sync cluster state to git state. `Application` CR points to git repo + path + target cluster. Auto-sync with `syncPolicy: automated: {prune: true, selfHeal: true}`. Never `kubectl apply` manually in production.
 
 ### Namespace Governance
+- **Create an explicit `Namespace` for the app and reference it everywhere. Never use `default`.** When fixing a manifest set, declare the namespace once and replace every `namespace: default` with it.
+
+```yaml
+# Dedicated namespace — replace `default` on every namespaced resource with this name
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-prod
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+```
+
 - `ResourceQuota`: caps total CPU/memory/pod-count per namespace. Prevents one team from starving others.
 - `LimitRange`: sets default requests/limits per container. Safety net for manifests that forget resource specs.
 - Combine both: LimitRange provides defaults, ResourceQuota enforces ceiling.
@@ -374,8 +416,10 @@ spec:
 - [ ] Rolling update with `maxUnavailable: 0` for zero-downtime deploys
 - [ ] `preStop` hook with sleep for graceful connection draining
 - [ ] `terminationGracePeriodSeconds` set appropriately
-- [ ] PodDisruptionBudget (`minAvailable: 50%`) for maintenance windows
-- [ ] Network policies restrict ingress/egress to required paths only
+- [ ] PodDisruptionBudget present, `minAvailable: 50%` (NOT 1), one per Deployment
+- [ ] `topologySpreadConstraints` set to spread replicas across zones/nodes
+- [ ] Network policies restrict ingress/egress to required paths only — no empty `from: []` and no empty `{}` selector (both = allow-all)
+- [ ] No resource uses `namespace: default` — a dedicated Namespace is declared and referenced everywhere
 - [ ] Secrets via sealed-secrets or external-secrets, not plain YAML in git
 - [ ] HPA with scale-down stabilization window
 - [ ] Namespace has ResourceQuota + LimitRange

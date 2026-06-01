@@ -1,0 +1,1 @@
+{"skill":"testing","eval":3,"passed":8,"total":9,"fails":[{"id":"test-pyramid-ratio","why":"No mention of the test pyramid or ~70/20/10 unit/integration/E2E ratios anywhere in the code or the Rules Applied prose; the architecture/awareness assertion is unaddressed."}]}

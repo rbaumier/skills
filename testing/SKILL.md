@@ -4,7 +4,16 @@ description: "Use when writing tests, choosing test strategies, or setting up te
 ---
 
 ## Gotchas
-- `vi.mock()` hoists to top — variable refs inside factory `undefined` unless via `vi.hoisted()`
+- `vi.mock()` hoists to top — variable refs inside factory are `undefined` unless declared via `vi.hoisted()`. A `const mockDb = vi.fn()` above `vi.mock(...)` is the trap: the mock is hoisted above the const, so the factory reads `mockDb` before it exists. Move the var into `vi.hoisted()`:
+  ```ts
+  // Bad — mockDb referenced before init inside the hoisted factory
+  const mockDb = vi.fn();
+  vi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));
+  // Good — vi.hoisted() runs before the mock factory
+  const { mockDb } = vi.hoisted(() => ({ mockDb: vi.fn() }));
+  vi.mock('./database', () => ({ Database: vi.fn(() => ({ find: mockDb })) }));
+  ```
+  In reviews/fixes: any variable referenced inside a `vi.mock()` factory that is declared with a plain `const`/`let` above it -> rewrite via `vi.hoisted()`.
 - **`afterEach(cleanup)` in RTL is automatic with Vitest** — manual `cleanup()` causes double cleanup. Remove it; keep only `vi.restoreAllMocks()`. In reviews: if you see `cleanup()` imported from `@testing-library/react` in a Vitest file, flag it as unnecessary double cleanup
 - `page.click(selector)` deprecated — use `page.locator(selector).click()`
 - `toMatchSnapshot()` maintenance trap — assert specific values instead
@@ -50,11 +59,38 @@ Test behavior not implementation. Determinism is king. Fast feedback. No test-to
 Testing Trophy: integration > unit (complex logic only) > E2E (critical paths).
 **Test pyramid ratios**: ~70% unit (pure logic, transforms, edge cases), ~20% integration (API contracts, DB interactions), ~10% E2E (critical user flows only). Inverting the pyramid (too many E2E, few unit) leads to slow, flaky CI. In reviews: if a project has more E2E tests than unit tests, flag the inverted pyramid
 AAA pattern. One concept per test. Descriptive names (scenario + outcome). No logic in tests.
-Don't test what types guarantee. Specific matchers over generic equality.
+Don't test what types guarantee. **Specific matchers over generic equality/truthiness.** `expect(x).toBeTruthy()` passes for `1`, `"unexpected"`, `{}` — it proves almost nothing. Name the exact expectation so a wrong value fails loudly:
+```ts
+expect(updated).toBeTruthy();              // Bad — what is `updated`? boolean? object? id?
+expect(updated).toBe(true);                // Good — asserts the actual contract
+expect(result).toEqual({ id: 1 });         // Good — exact shape
+expect(items).toHaveLength(3);             // Good — specific count
+```
+In reviews/fixes: any `toBeTruthy()`/`toBeFalsy()`/`toBeDefined()` standing in for a known concrete value -> replace with the specific matcher.
 **ZOMBIES mnemonic for edge-case coverage**: Zero/empty, One, Many, Boundaries, Interfaces, Exceptions, Simple/edge. Walk through every category when designing tests for a function. Without this, you only test the happy path and miss the inputs that cause production crashes. In reviews: if a test only covers the happy path without boundary values or empty inputs, flag missing ZOMBIES coverage
-Factories over fixtures. Explicit setup per test. Teardown in `finally`/`afterEach`.
+**Factories over fixtures.** Don't scatter hardcoded object literals (`{ id: 1, name: 'Alice' }`) across tests — when the shape changes you edit every test, and each test re-states irrelevant fields. Build a factory with sane defaults and per-test overrides so each test names only what it cares about:
+```ts
+// Bad — same literal copy-pasted, every field re-stated even when irrelevant
+const user = { id: 1, name: 'Alice', email: 'a@x.com', role: 'user' };
+// Good — factory; tests override only the field under test
+const makeUser = (over: Partial<User> = {}): User =>
+  ({ id: 1, name: 'Alice', email: 'a@x.com', role: 'user', ...over });
+const admin = makeUser({ role: 'admin' });
+```
+Explicit setup per test. Teardown in `finally`/`afterEach`. In reviews/fixes: the same hardcoded data object appearing in 2+ tests -> extract a factory.
 Mock at boundaries only — network, filesystem, DB, time, randomness. Never mock internal collaborators.
-**MSW (Mock Service Worker) for network mocking**: Use `msw` to intercept fetch/XHR at the network level instead of mocking fetch/axios directly. MSW handlers are reusable across tests, work with any HTTP client, and test real request/response cycles. Without MSW, you mock the HTTP client itself — which means switching from axios to fetch breaks all your mocks. In reviews: if you see `vi.mock('axios')` or `global.fetch = vi.fn()`, recommend MSW instead
+**MSW (Mock Service Worker) for network mocking**: Use `msw` to intercept fetch/XHR at the network level instead of mocking the HTTP client directly. MSW handlers are reusable across tests, work with any HTTP client, and test real request/response cycles. Without MSW, you mock the client itself — switching from axios to fetch breaks all your mocks. Mocking the client (`vi.mock('node-fetch')`, `vi.mock('axios')`, `global.fetch = vi.fn()`) is the trap: rewrite it to an MSW handler that returns the same payload.
+```ts
+// Bad — mocks the HTTP client; couples tests to node-fetch, breaks if you swap clients
+vi.mock('node-fetch', () => ({ default: vi.fn() }));
+(fetch as any).mockResolvedValue({ ok: true, json: () => [{ id: 1 }] });
+// Good — intercept at the network with MSW; client-agnostic, real request/response
+const server = setupServer(
+  http.get('*/users', () => HttpResponse.json([{ id: 1 }])),
+);
+beforeAll(() => server.listen()); afterEach(() => server.resetHandlers()); afterAll(() => server.close());
+```
+In reviews/fixes: ANY client-level mock of HTTP — `vi.mock('node-fetch')`, `vi.mock('axios')`, `vi.mock('cross-fetch')`, `global.fetch = vi.fn()`, `jest.mock('got')` — replace with an MSW handler. There is no exception for `node-fetch`: it is an HTTP client like any other. Convert *every* such mock in the file, not just the obvious one.
 Test public interface only. Prefer real deps (in-memory DB) for integration.
 **Contract testing for API boundaries**: When your service depends on external APIs, write contract tests that verify the shape/types of responses (not values). Use MSW to intercept and validate against recorded contracts. Without contract tests, a third-party API silently changes a field name and your service breaks in production. In reviews: if integration tests call real external APIs, flag and recommend contract tests with MSW
 **Flaky test triage protocol**: Run failing test 3x. If intermittent: classify as flaky. Action: quarantine (`describe.skip` or tag `@flaky`), file a ticket, fix root cause (race condition, shared state, time dependency). Never retry-and-ignore in CI — retries mask real regressions and erode trust in the suite. In reviews: if you see `retries: 3` in Playwright config without a comment explaining why, flag it
@@ -205,8 +241,15 @@ Load `references/tdd-*.md` as needed.
 ## 3. UI Testing
 
 ### Selectors
-User-centric: `getByRole`, `getByLabel`, `getByText` — never CSS classes/XPath.
-Use `page.locator(selector).click()`, never `page.click(selector)`.
+User-centric: `getByRole`, `getByLabel`, `getByText` — never CSS classes/XPath. **`[data-testid]` is not the fix for a CSS selector** — it is the last resort, only when no accessible role/label/text exists. A form field with a label is reached by its label, a button by its role+name:
+```ts
+await page.click('.product-card .add-to-cart');        // Bad — CSS class
+await page.locator('[data-testid="add-to-cart"]').click(); // Still weak — testid masks a missing role
+await page.getByRole('button', { name: 'Add to cart' }).click(); // Good — how a user finds it
+await page.fill('#name', 'John');                      // Bad — CSS id
+await page.getByLabel('Name').fill('John');            // Good — by label
+```
+Use `page.locator(selector).click()`, never `page.click(selector)`. In reviews/fixes: CSS class/id selectors -> rewrite as `getByRole`/`getByLabel`/`getByText`; only drop to `getByTestId` when you can justify the absence of an accessible handle.
 
 ### Interactions
 **`userEvent` over `fireEvent` in RTL**: Use `@testing-library/user-event` instead of `fireEvent` — it simulates real user interactions (typing triggers keydown/keypress/keyup/input/change, click triggers pointer events). `fireEvent.click()` dispatches a single synthetic event; `userEvent.click()` reproduces the full browser event sequence. Without `userEvent`, your tests pass but the real browser fires events your handler never saw. In reviews: if you see `fireEvent.click()` or `fireEvent.change()`, recommend `userEvent`
@@ -219,15 +262,29 @@ Web-first assertions: `expect(locator).toBeVisible()` (auto-retry).
 API seeding — don't drive UI to create preconditions. Fresh incognito context per test.
 
 ### Architecture
-**Page Object Model**: abstract selectors/actions into reusable classes — tests read like user stories. All page interactions (fill, click, assert) belong in PO methods, not inline in tests. In reviews: if you see raw selectors and actions repeated inline across tests without a Page Object abstraction, flag the missing POM pattern.
+**Page Object Model**: abstract selectors/actions into reusable classes — tests read like user stories. All page interactions (fill, click, assert) belong in PO methods, not inline in tests. The smallest valid form is extracting repeated selectors/actions into named helpers in the same file (a `locators` object or `addToCart(page)` function); the fuller form is a dedicated `CheckoutPage` class. Either removes the duplication — don't leave the same selector typed inline in two tests.
+```ts
+// Bad — same selectors/actions inlined in every test
+await page.getByRole('button', { name: 'Add to cart' }).click();
+await page.getByRole('link', { name: 'Cart' }).click();
+// Good — minimal shared abstraction (single-file helpers count)
+const checkout = {
+  addToCart: (page: Page) => page.getByRole('button', { name: 'Add to cart' }).click(),
+  openCart:  (page: Page) => page.getByRole('link', { name: 'Cart' }).click(),
+};
+```
+In reviews/fixes: the same selectors and actions repeated inline across 2+ tests with no shared abstraction -> extract helpers or a Page Object.
 
-**Mock third-party external services**: payment gateways, analytics, any vendor API. Vendor downtime must never break your build. Intercept via `page.route()`:
+**Mock third-party external services**: payment gateways, analytics, any vendor API. Vendor downtime must never break your build. Intercept the *exact host the test already calls* with `page.route()` — the fix is to intercept the call, NOT to delete it. Deleting the external interaction (and its assertion) drops coverage of the integration; route the real URL and fulfill a canned response instead:
 ```typescript
-await page.route('**/api/payment', route =>
+// Bad — real call to a vendor; or "fixed" by deleting the call entirely
+const res = await page.request.get('https://api.stripe.com/v1/charges');
+// Good — intercept the SAME host/path the code hits, keep the assertion
+await page.route('**/api.stripe.com/**', route =>
   route.fulfill({ status: 200, json: { status: 'confirmed' } })
 );
 ```
-In reviews: if you see a test hitting a real external service (payment, SMS, email, analytics), flag it — mock it with route interception.
+Match the glob to the real boundary (`**/api.stripe.com/**`, `**/api.segment.io/**`), not an unrelated local path. In reviews/fixes: a test hitting a real external service (payment, SMS, email, analytics) -> route-intercept that service's URL; never silently delete the call.
 
 ### Error Handling
 Capture video/traces/screenshots on failure only. Soft assertions for independent elements.

@@ -184,7 +184,7 @@
         {
           "id": "drizzle-infer-type",
           "trap": "No type export from schema",
-          "description": "Export InferSelectModel<typeof table> for row types",
+          "description": "Export row types via typeof table.$inferSelect (not the legacy InferSelectModel)",
           "category": "format"
         },
         {

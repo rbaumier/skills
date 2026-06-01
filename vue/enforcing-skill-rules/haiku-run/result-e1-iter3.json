@@ -1,0 +1,1 @@
+{"skill":"vue","passed":16,"total":17,"fails":[{"id":"views-zero-html","why":"ProductsPage still renders raw structural HTML (<div class=\"page-container\">, <div class=\"products-list\">) with its own scoped grid CSS (L350-380) instead of being pure component composition"}]}

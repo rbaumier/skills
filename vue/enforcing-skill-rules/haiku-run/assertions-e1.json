@@ -1,0 +1,104 @@
+[
+  {
+    "id": "composition-api",
+    "trap": "export default { data() {}, methods: {}, created() {}, provide() {} } uses Options API",
+    "description": "Uses <script setup lang='ts'>, not Options API",
+    "category": "architecture"
+  },
+  {
+    "id": "computed-not-template",
+    "trap": "{{ product.price * (1 + taxRate) }} and {{ cart.reduce((sum, i) => sum + i.qty * i.price, 0) }} are inline computations in template",
+    "description": "Total and taxed price computed via computed(), not inline in template",
+    "category": "behavior"
+  },
+  {
+    "id": "no-destructure-reactive",
+    "trap": "cart: reactive([]) inside Options API data() mixes reactive() with Options API reactivity",
+    "description": "No destructuring of reactive objects",
+    "category": "gotcha"
+  },
+  {
+    "id": "typed-props-emits",
+    "trap": "this.$emit('cart-updated', this.cart) is untyped emit with no defineEmits",
+    "description": "Uses defineProps<{}> and defineEmits<{}> with TypeScript generics",
+    "category": "format"
+  },
+  {
+    "id": "script-template-style-order",
+    "trap": "<template> appears before <script> in the SFC",
+    "description": "SFC order is <script> then <template> then <style>",
+    "category": "format"
+  },
+  {
+    "id": "no-unsanitized-vhtml",
+    "trap": "<div v-html=\"userBio\"></div> renders userBio without any sanitization",
+    "description": "v-html either removed or uses DOMPurify",
+    "category": "security"
+  },
+  {
+    "id": "stable-key",
+    "trap": ":key=\"product\" uses the object itself as key instead of a stable identifier",
+    "description": "v-for uses :key with stable identifier (product.id), not the object itself",
+    "category": "gotcha"
+  },
+  {
+    "id": "v-if-v-else",
+    "trap": "v-if=\"product.stock > 0\" and v-if=\"product.stock <= 0\" are opposite conditions without v-else",
+    "description": "Opposite v-if conditions replaced with v-if/v-else pair",
+    "category": "behavior"
+  },
+  {
+    "id": "declarative-template",
+    "trap": "cart.reduce((sum, i) => sum + i.qty * i.price, 0) and product.price * (1 + taxRate) are complex expressions in template",
+    "description": "Complex expressions (reduce, tax calc) moved from template to script",
+    "category": "behavior"
+  },
+  {
+    "id": "views-zero-html",
+    "trap": "Page-level component renders raw HTML: product-card divs, cart-summary divs, page__header all inline",
+    "description": "Page-level view uses components (ProductCard, CartSummary, etc.), not raw HTML/CSS",
+    "category": "architecture"
+  },
+  {
+    "id": "repeated-pattern-extracted",
+    "trap": "product-card__row div repeated 3 times for Category, Weight, Rating with identical structure",
+    "description": "product-card__row repeated 3x extracted into a component",
+    "category": "architecture"
+  },
+  {
+    "id": "composable-extracted",
+    "trap": "Cart state (cart reactive array), addToCart, removeFromCart methods, and provide({ cart }) are all inline in the component",
+    "description": "Cart state and side effects extracted into a composable (useCart or similar)",
+    "category": "architecture"
+  },
+  {
+    "id": "formatting-in-utils",
+    "trap": "${{ product.price * (1 + taxRate) }} and {{ item.qty * item.price }} format prices inline in template",
+    "description": "Price formatting logic in utils, not inline in template/component",
+    "category": "architecture"
+  },
+  {
+    "id": "props-down-events-up",
+    "trap": "provide() { return { cart: this.cart } } shares cart state via provide/inject instead of props",
+    "description": "Data flows via props, updates via emits — not provide/inject for parent-child",
+    "category": "behavior"
+  },
+  {
+    "id": "provide-inject-deep-only",
+    "trap": "provide() { return { cart: this.cart } } uses provide/inject for direct parent-child communication",
+    "description": "provide/inject NOT used for parent-child — only for deep tree if needed",
+    "category": "behavior"
+  },
+  {
+    "id": "v-model-form-only",
+    "trap": "No form inputs in the component — v-model should not be added where there are no form controls",
+    "description": "v-model only used for true two-way form controls, not general state",
+    "category": "gotcha"
+  },
+  {
+    "id": "no-unjustified-features",
+    "trap": "Simple product list with cart — no async components or heavy rendering that would justify Suspense, KeepAlive, or v-memo",
+    "description": "No unnecessary Suspense, KeepAlive, or v-memo added without justification",
+    "category": "gotcha"
+  }
+]

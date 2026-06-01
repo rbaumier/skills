@@ -57,8 +57,8 @@
         },
         {
           "id": "fs-jsdoc-with-example",
-          "trap": "export async function handleOrderData(...) has zero JSDoc",
-          "description": "Exported function has JSDoc with block description + @example with return value",
+          "trap": "export async function handleOrderData(...) has zero function doc naming consumer-visible behavior",
+          "description": "Exported function has a function doc (~5 lines max) naming the consumer-visible effect / return-value meaning — NOT a bare label. @example is NOT required (the skill caps function docs at ~5 lines and defaults to no comment).",
           "category": "format"
         },
         {
@@ -296,9 +296,9 @@
           "category": "security"
         },
         {
-          "id": "fs-ascii-diagram",
-          "trap": "The order pipeline has 5+ sequential steps (validate user → check stock → calculate total → create order → set priority → notify → cache) explained only in prose comments or not explained at all — no ASCII diagram",
-          "description": "Multi-step order pipeline (3+ steps) gets an ASCII diagram in comments showing the flow, not just prose",
+          "id": "fs-pipeline-flow-documented",
+          "trap": "The order pipeline has 5+ sequential steps (validate user → check stock → calculate total → create order → set priority → notify → cache) explained only as a dense prose paragraph or not at all",
+          "description": "The multi-step order pipeline (3+ steps) is documented as a module/function doc that lists the steps as a bullet list / step sequence (per the skill's mandatory module-doc shape: what, consumer consequence, how-as-bullets). An ASCII diagram is NOT required — the skill defaults to no comment and uses bullet lists, not diagrams.",
           "category": "format"
         },
         {
@@ -315,8 +315,8 @@
         },
         {
           "id": "fs-divergent-change-business-domain",
-          "trap": "formatEmail, formatReceipt, formatInvoice, getShippingLabel, validateOrder, applyBulkDiscount all live in the same file as handleOrderData — mixing order fulfillment (place order, apply discount) with document formatting (email/receipt/invoice) with shipping (label) with order validation — multiple unrelated business domains in one module",
-          "description": "The module is split so each file covers ONE business domain. Order fulfillment (placeOrder + applyBulkDiscount), document formatting (email/receipt/invoice), shipping, and validation are not all colocated in the same file — they are distinct business concerns that should not share a module",
+          "trap": "formatEmail, formatReceipt, formatInvoice, getShippingLabel, validateOrder, applyBulkDiscount, handleOrderData all mixed together — order fulfillment, document formatting, shipping, and validation are multiple unrelated business domains",
+          "description": "The unrelated business domains are separated into clearly delimited sections/modules — order fulfillment, document formatting, shipping, validation are NOT interleaved or fused into one function. Since the prompt mandates all code inline in one file (no file writes), separation via distinct named sections + a noted split boundary (e.g. a comment 'belongs in its own module: shipping') counts; actual file split is NOT required here.",
           "category": "architecture"
         }
       ]

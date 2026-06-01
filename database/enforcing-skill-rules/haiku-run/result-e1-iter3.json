@@ -1,0 +1,1 @@
+{"skill":"database","eval":"e1","iter":3,"passed":24,"total":37,"fails":["jsonb","soft-delete","covering-index","cursor-pagination","tsvector-gin","concurrent-index","not-valid-validate","now-clock-timestamp","rls","password-secrets","drizzle-constraints","exhaustive-match","derive-repo-type"]}

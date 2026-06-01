@@ -1,0 +1,98 @@
+[
+  {
+    "id": "no-enum",
+    "trap": "enum Status { Active = 'active', Inactive = 'inactive' } instead of as const object",
+    "description": "Status enum replaced with `as const` + `typeof` pattern",
+    "category": "behavior"
+  },
+  {
+    "id": "no-default-export",
+    "trap": "export default class UserService — uses default export",
+    "description": "default export replaced with named export",
+    "category": "architecture"
+  },
+  {
+    "id": "no-any",
+    "trap": "processUsers(users: any[]): any — untyped input and return",
+    "description": "any[] and any return type replaced with proper types (unknown + type guards, or explicit interfaces)",
+    "category": "behavior"
+  },
+  {
+    "id": "errors-as-values",
+    "trap": "throw new Error('User not found') and throw new Error('Update failed') — exceptions for expected failures",
+    "description": "throw replaced with Result return type for expected failures (getUser, updateUser)",
+    "category": "behavior"
+  },
+  {
+    "id": "type-not-interface",
+    "trap": "interface UserType { ... } used where no extension is needed",
+    "description": "Uses `type` by default, `interface` only if extending",
+    "category": "format"
+  },
+  {
+    "id": "no-barrel",
+    "trap": "index.ts re-exports UserService and UserType; user-service.ts imports from './index'",
+    "description": "index.ts barrel file eliminated — imports go directly to source files",
+    "category": "architecture"
+  },
+  {
+    "id": "kebab-case-files",
+    "trap": "Files already kebab-case (user-service.ts, types.ts) — verify model preserves them",
+    "description": "Files named in kebab-case (user-service.ts not UserService.ts)",
+    "category": "format"
+  },
+  {
+    "id": "jsdoc-with-example",
+    "trap": "JSDoc block has @description/@param/@returns but no @example with return value",
+    "description": "Exported domain functions (e.g. getUser/updateUser) carry JSDoc with a plain description + an @example showing the call and expected return (// => value). Trivial re-exported utilities (ok/err) and non-exported helpers are exempt; @description/@param/@returns tags must not appear.",
+    "category": "format"
+  },
+  {
+    "id": "file-order",
+    "trap": "user-service.ts mixes imports, class, and methods with no clear type/constant/function ordering",
+    "description": "File follows: imports → types → constants → functions",
+    "category": "architecture"
+  },
+  {
+    "id": "parse-at-boundary",
+    "trap": "JSON.parse(await res.text()) as UserType — cast without validation",
+    "description": "JSON.parse output validated with type guard or schema, not cast with `as`",
+    "category": "security"
+  },
+  {
+    "id": "esm-only",
+    "trap": "const config = require('./config.json') — CJS require instead of ESM import",
+    "description": "require() replaced with ESM import",
+    "category": "behavior"
+  },
+  {
+    "id": "named-param-types",
+    "trap": "updates: { name?: string, status?: Status } — inline object type not extracted",
+    "description": "Inline object type `{ name?: string, status?: Status }` extracted to named type",
+    "category": "format"
+  },
+  {
+    "id": "validate-json-parse",
+    "trap": "JSON.parse(await res.text()) as UserType — no runtime validation of parsed JSON",
+    "description": "JSON.parse validated with type guard or Zod, never cast with `as`",
+    "category": "security"
+  },
+  {
+    "id": "no-as-cast",
+    "trap": "JSON.parse(...) as UserType — uses `as` type assertion",
+    "description": "Zero `as` casts (except as const)",
+    "category": "gotcha"
+  },
+  {
+    "id": "import-type",
+    "trap": "DatabaseConnection imported with value import but only used as type",
+    "description": "`import type` used for type-only imports (DatabaseConnection)",
+    "category": "format"
+  },
+  {
+    "id": "no-description-param-returns",
+    "trap": "JSDoc uses @description, @param, @returns tags",
+    "description": "JSDoc uses plain block description + @example only — no @description/@param/@returns tags",
+    "category": "format"
+  }
+]

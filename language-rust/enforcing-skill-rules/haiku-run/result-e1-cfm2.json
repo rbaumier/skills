@@ -1,0 +1,1 @@
+{"skill":"language-rust","eval":"e1","iter":"cfm2","passed":16,"total":24,"fails":["drop-guard-before-await","arena-not-arc-mutex-ast","with-capacity-score-records","iterator-chain-score-records","unsafe-safety-comment","serde-deny-unknown-fields","must-use-on-builder","sealed-transform-trait"]}

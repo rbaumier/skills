@@ -1,0 +1,20 @@
+[
+  {
+    "id": "loc-inline-single-use",
+    "trap": "validateEmail, formatWelcomeMessage, and hashPassword each live in their own file under src/utils/ but are imported from exactly one caller (signup-handler.ts)",
+    "description": "The three single-use helpers (validateEmail, formatWelcomeMessage, hashPassword) are no longer in separate files under src/utils/. They are inlined at the call site or colocated at the bottom of the signup file. The three original utils files (email-validator.ts, welcome-formatter.ts, password-hasher.ts) are deleted.",
+    "category": "architecture"
+  },
+  {
+    "id": "loc-workflow-first",
+    "trap": "The signup feature is split across 4 files — signup-handler.ts, email-validator.ts, welcome-formatter.ts, password-hasher.ts — each with single callers",
+    "description": "The signup feature lives in a single file (or at most 2 files if there's a legitimate responsibility split like infra types vs feature logic) — NOT scattered across 4+ files with single-caller helpers each",
+    "category": "architecture"
+  },
+  {
+    "id": "loc-no-new-shared-primitives",
+    "trap": "A refactor under LoB rules must not introduce NEW helper files (shared/result.ts, shared/with-timeout.ts, etc.) that each have a single consumer — 'imagined future consumer' is not a justification",
+    "description": "The refactor does not create new helper/primitive files (shared/*.ts, utils/*.ts, helpers/*.ts) that each have exactly one consumer. Result types, withTimeout, and similar 'shared primitives' are inlined into the caller's file until a second real consumer appears.",
+    "category": "architecture"
+  }
+]

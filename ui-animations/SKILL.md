@@ -26,6 +26,90 @@ The browser renders in 4 stages: Style > Layout > Paint > Composite. Animate ONL
 
 **Layout thrashing & FLIP**: reading DOM measurements (`getBoundingClientRect`, `offsetHeight`) then writing styles in the same frame forces synchronous layout recalculation. Fix: batch all reads, then batch all writes. For position animations, use FLIP (First, Last, Invert, Play): measure start position, apply final state, calculate delta, animate the inversion back to zero.
 
+## MANDATORY Pre-Output Checklist — READ THIS LAST, BEFORE YOU WRITE CODE
+
+This is the single source of truth. Verify EVERY numbered item against EVERY animated element before returning code. These are hard rules with concrete values — apply them verbatim, do not approximate, do not swap one disallowed value for another. Do not stop after fixing a few; a partial pass FAILS. If a rule's target state is absent from the snippet, ADD the corrected pattern rather than skipping it.
+
+**Properties & values**
+1. **GPU-only properties.** Animate ONLY `transform` (x/y/scale/rotate) and `opacity` (and `filter` for blur). NEVER animate `width`, `height`, `top`, `left`, `margin`, `padding`. To grow/shrink a box use `scaleX`/`scaleY`; to reveal use `clip-path`.
+2. **Expandable height without animating `height`.** For collapse/expand (FAQ, accordion), DO NOT animate `height: 0 → auto` (not GPU, and `auto` is not animatable). Use the CSS grid-rows trick: wrap content in a `motion.div` animating `gridTemplateRows: '0fr' → '1fr'` (child `overflow: hidden`), or animate `clip-path`. This is how you satisfy "expandable animates" AND rule 1 simultaneously.
+3. **Never `scale(0)`.** Entrances start at `scale: 0.95` (floor) + `opacity: 0`, never `scale: 0`. Deformation range is 0.95–1.05.
+4. **No `will-change` left on permanently.** Do NOT set `willChange` on multiple props as a static style. Omit it, or apply then remove after the animation.
+5. **No `transition: all`.** Never `transition: 'all 0.5s'`. List exact properties, e.g. `transition: 'transform 0.15s cubic-bezier(0.16,1,0.3,1)'`.
+
+**Timing & easing**
+6. **Durations.** User-initiated transitions ≤ 300ms (`duration: 0.3`). Card/list entrances ≤ 300ms — NEVER `duration: 1.5`. Hover/press feedback 120–180ms (`duration: 0.15`), NEVER `0.5`.
+7. **Stagger ≤ 50ms per item.** Use `staggerChildren: 0.05` max (or `delay: i * 0.05`). Never `i * 0.2` / `staggerChildren: 0.1`.
+8. **Custom Bézier, never built-in keywords.** Never `ease: 'ease' | 'easeIn' | 'easeOut' | 'easeInOut' | 'linear'` for production motion. Use a numeric cubic-bezier array, e.g. `ease: [0.16, 1, 0.3, 1]` (smooth) or `[0.87, 0, 0.13, 1]` (snappy). (CSS: `cubic-bezier(0.16, 1, 0.3, 1)`.) Swapping `'ease'`→`'easeOut'` still FAILS.
+9. **Springs for interactive/interruptible motion.** Gestures, drags, hover/press, drawers, modals → `transition={{ type: 'spring', stiffness: 300, damping: 30 }}`. Duration-based easing is for entrances only.
+10. **CSS transitions, not `@keyframes`, for interruptible motion.** Hover/state effects use a CSS `transition` (or Framer `whileHover`/`whileTap`), NEVER `animation: x 0.3s` + `@keyframes`. State-driven motion (drawer) uses Framer variants, not a CSS keyframe `animation`.
+
+**Enter / exit / reveal**
+11. **Enter recipe = opacity + translateY + blur.** Entrances animate all three: `initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}` → `animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}`. Plain opacity+y is incomplete.
+12. **Exit subtler than enter.** Exit keeps the same opacity/blur but a SMALLER translate, e.g. enter `y: -12` → exit `y: -4` (range -4 to -6). Never mirror the enter translate exactly.
+13. **Clip-path for reveals.** Reveal/hide of nav, panels, drawers uses `clip-path` (e.g. `inset(0 100% 0 0)` → `inset(0 0 0 0)`), NOT width/height animation and NOT `scaleX` (which distorts content).
+14. **Wrap conditional renders in `AnimatePresence`.** Any `{flag && <X/>}` or unmount must be a keyed `motion.div` inside `<AnimatePresence>` so it animates out, not pops.
+15. **Animate tab/mode swaps.** `cond ? <A/> : <B/>` swaps go through `<AnimatePresence mode="wait">` with keyed `motion.div` (opacity in/out), not an instant ternary.
+16. **Loading → content is a crossfade.** Wrap `isLoading ? <Spinner/> : <Content/>` in `AnimatePresence mode="wait"` with keyed `motion.div` (opacity fade). Even if no loading state exists in the snippet, ADD the scaffold.
+
+**Feedback, separation, motion safety**
+17. **Button press feedback.** Every button gets `whileTap={{ scale: 0.97 }}` (Framer) or `:active { transform: scale(0.97) }` (CSS).
+18. **Shadows, not borders, on variable backgrounds.** When `background` is a variable/token (e.g. `var(--card-bg)`) or can change, use `box-shadow` for separation, not `border: 1px solid`.
+19. **No vestibular triggers.** No large zoom, spin, or parallax tied to scroll. Cap any scroll/scale to the 0.95–1.05 range. A hero scaling `0.5 → 1.3` is forbidden — clamp to ≤1.05 or remove.
+20. **No continuous purposeless animation.** Remove decorative `repeat: Infinity` rotations/loops, or make them pausable. A purely decorative `animate={{ rotate: 360 }}` infinite spinner must go.
+21. **Keyboard-initiated actions don't animate.** A Cmd+K / keyboard handler that opens UI should NOT trigger an entrance animation (Emil's rule) — open instantly.
+22. **`prefers-reduced-motion`.** Add reduced-motion handling: `useReducedMotion()` (set `duration: 0` when true) and/or a CSS `@media (prefers-reduced-motion: reduce)` kill switch. Always animate to the final state, just skip the motion.
+23. **Tooltip: first delayed, rest instant.** First tooltip in a group gets a delay + animation; while a group/`skipDelay` flag is active, subsequent tooltips appear with `delay: 0` and `duration: 0`. Do NOT give every tooltip the same fixed delay, and do NOT just remove the delay. Copy the pattern in [Tooltip Group: first delayed, rest instant](#tooltip-group-first-delayed-rest-instant) below — implement it, don't approximate.
+
+After fixing, RE-SCAN the code against items 1–23 once more. Any remaining trap = fail.
+
+### Tooltip Group: first delayed, rest instant
+
+The first tooltip you hover gets the full delay + enter animation. Once one is open, a shared group flag makes the rest open instantly (and only resets after the cursor has left the group long enough). This is the concrete `delay`/`duration` differentiation rule 23 requires — paste and adapt it, never collapse it to a single fixed delay.
+
+```tsx
+import { createContext, useContext, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+
+// Shared flag: true = "a tooltip was recently open, skip the delay".
+const TooltipGroupContext = createContext<{ skipDelay: boolean; open: () => void; close: () => void }>({
+  skipDelay: false, open: () => {}, close: () => {},
+})
+
+function TooltipGroup({ children }: { children: React.ReactNode }) {
+  const [skipDelay, setSkipDelay] = useState(false)
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>()
+  const open = () => { clearTimeout(resetTimer.current); setSkipDelay(true) }
+  // Only return to "delayed" mode after the pointer has been away ~300ms.
+  const close = () => { resetTimer.current = setTimeout(() => setSkipDelay(false), 300) }
+  return <TooltipGroupContext.Provider value={{ skipDelay, open, close }}>{children}</TooltipGroupContext.Provider>
+}
+
+function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const { skipDelay, open, close } = useContext(TooltipGroupContext)
+  const [show, setShow] = useState(false)
+  return (
+    <span onMouseEnter={() => { setShow(true); open() }} onMouseLeave={() => { setShow(false); close() }}>
+      {children}
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            role="tooltip"
+            initial={{ opacity: 0, y: 4, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: 2 }}
+            // First tooltip: 500ms delay + 200ms enter. Subsequent (skipDelay): instant.
+            transition={skipDelay ? { duration: 0, delay: 0 } : { duration: 0.2, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {label}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </span>
+  )
+}
+```
+
 ## Timing Duration Guidelines
 
 | Interaction type | Duration | Notes |
