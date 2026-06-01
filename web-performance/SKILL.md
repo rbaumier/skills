@@ -25,20 +25,22 @@ description: "Use when optimizing web performance — Core Web Vitals, LCP, CLS,
 - Target LCP < 2.5s, INP < 200ms, CLS < 0.1, TTFB < 600ms, FCP < 1.8s, TBT < 200ms
 - JS bundle target < 200KB gzipped total
 - Images < 200KB each, use WebP/AVIF formats
-- Always set width/height on images to prevent CLS
+- EVERY image gets explicit width+height (or aspect-ratio) — NO EXCEPTIONS. Count the `<img>`/`<Image>` tags in the source; every single one must have dimensions in your output, including avatars, brand logos, and footer images. If you extract images into a child component, the dimensions MUST go with them — never drop an image's width/height by moving it. Missing one = CLS bug.
 - Lazy load below-fold images with loading="lazy"
 - Eager load hero image with fetchpriority="high"
 - Preload critical images via link rel="preload"
-- Use responsive images with picture and srcset
-- Code split by route, lazy load non-critical components
+- EVERY content `<img>` that scales with the viewport (hero, product cards, brand logos, footer CTA) MUST ship a `srcset` of width descriptors plus a `sizes` attribute — width/height alone is NOT responsive. A plain `<img src=... width height>` fails this. Emit, e.g. `<img src="/hero-1200.webp" srcset="/hero-480.webp 480w, /hero-800.webp 800w, /hero-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 1200px" width={1200} height={600} />`. `sizes` must mirror the CSS layout (full-width → `100vw`, fixed-width logo → its px). Next `<Image>` emits srcset automatically; raw `<img>` does not, so add it by hand. Use `<picture>` only for art direction or AVIF/WebP fallbacks.
+- Code split by route AND lazy-load non-critical components. A static `import Modal from '@/components/Modal'` for a component that is conditionally or below-fold rendered (modals, dialogs, drawers, tooltips, accordions, anything behind `{open && <X/>}`) ships it in the main bundle even when never shown. Convert those to a dynamic import so they become their own chunk: Next.js `const Modal = dynamic(() => import('@/components/Modal'))` (add `{ ssr: false }` for client-only), or `const Modal = React.lazy(() => import('@/components/Modal'))` wrapped in `<Suspense>`. Keep above-the-fold layout (Header, primary nav) as static imports. Splitting into per-path imports (the barrel rule) is NOT the same as code-splitting — you still need `dynamic()`/`lazy()` for the deferred ones.
 - Tree shake unused exports, sideEffects: false
+- NEVER import from a barrel file (e.g. `import { Header, Footer, Card } from '@/components'`). Barrel re-exports defeat tree-shaking and pull the whole module graph into the bundle. Import each component from its own path: `import { Header } from '@/components/Header'`. This also applies to lazy `import('@/components').then(m => m.X)` — point `import()` at the real file, not the barrel.
 - Replace heavy libs (moment->date-fns, lodash->specific imports)
 - Defer third-party scripts, use async/defer on all scripts
 - Inline critical CSS, defer non-critical, purge unused
-- Use CSS containment for layout isolation
-- Preconnect to critical origins, prefetch next-page resources
+- Use CSS containment for layout isolation on repeating/independent blocks: add `contain: layout` (or `content-visibility: auto` for long offscreen lists) to product grids, card containers, and below-fold sections so a change inside one block cannot trigger a full-page reflow. Example: `.product-grid { contain: layout; }`
+- ANY motion (CSS `animation`, `transition`, `scroll-behavior: smooth`, JS-driven movement) MUST be wrapped in a `@media (prefers-reduced-motion: reduce)` guard that disables it. Don't just delete an animation to "fix" this — if any motion remains anywhere in your output, add the guard. Example: `@media (prefers-reduced-motion: reduce) { .floating { animation: none; } html { scroll-behavior: auto; } }`
+- Preconnect to EVERY critical third-party origin the page hits early (CDN, analytics, chat widget, font host). Add a `<link rel="preconnect">` in `<head>` for each distinct origin so the DNS + TLS handshake starts before the resource is requested. Example: `<link rel="preconnect" href="https://cdn.example.com" crossOrigin="anonymous" /><link rel="preconnect" href="https://cdn.analytics.com" />`. Use `dns-prefetch` as a fallback for less-critical origins, and `prefetch` for next-page resources. If you switch image src to a CDN host, that new origin needs a preconnect too.
 - Enable HTTP/2+, Brotli compression
-- Cache immutable static assets 1yr with hashed filenames
+- Cache immutable static assets (images, fonts, hashed JS/CSS) 1yr. This needs real cache headers, NOT just ISR/`revalidate` (that only caches the HTML). Emit a config that sets them, e.g. Next.js `next.config.js`: `async headers() { return [{ source: '/images/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }, { source: '/fonts/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }]; }`. If asked to fix a single component, still add this config block to your output.
 - Dynamic HTML: Cache-Control public, max-age=0, must-revalidate
 - API responses: Cache-Control private with short TTL
 - Layer caching: browser, CDN, Redis/Memcached, DB query cache
@@ -60,10 +62,11 @@ description: "Use when optimizing web performance — Core Web Vitals, LCP, CLS,
 - Roll out perf changes gradually with rollback plans
 - Always test on real mobile devices + slow networks
 - Use RUM data, not just lab/synthetic data
-- Never load everything upfront; lazy load non-critical resources
+- Never render every section eagerly upfront. Below-the-fold sections (reviews, brand/partner logos, footer CTAs, comment threads) should not be in the initial render path — defer them so they hydrate/fetch only when needed. In Next.js wrap each below-fold section in a dynamic import: `const Reviews = dynamic(() => import('@/sections/Reviews'), { ssr: false });` (or `React.lazy` + `<Suspense>`, optionally gated by an `IntersectionObserver`). Above-the-fold content (hero, primary product grid) stays eager — do NOT defer what is visible on first paint.
 - Remove unused dependencies regularly
-- Deliver images via CDN
-- Font optimization: `font-display: swap` on all @font-face, `size-adjust` to match fallback metrics and prevent CLS, preload primary font (`<link rel='preload' as='font' type='font/woff2' crossorigin>`), subset fonts to used characters (pyftsubset/glyphhanger), self-host over Google Fonts to eliminate extra DNS+connection
+- Deliver images via a CDN, not a bare local `/images/...` path. Point image `src` at a CDN origin (e.g. `https://cdn.example.com/images/...`) or configure an image loader (Next.js `images.loader`/`loaderFile`, or a CDN domain in `images.domains`/`remotePatterns`). When fixing markup, switch the `src` host to the CDN.
+- Self-host fonts — do NOT keep a `https://fonts.googleapis.com/...` stylesheet link. Remove it and instead define `@font-face` with a local woff2 URL (e.g. `src: url('/fonts/inter-400.woff2') format('woff2')`). This kills an extra DNS lookup + connection to Google's origin. Keeping the Google Fonts `<link>` fails this even if you set `display=swap`.
+- Font optimization: `font-display: swap` on all @font-face, `size-adjust` to match fallback metrics and prevent CLS, preload primary font (`<link rel='preload' as='font' type='font/woff2' crossorigin>`), subset fonts to used characters (pyftsubset/glyphhanger)
 - Responsive images: use width descriptors (`w`) not pixel descriptors (`x`), `sizes` attribute MUST match CSS layout breakpoints, `<picture>` for art direction, AVIF (70% savings) > WebP (50%) > JPEG with fallbacks, `aspect-ratio` CSS property prevents CLS
 - Ban em-dash overuse in UI copy: max 1 per paragraph, replace with commas/parentheses/periods
 - PWA offline-first for repeat-visit performance: service worker with cache-first for static assets, network-first for API, stale-while-revalidate for semi-dynamic content. Repeat-visit LCP drops to near-zero for cached resources
@@ -159,6 +162,22 @@ What is slow?
 - Unthrottled scroll listeners without passive:true = INP killer
 - Hydration performance (SSR/SSG): measure hydration time in DevTools (look for 'Hydrate' in flame chart). Use selective/partial hydration (React Server Components, Astro islands, Qwik resumability). Defer hydration of below-fold interactive components. Never hydrate static content. Target: hydration < 500ms on mobile
 - Bundle analysis: run `npx webpack-bundle-analyzer stats.json` (webpack) or `npx vite-bundle-visualizer` (Vite). Look for duplicate dependencies, oversized chunks (>100KB), unnecessary polyfills, unused locale data. Set CI budget: fail build if any chunk exceeds threshold
+
+## Before You Output: Completeness Checklist
+
+When fixing code, do not stop after the obvious wins (libs, hero image, scroll listener). Sweep the WHOLE file and verify each line below. The easy-to-miss items are the ones that lose points.
+
+- [ ] **Count every image.** List each `<img>`/`<Image>` in the source (hero, products, avatars, brand logos, footer CTA). Every one must end up with width+height (or aspect-ratio) AND a lazy/eager decision in your output. If you move images into a child component, the dimensions move with them — re-check the child too. Don't fix the first two images and forget the rest.
+- [ ] **Responsive images** — every viewport-scaling `<img>` has a `srcset` (width descriptors) + `sizes`, not just width/height. A bare `<img src width height>` is NOT responsive.
+- [ ] **Preconnect** — a `<link rel="preconnect">` exists for each early third-party origin (CDN, analytics, chat widget, font/image host).
+- [ ] **Non-critical components code-split** — conditionally/below-fold-rendered components (Modal, Sidebar, dialogs) use `dynamic()`/`React.lazy`, not a static `import`.
+- [ ] **Below-fold sections deferred** — reviews/brands/footer-CTA sections are not all rendered eagerly upfront (wrap in `dynamic()`/lazy); above-fold stays eager.
+- [ ] **No barrel imports** remain (no `from '@/components'` grouping; no `import('@/components').then`).
+- [ ] **Fonts self-hosted** — the Google Fonts `<link>` is gone, replaced by local `@font-face`.
+- [ ] **CSS containment** present on grids/repeating sections (`contain: layout`).
+- [ ] **Reduced-motion guard** present if ANY motion remains (including `scroll-behavior: smooth`).
+- [ ] **Images via CDN** — src points at a CDN origin or a configured loader, not bare `/images/`.
+- [ ] **Static-asset cache headers** emitted as real config (`Cache-Control: ...immutable`), not just ISR `revalidate`.
 
 ## Audit Report Template
 

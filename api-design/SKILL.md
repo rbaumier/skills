@@ -166,6 +166,29 @@ interface APIError {
 - New fields are always additive and optional (Hyrum's Law: removing a field breaks someone)
 - **Backward compat via re-export** — when renaming a type or endpoint, maintain a deprecated re-export/redirect from the old name. Migration cost is borne by the maintainer, not the consumer
 
+**Deleting the old version is NOT deprecating it.** This is the #1 wrong "fix". When you encounter a deprecated or to-be-removed endpoint, the correct response is to *codify the deprecation*, never to silently delete it — deletion is the breaking change the protocol exists to prevent. Deprecation is something you implement in code, not a comment that says "deprecated":
+
+```typescript
+// WRONG — "fixing" deprecation by deleting the old endpoint.
+// Every consumer of /v1 breaks the moment this ships.
+app.get("/api/v2/orders", listOrders); // v1 route deleted
+
+// RIGHT — old version still works, but every response announces its retirement.
+app.get("/api/v1/orders", (req, res) => {
+  res.set("Deprecation", "true");
+  res.set("Sunset", "Wed, 01 Sep 2026 00:00:00 GMT"); // >= 3 months out
+  res.set("Link", '</api/v2/orders>; rel="successor-version"'); // points to migration target
+  return listOrders(req, res);
+});
+```
+
+Rationale: consumers depend on the old surface (Hyrum's Law). The headers give every caller a machine-readable signal and a deadline so they can migrate before the surface disappears. Removing first and announcing later inverts the protocol — the breakage lands before anyone is warned.
+
+Review checklist:
+- A deprecated/old endpoint or type was *deleted* with no replacement bridge -> flag "this is a breaking change, not a deprecation — keep the old surface and add `Deprecation`/`Sunset` headers"
+- A surface marked "deprecated" in a comment but emitting no `Deprecation`/`Sunset` header -> flag "deprecation must be coded as response headers, not described in a comment"
+- A `Sunset` date less than 3 months out (or absent) on an external API -> flag "give consumers a real migration window"
+
 ## Pagination
 
 **Decision table: cursor vs offset**
@@ -273,6 +296,32 @@ Ask of every interface: "is this shape the user wants, or the test wants?" If a 
 1. **Add, never remove.** New fields are optional. Removed fields break consumers.
 2. **Never change field types.** `priority: string` becoming `priority: number` is a breaking change even if "nobody uses it" (Hyrum's Law: somebody does).
 3. **Discriminated unions for variants.** Each state carries exactly the fields it needs — no nullable fields that "only exist when status is X".
+
+   **Trigger — if you see a type with a `status`/`kind`/`type` string-union field AND one or more optional fields that "only apply when status is X" → it MUST be a discriminated union.** This is the most-missed rule. One object per variant, each listing only the fields that variant has; the discriminant field is a single literal per variant, not a shared union.
+
+   **Deleting the conditional fields is NOT the fix.** When a flat type has optional per-state fields, the correct refactor is to *redistribute* those fields into their variants — never to drop `trackingNumber`/`cancelledReason` because they were nullable. Dropping them loses real data the API must carry; modeling them as variants is the whole point.
+
+   ```typescript
+   // WRONG — flat type, mutually-exclusive fields all optional.
+   // Nothing stops a "pending" order from carrying a trackingNumber,
+   // or a "shipped" order from missing one. The type lies about reality.
+   interface Order {
+     id: OrderId;
+     status: "pending" | "shipped" | "cancelled";
+     trackingNumber?: string; // only when shipped
+     shippedAt?: Date;        // only when shipped
+     cancelledReason?: string; // only when cancelled
+   }
+
+   // RIGHT — one variant per state, each carrying exactly its own fields.
+   // The compiler now enforces that trackingNumber exists iff shipped.
+   type Order =
+     | { id: OrderId; status: "pending" }
+     | { id: OrderId; status: "shipped"; trackingNumber: string; shippedAt: Date }
+     | { id: OrderId; status: "cancelled"; cancelledReason: string };
+   ```
+
+   Rationale: optional fields make illegal states representable — every consumer must defensively null-check, and nothing prevents the wrong combination. A discriminated union makes illegal states unrepresentable: narrowing on `status` gives the caller exactly the fields that state has, no more. Reviews: type with a discriminant field + optional fields gated on its value -> flag "model as a discriminated union, one variant per state — do not delete the conditional fields".
 4. **Branded types for IDs.** `OrderId` and `UserId` are distinct types — prevents passing one where the other is expected.
 5. **Validate at boundaries only.** Trust internal code. Validate where external input enters: API handlers, form submissions, third-party responses, env vars. Never between internal functions sharing type contracts.
 6. **Sealed traits/interfaces** — prevent external implementation to allow adding methods without breaking changes. Use private module pattern (Rust) or private symbols (TS).

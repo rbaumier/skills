@@ -101,11 +101,33 @@ Beyond `strict: true`, enable these flags — they catch real bugs `strict` miss
 ## Style
 
 - Files: kebab-case.ts
-- JSDoc: plain block description + `@example` (with function call AND expected return `// => value`) — no `@description` tag, no `@param`/`@returns` (types are the docs)
+- JSDoc on every **exported** function: a plain block description + an `@example` showing a real call AND the expected return as `// => value`. No `@description` tag, no `@param`/`@returns` (types are the docs). Internal (non-exported) helpers don't need JSDoc.
+```typescript
+/**
+ * Fetches a user by id.
+ * @example
+ * await getUser('u_1') // => { ok: true, value: { id: 'u_1', name: 'Ada' } }
+ */
+export async function getUser(id: string): Promise<Result<User, GetUserError>> { /* ... */ }
+```
 - File order: imports → types/interfaces → constants → functions
 - Parse at boundaries (`unknown` in, typed out), trust inside. Use assertion functions (`function assertDefined<T>(val: T | undefined): asserts val is T`) for native TS narrowing at internal boundaries where Zod is overkill
 - Prefer `Readonly<T>` for function parameters that should not be mutated, `readonly T[]` for returned arrays, `as const` for deep immutability. Default to immutable; opt into mutation explicitly
 - Narrow with `'prop' in obj` for unions without a discriminant field. Use custom type predicates (`function isUser(x: unknown): x is User`) for complex narrowing. Never use `as` to narrow. TS 5.5+ auto-infers type predicates for `.filter(x => x !== null)` — manual `x is T` annotations are no longer needed for simple null/undefined filters
+- **Never `as X`** — the only allowed assertions are `as const` and (rarely) `as unknown` at a single trusted boundary. **Never the double-cast `as unknown as T`** — it silences the compiler and hides misaligned types; fix the type instead. Inside a type guard, narrow with `in` + `typeof`, never `as`. The guard parameter stays `unknown`; once you have checked `'id' in data`, TS narrows `data` so `typeof data.id === 'string'` works with NO cast:
+```typescript
+// WRONG — `as` inside the guard defeats its purpose
+function isUser(data: unknown): data is User {
+  return typeof (data as Record<string, unknown>).id === 'string'; // ← NO
+}
+// RIGHT — `in` narrows, then property access is cast-free
+function isUser(data: unknown): data is User {
+  return typeof data === 'object' && data !== null
+    && 'id' in data && typeof data.id === 'string'
+    && 'name' in data && typeof data.name === 'string';
+}
+```
+- **`import type` for type-only imports** — if an import is used only in type positions (parameter/return/field annotations), write `import type { Foo } from './foo'`, never a value `import { Foo }`. Mixed: `import { makeFoo, type Foo } from './foo'`. A value import of a type loads the module at runtime for nothing and `verbatimModuleSyntax` will error. Trigger: any `import { X }` where `X` appears only after a `:` -> change to `import type`
 - **Narrowing lost across closures** -- narrowing doesn't survive closure boundaries (`setTimeout`, `.then`, event handlers). Capture the narrowed value in a `const` before passing to callbacks: `const name = user.name; setTimeout(() => log(name))` — not `setTimeout(() => log(user.name))` where `user` may be re-assigned
 - Template literal types for string-typed APIs — `type Route = /`/api/${string}/`` constrains string shapes at compile time. Use for API paths, CSS units (`${number}px`), event names
 - ESM only: `"type": "module"` in package.json. Never mix CJS imports (`require`) with ESM modules
