@@ -1,0 +1,135 @@
+Fix all issues:
+
+```typescript
+import { z } from 'zod';
+
+const userSchema = z.object({
+  id: z.any(),
+  name: z.string(),
+  email: z.string().optional(),
+  age: z.string(),
+  role: z.string(),
+  preferences: z.object({
+    theme: z.string(),
+    locale: z.string(),
+  }),
+});
+
+interface User {
+  id: any;
+  name: string;
+  email?: string;
+  age: string;
+  role: string;
+  preferences: { theme: string; locale: string };
+}
+
+const updateUserSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().optional(),
+  age: z.string().optional(),
+});
+
+const apiResponseSchema = z.object({
+  data: userSchema,
+  meta: z.object({ page: z.number() }),
+});
+
+async function handleForm(formData: FormData) {
+  const raw = Object.fromEntries(formData);
+  try {
+    const data = userSchema.parse(raw);
+    return { success: true, data };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+function processApiResponse(json: string) {
+  const parsed = JSON.parse(json);
+  return parsed as ApiResponse;
+}
+
+const categorySchema: z.ZodType<any> = z.object({
+  name: z.string(),
+  children: z.array(categorySchema),
+});
+
+function ProductCard({ product }: { product: unknown }) {
+  const schema = z.object({
+    name: z.string(),
+    price: z.number(),
+  });
+  const validated = schema.parse(product);
+  return <div>{validated.name}</div>;
+}
+
+const passwordSchema = z.string().refine((val) => {
+  if (val.length < 8) throw new Error('Too short');
+  if (!/[A-Z]/.test(val)) throw new Error('Need uppercase');
+  return true;
+});
+
+const eventSchema = z.union([
+  z.object({ type: z.literal('click'), x: z.number(), y: z.number() }),
+  z.object({ type: z.literal('keypress'), key: z.string() }),
+]);
+
+const userId = z.string().uuid();
+const orderId = z.string().uuid();
+
+function getOrder(uid: z.infer<typeof userId>, oid: z.infer<typeof orderId>) {
+}
+
+// --- No custom messages on schema fields ---
+const orderSchema = z.object({
+  quantity: z.number().min(1),  // error: "Number must be greater than or equal to 1" — not user-friendly
+  email: z.string().email(),    // error: "Invalid email" — not helpful
+  address: z.string().min(5),   // error: "String must contain at least 5 character(s)" — cryptic
+});
+
+// --- Async validation without parseAsync ---
+const usernameSchema = z.string().refine(async (val) => {
+  const exists = await checkUsernameExists(val);
+  return !exists;
+}, 'Username taken');
+
+function validateUsername(input: string) {
+  return usernameSchema.parse(input);  // sync parse with async refine!
+}
+
+// --- Duplicated schema variant instead of pick/omit ---
+const userProfileSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  avatar: z.string().url(),
+  bio: z.string(),
+});
+
+const userCardSchema = z.object({
+  name: z.string(),
+  avatar: z.string().url(),
+});
+
+// --- Multi-stage validation without pipe ---
+const rawInput = z.string();
+function parseAndValidateDate(input: string) {
+  const str = rawInput.parse(input);
+  const date = new Date(str);
+  if (isNaN(date.getTime())) throw new Error('Invalid date');
+  return date;
+}
+
+// --- Missing default/catch ---
+const settingsSchema = z.object({
+  theme: z.enum(['light', 'dark']),      // no default — crashes if missing
+  pageSize: z.number(),                   // no default — crashes if missing
+  experimentalFeatures: z.boolean(),      // no catch — crashes on bad data
+});
+
+// --- Transform without z.input distinction ---
+const dateFieldSchema = z.string().transform((val) => new Date(val));
+type DateField = z.infer<typeof dateFieldSchema>; // Date — but what's the INPUT type?
+```
+
+Output fixed code only.

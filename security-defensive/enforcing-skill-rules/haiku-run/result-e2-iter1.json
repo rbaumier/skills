@@ -1,0 +1,1 @@
+{"skill":"security-defensive","eval":2,"passed":7,"total":8,"fails":[{"id":"supply-chain-beyond-audit","why":"Only npm-audit-family tooling (npm audit --audit-level=high && npm audit signatures); no lockfile-lint, Socket.dev, or Snyk beyond npm audit as the assertion requires"}]}

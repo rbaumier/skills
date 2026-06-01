@@ -1,0 +1,26 @@
+[
+  {
+    "id": "vertical-slices",
+    "trap": "All 6 tests written at once (horizontal slicing)",
+    "description": "Vertical slices: one test → one impl → repeat, not batch",
+    "category": "behavior"
+  },
+  {
+    "id": "tracer-bullet",
+    "trap": "All tests first then all implementation",
+    "description": "Tracer bullet: one thin slice end-to-end first",
+    "category": "behavior"
+  },
+  {
+    "id": "never-refactor-red",
+    "trap": "Refactoring calculateTotal while tests are failing",
+    "description": "Never refactor during RED — only when GREEN",
+    "category": "behavior"
+  },
+  {
+    "id": "minimal-code",
+    "trap": "Plan to implement all methods at once",
+    "description": "Write only enough code to pass the current test",
+    "category": "behavior"
+  }
+]

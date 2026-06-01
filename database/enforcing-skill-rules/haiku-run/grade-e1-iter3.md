@@ -1,0 +1,43 @@
+# Grade: database / e1 / iter3
+
+Strict grading. Each assertion judged ONLY on whether the violation is clearly corrected in the actual code (with citation). FAIL on doubt, aspirational, or delegated-to-comment-only.
+
+| # | id | Verdict | Evidence |
+|---|----|---------|----------|
+| 1 | uuidv7 | PASS | SQL: `id UUID PRIMARY KEY, -- UUIDv7, generated in app layer via uuidv7()` (L16/L17); Drizzle: `.$defaultFn(() => uuidv7())` (L174, 191, 217, 247); import `from 'uuidv7'` (L166). No `gen_random_uuid()` anywhere. |
+| 2 | fk-indexes | PASS | `CREATE INDEX idx_user_org_id ON public."user"(org_id)` (L55), `idx_project_org_id` (L79), `idx_task_project_id` (L109), `idx_task_assignee_id` (L110). All FKs (org_id, project_id, assignee_id) indexed. |
+| 3 | text-not-varchar | PASS | All string cols use `TEXT` (e.g. `name TEXT NOT NULL` L18, `full_name TEXT NOT NULL` L32, `title TEXT NOT NULL` L87). No VARCHAR present. Drizzle uses `text(...)`. |
+| 4 | timestamptz | PASS | `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` (L19, 38, 64, 91); Drizzle `timestamp('created_at', { withTimezone: true })` (L176, 201, 228, 261). No bare TIMESTAMP. |
+| 5 | numeric-not-float | PASS | `budget NUMERIC(12, 2)` (L62), `price_estimate NUMERIC(12, 2)` (L89); Drizzle `numeric('budget', { precision: 12, scale: 2 })` (L222), `numeric('price_estimate', ...)` (L255). No FLOAT. |
+| 6 | jsonb | PARTIAL→FAIL | SQL uses `preferences JSONB` (L37) — fixed. BUT Drizzle schema regresses: `preferences: text('preferences')` (L208) with comment "semi-structured user prefs". The trap (preferences as TEXT) persists in the TS schema. Not clearly corrected across the code. |
+| 7 | soft-delete | FAIL | Trap = `is_deleted BOOLEAN`. Code replaces with `is_active BOOLEAN` (L36, L199), not the prescribed `deleted_at TIMESTAMPTZ`. Description explicitly requires "deleted_at TIMESTAMPTZ, not boolean is_deleted". A boolean flag remains; the assertion's required pattern (timestamptz column) is absent from the actual schema (only mentioned aspirationally in Issue Summary #8). |
+| 8 | check-constraints | PASS | SQL: `status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN (...))` (L63, L90) plus named constraints `project_status_chk` (L68), `task_status_chk` (L96). |
+| 9 | no-select-star | PASS | Repository uses explicit column lists in `.select({ id, projectId, ... })` (L380-389, L481-490). No `SELECT *` / `db.select()` bare. |
+| 10 | covering-index | FAIL | No `INCLUDE` clause exists anywhere in the SQL. Only a comment claims explicit columns "enables covering indexes" (L527). The assertion requires covering indexes WITH INCLUDE; none are created. Aspirational only. |
+| 11 | partial-index | PASS | `CREATE INDEX idx_project_status ON public.project(status) WHERE status = 'active'` (L80). Partial index present. |
+| 12 | brin-time-series | PASS | `CREATE INDEX idx_task_created_at_brin ON public.task USING BRIN (created_at)` (L113). |
+| 13 | cursor-pagination | FAIL | No keyset/cursor pagination implemented in any query. `search()` uses `.limit(100)` (L493), `findById` no pagination. Only mentioned in Issue Summary #12 (aspirational). The OFFSET trap is removed but the required cursor pattern is not present in actual code. |
+| 14 | tsvector-gin | FAIL | `search()` still uses `ILIKE ${'%' + searchQuery + '%'}` (L492) — a leading-wildcard pattern that defeats indexes, the exact class of the trap. No TSVECTOR column or GIN index created. Comment says "For large tables use TSVECTOR + GIN" (L479) — aspirational/delegated, not implemented. |
+| 15 | expand-contract | PASS | Full 5-step expand-and-contract migration present: ADD nullable col (L128), batched backfill (L131), dual-write, switch reads, drop old col (L137). Explicit "never use ALTER TABLE ... RENAME" (L124). |
+| 16 | lock-timeout | PASS | `SET lock_timeout = '5s'` (L9) at top of migration DDL. |
+| 17 | concurrent-index | FAIL | All `CREATE INDEX` statements (L55, 79, 80, 109, 110, 113) lack `CONCURRENTLY`. The trap (CREATE INDEX without CONCURRENTLY) persists verbatim. Not mentioned even in summary. |
+| 18 | not-valid-validate | FAIL | No `ADD CONSTRAINT ... NOT VALID` + `VALIDATE CONSTRAINT` pattern anywhere. Constraints added inline at table creation. The NOT NULL / constraint-validation split is absent. |
+| 19 | no-disable-autovacuum | PASS | No `autovacuum_enabled = false` anywhere; Issue Summary #21 affirms "Never disable (tuning frequency is fine)". The trap is absent and the rule is honored. (Borderline: rule satisfied by absence of the anti-pattern, which is the correct correction.) |
+| 20 | now-clock-timestamp | FAIL | No actual query uses `clock_timestamp()`; only Issue Summary #30 mentions it aspirationally. No code demonstrates the corrected pattern; `NOW()` still used as column default (which is fine) but the assertion's specific guidance is only in prose, not code. |
+| 21 | pool-math-pgbouncer | PASS | Explicit pool math `5 instances × 20 pool size = 100 total connections` and `PgBouncer in transaction mode` recommendation in both SQL config (L144-145) and db.ts (L303-304). |
+| 22 | truncate-vs-delete | PASS | `-- TRUNCATE TABLE audit_logs; -- REMOVED: use DELETE FROM audit_logs instead` (L12-13), reiterated Issue Summary #1. TRUNCATE removed. |
+| 23 | least-privilege | PASS | db.ts: dedicated `app_user` role with `GRANT SELECT, INSERT, UPDATE, DELETE` (L296-300), explicit "App NEVER connects as postgres superuser" (L294). |
+| 24 | rls | FAIL | RLS enabled only on `task` (L116-118). Trap/description require "RLS on every table for multi-tenant isolation"; organization, user, project tables have NO `ENABLE ROW LEVEL SECURITY` or policy. Not clearly/fully corrected. |
+| 25 | parameterized-queries | PASS | Queries use Drizzle param binding `eq(task.id, id)` (L392) and `sql\`${task.title} ILIKE ${'%' + searchQuery + '%'}\`` (L492) which parameterizes the bound value. No string concatenation into SQL text. |
+| 26 | password-secrets | FAIL | `api_key TEXT NOT NULL, -- Never store plaintext; encrypt at rest if PII` (L35) and Drizzle `apiKey: text('api_key')` (L198). The column still stores the api_key directly; no hashing/encryption/vault reference implemented — only a comment saying not to store plaintext. password_hash is fine, but api_key remains plaintext-capable. Aspirational comment ≠ correction. |
+| 27 | drizzle-uuidv7 | PASS | `id: uuid('id').primaryKey().$defaultFn(() => uuidv7())` on all tables (L174, 191, 217, 247). No `serial` PK used (serial imported but unused). |
+| 28 | drizzle-timezone | PASS | `timestamp('created_at', { withTimezone: true }).notNull().defaultNow()` (L176, 201, 228, 261). |
+| 29 | drizzle-constraints | FAIL | Third pgTable argument contains only `index(...)` calls; the CHECK constraints are NOT in the third argument — L233-234 explicitly leave it as a comment ("Drizzle's check() requires sql`...`; alternatively use raw SQL migration"). The assertion "Constraints in pgTable third argument" includes the CHECK constraints which are absent. Indexes present, checks delegated/omitted. |
+| 30 | drizzle-infer-type | PASS | `export type Task = typeof task.$inferSelect` etc. (L275-278), uses `$inferSelect` not legacy InferSelectModel. |
+| 31 | drizzle-cli-review | PASS | schema.ts header `// schema.ts (corrected from drizzle-kit output)` (L163) and Issue Summary #16 "drizzle-kit output as-is → Manual review: UUIDv7, TIMESTAMPTZ, CHECK, indexes". Review demonstrated by the corrected fields. |
+| 32 | errors-as-values | PASS | Repository returns errors as values: `return new TaskNotFoundError(id)` (L395), `return new DatabaseError(...)` (L400), return type unions. No `throw` statements in repo logic. |
+| 33 | domain-error-classes | PASS | `TaskNotFoundError`, `TaskCreateError`, `DatabaseError` classes with `_tag` discriminants (L352-365). Domain-specific, not generic Error. |
+| 34 | transaction-error-union | PASS | `createWithComment` returns `{...} | TaskCreateError | DatabaseError` (L421-424), a typed union of step errors. |
+| 35 | exhaustive-match | FAIL | No `matchError()` function nor any error-to-HTTP status mapping exists in the code. The error union is defined but never exhaustively matched/mapped to HTTP. Trap (no error-to-HTTP mapping) persists. |
+| 36 | derive-repo-type | FAIL | Repository is exported as a `class TaskRepository` (L370), not a factory with `ReturnType<typeof createXRepository>`. The exact trap ("Class export instead of factory with ReturnType") is unchanged. |
+| 37 | otel-logger | PASS | `OtelDrizzleLogger` class (L317-326) passed at client creation: `drizzle(pool, { schema, logger: new OtelDrizzleLogger() })` (L328-331). |

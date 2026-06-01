@@ -1,0 +1,1 @@
+{"skill":"zod","passed":22,"total":23,"fails":[{"id":"partial-updates","why":"updateUserSchema is re-declared as a fresh z.strictObject (L23-27) instead of derived from userSchema via .partial(); duplication trap not corrected"}]}

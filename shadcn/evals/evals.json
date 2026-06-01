@@ -35,7 +35,7 @@
       "expected_output": "A React component with full Card composition, Skeleton for loading, Badge for changes, semantic colors, gap-* spacing.",
       "files": [],
       "assertions": [
-        { "id": "full-card-composition", "description": "Uses full Card composition with CardHeader, CardTitle, CardContent (not dumping everything into CardContent)", "category": "format" },
+        { "id": "full-card-composition", "description": "Uses proper Card composition: title in CardHeader + CardTitle, body in CardContent (not everything dumped into CardContent). CardDescription/CardFooter are optional and not required to pass.", "category": "format" },
         { "id": "uses-skeleton-for-loading", "description": "Uses Skeleton component for loading placeholders instead of custom animate-pulse divs", "category": "behavior" },
         { "id": "uses-badge-for-change", "description": "Uses Badge component for percentage change instead of custom styled spans", "category": "behavior" },
         { "id": "uses-semantic-colors", "description": "Uses semantic color tokens instead of raw color values like bg-green-500 or text-red-600", "category": "format" },

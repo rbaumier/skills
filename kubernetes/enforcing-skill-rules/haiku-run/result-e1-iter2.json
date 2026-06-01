@@ -1,0 +1,1 @@
+{"skill":"kubernetes","passed":25,"total":26,"fails":[{"id":"security-context-pod","why":"securityContext set only at container level (L101-107); no pod-level spec.securityContext with runAsNonRoot/runAsUser, and seccompProfile: RuntimeDefault is absent from the entire manifest"}]}

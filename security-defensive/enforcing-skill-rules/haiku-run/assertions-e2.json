@@ -1,0 +1,50 @@
+[
+  {
+    "id": "prototype-pollution",
+    "trap": "Naive object merge iterating all keys including __proto__",
+    "description": "Freeze prototypes or use Object.create(null) to prevent prototype pollution",
+    "category": "security"
+  },
+  {
+    "id": "mass-assignment",
+    "trap": "Spreading req.body directly into DB update",
+    "description": "Allowlist fields explicitly -- never spread req.body into DB operations",
+    "category": "security"
+  },
+  {
+    "id": "redos-prevention",
+    "trap": "Catastrophic backtracking regex for email",
+    "description": "Avoid nested quantifiers in regex -- use RE2 or linear-time alternatives",
+    "category": "security"
+  },
+  {
+    "id": "open-redirect",
+    "trap": "Redirect to unvalidated user-supplied URL",
+    "description": "Allowlist redirect targets or validate same-origin before redirect",
+    "category": "security"
+  },
+  {
+    "id": "error-stack-leak",
+    "trap": "Stack trace and query params in error response",
+    "description": "Generic error to client, structured log server-side -- never leak stack/query",
+    "category": "security"
+  },
+  {
+    "id": "oauth-state-param",
+    "trap": "OAuth callback without state parameter validation",
+    "description": "Validate state parameter in OAuth callback to prevent CSRF",
+    "category": "security"
+  },
+  {
+    "id": "idor-ownership",
+    "trap": "Invoice endpoint without ownership check",
+    "description": "IDOR: verify resource ownership (userId === session.userId) before returning",
+    "category": "security"
+  },
+  {
+    "id": "supply-chain-beyond-audit",
+    "trap": "Only npm audit for security",
+    "description": "Supply chain: adds at least one measure BEYOND `npm audit` itself — a dedicated tool (lockfile-lint, Socket.dev, Snyk) OR digest-pinned CI images, OR install-script detection (npm query preinstall/postinstall). `npm audit signatures` alone does NOT count (still npm audit).",
+    "category": "security"
+  }
+]

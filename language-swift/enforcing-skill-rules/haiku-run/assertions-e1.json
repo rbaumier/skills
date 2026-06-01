@@ -1,0 +1,194 @@
+[
+  {
+    "id": "sendable-value-types",
+    "trap": "UserProfile is a class crossing concurrency boundaries; should be a struct for Sendable compliance",
+    "category": "concurrency",
+    "description": "Prefer value types (struct) for cross-boundary data; mark types Sendable explicitly"
+  },
+  {
+    "id": "unchecked-sendable-last-resort",
+    "trap": "APIClient uses @unchecked Sendable with mutable var properties and no documented safety invariant",
+    "category": "concurrency",
+    "description": "@unchecked Sendable is last resort only; must document safety invariant; prefer actor or proper isolation"
+  },
+  {
+    "id": "structured-concurrency",
+    "trap": "loadProfile uses Task.detached breaking actor inheritance instead of structured concurrency",
+    "category": "concurrency",
+    "description": "Prefer structured concurrency (async let, TaskGroup) over Task {}; avoid Task.detached unless explicitly breaking actor inheritance"
+  },
+  {
+    "id": "task-cancellation",
+    "trap": "heavyComputation has a long loop with no Task.isCancelled check",
+    "category": "concurrency",
+    "description": "Support cancellation — check Task.isCancelled in loops/heavy ops"
+  },
+  {
+    "id": "main-thread-heavy-work",
+    "trap": "heavyComputation runs a 10M iteration loop on @MainActor",
+    "category": "concurrency",
+    "description": "Main thread = UI only; heavy work on background actors/tasks"
+  },
+  {
+    "id": "continuation-exactly-once",
+    "trap": "bridgeCallback calls legacyFetch twice, risking double-resume which crashes",
+    "category": "concurrency",
+    "description": "Continuations MUST resume exactly once — double-resume = crash, never-resume = leaked task"
+  },
+  {
+    "id": "checked-continuation",
+    "trap": "bridgeCallback uses withUnsafeContinuation instead of withCheckedThrowingContinuation for non-perf-critical bridging",
+    "category": "concurrency",
+    "description": "Use withCheckedThrowingContinuation (debug checks) for bridging callback APIs; unsafe only for perf-critical"
+  },
+  {
+    "id": "async-stream-over-combine",
+    "trap": "NotificationCenter uses Combine PassthroughSubject instead of AsyncStream for new event stream code",
+    "category": "concurrency",
+    "description": "Prefer AsyncStream over Combine publishers for new code"
+  },
+  {
+    "id": "async-stream-cancellation",
+    "trap": "Event streaming via callback handler has no cancellation support via onTermination",
+    "category": "concurrency",
+    "description": "AsyncStream: support cancellation via onTermination handler"
+  },
+  {
+    "id": "delegate-wrap-asyncstream",
+    "trap": "streamEvents uses raw callback handler instead of wrapping in AsyncStream",
+    "category": "concurrency",
+    "description": "Wrap Delegate/callback-based APIs in AsyncStream, not raw continuations or closures"
+  },
+  {
+    "id": "typed-throws",
+    "trap": "fetchNotifications uses untyped throws for a library-style API where callers need structured error handling",
+    "category": "concurrency",
+    "description": "Use typed throws (throws(ErrorType)) for library APIs where callers need structured error handling"
+  },
+  {
+    "id": "observable-macro",
+    "trap": "ProfileViewModel and NotificationCenter use ObservableObject/@Published instead of @Observable macro",
+    "category": "swiftui-architecture",
+    "description": "@Observable macro over legacy ObservableObject for state management"
+  },
+  {
+    "id": "state-private",
+    "trap": "ContentView @State properties showSheet and selectedTab are not private",
+    "category": "swiftui-architecture",
+    "description": "@State for view-local private state — should be private"
+  },
+  {
+    "id": "environment-dependency-injection",
+    "trap": "ContentView takes viewModel as @StateObject init param instead of using @Environment for DI",
+    "category": "swiftui-architecture",
+    "description": "@Environment for dependency injection"
+  },
+  {
+    "id": "navigation-stack",
+    "trap": "Uses deprecated NavigationView instead of NavigationStack",
+    "category": "swiftui-architecture",
+    "description": "NavigationStack + typed .navigationDestination(for:) — avoid NavigationLink with direct views"
+  },
+  {
+    "id": "navigation-destination-typed",
+    "trap": "NavigationLink with direct view closure instead of typed .navigationDestination(for:)",
+    "category": "swiftui-architecture",
+    "description": "NavigationStack + typed .navigationDestination(for:) — avoid NavigationLink with direct views"
+  },
+  {
+    "id": "sheet-item-over-ispresented",
+    "trap": "Uses .sheet(isPresented:) instead of .sheet(item:) to ensure data availability",
+    "category": "ui-patterns",
+    "description": "Use .sheet(item:) over .sheet(isPresented:) — ensures data availability"
+  },
+  {
+    "id": "dismiss-environment",
+    "trap": "EditProfileView uses deprecated @Environment(\\.presentationMode) instead of @Environment(\\.dismiss)",
+    "category": "ui-patterns",
+    "description": "Dismissal via @Environment(\\.dismiss) owned by sheet"
+  },
+  {
+    "id": "task-over-onappear",
+    "trap": "Uses .onAppear with nested Task instead of .task modifier for async work",
+    "category": "ui-patterns",
+    "description": ".task over .onAppear for async work — auto-cancels on disappear"
+  },
+  {
+    "id": "accessibility-labels",
+    "trap": "Interactive buttons, images, and list rows have no .accessibilityLabel()",
+    "category": "ui-patterns",
+    "description": "Every interactive element needs .accessibilityLabel(); missing accessibility = incomplete feature"
+  },
+  {
+    "id": "view-body-extract-subviews",
+    "trap": "ContentView body is massive with deeply nested VStack/List — needs scrolling to read",
+    "category": "swiftui-architecture",
+    "description": "If body needs scrolling to read — extract subviews; massive Views = anti-pattern"
+  },
+  {
+    "id": "swiftdata-over-coredata",
+    "trap": "Uses Core Data (NSManagedObject) instead of SwiftData @Model for new project",
+    "category": "data-persistence",
+    "description": "SwiftData over Core Data for new projects — use @Model macro"
+  },
+  {
+    "id": "codable-snake-case-strategy",
+    "trap": "UserProfile has user_name as snake_case property matching JSON instead of using keyDecodingStrategy = .convertFromSnakeCase",
+    "category": "data-persistence",
+    "description": "Use JSONDecoder.keyDecodingStrategy = .convertFromSnakeCase for snake_case APIs; decouple JSON keys from property names"
+  },
+  {
+    "id": "swift-testing-over-xctest",
+    "trap": "Tests use XCTest (XCTestCase, XCTAssertNotNil, XCTestExpectation) instead of Swift Testing (@Test, #expect, #require)",
+    "category": "testing",
+    "description": "Swift Testing framework over XCTest — use @Test with #expect() and #require() macros; async tests await directly, no XCTestExpectation"
+  },
+  {
+    "id": "noncopyable-token",
+    "trap": "SessionToken is a class with a copy() method for a single-use token; should be ~Copyable struct",
+    "category": "type-system",
+    "description": "Use ~Copyable for resources that must not be duplicated (tokens, one-shot operations); enforces single-use at compile time"
+  },
+  {
+    "id": "property-wrapper-simple",
+    "trap": "Clamped property wrapper has Logger and cache dict — complex logic belongs in the type, not the wrapper",
+    "category": "type-system",
+    "description": "Keep property wrappers simple — complex logic belongs in the type, not the wrapper"
+  },
+  {
+    "id": "let-over-var",
+    "trap": "APIClient.baseURL and session are var but never mutated; should be let",
+    "category": "naming-style",
+    "description": "Immutability: let by default; var only when mutation required"
+  },
+  {
+    "id": "argument-labels-clarity",
+    "trap": "fetchUser(id:) is fine but remove(index) style would be unclear — general check that API arg labels are present",
+    "category": "naming-style",
+    "description": "Clarity: remove(at: index) over remove(index) — Swift is verbose by design"
+  },
+  {
+    "id": "protocol-conformance-extension",
+    "trap": "UserProfile implements Codable inline on the class declaration instead of in a separate extension",
+    "category": "naming-style",
+    "description": "Protocol conformance: extension MyType: MyProtocol to group methods separately"
+  },
+  {
+    "id": "no-blanket-mainactor",
+    "trap": "ProfileViewModel is blanket @MainActor but contains heavyComputation which should not be on MainActor",
+    "category": "concurrency",
+    "description": "Do NOT blanket @MainActor to silence errors; identify correct isolation per function"
+  },
+  {
+    "id": "preview-mock-data",
+    "trap": "No #Preview provided with mock data for any view",
+    "category": "ui-patterns",
+    "description": "Provide #Preview with mock data; keep instant & reliable"
+  },
+  {
+    "id": "single-source-of-truth",
+    "trap": "EditProfileView mutates profile.user_name directly from the view instead of flowing state changes through model",
+    "category": "architecture",
+    "description": "Single source of truth — state in one place, flows down"
+  }
+]

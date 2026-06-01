@@ -52,7 +52,7 @@
         {
           "id": "jsdoc-with-example",
           "trap": "JSDoc block has @description/@param/@returns but no @example with return value",
-          "description": "Exported functions have JSDoc with plain description + @example with return value",
+          "description": "Exported domain functions (e.g. getUser/updateUser) carry JSDoc with a plain description + an @example showing the call and expected return (// => value). Trivial re-exported utilities (ok/err) and non-exported helpers are exempt; @description/@param/@returns tags must not appear.",
           "category": "format"
         },
         {

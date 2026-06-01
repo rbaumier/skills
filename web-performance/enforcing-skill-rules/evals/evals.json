@@ -169,12 +169,6 @@
           "description": "Code split by route, lazy load non-critical components"
         },
         {
-          "id": "inline-critical-css",
-          "trap": "Large inline style block includes non-critical CSS like animations and footer styles",
-          "category": "css",
-          "description": "Inline critical CSS only, defer non-critical, purge unused"
-        },
-        {
           "id": "css-containment",
           "trap": "No CSS containment used on product grid or sections for layout isolation",
           "category": "css",

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "discriminated-union",
+    "trap": "Numeric enum with optional params instead of discriminated union",
+    "description": "Discriminated unions over numeric enums for type-safe branching",
+    "category": "behavior"
+  },
+  {
+    "id": "strict-tsconfig-unchecked-index",
+    "trap": "items[5].toUpperCase() without noUncheckedIndexedAccess",
+    "description": "Enable noUncheckedIndexedAccess in tsconfig",
+    "category": "gotcha"
+  },
+  {
+    "id": "exact-optional-properties",
+    "trap": "port: undefined assigned to optional field",
+    "description": "Enable exactOptionalPropertyTypes in tsconfig",
+    "category": "gotcha"
+  },
+  {
+    "id": "readonly-params",
+    "trap": "Mutable array parameter mutated with sort()",
+    "description": "ReadonlyArray<T> for function parameters to prevent mutation",
+    "category": "gotcha"
+  },
+  {
+    "id": "assertion-function",
+    "trap": "as { name: string } type assertion on unknown",
+    "description": "Assertion functions (asserts x is T) over type assertions for runtime validation",
+    "category": "behavior"
+  },
+  {
+    "id": "no-function-overloads",
+    "trap": "Function overloads for createDate",
+    "description": "Union params or options object over function overloads",
+    "category": "behavior"
+  },
+  {
+    "id": "template-literal-types",
+    "trap": "string type for HTTP method allows typos",
+    "description": "Template literal types for string-typed APIs",
+    "category": "behavior"
+  },
+  {
+    "id": "oxlint-not-biome",
+    "trap": "Biome config instead of oxlint+oxfmt",
+    "description": "oxlint + oxfmt over Biome for linting/formatting",
+    "category": "format"
+  },
+  {
+    "id": "exhaustive-switch",
+    "trap": "Switch on Status missing pending case",
+    "description": "Exhaustive switch with assertNever default for union types",
+    "category": "gotcha"
+  },
+  {
+    "id": "as-const-satisfies",
+    "trap": "Object.freeze instead of as const satisfies",
+    "description": "as const satisfies for literal types with type checking",
+    "category": "behavior"
+  }
+]

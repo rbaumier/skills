@@ -1,0 +1,114 @@
+Fix all issues:
+
+```sql
+TRUNCATE TABLE audit_logs;
+
+CREATE TABLE organizations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  org_id UUID REFERENCES organizations(id),
+  full_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  password_hash TEXT,
+  api_key TEXT,
+  is_deleted BOOLEAN DEFAULT false,
+  preferences TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE projects (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  org_id UUID REFERENCES organizations(id),
+  name VARCHAR(255),
+  budget FLOAT,
+  status TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE tasks (
+  id SERIAL PRIMARY KEY,
+  project_id UUID REFERENCES projects(id),
+  assignee_id UUID REFERENCES users(id),
+  title TEXT,
+  description TEXT,
+  price_estimate FLOAT,
+  status TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+SELECT * FROM tasks WHERE project_id = $1 AND status = 'active' ORDER BY created_at DESC;
+
+SELECT * FROM tasks WHERE description LIKE '%deploy%';
+
+SELECT * FROM tasks WHERE assignee_id = $1 ORDER BY created_at DESC LIMIT 20 OFFSET 200;
+
+SELECT * FROM tasks WHERE created_at > NOW() - INTERVAL '1 hour';
+```
+
+The app runs 5 instances each with connection pool of 20.
+
+```sql
+ALTER TABLE users RENAME COLUMN name TO full_name;
+
+ALTER TABLE users ALTER COLUMN email SET NOT NULL;
+
+CREATE INDEX idx_tasks_project ON tasks(project_id);
+
+ALTER TABLE tasks SET (autovacuum_enabled = false);
+```
+
+```typescript
+// schema.ts (drizzle-kit output, as-is)
+import { pgTable, uuid, varchar, timestamp, real, text, boolean, serial } from 'drizzle-orm/pg-core';
+
+export const tasks = pgTable('tasks', {
+  id: serial('id').primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id),
+  title: text('title'),
+  priceEstimate: real('price_estimate'),
+  status: text('status'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+```
+
+```typescript
+// task-repository.ts
+export class TaskRepository {
+  async findById(id: string) {
+    const task = await db.select().from(tasks).where(eq(tasks.id, id));
+    if (!task.length) throw new Error('Task not found');
+    return task[0];
+  }
+
+  async createWithComment(taskData: any, commentText: string) {
+    return await db.transaction(async (tx) => {
+      const [task] = await tx.insert(tasks).values(taskData).returning();
+      const [comment] = await tx.insert(comments).values({
+        taskId: task.id,
+        text: commentText,
+      }).returning();
+      return { task, comment };
+    });
+  }
+
+  async search(userInput: string) {
+    return await db.execute(`SELECT * FROM tasks WHERE title LIKE '%${userInput}%'`);
+  }
+}
+```
+
+```typescript
+// db.ts
+const client = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(client, { schema });
+```
+
+App connects as postgres superuser. No RLS.
+
+Output fixed code + list every issue.

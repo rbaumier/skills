@@ -1,0 +1,1 @@
+{"skill":"tailwind","eval":"e1","iter":4,"passed":25,"total":33,"fails":["v4-theme-css","compound-dialog","dark-mode-tokens","animation-tokens-theme","starting-style-popover","custom-variant-dark","body-semantic-tokens","radix-primitives"]}

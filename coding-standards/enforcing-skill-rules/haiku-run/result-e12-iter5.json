@@ -1,0 +1,1 @@
+{"skill":"coding-standards","eval":"e12","iter":5,"passed":40,"total":53,"fails":["fs-module-orientation","fs-next-caller-effect","fs-factory-di","fs-extract-by-responsibility","fs-srp-cqs","fs-strict-typing","fs-parse-dont-validate","fs-crosscutting-wrapper","fs-dto-mapping","fs-exports-at-top","fs-law-of-demeter","fs-one-abstraction-level","fs-enduring-reader"]}

@@ -1,0 +1,125 @@
+Fix all issues:
+
+```typescript
+import express from "express";
+
+const app = express();
+
+type UserId = string;
+type OrderId = string;
+
+interface Order {
+  id: string;
+  userId: string;
+  items: { sku: string; qty: number }[];
+  shippingAddress: { street: string; city: string; zip: string };
+  status: "pending" | "shipped" | "cancelled";
+  priority: string;
+  createdAt: Date;
+  updatedAt: Date;
+  total: number;
+  internalDbRowId: number;
+  _sequelizeTimestamp: string;
+}
+
+interface OrderV2 {
+  id: string;
+  userId: string;
+  items: { sku: string; qty: number }[];
+  shippingAddress: { street: string; city: string; zip: string };
+  status: "pending" | "shipped" | "cancelled";
+  priority: number;
+  createdAt: Date;
+  updatedAt: Date;
+  total: number;
+  trackingNumber: string | null;
+  cancelledReason: string | null;
+  shippedAt: Date | null;
+}
+
+function validateOrder(order: Order) {
+  if (!order.items.length) throw new Error("Items required");
+  if (!order.shippingAddress.city) throw new Error("City required");
+}
+
+function calculateTotal(order: Order) {
+  validateOrder(order);
+  return order.items.reduce((sum, i) => sum + i.qty * 10, 0);
+}
+
+app.post("/api/createOrder", async (req, res) => {
+  try {
+    const body = req.body;
+    const order: Order = {
+      id: Math.random().toString(36).slice(2),
+      userId: body.userId,
+      items: body.items,
+      shippingAddress: body.shippingAddress,
+      status: "pending",
+      priority: body.priority,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      total: calculateTotal(body),
+      internalDbRowId: 42,
+      _sequelizeTimestamp: new Date().toISOString(),
+    };
+    res.status(200).json(order);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message, stack: err.stack });
+  }
+});
+
+app.get("/api/v1/orders", async (req, res) => {
+  const orders: Order[] = [];
+  res.json(orders);
+});
+
+app.get("/api/v1/orders/:id", async (req, res) => {
+  const order = null;
+  if (!order) {
+    res.status(404).json({ msg: "not found" });
+    return;
+  }
+  res.json(order);
+});
+
+app.put("/api/v1/orders/:id", async (req, res) => {
+  const order: Order = req.body;
+  validateOrder(order);
+  res.json(order);
+});
+
+app.get("/api/v1/orders/:id/cancel", async (req, res) => {
+  res.json({ success: true });
+});
+
+app.get("/api/v2/orders", async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const size = parseInt(req.query.size as string) || 50;
+  const orders: OrderV2[] = [];
+  res.json({
+    items: orders,
+    page,
+    size,
+  });
+});
+
+app.post("/api/v1/orders/:id/ship", async (req, res) => {
+  const includeInternal = req.query.internal === "true";
+  if (includeInternal) {
+    res.json({ shipped: true, internalDbRowId: 42, queryPlan: "seq scan" });
+  } else {
+    res.json({ shipped: true });
+  }
+});
+
+function processThirdPartyWebhook(payload: any) {
+  const orderId = payload.order_id;
+  const amount = payload.amount;
+  return { orderId, amount };
+}
+
+app.listen(3000);
+```
+
+Output fixed code only.

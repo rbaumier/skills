@@ -1,0 +1,149 @@
+Fix all issues:
+
+```typescript
+// src/i18n/en.json
+{
+  "Welcome to the app": "Welcome to the app",
+  "Sign in": "Sign in",
+  "diffs.header.actions.delete.confirm": "Are you sure you want to delete?",
+  "items": "item",
+  "items_plural": "items",
+  "validation": {
+    "tooShort": "Too short (min {{min}})",
+    "required": "Required",
+    "invalidEmail": "Invalid email"
+  },
+  "errors": {
+    "repo_not_found": "Repository not found",
+    "unauthorized": "Unauthorized"
+  },
+  "seo": {
+    "settingsPage": "Settings"
+  }
+}
+
+// src/i18n/config.ts
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import en from './en.json';
+import pt_BR from './pt-BR.json';
+
+i18n.use(initReactI18next).init({
+  resources: { en: { translation: en }, 'pt-BR': { translation: pt_BR } },
+  lng: navigator.language,
+  fallbackLng: 'en',
+  interpolation: { escapeValue: false },
+});
+
+export default i18n;
+
+// src/schemas/settingsSchema.ts
+import { z } from 'zod';
+
+export const settingsSchema = z.object({
+  displayName: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email'),
+  bio: z.string().max(500, 'Bio is too long'),
+  password: z.string().min(8),
+  confirmPassword: z.string().min(8),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+// src/utils/errors.ts
+import { ProblemDetail } from '../types';
+
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unexpected error occurred';
+}
+
+// src/routes/settings.tsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/settings')({
+  component: SettingsPage,
+  head: () => ({
+    meta: [{ title: 'Settings - MyApp' }],
+  }),
+});
+
+// src/components/SettingsPage.tsx
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useTranslation } from 'react-i18next';
+import { settingsSchema } from '../schemas/settingsSchema';
+import { getErrorMessage } from '../utils/errors';
+import { useMutation } from '@tanstack/react-query';
+
+function SettingsPage() {
+  const { t } = useTranslation();
+  const form = useForm({
+    resolver: zodResolver(settingsSchema),
+  });
+
+  const mutation = useMutation({
+    mutationFn: saveSettings,
+    onError: (error) => {
+      alert(getErrorMessage(error));
+    },
+  });
+
+  const lastSaved = new Date(form.getValues('lastSaved'));
+  const fileCount = 3;
+  const collaborators = ['Alice', 'Bob', 'Charlie'];
+
+  return (
+    <div>
+      <html lang="en">
+        <head>
+          <title>Settings - MyApp</title>
+        </head>
+      </html>
+      <h1>Settings</h1>
+      <p style={{ marginLeft: '16px', paddingRight: '8px', textAlign: 'left', borderLeft: '2px solid gray' }}>
+        Last saved: {lastSaved.toLocaleDateString()}
+      </p>
+      <p>{fileCount === 1 ? '1 file' : `${fileCount} files`}</p>
+      <p>Collaborators: {collaborators.join(', ')}</p>
+      <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))}>
+        <label>
+          Display Name
+          <input {...form.register('displayName')} />
+          {form.formState.errors.displayName && (
+            <span>{form.formState.errors.displayName.message}</span>
+          )}
+        </label>
+        <label>
+          Email
+          <input {...form.register('email')} />
+        </label>
+        <label>
+          Bio
+          <input {...form.register('bio')} />
+        </label>
+        <label>
+          Password
+          <input type="password" {...form.register('password')} />
+        </label>
+        <label>
+          Confirm Password
+          <input type="password" {...form.register('confirmPassword')} />
+        </label>
+        <button type="submit">Save changes</button>
+        <Trans i18nKey="Welcome to the app">
+          Welcome to the <strong>app</strong>
+        </Trans>
+      </form>
+    </div>
+  );
+}
+
+export default SettingsPage;
+```
+
+Output fixed code only.

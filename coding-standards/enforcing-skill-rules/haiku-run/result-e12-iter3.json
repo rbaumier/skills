@@ -1,0 +1,1 @@
+{"skill":"coding-standards","eval":"e12","iter":3,"passed":47,"total":53,"fails":["fs-promise-all","fs-bound-inputs","fs-timeout-io","fs-crosscutting-wrapper","fs-structured-api-errors","fs-exports-at-top"]}

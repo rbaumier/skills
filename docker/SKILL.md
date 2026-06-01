@@ -31,11 +31,11 @@ description: Use when writing Dockerfiles, configuring docker-compose, optimizin
   RUN --mount=type=cache,target=/root/.cache/uv uv pip install -r requirements.txt
   ```
 - `--frozen-lockfile` (pnpm/yarn) or `npm ci` — never `npm install` in CI/Docker. Lockfile is law.
-- ENTRYPOINT vs CMD — use ENTRYPOINT for the binary, CMD for default args: `ENTRYPOINT ["node"]` + `CMD ["server.js"]`. Exec form `["..."]` always, never shell form `CMD node server.js` (shell form wraps in `/bin/sh -c`, breaks signal handling). Override CMD at runtime: `docker run myapp worker.js`.
+- ENTRYPOINT vs CMD — ALWAYS define BOTH, never CMD alone for a runnable image. ENTRYPOINT = the binary (or init + binary), CMD = default args: `ENTRYPOINT ["node"]` + `CMD ["server.js"]`. CMD-alone is a smell: it conflates binary and args and loses clean runtime override. Exec form `["..."]` always, never shell form `CMD node server.js` (shell form wraps in `/bin/sh -c`, breaks signal handling). Override CMD at runtime: `docker run myapp worker.js`.
 - Multi-platform builds with buildx — `docker buildx build --platform linux/amd64,linux/arm64 -t myapp:v1 --push .`. Create builder: `docker buildx create --use`. For compiled languages, use cross-compilation in build stage. For interpreted languages (Node, Python), it usually just works.
 - Alpine for small images. Switch to `-slim` if native deps have musl issues (psycopg2, sharp, etc.).
 - Distroless images for production — use `gcr.io/distroless/nodejs22-debian12` or `gcr.io/distroless/static-debian12` as final stage. No shell, no package manager = minimal attack surface. Debug variant available: `:debug` tag adds busybox shell. When distroless is too restrictive, use `*-slim` variants.
-- OCI labels for image metadata — add standard labels for traceability: `LABEL org.opencontainers.image.source="https://github.com/org/repo"`, `org.opencontainers.image.version="1.2.0"`, `org.opencontainers.image.revision="$(git rev-parse HEAD)"`. Enables `docker inspect` to trace image to source.
+- OCI labels for image metadata — REQUIRED on every production image, not optional. Add standard labels for traceability: `LABEL org.opencontainers.image.source="https://github.com/org/repo"`, `org.opencontainers.image.version="1.2.0"`, `org.opencontainers.image.revision="$(git rev-parse HEAD)"`. Enables `docker inspect` to trace a running image back to its source commit. An image with no labels is untraceable in an incident.
 
 ### Multi-Stage Build Pattern
 
@@ -64,6 +64,12 @@ RUN npm run build && npm prune --production
 # -- Stage 4: Production (minimal image, non-root, healthcheck) --
 FROM node:22-alpine AS production
 WORKDIR /app
+# OCI labels for traceability — trace any running image back to its source commit.
+LABEL org.opencontainers.image.source="https://github.com/org/repo" \
+      org.opencontainers.image.version="1.2.0" \
+      org.opencontainers.image.revision="$GIT_SHA"
+# tini as PID 1 — forwards SIGTERM and reaps zombies. apk add it, never skip it.
+RUN apk add --no-cache tini
 # Non-root user — NEVER run prod as root
 RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001
 USER appuser
@@ -73,10 +79,23 @@ COPY --from=build --chown=appuser:appgroup /app/package.json ./
 ENV NODE_ENV=production
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:3000/health || exit 1
-CMD ["node", "dist/server.js"]
+# ENTRYPOINT = the init + binary, CMD = default args (override-able at runtime).
+ENTRYPOINT ["tini", "--", "node"]
+CMD ["dist/server.js"]
 ```
 
 **Signal handling**: Signal handling with `tini` or `dumb-init` — PID 1 in containers doesn't get default signal handling. Use `tini` as entrypoint to properly forward signals and reap zombies: `ENTRYPOINT ["tini", "--"]` then `CMD ["node", "server.js"]`. Or use `docker run --init`. Without this, SIGTERM is silently ignored = ungraceful shutdown.
+
+**Every production stage MUST have ALL of these — verify each one before you finish:**
+- [ ] Pinned base image (no `:latest`), Alpine/slim variant
+- [ ] OCI labels: `org.opencontainers.image.source` / `.version` / `.revision`
+- [ ] `RUN apk add --no-cache tini` (or `dumb-init`) — init for PID 1
+- [ ] Non-root `USER` + `--chown` on every COPY
+- [ ] `ENV NODE_ENV=production`
+- [ ] `HEALTHCHECK`
+- [ ] `ENTRYPOINT` (init + binary) AND `CMD` (default args) — BOTH, exec form, never CMD alone
+
+A weak signal here is silent: skip tini and SIGTERM is dropped; skip labels and the image is untraceable; ship CMD-alone and you lose clean runtime arg override. Don't skip the boring ones.
 
 ```bash
 ```
@@ -96,6 +115,7 @@ docker build --target production -t myapp:prod .
 - Compose Watch for development (Docker Compose 2.22+) — `docker compose watch` replaces manual bind mounts with declarative file sync. Config in compose.yaml: `develop: watch: [{action: sync, path: ./src, target: /app/src}, {action: rebuild, path: package.json}]`. Auto-syncs source changes, rebuilds on dependency changes.
 - Compose profiles for optional services — `profiles: [debug]` on services like debug tools, admin panels, monitoring. Start normally: `docker compose up`. Include debug tools: `docker compose --profile debug up`. Keeps default stack lean.
 - Healthchecks on every service — compose uses them for dependency ordering.
+- Security hardening on every service — `cap_drop: [ALL]` and `security_opt: [no-new-privileges:true]` go on app, db, redis, ALL of them. Don't harden only the app and leave the datastore wide open.
 
 ```yaml
 # docker-compose.yml — standard web app stack
@@ -137,6 +157,10 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    security_opt:                     # Same hardening as app — every service, no exceptions
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -149,6 +173,10 @@ services:
       - "127.0.0.1:6379:6379"        # localhost only
     volumes:
       - redisdata:/data
+    security_opt:                     # Same hardening as app — every service, no exceptions
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   pgdata:
@@ -202,7 +230,7 @@ networks:
 - No secrets in Dockerfile or image layers. Not in ENV, not in COPY. Use runtime env vars or mounted secrets.
 - `security_opt: [no-new-privileges:true]` — prevents privilege escalation inside container.
 - `read_only: true` with explicit `tmpfs` for writable dirs — minimizes attack surface.
-- `cap_drop: [ALL]` then `cap_add` only what's needed. Principle of least privilege.
+- `cap_drop: [ALL]` then `cap_add` only what's needed. Principle of least privilege. Apply to EVERY service — app, db, redis, all of them — not just the app. A database left with full default capabilities is the soft target attackers pivot to.
 - Pin base image versions. Never `:latest`. Reproducible builds = auditable builds.
 - BuildKit build secrets — never `COPY` or `ARG` secrets into image layers. Use `RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci` for private registry auth. Pass secrets at build time: `docker build --secret id=npmrc,src=.npmrc`. Secrets never appear in image history.
 - Image scanning in CI — run `trivy image myapp:latest` before pushing. Fail CI on HIGH/CRITICAL CVEs: `trivy image --severity HIGH,CRITICAL --exit-code 1`. For Dockerfile linting, use `hadolint Dockerfile` to catch anti-patterns before building. Both tools are fast and free.

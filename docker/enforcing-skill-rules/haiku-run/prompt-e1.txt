@@ -1,0 +1,47 @@
+Fix all issues:
+
+```dockerfile
+FROM node:latest
+WORKDIR /app
+COPY . .
+RUN npm install
+RUN apt-get update && apt-get install -y curl
+ENV API_KEY=sk-secret-1234567890
+ENV DATABASE_URL=postgres://admin:password@db:5432/myapp
+EXPOSE 3000
+CMD node dist/server.js
+```
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+    environment:
+      - API_KEY=sk-secret-1234567890
+      - NODE_ENV=production
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: myapp
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+```
+
+Output fixed code only.

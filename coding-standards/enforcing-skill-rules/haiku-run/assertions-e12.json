@@ -1,0 +1,314 @@
+[
+  {
+    "id": "fs-module-orientation",
+    "trap": "// Process orders is a terse label, not a doc comment explaining what the module does and how",
+    "description": "Module/function starts with doc comment: what it does + how it works",
+    "category": "format"
+  },
+  {
+    "id": "fs-consequence-comments",
+    "trap": "// Get user, // Process items, // Update cache describe mechanics, not consequences",
+    "description": "Comments explain consequences, not mechanics. 'cache so the frontend...' not just 'update cache'",
+    "category": "format"
+  },
+  {
+    "id": "fs-term-explanations",
+    "trap": "big_orders table and 1000 threshold used without explaining the domain concept",
+    "description": "Any domain terms explained on first use",
+    "category": "format"
+  },
+  {
+    "id": "fs-conversational-tone",
+    "trap": "// Get user, // Notify, // Check stock are terse mechanical labels",
+    "description": "Conversational comment tone, not mechanical",
+    "category": "format"
+  },
+  {
+    "id": "fs-inaction-justified",
+    "trap": "throw new Error('blocked') exits early with no explanation of why blocked users are rejected",
+    "description": "If any no-op/early-return, justified with why",
+    "category": "format"
+  },
+  {
+    "id": "fs-next-caller-effect",
+    "trap": "cache.set(`user:${userId}:lastOrder`, ...) with no comment on what next caller sees",
+    "description": "Cache/DB state mutations explain what next caller sees",
+    "category": "format"
+  },
+  {
+    "id": "fs-return-value-intent",
+    "trap": "return order.rows[0] with no documentation of what the caller should do with it",
+    "description": "Return value documented: what the caller should do with it",
+    "category": "format"
+  },
+  {
+    "id": "fs-limits-explained",
+    "trap": "if (total > 1000) has no explanation of why 1000 is the threshold for big orders",
+    "description": "The 1000 threshold for big orders explained with why",
+    "category": "format"
+  },
+  {
+    "id": "fs-jsdoc-with-example",
+    "trap": "export async function handleOrderData(...) has zero function doc naming consumer-visible behavior",
+    "description": "Exported function has a function doc (~5 lines max) naming the consumer-visible effect / return-value meaning — NOT a bare label. @example is NOT required (the skill caps function docs at ~5 lines and defaults to no comment).",
+    "category": "format"
+  },
+  {
+    "id": "fs-naming-intent",
+    "trap": "handleOrderData uses banned words; u, usr, itm, ct, amt, s are cryptic abbreviations",
+    "description": "handleOrderData renamed — no banned words (handle, data, process). Full words (usr→user, itm→item, ct→count, amt→amount, s→stock)",
+    "category": "format"
+  },
+  {
+    "id": "fs-boolean-prefix",
+    "trap": "sendEmail is a boolean without is/has/should prefix",
+    "description": "Booleans use is/has/should prefix in positive form",
+    "category": "format"
+  },
+  {
+    "id": "fs-symmetry",
+    "trap": "cache.set without corresponding cache.get; insert/update naming not symmetric",
+    "description": "Naming pairs consistent (get/set, add/remove)",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-boolean-flags",
+    "trap": "isUrgent and sendEmail are boolean params that branch internal behavior",
+    "description": "isUrgent and sendEmail boolean params split into separate functions or options object",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-guard-clauses",
+    "trap": "if (itm.qty > 0 && itm.active && !usr.blocked) nested inside for loop with inner if (amt > 0)",
+    "description": "Nested if/else flattened to guard clauses, max 3 indent levels",
+    "category": "format"
+  },
+  {
+    "id": "fs-switch-or-map",
+    "trap": "discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0 nested ternary chain",
+    "description": "discountCode if/else chain replaced with object map or switch",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-immutable",
+    "trap": "let total = 0; total += amt; let ct = 0; ct++ mutate accumulators inside loop",
+    "description": "No mutation of items array or item objects",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-promise-all",
+    "trap": "await db.query('SELECT qty FROM stock...') called sequentially inside for loop",
+    "description": "Independent stock checks run in parallel (Promise.all)",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-factory-di",
+    "trap": "import { db }, import { cache }, import { mailer } are hardcoded global imports",
+    "description": "db, cache, mailer injected via factory, not imported as globals",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-extract-by-responsibility",
+    "trap": "handleOrderData mixes 7 concerns in one function: fetch user, loop-price items, check stock, big-order notification, create order, set priority, send email, update cache, log",
+    "description": "handleOrderData is split by RESPONSIBILITY (not line count): at minimum fetch user, price items, persist order, and notify are separate named operations. The split is driven by mixing concerns, not by hitting an arbitrary line threshold.",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-max-3-args",
+    "trap": "handleOrderData(userId, items, isUrgent, sendEmail, emailTo, taxRate, discountCode) has 7 positional args",
+    "description": "7 positional args replaced with options object",
+    "category": "format"
+  },
+  {
+    "id": "fs-srp-cqs",
+    "trap": "Order creation, email sending, cache update, and logging all in one function",
+    "description": "Order creation (command) separated from notification (side-effect)",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-named-constants",
+    "trap": "1000, 50, 20 are magic numbers used inline without named constants",
+    "description": "Magic numbers (1000, 50, 20) extracted to named constants",
+    "category": "format"
+  },
+  {
+    "id": "fs-strict-typing",
+    "trap": "userId: any, items: any[] accept anything; OrderStatus = string is untyped",
+    "description": "Explicit types/interfaces for all params and returns, no any",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-externalize-config",
+    "trap": "'FREE50', 'FREE20' discount codes and 1000 threshold hardcoded in function body",
+    "description": "Discount codes/thresholds in config, not inline",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-bound-inputs",
+    "trap": "No validation on qty (could be negative), items array (could be empty)",
+    "description": "Input validation rejects invalid values (negative qty, empty items) — no ?? fallback",
+    "category": "security"
+  },
+  {
+    "id": "fs-result-not-throw",
+    "trap": "throw new Error('not found'), throw new Error('blocked'), throw new Error('stock')",
+    "description": "Errors returned as Result, no throw",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-preserve-cause",
+    "trap": "throw new Error('stock') is a bare string with no original cause or context",
+    "description": "Errors preserve original cause/context",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-intermediate-vars",
+    "trap": "itm.qty * itm.price * (taxRate ? 1 + taxRate : 1) - (discountCode === ...) is one compound expression",
+    "description": "Compound expressions (tax calc, discount) extracted to named variables",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-clever-code",
+    "trap": "discountCode === 'FREE50' ? 50 : discountCode === 'FREE20' ? 20 : 0 nested ternary",
+    "description": "Nested ternary for discounts removed, replaced with clear logic",
+    "category": "format"
+  },
+  {
+    "id": "fs-blank-lines",
+    "trap": "Dense code blocks with inconsistent spacing between logical sections",
+    "description": "Logical blocks separated with blank lines",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-commented-code",
+    "trap": "// Log inside business logic comment labels dead-weight code that should be removed",
+    "description": "Commented-out old approach removed",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-todo-without-issue",
+    "trap": "No existing TODOs but refactoring should not introduce any without issue links",
+    "description": "TODO/FIXME without tracking issue removed",
+    "category": "format"
+  },
+  {
+    "id": "fs-state-narration",
+    "trap": "if (isUrgent)/else and if (sendEmail) branches have no journey narration",
+    "description": "If any conditional branches, narrated with journey (optional — depends on refactoring approach)",
+    "category": "format"
+  },
+  {
+    "id": "fs-invalid-states-unrepresentable",
+    "trap": "OrderStatus = string instead of union type; status 'pending' is a raw string",
+    "description": "Make invalid states unrepresentable — union types for status, not bare strings",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-parse-dont-validate",
+    "trap": "userId: any, items: any[] — accepted without parsing into typed domain objects",
+    "description": "Parse, don't validate — construct typed domain objects at boundary, reject invalid",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-timeout-io",
+    "trap": "db.query calls have no timeout — can hang forever",
+    "description": "Timeout on every I/O call",
+    "category": "gotcha"
+  },
+  {
+    "id": "fs-crosscutting-wrapper",
+    "trap": "console.log('Order created') inside business logic",
+    "description": "No logging in business logic — use crosscutting wrapper (withLogging/withTracing)",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-structured-api-errors",
+    "trap": "throw new Error('not found') — bare string, no type/code/status",
+    "description": "Structured errors: { type, code, status, detail } not bare { message }",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-dto-mapping",
+    "trap": "return order.rows[0] — raw DB row returned to caller",
+    "description": "Map DB entities to DTOs — dedicated response type, not raw rows",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-exports-at-top",
+    "trap": "Single export mixed in with all implementation",
+    "description": "Exports/public API at top of file, private helpers at bottom",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-rule-of-three",
+    "trap": "formatEmail, formatReceipt, formatInvoice are 3 functions with identical params (to, name, amount, currency) and similar bodies — a pattern has emerged",
+    "description": "3 similar functions with identical signatures extracted into a shared abstraction or parameterized function",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-data-clumps-value-object",
+    "trap": "to, name, amount, currency appear as the same 4 params across formatEmail, formatReceipt, formatInvoice",
+    "description": "Repeated param group (to, name, amount, currency) extracted to a Value Object / named type",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-law-of-demeter",
+    "trap": "order.customer.address.street, order.customer.address.city, order.customer.address.zip — 3 levels deep into object graph",
+    "description": "Chained property access 2+ levels deep replaced with direct accessor or destructured at boundary",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-one-abstraction-level",
+    "trap": "validateOrder mixes high-level validation (check city exists, check total) with low-level string formatting (template literal with toFixed)",
+    "description": "validateOrder split — validation logic separated from string formatting, no mixing of abstraction levels",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-define-errors-out-of-existence",
+    "trap": "removeCartItem throws 'item not in cart' when removing an item that doesn't exist — but the postcondition is the same: item is not in cart",
+    "description": "removeCartItem redesigned to succeed even if item absent — guarantees 'after call, item is not in cart' instead of throwing",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-pull-complexity-down",
+    "trap": "applyBulkDiscount forces callers to pass retryCount, retryDelayMs, maxRetries — retry logic pushed to caller instead of absorbed internally",
+    "description": "Retry config params removed from applyBulkDiscount — module handles retry internally or removes it (caller shouldn't deal with retry complexity)",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-impossible-state-documented",
+    "trap": "if (total <= 0) throw new Error('invalid total') in validateOrder — a negative total after summing valid items is a programmer bug, but the code treats it like a normal error with no explanation",
+    "description": "Impossible-state check returns Result error (not throw) AND has a comment explaining why this state should never occur — the comment documents the invariant",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-barricade-boundary",
+    "trap": "Validation scattered: usr.blocked checked in main function AND redundantly inside loop (itm.qty > 0 && itm.active && !usr.blocked)",
+    "description": "Validation consolidated at boundary — usr.blocked checked once at entry (barricade), not re-checked inside loop",
+    "category": "security"
+  },
+  {
+    "id": "fs-pipeline-flow-documented",
+    "trap": "The order pipeline has 5+ sequential steps (validate user → check stock → calculate total → create order → set priority → notify → cache) explained only as a dense prose paragraph or not at all",
+    "description": "The multi-step order pipeline (3+ steps) is documented as a module/function doc that lists the steps as a bullet list / step sequence (per the skill's mandatory module-doc shape: what, consumer consequence, how-as-bullets). An ASCII diagram is NOT required — the skill defaults to no comment and uses bullet lists, not diagrams.",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-archaeology",
+    "trap": "The top-of-file comment says 'Was originally a class-based OrderService, refactored to functions in Q3' — it narrates past implementation history",
+    "description": "The 'refactored from a class in Q3' archaeology comment is removed. No comment references past implementation (no 'previously', 'used to', 'was', 'before', 'originally', 'refactored from')",
+    "category": "format"
+  },
+  {
+    "id": "fs-enduring-reader",
+    "trap": "getInstanceConfig has a comment 'These values are exposed because the admin dashboard needs them on the instance settings page' — a shared API comment anchored to one specific caller (the admin dashboard / instance settings page) instead of the stable domain purpose",
+    "description": "getInstanceConfig comment rewritten to describe the stable domain purpose of the config values (what they mean / what consumers decide with them) — NO reference to the admin dashboard, the instance settings page, or any single caller",
+    "category": "format"
+  },
+  {
+    "id": "fs-divergent-change-business-domain",
+    "trap": "formatEmail, formatReceipt, formatInvoice, getShippingLabel, validateOrder, applyBulkDiscount, handleOrderData all mixed together — order fulfillment, document formatting, shipping, and validation are multiple unrelated business domains",
+    "description": "The unrelated business domains are separated into clearly delimited sections/modules — order fulfillment, document formatting, shipping, validation are NOT interleaved or fused into one function. Since the prompt mandates all code inline in one file (no file writes), separation via distinct named sections + a noted split boundary (e.g. a comment 'belongs in its own module: shipping') counts; actual file split is NOT required here.",
+    "category": "architecture"
+  }
+]

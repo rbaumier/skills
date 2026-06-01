@@ -1,0 +1,200 @@
+[
+  {
+    "id": "replace-moment",
+    "trap": "Uses moment (heavy lib) for date formatting and relative time",
+    "category": "bundle-size",
+    "description": "Replace heavy libs: moment -> date-fns or Intl"
+  },
+  {
+    "id": "replace-lodash",
+    "trap": "Imports entire lodash library instead of specific functions",
+    "category": "bundle-size",
+    "description": "Replace heavy libs: lodash -> specific imports or native methods"
+  },
+  {
+    "id": "barrel-import",
+    "trap": "Barrel import from @/components imports all components, bloating bundle",
+    "category": "bundle-size",
+    "description": "Avoid barrel file imports; import components individually for tree-shaking"
+  },
+  {
+    "id": "hero-image-format",
+    "trap": "Hero image is .png, not WebP/AVIF",
+    "category": "images",
+    "description": "Use WebP/AVIF formats for images (70% savings AVIF, 50% WebP)"
+  },
+  {
+    "id": "hero-image-dimensions",
+    "trap": "Hero img has no width/height attributes, causes CLS",
+    "category": "cls",
+    "description": "Always set width/height or aspect-ratio on images to prevent CLS"
+  },
+  {
+    "id": "hero-image-fetchpriority",
+    "trap": "Hero image (LCP element) missing fetchpriority=\"high\"",
+    "category": "lcp",
+    "description": "Eager load hero image with fetchpriority=\"high\""
+  },
+  {
+    "id": "hero-image-preload",
+    "trap": "Critical hero image is not preloaded via link rel=\"preload\"",
+    "category": "lcp",
+    "description": "Preload critical LCP image via <link rel=\"preload\">"
+  },
+  {
+    "id": "product-image-dimensions",
+    "trap": "Product card images have no width/height attributes",
+    "category": "cls",
+    "description": "Every image must have explicit width/height or aspect-ratio to prevent CLS"
+  },
+  {
+    "id": "product-image-lazy",
+    "trap": "Product grid images (below fold) missing loading=\"lazy\"",
+    "category": "lazy-loading",
+    "description": "Lazy load below-fold images with loading=\"lazy\""
+  },
+  {
+    "id": "product-image-format",
+    "trap": "Product images use .png instead of WebP/AVIF",
+    "category": "images",
+    "description": "Use WebP/AVIF for product images with fallbacks"
+  },
+  {
+    "id": "responsive-images",
+    "trap": "No srcset/sizes or <picture> element for responsive images",
+    "category": "images",
+    "description": "Use responsive images with <picture> and srcset with width descriptors"
+  },
+  {
+    "id": "avatar-image-dimensions",
+    "trap": "Review avatar images have no width/height",
+    "category": "cls",
+    "description": "All images including avatars must have explicit dimensions"
+  },
+  {
+    "id": "avatar-image-lazy",
+    "trap": "Review avatar images (far below fold) not lazy loaded",
+    "category": "lazy-loading",
+    "description": "Lazy load below-fold images"
+  },
+  {
+    "id": "brand-image-dimensions",
+    "trap": "Brand partner images have no height attribute",
+    "category": "cls",
+    "description": "Brand images need explicit width and height to prevent CLS"
+  },
+  {
+    "id": "brand-image-lazy",
+    "trap": "Brand partner images (far below fold) not lazy loaded",
+    "category": "lazy-loading",
+    "description": "Lazy load all below-fold images"
+  },
+  {
+    "id": "footer-image-dimensions",
+    "trap": "Footer CTA image has no width/height",
+    "category": "cls",
+    "description": "Footer images must have explicit dimensions"
+  },
+  {
+    "id": "footer-image-lazy",
+    "trap": "Footer CTA image not lazy loaded",
+    "category": "lazy-loading",
+    "description": "Lazy load below-fold images including footer images"
+  },
+  {
+    "id": "script-defer",
+    "trap": "Third-party scripts loaded synchronously without async/defer",
+    "category": "render-blocking",
+    "description": "Defer third-party scripts, use async/defer on all scripts"
+  },
+  {
+    "id": "font-display-swap",
+    "trap": "Google Fonts loaded with display=block (render-blocking), should be swap",
+    "category": "font-optimization",
+    "description": "Use font-display: swap on all @font-face; Google Fonts link should use display=swap"
+  },
+  {
+    "id": "font-self-host",
+    "trap": "Google Fonts loaded from external CDN instead of self-hosted",
+    "category": "font-optimization",
+    "description": "Self-host fonts over Google Fonts to eliminate extra DNS+connection"
+  },
+  {
+    "id": "font-preload",
+    "trap": "Primary font not preloaded with link rel=\"preload\"",
+    "category": "font-optimization",
+    "description": "Preload primary font with <link rel=\"preload\" as=\"font\" type=\"font/woff2\" crossorigin>"
+  },
+  {
+    "id": "preconnect",
+    "trap": "No preconnect hints for critical third-party origins",
+    "category": "network",
+    "description": "Preconnect to critical origins"
+  },
+  {
+    "id": "scroll-listener-passive",
+    "trap": "Scroll listener added without passive:true option",
+    "category": "inp",
+    "description": "Unthrottled scroll listeners without passive:true are INP killers"
+  },
+  {
+    "id": "scroll-listener-throttle",
+    "trap": "Scroll listener fires on every scroll event with no throttle/rAF",
+    "category": "inp",
+    "description": "Throttle scroll/resize handlers with requestAnimationFrame"
+  },
+  {
+    "id": "scroll-listener-cleanup",
+    "trap": "Scroll event listener never cleaned up (missing useEffect return)",
+    "category": "memory",
+    "description": "Always clean up event listeners to prevent memory leaks"
+  },
+  {
+    "id": "localstorage-render",
+    "trap": "Synchronous localStorage read in useEffect during initial render path",
+    "category": "main-thread",
+    "description": "No synchronous localStorage/sessionStorage reads in render path"
+  },
+  {
+    "id": "code-split-components",
+    "trap": "Modal, Sidebar, and other non-critical components not lazy loaded",
+    "category": "bundle-size",
+    "description": "Code split by route, lazy load non-critical components"
+  },
+  {
+    "id": "css-containment",
+    "trap": "No CSS containment used on product grid or sections for layout isolation",
+    "category": "css",
+    "description": "Use CSS containment for layout isolation on repeating elements"
+  },
+  {
+    "id": "reduced-motion",
+    "trap": "Float animation runs unconditionally, no prefers-reduced-motion check",
+    "category": "accessibility-performance",
+    "description": "Respect prefers-reduced-motion: reduce — disable animations"
+  },
+  {
+    "id": "emdash-overuse",
+    "trap": "Promo banner has 4 em-dashes in one paragraph",
+    "category": "copy",
+    "description": "Ban em-dash overuse: max 1 per paragraph, replace with commas/periods"
+  },
+  {
+    "id": "image-cdn",
+    "trap": "All images served from local /images/ path instead of CDN",
+    "category": "network",
+    "description": "Deliver images via CDN"
+  },
+  {
+    "id": "cache-headers-static",
+    "trap": "No cache headers configured for static image/font assets",
+    "category": "caching",
+    "description": "Cache immutable static assets 1yr with hashed filenames"
+  },
+  {
+    "id": "lazy-load-everything-upfront",
+    "trap": "All sections (reviews, brands, footer CTA) rendered eagerly upfront",
+    "category": "lazy-loading",
+    "description": "Never load everything upfront; lazy load non-critical resources"
+  }
+]

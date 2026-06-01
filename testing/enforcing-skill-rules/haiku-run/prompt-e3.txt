@@ -1,0 +1,85 @@
+Fix all issues:
+
+```typescript
+// api-client.test.ts
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("node-fetch", () => ({ default: vi.fn() }));
+import fetch from "node-fetch";
+
+describe("ApiClient", () => {
+  it("fetches users", async () => {
+    (fetch as any).mockResolvedValue({ ok: true, json: () => [{ id: 1 }] });
+    const users = await getUsers();
+    expect(users.length).toBe(1);
+  });
+
+  it("fetches single user", async () => {
+    (fetch as any).mockResolvedValue({ ok: true, json: () => ({ id: 1, name: "Alice" }) });
+    const user = await getUser(1);
+    expect(user.name).toBe("Alice");
+  });
+});
+
+// form.test.tsx
+import { render, fireEvent } from "@testing-library/react";
+import { LoginForm } from "./LoginForm";
+
+describe("LoginForm", () => {
+  it("submits the form", () => {
+    const { getByRole } = render(<LoginForm />);
+    const button = getByRole("button", { name: "Submit" });
+    fireEvent.click(button);
+    const input = getByRole("textbox", { name: "Email" });
+    fireEvent.change(input, { target: { value: "test@test.com" } });
+  });
+});
+
+// external-api.test.ts
+describe("ExternalPaymentService", () => {
+  it("verifies payment status", async () => {
+    const res = await fetch("https://api.stripe.com/v1/charges/ch_123");
+    expect(res.ok).toBeTruthy();
+  });
+});
+
+// vitest.config.ts
+import { defineConfig } from "vitest/config";
+export default defineConfig({
+  test: {
+    coverage: {
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
+    },
+  },
+});
+
+// dashboard.e2e.ts
+import { test, expect } from "@playwright/test";
+test("dashboard layout", async ({ page }) => {
+  await page.goto("/dashboard");
+  const html = await page.content();
+  expect(html).toMatchSnapshot("dashboard.html");
+});
+
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+export default defineConfig({
+  retries: 3,
+});
+
+// format.test.ts
+describe("formatCurrency", () => {
+  it("formats USD", () => { expect(formatCurrency(100, "USD")).toBe("dollar100.00"); });
+  it("formats EUR", () => { expect(formatCurrency(100, "EUR")).toBe("euro100.00"); });
+  it("formats GBP", () => { expect(formatCurrency(100, "GBP")).toBe("pound100.00"); });
+  it("formats JPY", () => { expect(formatCurrency(1000, "JPY")).toBe("yen1000"); });
+  it("formats zero", () => { expect(formatCurrency(0, "USD")).toBe("dollar0.00"); });
+});
+```
+
+Output fixed code only.
