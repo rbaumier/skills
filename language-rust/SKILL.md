@@ -68,7 +68,18 @@ description: Use when writing, reviewing, or refactoring Rust — ownership, lif
   ```
 - **Cell/RefCell for single-threaded interior mutability** — if a struct has `&self` methods but needs internal mutable state (caches, counters, lazy fields), use `Cell<T>`/`RefCell<T>`, not `Mutex`. **`Mutex` in single-threaded code is a code smell**
 - Weak<T> back-references prevent reference-cycle leaks
-- Arena allocators (bumpalo) over Rc<RefCell<T>> sprawl for graphs/ASTs — **if you see `Arc<Mutex<Node>>` for tree/graph structures, recommend bumpalo arenas with index-based references**
+- **Arena + index references over pointer trees** — for graphs/ASTs/trees, an `Arc<Mutex<Node>>` (or `Box<Node>`/`Rc<RefCell<Node>>`) field web fights the borrow checker and leaks on cycles. Store every node once in an arena `Vec` and reference others by an index newtype (`NodeId(usize)`), not by pointer. Removing the `Mutex`/`Arc` but keeping a pointer tree is NOT the fix — the references themselves must become indices.
+  ```rust
+  // WRONG: pointer tree — interior locking, cycle leaks, borrow-checker fights
+  struct AstNode { expr: Expr, parent: Option<Arc<Mutex<AstNode>>>, children: Vec<Arc<Mutex<AstNode>>> }
+
+  // RIGHT: arena owns the nodes; parent/children are indices into it
+  #[derive(Clone, Copy, PartialEq, Eq)]
+  struct NodeId(usize);
+  struct AstNode { expr: Expr, parent: Option<NodeId>, children: Vec<NodeId> }
+  struct Ast { nodes: Vec<AstNode> }   // the arena; resolve a NodeId with self.nodes[id.0]
+  ```
+  (`bumpalo` is the crate when you want true bump allocation; the `Vec` + `NodeId` shape above is the borrow-checker-friendly default.)
 - **Box large enum variants** — an enum is as big as its largest variant. When one variant holds a big payload (`HashMap`, large struct, `[u8; N]`) and others are tiny (`Literal(i64)`), `Box` the big field so every value of the enum stays small:
   ```rust
   // WRONG: Call { callee: Box<Expr>, args: Vec<Expr>, source_map: HashMap<String, Span> }
@@ -200,6 +211,7 @@ Before you output Rust, grep your own code for these triggers and apply the fix.
 - `.map_err(|e| ...format!("X failed: {e}"))` / context that restates the error → **explain WHY + include the path/input**.
 - Filesystem fn taking `String` or `&str` (path param) → **`impl AsRef<Path>`** (not `&str`).
 - enum with one big variant (`HashMap`, big struct, big array) next to tiny ones → **`Box` the big payload**.
+- tree/graph/AST node with `Arc<Mutex<Node>>` / `Box<Node>` / `Rc<RefCell<Node>>` in `parent`/`children` fields → **arena `Vec<Node>` + `NodeId(usize)` index references** (rewrite the reference fields to indices; dropping the `Mutex`/`Arc` while keeping a pointer tree is NOT the fix).
 - `HashMap<u64, _>` / `HashMap<integer, _>` → **`FxHashMap` / `AHashMap`** (change the type, not a comment).
 - `LinkedList<_>` → **`VecDeque`** (rewrite to `push_back`/`pop_front`; never drop the function).
 - `Builder::build(self) -> T` returning the struct directly → **`-> Result<T, _>`**; required fields error via `.ok_or(...)?`, no `unwrap_or_default()`.

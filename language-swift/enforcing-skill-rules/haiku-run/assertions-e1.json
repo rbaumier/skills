@@ -126,12 +126,6 @@
     "description": "If body needs scrolling to read — extract subviews; massive Views = anti-pattern"
   },
   {
-    "id": "swiftdata-over-coredata",
-    "trap": "Uses Core Data (NSManagedObject) instead of SwiftData @Model for new project",
-    "category": "data-persistence",
-    "description": "SwiftData over Core Data for new projects — use @Model macro"
-  },
-  {
     "id": "codable-snake-case-strategy",
     "trap": "UserProfile has user_name as snake_case property matching JSON instead of using keyDecodingStrategy = .convertFromSnakeCase",
     "category": "data-persistence",
