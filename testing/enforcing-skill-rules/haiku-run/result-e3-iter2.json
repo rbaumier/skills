@@ -1,0 +1,1 @@
+{"skill":"testing","eval":"e3","iter":2,"passed":4,"total":8,"fails":["msw-not-vi-mock-fetch","zombies-coverage","contract-test-external-api","visual-screenshot-not-html-snapshot"]}

@@ -1,0 +1,1 @@
+{"skill":"language-swift","eval":"e1","iter":3,"passed":28,"total":33,"fails":["task-cancellation","async-stream-cancellation","delegate-wrap-asyncstream","environment-dependency-injection","single-source-of-truth"]}

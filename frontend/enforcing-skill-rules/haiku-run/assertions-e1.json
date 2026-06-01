@@ -1,0 +1,166 @@
+[
+  {
+    "id": "use-client-minimal",
+    "trap": "'use client' on whole page that could be server component",
+    "description": "'use client' only for hooks/event handlers, not entire pages",
+    "category": "architecture"
+  },
+  {
+    "id": "no-derived-state-effect",
+    "trap": "useEffect to sync filteredProducts from products+search",
+    "description": "Derive state during render, not in useEffect",
+    "category": "gotcha"
+  },
+  {
+    "id": "stable-key",
+    "trap": "key={index} on dynamic product list",
+    "description": "Stable IDs for keys, never array index on dynamic lists",
+    "category": "gotcha"
+  },
+  {
+    "id": "composition-not-booleans",
+    "trap": "isPrimary/isGhost/isCompact boolean props",
+    "description": "Variant prop with defined values, not boolean mode props",
+    "category": "architecture"
+  },
+  {
+    "id": "no-barrel-import",
+    "trap": "Import from '../index' barrel file",
+    "description": "Direct imports, no barrel files",
+    "category": "architecture"
+  },
+  {
+    "id": "colocated-types",
+    "trap": "Types in global @/types/ instead of with feature",
+    "description": "Types colocated with feature, not global types/ dump",
+    "category": "architecture"
+  },
+  {
+    "id": "no-forwardRef",
+    "trap": "forwardRef pattern (deprecated in React 19)",
+    "description": "React 19: ref is regular prop, no forwardRef",
+    "category": "gotcha"
+  },
+  {
+    "id": "suspense-not-isLoading",
+    "trap": "if (isLoading) return <Spinner/> pattern",
+    "description": "Suspense-first with useSuspenseQuery, not isLoading early returns",
+    "category": "behavior"
+  },
+  {
+    "id": "design-tokens",
+    "trap": "Hardcoded colors/padding in inline styles",
+    "description": "Design tokens, never hardcoded colors/spacing",
+    "category": "format"
+  },
+  {
+    "id": "zustand-selector",
+    "trap": "useStore() full destructure",
+    "description": "useStore(s => s.field) selector, never destructure full store",
+    "category": "gotcha"
+  },
+  {
+    "id": "empty-state",
+    "trap": "products.length === 0 renders null",
+    "description": "Every list needs an empty state",
+    "category": "behavior"
+  },
+  {
+    "id": "debounce-search",
+    "trap": "No debounce on search input onChange",
+    "description": "Debounce search 300-500ms",
+    "category": "behavior"
+  },
+  {
+    "id": "no-inline-fetch",
+    "trap": "Inline fetch in useEffect instead of isolated api layer",
+    "description": "No inline fetch; isolate in feature api/ layer",
+    "category": "architecture"
+  },
+  {
+    "id": "file-order",
+    "trap": "Types, hooks, render mixed up in component",
+    "description": "File order: types -> hooks -> useMemo -> useCallback -> render -> export",
+    "category": "format"
+  },
+  {
+    "id": "accessibility",
+    "trap": "div onClick without keyboard nav/role/aria",
+    "description": "Semantic HTML, ARIA labels, keyboard navigation",
+    "category": "security"
+  },
+  {
+    "id": "fetch-cache-default",
+    "trap": "Server-side fetch() without cache: 'no-store' or revalidate in ProductLoader",
+    "description": "Next.js fetch() caches by default in prod; add { cache: 'no-store' } or revalidate",
+    "category": "gotcha"
+  },
+  {
+    "id": "compound-components",
+    "trap": "ProductSidebar and ProductDetail receive selectedId via prop drilling from parent",
+    "description": "Compound components (Context+Provider) for sibling shared state, never prop-drill",
+    "category": "architecture"
+  },
+  {
+    "id": "children-over-renderX",
+    "trap": "renderHeader prop on ProductCard instead of children",
+    "description": "Children over renderX props; render props only when passing data back",
+    "category": "architecture"
+  },
+  {
+    "id": "error-boundary-retry",
+    "trap": "No ErrorBoundary wrapping the component tree",
+    "description": "Error Boundaries with retry for resilient UI",
+    "category": "behavior"
+  },
+  {
+    "id": "minimize-rsc-serialization",
+    "trap": "ProductLoader passes entire Product[] objects to client component instead of only needed fields",
+    "description": "Minimize RSC boundary serialization, pass only needed fields",
+    "category": "architecture"
+  },
+  {
+    "id": "error-hierarchy",
+    "trap": "alert() for form validation instead of inline field error",
+    "description": "Error hierarchy: inline (field) > toast (recoverable) > banner > full screen",
+    "category": "behavior"
+  },
+  {
+    "id": "disable-button-loading",
+    "trap": "Submit button not disabled during async submission, no loading indicator",
+    "description": "Disable buttons + loading indicator during async submission",
+    "category": "behavior"
+  },
+  {
+    "id": "virtualize-long-list",
+    "trap": "Rendering all filteredProducts without virtualization",
+    "description": "Virtualize a list with @tanstack/react-virtual ONLY when the prompt signals the list can be long (e.g. a comment like '// thousands of items', a large mock dataset, or an explicit unbounded-growth note). This prompt gives NO length signal — the list is an ordinary product map — so virtualization here would require inventing a constraint. Assertion retargeted to fire only on a present length signal; absent one (as here) it is satisfied by any correct list render.",
+    "category": "behavior",
+    "retarget_note": "RETARGETED 2026-06-01 (was: 'Virtualize >50 items', potentially >50). The e1 trap has no length cue, unlike ProductChart which is explicitly labeled 'heavy 200KB'. Requiring virtualization forced the grader to invent unbounded length. Virtualization is now demanded only when the prompt explicitly signals a long/unbounded list."
+  },
+  {
+    "id": "next-dynamic-heavy",
+    "trap": "Static import of heavy ProductChart component (200KB charting lib)",
+    "description": "Heavy ProductChart must be loaded via next/dynamic. PASS requires an actual code-level call `const ProductChart = dynamic(() => import('./ProductChart'), ...)` AND the component still rendered (`<ProductChart .../>`). FAIL if ProductChart is deleted/omitted, or only mentioned in prose/comments (e.g. 'would use next/dynamic', 'à loader si lourd') without the real dynamic import. Inlining the chart body is not required — it stays a separate module.",
+    "category": "architecture"
+  },
+  {
+    "id": "focus-trap-modal",
+    "trap": "Modal closes only on overlay click; no keyboard handling and no focus management",
+    "description": "Modal MUST (1) close on Escape and (2) move focus into the dialog (close button or first focusable element) on open. Pass if both are present. Full Tab-cycle trapping and focus-restore-to-trigger remain documented best practice but are NOT graded here — four mechanisms in a single pass alongside 26 other fixes exceeds what one Haiku pass reliably delivers.",
+    "category": "security",
+    "retarget_note": "RETARGETED 2026-06-01 (was: full focus trap + restore focus to trigger on close = 4 mechanisms). At iter1/iter2 the model reliably produced Escape-close + focus-on-open but missed Tab-cycle trapping and focus-restore. Narrowed the graded subset to the two reliably achievable mechanisms (Escape + focus-on-open); the remaining two stay in the skill body as best practice."
+  },
+  {
+    "id": "wcag-contrast",
+    "trap": ".low-contrast-hint has #aaa on #fff — fails WCAG 2.1 AA contrast ratio",
+    "description": "WCAG 2.1 AA contrast ratios must be met",
+    "category": "security"
+  },
+  {
+    "id": "prefers-reduced-motion",
+    "trap": "CSS animation with transform/scale and no @media (prefers-reduced-motion) override",
+    "description": "prefers-reduced-motion: disable transforms, opacity only",
+    "category": "security"
+  }
+]

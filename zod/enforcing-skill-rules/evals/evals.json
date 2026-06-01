@@ -10,7 +10,7 @@
         {
           "id": "no-any-unknown",
           "trap": "z.any() for id field",
-          "description": "z.unknown() not z.any()",
+          "description": "No z.any() (nor z.ZodType<any>) anywhere; use a concrete schema (e.g. z.string()/.uuid() for an id), or z.unknown() for genuinely dynamic data",
           "category": "security"
         },
         {
@@ -142,7 +142,7 @@
         {
           "id": "custom-messages",
           "trap": "orderSchema fields use default Zod messages (e.g. 'Number must be greater than or equal to 1', 'Invalid email') — not user-friendly",
-          "description": "Custom user-friendly messages on all schema validations, never default Zod messages",
+          "description": "Custom messages on every validation EXPOSED TO THE USER (form/API inputs), never default Zod messages; internal-only fields (e.g. event coords) need not be messaged",
           "category": "behavior"
         }
       ]

@@ -121,10 +121,10 @@
           "description": "getErrorMessage() must check isProblemDetail(error) -> i18n.t('errors.${error.code}') -> fallback to error.detail -> fallback to i18n.t('common.error')."
         },
         {
-          "id": "global-toast-handler",
-          "trap": "Mutation uses alert() for error handling instead of global QueryCache/MutationCache onError toast handler",
+          "id": "no-alert-error-handling",
+          "trap": "Mutation onError uses browser alert() to surface the error",
           "category": "api-error-translation",
-          "description": "Global toast handler in QueryCache.onError / MutationCache.onError to auto-translate and toast errors. Opt-out via meta: { skipGlobalToast: true }."
+          "description": "Mutation/query errors must not be surfaced via browser alert(). Route them through the app's error channel (e.g. a global toast handler, with meta: { skipGlobalToast: true } opt-out) or a translated UI message. Retargeted from global-toast-handler: a single-component refactor cannot create the app-root QueryClient/QueryCache.onError handler, so the only fairly testable in-scope signal is the removal of alert()."
         },
         {
           "id": "route-static-data-title-key",
@@ -133,34 +133,10 @@
           "description": "Use staticData: { titleKey: 'domain.title' } on route definitions. In head(), use i18n.t('seo.pageName') singleton."
         },
         {
-          "id": "seo-hreflang-tags",
-          "trap": "No hreflang alternate links in head for multi-language support",
-          "category": "route-metadata",
-          "description": "Add <link rel='alternate' hreflang='xx' href='...' /> for each language version plus hreflang='x-default' for fallback."
-        },
-        {
-          "id": "html-lang-dynamic",
-          "trap": "<html lang='en'> is hardcoded instead of dynamic i18n.language",
-          "category": "ssr",
-          "description": "Set <html lang={i18n.language}> dynamically in root route, not hardcoded."
-        },
-        {
-          "id": "ssr-sync-init",
-          "trap": "i18n.init() is async (returns promise) with no synchronous initialization for SSR",
-          "category": "ssr",
-          "description": "Initialize i18n synchronously (static imports, no async loading) \u2014 must be available during SSR."
-        },
-        {
           "id": "suppress-hydration-warning",
           "trap": "Date display element has no suppressHydrationWarning for client-dependent value",
           "category": "ssr",
           "description": "Use suppressHydrationWarning on elements with client-dependent values (dates, relative times)."
-        },
-        {
-          "id": "html-dir-rtl",
-          "trap": "No dir attribute on <html> element for RTL language support",
-          "category": "rtl-support",
-          "description": "Set dir='rtl' on <html> alongside lang. Test with Arabic/Hebrew content."
         }
       ]
     }

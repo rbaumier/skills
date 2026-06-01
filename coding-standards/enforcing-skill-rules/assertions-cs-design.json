@@ -1,0 +1,56 @@
+[
+  {
+    "id": "fs-factory-di",
+    "trap": "import { db }, import { cache }, import { mailer } are hardcoded global imports",
+    "description": "db, cache, mailer injected via factory, not imported as globals",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-extract-by-responsibility",
+    "trap": "placeOrder mixes concerns in one body: fetch user (I/O), price items (pure compute), persist order (I/O), notify (side-effect), cache (side-effect)",
+    "description": "placeOrder is decomposed by RESPONSIBILITY (not line count): at minimum the pure pricing step and the persist/notify steps are pulled into named operations. JUDGMENT CALL per :design — a clean linear top-to-bottom workflow is acceptable, but a god-body fusing pure compute with multiple I/O side-effects should surface at least the independently-testable pricing op as a named function. PASS if pricing (or an equivalent concern) is a named op; FAIL only if everything stays fused with zero extraction.",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-dto-mapping",
+    "trap": "return order.rows[0] — raw DB row returned to caller",
+    "description": "Map DB entities to DTOs — dedicated response type, not raw rows",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-exports-at-top",
+    "trap": "Exported placeOrder/applyBulkDiscount sit BELOW non-exported format helpers",
+    "description": "Exports/public API grouped at top of file, private helpers at bottom",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-rule-of-three",
+    "trap": "formatEmail, formatReceipt, formatInvoice are 3 functions with identical params (to, name, amount, currency) and similar bodies — a pattern has emerged",
+    "description": "3 similar functions with identical signatures extracted into a shared abstraction or parameterized function",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-data-clumps-value-object",
+    "trap": "to, name, amount, currency appear as the same 4 params across formatEmail, formatReceipt, formatInvoice",
+    "description": "Repeated param group (to, name, amount, currency) extracted to a Value Object / named type",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-pull-complexity-down",
+    "trap": "applyBulkDiscount forces callers to pass retryCount, retryDelayMs, maxRetries — retry logic pushed to caller instead of absorbed internally",
+    "description": "Retry config params removed from applyBulkDiscount — module handles retry internally or removes it (caller shouldn't deal with retry complexity)",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-divergent-change-business-domain",
+    "trap": "formatEmail/formatReceipt/formatInvoice (document formatting), getShippingLabel (shipping), placeOrder (fulfillment), applyBulkDiscount (pricing) — multiple unrelated business domains in one file",
+    "description": "The unrelated business domains (document formatting, shipping, fulfillment, pricing) are NOT interleaved or fused into one function — each lives in its own distinct named function/section. PASS when the domains are kept as separate non-interleaved functions (the available fix in a single-file output); an explicit 'belongs in its own module' boundary comment is a BONUS, not required. FAIL only if domains are fused into one body or interleaved.",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-law-of-demeter",
+    "trap": "order.customer.address.street, order.customer.address.city, order.customer.address.zip — 3 levels deep into object graph",
+    "description": "Chained property access 2+ levels deep replaced with direct accessor or destructured at boundary",
+    "category": "behavior"
+  }
+]

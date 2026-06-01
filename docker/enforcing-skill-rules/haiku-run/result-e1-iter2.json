@@ -1,0 +1,1 @@
+{"skill":"docker","passed":29,"total":30,"fails":[{"id":"resource-limits","why":"deploy.resources.limits only on app service; db and redis have none, but assertion requires limits on every production service"}]}

@@ -1,0 +1,387 @@
+Fix all issues:
+
+```tsx
+// app/layout.tsx
+import { cookies } from 'next/headers';
+import Script from 'next/script';
+import { ThemeProvider } from './theme-provider';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = (await cookies()).get('session');
+  const theme = session?.value === 'dark' ? 'dark' : 'light';
+
+  return (
+    <html>
+      <head>
+        <Script src="https://analytics.thirdparty.io/v3/track.js" />
+      </head>
+      <body>
+        <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      </body>
+    </html>
+  );
+}
+
+// app/projects/page.tsx
+import { getUser } from '@/lib/data';
+import { getProjects } from '@/lib/data';
+import { getNotifications } from '@/lib/data';
+import { ProjectDashboard } from './project-dashboard';
+
+export default async function ProjectsPage() {
+  const user = await getUser();
+  const projects = await getProjects(user.teamId);
+  const notifications = await getNotifications(user.id);
+
+  return (
+    <ProjectDashboard
+      user={user}
+      projects={projects}
+      notifications={notifications}
+    />
+  );
+}
+
+async function logPageView(userId: string) {
+  await db.analytics.insert({ userId, page: 'projects', ts: Date.now() });
+}
+
+// app/projects/project-dashboard.tsx
+'use client';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { formatCurrency, cn, slugify, truncate } from '@/lib/utils';
+import { Chart } from '@/components';
+
+interface Project {
+  id: string;
+  name: string;
+  budget: number;
+  status: 'active' | 'archived' | 'draft';
+  ownerId: string;
+  tags: string[];
+  createdAt: string;
+  categoryId: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  teamId: string;
+}
+
+const categories = [
+  { id: 'eng', label: 'Engineering' },
+  { id: 'design', label: 'Design' },
+  { id: 'marketing', label: 'Marketing' },
+  { id: 'sales', label: 'Sales' },
+  { id: 'ops', label: 'Operations' },
+];
+
+export function ProjectDashboard({ user, projects, notifications }: {
+  user: User;
+  projects: Project[];
+  notifications: Notification[];
+}) {
+  const [filter, setFilter] = useState('');
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+
+  const [activeBudget, setActiveBudget] = useState(0);
+  useEffect(() => {
+    const total = projects
+      .filter(p => p.status === 'active')
+      .reduce((sum, p) => sum + p.budget, 0);
+    setActiveBudget(total);
+  }, [projects]);
+
+  const [sortedProjects, setSortedProjects] = useState<Project[]>([]);
+  useEffect(() => {
+    const sorted = [...projects].sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    setSortedProjects(sorted);
+  }, [projects]);
+
+  const enrichedProjects = projects.map(project => ({
+    ...project,
+    categoryLabel: categories.find(c => c.id === project.categoryId)?.label ?? 'Unknown',
+  }));
+
+  const allTags = projects
+    .flatMap(p => p.tags)
+    .filter((tag, idx, arr) => arr.indexOf(tag) === idx);
+
+  const highBudgetActive = projects
+    .filter(p => p.status === 'active')
+    .map(p => ({ name: p.name, budget: p.budget }))
+    .filter(p => p.budget > 50000)
+    .map(p => p.name);
+
+  useEffect(() => {
+    trackView(user);
+  }, [user]);
+
+  const handleSearch = useCallback((query: string) => {
+    setFilter(query);
+  }, []);
+
+  const filtered = enrichedProjects.filter(p =>
+    p.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const store = useProjectStore(state => state);
+  const canEdit = store.permissions.includes('edit');
+  const canDelete = store.permissions.includes('delete');
+
+  const budgetFormatter = useMemo(
+    () => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
+    []
+  );
+
+  const statusLabel = useMemo(() => {
+    if (!selectedProject) return 'None';
+    const p = projects.find(p => p.id === selectedProject);
+    return p?.status?.toUpperCase() ?? 'UNKNOWN';
+  }, [selectedProject, projects]);
+
+  const projectNameSlug = useMemo(
+    () => filter.trim().toLowerCase().replace(/\s+/g, '-'),
+    [filter]
+  );
+
+  const onProjectUpdate = useCallback((update: ProjectUpdate) => {
+    console.log(`Project update by ${user.name}:`, update);
+    sendAnalytics(user.id, update);
+  }, [user.name, user.id]);
+
+  useEffect(() => {
+    const ws = new WebSocket('/ws/projects');
+    ws.onmessage = (e) => onProjectUpdate(JSON.parse(e.data));
+    return () => ws.close();
+  }, [onProjectUpdate]);
+
+  const [savedTheme, setSavedTheme] = useState(localStorage.getItem('projectTheme') || 'default');
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  const urlPattern = /https?:\/\/[^\s/$.?#].[^\s]*/gi;
+
+  const footer = (
+    <footer className="border-t mt-8 pt-4 text-sm text-gray-500">
+      <p>© 2025 ProjectHub. All rights reserved.</p>
+      <nav>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+      </nav>
+    </footer>
+  );
+
+  const orderedByBudget = [...projects].sort((a, b) => b.budget - a.budget);
+  const reversedProjects = [...projects].reverse();
+
+  const [count, setCount] = useState(0);
+  const increment = useCallback(() => setCount(count + 1), [count]);
+  const decrement = useCallback(() => setCount(count - 1), [count]);
+
+  return (
+    <div>
+      <header>
+        <h1>Projects — {statusLabel}</h1>
+        <span>Budget: {budgetFormatter.format(activeBudget)}</span>
+        <span>Slug: {projectNameSlug}</span>
+        <div>
+          <button onClick={increment}>+</button>
+          <span>{count}</span>
+          <button onClick={decrement}>-</button>
+        </div>
+      </header>
+
+      <input
+        value={filter}
+        onChange={e => handleSearch(e.target.value)}
+        placeholder="Search projects..."
+      />
+
+      <section>
+        {filtered.map((project, index) => (
+          <div key={index} onClick={() => setSelectedProject(project.id)}>
+            <h3>{project.name}</h3>
+            <span>{project.categoryLabel}</span>
+            <span>{budgetFormatter.format(project.budget)}</span>
+            {project.status === 'draft' && <DraftBadge />}
+            {canEdit && <EditButton projectId={project.id} />}
+          </div>
+        ))}
+      </section>
+
+      <aside>
+        <h2>Tags</h2>
+        {allTags.map(tag => <span key={tag}>{tag}</span>)}
+      </aside>
+
+      <ProjectChart data={projects} config={{ animate: true }} />
+
+      {footer}
+    </div>
+  );
+}
+
+function ProjectChart({ data, config }: { data: Project[]; config: ChartConfig }) {
+  return <Chart data={data} config={config} />;
+}
+
+// app/projects/export-modal.tsx
+import ExportWizard from './export-wizard';
+
+export function ExportTrigger() {
+  const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await runExport();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>
+        {exporting ? 'Exporting...' : 'Export'}
+      </button>
+      {open && <ExportWizard onExport={handleExport} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+// app/projects/settings/page.tsx
+import { useSearchParams } from 'next/navigation';
+
+export default function ProjectSettingsPage() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'general';
+
+  return (
+    <div>
+      <h1>Settings</h1>
+      <TabPanel activeTab={tab} />
+    </div>
+  );
+}
+
+// app/feed/page.tsx
+'use client';
+import { useEffect, useState } from 'react';
+
+export function FeedPage() {
+  const [posts, setPosts] = useState([]);
+  const [trending, setTrending] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/posts').then(r => r.json()).then(setPosts);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/posts').then(r => r.json()).then(data => {
+      setTrending(data.filter((p: any) => p.trending));
+    });
+  }, []);
+
+  return (
+    <div>
+      <PostList posts={posts} />
+      <TrendingSidebar posts={trending} />
+    </div>
+  );
+}
+
+// app/actions/project-actions.ts
+'use server';
+
+export async function updateProject(formData: FormData) {
+  const name = formData.get('name') as string;
+  const budget = Number(formData.get('budget'));
+  const status = formData.get('status') as string;
+  await db.projects.update({ name, budget, status });
+  return { success: true };
+}
+
+export async function deleteProject(formData: FormData) {
+  const projectId = formData.get('projectId') as string;
+  await db.projects.delete(projectId);
+  return { success: true };
+}
+
+// app/projects/edit-form.tsx
+'use client';
+import { useState } from 'react';
+
+export function ProjectEditForm({ project }: { project: Project }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    setError('');
+    try {
+      await updateProject(new FormData(e.target as HTMLFormElement));
+      setSuccess(true);
+    } catch (err) {
+      setError('Update failed');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="name" defaultValue={project.name} />
+      <input name="budget" type="number" defaultValue={project.budget} />
+      <select name="status" defaultValue={project.status}>
+        <option value="active">Active</option>
+        <option value="archived">Archived</option>
+        <option value="draft">Draft</option>
+      </select>
+      <button type="submit" disabled={pending}>
+        {pending ? 'Saving...' : 'Save'}
+      </button>
+      {error && <p className="text-red-500">{error}</p>}
+      {success && <p className="text-green-500">Saved!</p>}
+    </form>
+  );
+}
+
+// app/projects/team-list.tsx
+'use client';
+import { useState } from 'react';
+
+export function TeamList({ members }: { members: TeamMember[] }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  return (
+    <ul>
+      {members.map((member, i) => (
+        <li key={i}>
+          {editingId === member.id ? (
+            <MemberEditForm member={member} onDone={() => setEditingId(null)} />
+          ) : (
+            <MemberCard member={member} onEdit={() => setEditingId(member.id)} />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Output fixed code only.

@@ -1,0 +1,218 @@
+[
+  {
+    "id": "cookies-layout-blast-radius",
+    "trap": "cookies() in layout makes ALL child routes dynamic — session check should be in page or middleware",
+    "description": "cookies()/headers() in layouts make every child page dynamic. Flag and explain the blast radius",
+    "category": "gotcha"
+  },
+  {
+    "id": "defer-third-party-script",
+    "trap": "Script tag without strategy prop loads eagerly and blocks rendering",
+    "description": "Defer third-party scripts with strategy='lazyOnload'",
+    "category": "behavior"
+  },
+  {
+    "id": "barrel-file-imports",
+    "trap": "import { formatCurrency, cn, slugify, truncate } from '@/lib/utils' and import { Chart } from '@/components' are barrel file imports",
+    "description": "Import directly from specific modules, avoid barrel files that bundle unused code",
+    "category": "architecture"
+  },
+  {
+    "id": "sequential-fetches-better-all",
+    "trap": "Sequential await getUser/getProjects/getNotifications where notifications is independent of projects",
+    "description": "Use better-all pattern: start independent fetches early, await late. getNotifications can start during getProjects",
+    "category": "behavior"
+  },
+  {
+    "id": "react-cache-dedup",
+    "trap": "getUser/getProjects/getNotifications not wrapped in React.cache()",
+    "description": "Wrap server-side data fetching functions in React.cache() for per-request deduplication",
+    "category": "behavior"
+  },
+  {
+    "id": "no-suspense-streaming",
+    "trap": "ProjectsPage awaits all data sequentially before rendering anything — no progressive streaming",
+    "description": "Use Suspense boundaries to stream progressively instead of blocking on all data",
+    "category": "architecture"
+  },
+  {
+    "id": "after-for-analytics",
+    "trap": "logPageView defined but analytics logging should use after() for non-blocking post-response work",
+    "description": "Use after() for non-blocking post-response work like analytics, logging",
+    "category": "behavior"
+  },
+  {
+    "id": "derived-state-activeBudget",
+    "trap": "useEffect to compute activeBudget from projects — classic derive-in-effect anti-pattern",
+    "description": "Derive state during render (const activeBudget = ...), never in effects",
+    "category": "behavior"
+  },
+  {
+    "id": "derived-state-sortedProjects",
+    "trap": "useEffect to compute sortedProjects — another derived state in effect with unnecessary extra render",
+    "description": "Derive sorted list during render or useMemo, not via effect + setState",
+    "category": "behavior"
+  },
+  {
+    "id": "map-lookup-categories",
+    "trap": "categories.find() inside projects.map() — O(n*m) lookup each render",
+    "description": "Build a Map from categories for O(1) lookups instead of .find() inside .map()",
+    "category": "behavior"
+  },
+  {
+    "id": "set-dedup-tags",
+    "trap": ".filter((tag, idx, arr) => arr.indexOf(tag) === idx) for deduplication",
+    "description": "Use [...new Set(arr)] instead of indexOf-based deduplication",
+    "category": "behavior"
+  },
+  {
+    "id": "single-loop-chain",
+    "trap": "Chained .filter().map().filter().map() on projects for highBudgetActive",
+    "description": "Combine chained filter/map/reduce into a single loop for large arrays",
+    "category": "behavior"
+  },
+  {
+    "id": "primitive-effect-deps-user",
+    "trap": "useEffect depends on user object reference, not user.id — fires on every render if user is a new object",
+    "description": "Use primitive values (user.id) as effect dependencies, not objects",
+    "category": "gotcha"
+  },
+  {
+    "id": "subscribe-derived-not-full-store",
+    "trap": "useProjectStore(state => state) subscribes to entire store, only uses permissions",
+    "description": "Subscribe to derived values: useProjectStore(s => s.permissions) or derived booleans",
+    "category": "behavior"
+  },
+  {
+    "id": "premature-usememo-slug",
+    "trap": "useMemo for a simple string trim/toLowerCase/replace — trivial computation",
+    "description": "Don't wrap simple primitive expressions in useMemo — only memoize genuinely expensive computations",
+    "category": "behavior"
+  },
+  {
+    "id": "useLatest-ref-websocket",
+    "trap": "onProjectUpdate callback in effect dep causes WebSocket reconnect on every user.name/user.id change",
+    "description": "Store callback in ref (useLatest pattern) to avoid effect re-runs and WebSocket reconnections",
+    "category": "behavior"
+  },
+  {
+    "id": "useState-localstorage-ssr",
+    "trap": "useState(localStorage.getItem(...)) crashes in SSR — no lazy initializer",
+    "description": "Pass initializer function to useState for SSR-unsafe defaults: useState(() => localStorage.getItem(...))",
+    "category": "gotcha"
+  },
+  {
+    "id": "useState-window-ssr",
+    "trap": "useState(window.innerWidth) crashes in SSR — browser API in initial state",
+    "description": "Use lazy initializer useState(() => window.innerWidth) for SSR safety",
+    "category": "gotcha"
+  },
+  {
+    "id": "hoist-regex-outside",
+    "trap": "urlPattern regex created inside component body — recreated every render",
+    "description": "Hoist RegExp creation outside component functions as module-level constant",
+    "category": "behavior"
+  },
+  {
+    "id": "hoist-static-jsx",
+    "trap": "Static footer JSX literal created inside component every render",
+    "description": "Hoist static JSX (footer) outside the component function",
+    "category": "behavior"
+  },
+  {
+    "id": "toSorted-toReversed",
+    "trap": "[...projects].sort() and [...projects].reverse() instead of toSorted()/toReversed()",
+    "description": "Use toSorted()/toReversed() for immutable array transforms",
+    "category": "behavior"
+  },
+  {
+    "id": "functional-setState-stale",
+    "trap": "setCount(count + 1) with count in useCallback deps — stale closure, re-creates callback on every count change",
+    "description": "Use functional setState: setCount(c => c + 1) for stable callbacks without deps",
+    "category": "gotcha"
+  },
+  {
+    "id": "ternary-not-ampersand",
+    "trap": "{project.status === 'draft' && <DraftBadge />} could render false/undefined unexpectedly",
+    "description": "Use ternary operator (? : null) instead of && for conditional JSX rendering",
+    "category": "behavior"
+  },
+  {
+    "id": "content-visibility-list",
+    "trap": "Project list renders many items via .map() without content-visibility optimization",
+    "description": "Add content-visibility: auto for long off-screen lists — free browser virtualization",
+    "category": "behavior"
+  },
+  {
+    "id": "dynamic-import-modal",
+    "trap": "ExportWizard imported eagerly at top level despite being conditionally rendered",
+    "description": "Use next/dynamic or React.lazy for heavy/rarely-used components like modals",
+    "category": "architecture"
+  },
+  {
+    "id": "preload-on-hover",
+    "trap": "Export button has no onMouseEnter/onFocus to preload the lazy modal chunk",
+    "description": "Trigger import() on hover/focus for lazy-loaded components to preload during ~200ms before click",
+    "category": "behavior"
+  },
+  {
+    "id": "useTransition-export",
+    "trap": "Manual useState(false) loading boolean for async export operation",
+    "description": "Use useTransition for non-urgent state updates instead of manual loading booleans",
+    "category": "behavior"
+  },
+  {
+    "id": "useSearchParams-suspense",
+    "trap": "useSearchParams() without Suspense boundary forces entire page to client-side render",
+    "description": "Wrap component using useSearchParams in a Suspense boundary to prevent CSR bailout",
+    "category": "gotcha"
+  },
+  {
+    "id": "swr-client-dedup",
+    "trap": "FeedPage fetches /api/posts twice in separate useEffects — duplicate network requests",
+    "description": "Use SWR for client-side request deduplication instead of raw fetch in effects",
+    "category": "behavior"
+  },
+  {
+    "id": "server-action-validation",
+    "trap": "updateProject and deleteProject trust FormData without Zod validation or auth checks",
+    "description": "Server actions are public HTTP endpoints — validate inputs with Zod, check auth/authz",
+    "category": "gotcha"
+  },
+  {
+    "id": "useActionState-form",
+    "trap": "ProjectEditForm uses manual useState for pending/error/success instead of useActionState",
+    "description": "useActionState (React 19) replaces manual form loading patterns — works with progressive enhancement",
+    "category": "behavior"
+  },
+  {
+    "id": "key-index-reorderable",
+    "trap": "TeamList uses key={i} on a list of members that can be edited/reordered",
+    "description": "Never use array index as key for dynamic lists — use stable id (member.id) to prevent state bugs",
+    "category": "gotcha"
+  },
+  {
+    "id": "key-index-projects",
+    "trap": "Project list uses key={index} on filtered/sortable list",
+    "description": "Use project.id as key — index keys cause state corruption when list is filtered or reordered",
+    "category": "gotcha"
+  },
+  {
+    "id": "minimize-rsc-serialization",
+    "trap": "All server data (user, projects, notifications) dumped into single client component",
+    "description": "Minimize data passed from server to client — split into smaller client components receiving only what they need",
+    "category": "architecture"
+  },
+  {
+    "id": "useDeferredValue-search",
+    "trap": "Search input filtering causes re-render of entire project list on every keystroke",
+    "description": "Use useDeferredValue for expensive re-renders during typing to keep input responsive",
+    "category": "behavior"
+  },
+  {
+    "id": "cache-localstorage-reads",
+    "trap": "localStorage.getItem called as useState initializer runs on every render path in dev",
+    "description": "Cache localStorage reads — read once into state with lazy initializer, not raw call",
+    "category": "behavior"
+  }
+]

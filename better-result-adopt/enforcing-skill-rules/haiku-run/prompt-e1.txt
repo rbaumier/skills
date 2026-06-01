@@ -1,0 +1,60 @@
+Migrate this module to use better-result. Fix everything wrong with it:
+
+```typescript
+function add(a: number, b: number): number { return a + b; }
+
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function createUser(name: string, email: string): Promise<User> {
+  if (!validateEmail(email)) throw new Error('Invalid email');
+  const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+  if (existing.rows[0]) throw new Error('Email taken');
+  try {
+    const result = await db.query('INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *', [name, email]);
+    return result.rows[0];
+  } catch (e) {
+    throw new Error('DB insert failed');
+  }
+}
+
+async function getUserProfile(userId: string): Promise<{ user: User; orders: Order[] }> {
+  const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+  if (!user.rows[0]) throw new Error('User not found');
+  const orders = await db.query('SELECT * FROM orders WHERE user_id = $1', [userId]);
+  return { user: user.rows[0], orders: orders.rows };
+}
+
+async function processCheckout(userId: string, cartId: string): Promise<Receipt> {
+  const user = await getUserProfile(userId);
+  const cart = await loadCart(cartId);
+  if (!cart) throw new Error('Cart not found');
+  const validated = validateCart(cart);
+  if (!validated.ok) throw new Error(validated.error);
+  try {
+    const payment = await chargePayment(cart.total);
+    const order = await createOrder(user.user, cart, payment);
+    return createReceipt(order);
+  } catch (e) {
+    if (e instanceof PaymentError) return { error: 'payment_failed' } as any;
+    throw e;
+  }
+}
+
+// Controller
+async function handleCreateUser(req, res) {
+  try {
+    const user = await createUser(req.body.name, req.body.email);
+    res.json(user);
+  } catch (e) {
+    if (e.message === 'Invalid email') res.status(400).json({ error: e.message });
+    else if (e.message === 'Email taken') res.status(409).json({ error: e.message });
+    else res.status(500).json({ error: 'Internal error' });
+  }
+}
+```
+
+Assume getUserProfile, loadCart, validateCart, chargePayment, createOrder, createReceipt will return Result after migration. The `add` and `validateEmail` functions are pure utilities.
+
+Output ONLY the migrated code. Do not write files.

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "validateSearch-typed",
+    "trap": "Manual URLSearchParams parsing",
+    "description": "validateSearch with Zod schema for typed search params per route",
+    "category": "behavior"
+  },
+  {
+    "id": "link-preload-strategies",
+    "trap": "Links without preload prop",
+    "description": "Link preload: intent (default), render (above-fold), false (rare links)",
+    "category": "behavior"
+  },
+  {
+    "id": "server-form-validation",
+    "trap": "Form without server-side validation",
+    "description": "createServerValidate() from @tanstack/start for server-side form validation",
+    "category": "security"
+  },
+  {
+    "id": "staleTime-loader-coordination",
+    "trap": "prefetchQuery without staleTime matching navigation time",
+    "description": "Coordinate staleTime between loader and query (>= navigation time)",
+    "category": "behavior"
+  },
+  {
+    "id": "pendingComponent-not-suspense",
+    "trap": "Suspense boundary at route level instead of pendingComponent",
+    "description": "pendingComponent for route-level loading -- Suspense only for sub-route streaming",
+    "category": "architecture"
+  },
+  {
+    "id": "createAPIFileRoute",
+    "trap": "Raw Response.json in a route loader instead of a server route handler",
+    "description": "Server route via createFileRoute with server.handlers (GET/POST/...) returning Response/json -- not data in a loader",
+    "category": "architecture"
+  }
+]

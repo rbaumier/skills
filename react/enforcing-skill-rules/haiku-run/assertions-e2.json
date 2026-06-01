@@ -1,0 +1,44 @@
+[
+  {
+    "id": "useSearchParams-suspense",
+    "trap": "useSearchParams without Suspense boundary",
+    "description": "Wrap useSearchParams in Suspense to prevent whole-page bailout to CSR",
+    "category": "gotcha"
+  },
+  {
+    "id": "useActionState",
+    "trap": "useState for form pending/error instead of useActionState",
+    "description": "useActionState (React 19) over manual useState for form submissions",
+    "category": "behavior"
+  },
+  {
+    "id": "error-boundary-required",
+    "trap": "No error boundary wrapping async components",
+    "description": "Error boundaries are required, not optional -- wrap async components",
+    "category": "behavior"
+  },
+  {
+    "id": "useDeferredValue-filtering",
+    "trap": "Expensive inline filter without useDeferredValue",
+    "description": "useDeferredValue for expensive filtering to keep input responsive",
+    "category": "behavior"
+  },
+  {
+    "id": "key-prop-reorderable",
+    "trap": "key={index} on a reorderable list",
+    "description": "Stable keys on reorderable lists -- index keys cause state bugs on reorder",
+    "category": "gotcha"
+  },
+  {
+    "id": "key-reset-pattern",
+    "trap": "Conditional rendering to toggle edit mode instead of key reset",
+    "description": "key prop for state reset instead of conditional component swap",
+    "category": "behavior"
+  },
+  {
+    "id": "server-action-validation",
+    "trap": "Server action trusts FormData without validation",
+    "description": "Validate server action inputs with Zod -- FormData is user-controlled",
+    "category": "security"
+  }
+]

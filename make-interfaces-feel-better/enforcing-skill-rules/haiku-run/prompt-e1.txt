@@ -1,0 +1,141 @@
+Fix all issues:
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { PlayIcon, PauseIcon, HeartIcon, StarIcon } from './icons';
+
+// package.json includes "motion": "^11.0.0"
+
+// Root layout — wraps the whole app
+export function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+
+// Interactive side drawer toggled by a button
+const drawerCss = `
+  .drawer {
+    transform: translateX(-100%);
+  }
+  .drawer.open {
+    animation: slideIn 250ms ease-out forwards;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+`;
+
+function SideDrawer({ open }: { open: boolean }) {
+  return (
+    <>
+      <style>{drawerCss}</style>
+      <aside className={open ? 'drawer open' : 'drawer'}>Filters</aside>
+    </>
+  );
+}
+
+export default function DashboardCard({ stats, avatarUrl }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [liveCount, setLiveCount] = useState(0);
+
+  return (
+    <div
+      className="rounded-xl p-3 border border-slate-200"
+      style={{ transition: 'all 200ms ease-out' }}
+    >
+      <SideDrawer open={drawerOpen} />
+
+      <div className="flex items-center justify-between rounded-xl bg-white p-2 border border-slate-200">
+        <h1>Your team's performance this quarter</h1>
+
+        <img
+          src={avatarUrl}
+          alt="avatar"
+          className="size-12 rounded-full outline outline-1 outline-slate-700/20"
+        />
+      </div>
+
+      <p>
+        A detailed breakdown of how every member contributed across the
+        sprint, including merged pull requests and review turnaround time.
+      </p>
+
+      {/* live-updating viewer count */}
+      <div className="text-2xl font-bold">{liveCount} viewers</div>
+
+      {/* play / pause toggle */}
+      <button
+        onClick={() => setIsPlaying(!isPlaying)}
+        className="flex size-6 items-center justify-center rounded-full bg-black text-white transition"
+        style={{ willChange: 'all' }}
+      >
+        {isPlaying ? <PauseIcon /> : <PlayIcon />}
+      </button>
+
+      {/* like button — icon swaps on click */}
+      <button
+        onClick={() => {}}
+        className="transition-transform active:scale-[0.9]"
+        style={{ width: 24, height: 24 }}
+      >
+        {stats.liked ? <HeartIcon filled /> : <HeartIcon />}
+      </button>
+
+      <button
+        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 text-white"
+        onClick={() => setDrawerOpen(!drawerOpen)}
+      >
+        <span>Open details</span>
+        <StarIcon />
+      </button>
+
+      {/* staggered? no — whole list fades in as one block */}
+      <AnimatePresence>
+        <motion.ul
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {stats.members.map((m) => (
+            <motion.li
+              key={m.id}
+              exit={{ opacity: 0, height: 0, transition: { duration: 0.4 } }}
+            >
+              {m.name} — {m.commits}
+            </motion.li>
+          ))}
+        </motion.ul>
+      </AnimatePresence>
+
+      <button onClick={() => setIsModalOpen(true)}>More</button>
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            className="fixed inset-0 rounded-xl bg-white p-4 shadow-2xl border border-slate-200"
+            initial={{ opacity: 0, scale: 0.5, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0.25 }}
+          >
+            <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              Details
+            </motion.h2>
+            <p>Closed {stats.closed} issues.</p>
+            <button onClick={() => setIsModalOpen(false)}>Close</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+```
+
+Target: macOS, light and dark mode. Output fixed code only.

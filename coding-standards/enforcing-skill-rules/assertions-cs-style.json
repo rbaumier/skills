@@ -1,0 +1,86 @@
+[
+  {
+    "id": "fs-module-orientation",
+    "trap": "// Process orders is a terse label, not a doc comment explaining what the module does and how",
+    "description": "Module/function starts with doc comment: what it does + how it works",
+    "category": "format"
+  },
+  {
+    "id": "fs-consequence-comments",
+    "trap": "// Get user, // Process items, // Update cache describe mechanics, not consequences",
+    "description": "Comments explain consequences, not mechanics. 'cache so the frontend...' not just 'update cache'",
+    "category": "format"
+  },
+  {
+    "id": "fs-term-explanations",
+    "trap": "big_orders table and 1000 threshold used without explaining the domain concept",
+    "description": "Any domain terms explained on first use",
+    "category": "format"
+  },
+  {
+    "id": "fs-conversational-tone",
+    "trap": "// Get user, // Notify, // Check stock are terse mechanical labels",
+    "description": "Conversational comment tone, not mechanical",
+    "category": "format"
+  },
+  {
+    "id": "fs-next-caller-effect",
+    "trap": "cache.set(`user:${userId}:lastOrder`, ...) with no comment on what next caller sees",
+    "description": "Cache/DB state mutations explain what next caller sees",
+    "category": "format"
+  },
+  {
+    "id": "fs-return-value-intent",
+    "trap": "return order.rows[0] with no documentation of what the caller should do with it",
+    "description": "Return value documented: what the caller should do with it",
+    "category": "format"
+  },
+  {
+    "id": "fs-jsdoc-with-example",
+    "trap": "export async function handleOrderData(...) has zero function doc naming consumer-visible behavior",
+    "description": "Exported function has a function doc (~5 lines max) naming the consumer-visible effect / return-value meaning \u2014 NOT a bare label. @example is NOT required (the skill caps function docs at ~5 lines and defaults to no comment).",
+    "category": "format"
+  },
+  {
+    "id": "fs-naming-intent",
+    "trap": "handleOrderData uses banned words; u, usr, itm, ct, amt, s are cryptic abbreviations",
+    "description": "handleOrderData renamed \u2014 no banned words (handle, data, process). Full words (usr\u2192user, itm\u2192item, ct\u2192count, amt\u2192amount, s\u2192stock)",
+    "category": "format"
+  },
+  {
+    "id": "fs-boolean-prefix",
+    "trap": "sendEmail is a boolean without is/has/should prefix",
+    "description": "Booleans use is/has/should prefix in positive form",
+    "category": "format"
+  },
+  {
+    "id": "fs-symmetry",
+    "trap": "cache.set without corresponding cache.get; insert/update naming not symmetric",
+    "description": "Naming pairs consistent (get/set, add/remove)",
+    "category": "format"
+  },
+  {
+    "id": "fs-pipeline-flow-documented",
+    "trap": "The order pipeline has 5+ sequential steps (validate user \u2192 check stock \u2192 calculate total \u2192 create order \u2192 set priority \u2192 notify \u2192 cache) explained only as a dense prose paragraph or not at all",
+    "description": "The multi-step order pipeline (3+ steps) is documented as a module/function doc that lists the steps as a bullet list / step sequence (per the skill's mandatory module-doc shape: what, consumer consequence, how-as-bullets). An ASCII diagram is NOT required \u2014 the skill defaults to no comment and uses bullet lists, not diagrams.",
+    "category": "format"
+  },
+  {
+    "id": "fs-no-archaeology",
+    "trap": "The top-of-file comment says 'Was originally a class-based OrderService, refactored to functions in Q3' \u2014 it narrates past implementation history",
+    "description": "The 'refactored from a class in Q3' archaeology comment is removed. No comment references past implementation (no 'previously', 'used to', 'was', 'before', 'originally', 'refactored from')",
+    "category": "format"
+  },
+  {
+    "id": "fs-enduring-reader",
+    "trap": "getInstanceConfig has a comment 'These values are exposed because the admin dashboard needs them on the instance settings page' \u2014 a shared API comment anchored to one specific caller (the admin dashboard / instance settings page) instead of the stable domain purpose",
+    "description": "getInstanceConfig comment rewritten to describe the stable domain purpose of the config values (what they mean / what consumers decide with them) \u2014 NO reference to the admin dashboard, the instance settings page, or any single caller",
+    "category": "format"
+  },
+  {
+    "id": "fs-state-narration",
+    "trap": "if (isUrgent)/else and if (sendEmail) branches have no journey narration",
+    "description": "If any conditional branches, narrated with journey (optional \u2014 depends on refactoring approach)",
+    "category": "format"
+  }
+]

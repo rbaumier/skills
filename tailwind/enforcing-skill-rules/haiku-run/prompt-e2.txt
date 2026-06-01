@@ -1,0 +1,53 @@
+Fix all issues in this Tailwind v4 project:
+
+```css
+/* globals.css */
+@import "tailwindcss";
+
+@theme {
+  --color-brand: oklch(0.7 0.15 250);
+  --color-brand-foreground: oklch(oklch(0.98 0.01 250));
+  --animate-fade: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+```
+
+```tsx
+export function Card({ variant }: { variant: "primary" | "secondary" }) {
+  return (
+    <div className={variant === "primary" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"}>
+      <h2 className="text-lg font-bold">Title</h2>
+    </div>
+  );
+}
+
+import { cva } from "class-variance-authority";
+const buttonVariants = cva("px-4 py-2 rounded", {
+  variants: {
+    variant: {
+      primary: "bg-brand text-white",
+      secondary: "bg-gray-200 text-gray-800",
+    },
+  },
+});
+
+export function Layout() {
+  return (
+    <div>
+      <nav className="fixed top-0 z-[999] w-full bg-white">Nav</nav>
+      <div className="fixed bottom-4 right-4 z-[1000]">Toast</div>
+    </div>
+  );
+}
+
+
+module.exports = {
+  plugins: [require("@tailwindcss/typography")],
+};
+```
+
+Output fixed code only.

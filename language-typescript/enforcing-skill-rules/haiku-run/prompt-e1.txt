@@ -1,0 +1,70 @@
+Refactor this TypeScript module. Fix everything wrong with it:
+
+```typescript
+// index.ts (barrel)
+export { UserService } from './user-service';
+export { UserType } from './types';
+
+// types.ts
+import { Status } from './status';
+
+export enum Status {
+  Active = 'active',
+  Inactive = 'inactive',
+}
+
+export interface UserType {
+  id: string;
+  name: string;
+  status: Status;
+}
+
+// user-service.ts
+import { UserType, Status } from './index';
+import { DatabaseConnection } from './db';
+const config = require('./config.json');
+
+/**
+ * @description Service for managing users
+ * @param {string} id - The user ID
+ * @returns {Promise<UserType>} The user object
+ */
+export default class UserService {
+  async getUser(id: string): Promise<UserType> {
+    const res = await fetch(`/api/users/${id}`);
+    if (!res.ok) throw new Error('User not found');
+    const data = JSON.parse(await res.text()) as UserType;
+    return data;
+  }
+
+  async updateUser(id: string, updates: { name?: string, status?: Status }): Promise<void> {
+    const env = process.env.API_URL;
+    const res = await fetch(`${env}/api/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Update failed');
+  }
+
+  processUsers(users: any[]): any {
+    return users.filter(u => u.status === Status.Active).map(u => ({
+      ...u,
+      displayName: u.name.toUpperCase(),
+    }));
+  }
+
+  async cleanup(connection: DatabaseConnection): Promise<void> {
+    try {
+      await connection.beginTransaction();
+      await connection.query('DELETE FROM temp_users');
+      await connection.commit();
+    } catch (e) {
+      await connection.rollback();
+    } finally {
+      connection.release();
+    }
+  }
+}
+```
+
+Output ONLY the refactored code (all files). Do not write files to disk.

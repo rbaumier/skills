@@ -1,0 +1,222 @@
+Fix all issues:
+
+```tsx
+// tailwind.config.ts
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: ['./src/**/*.{ts,tsx}', './node_modules/@acme/ui/**/*.js'],
+  theme: {
+    extend: {
+      colors: {
+        primary: '#3b82f6',
+        secondary: '#10b981',
+      },
+    },
+  },
+};
+export default config;
+
+// card.tsx
+import React, { forwardRef } from 'react';
+
+type CardProps = {
+  variant: 'primary' | 'ghost';
+  children: React.ReactNode;
+};
+
+export const Card = forwardRef<HTMLDivElement, CardProps>(({ variant, children }, ref) => {
+  const baseClasses = 'rounded-lg p-5 mb-7';
+  const variantClass = variant === 'primary'
+    ? 'bg-[#3b82f6] text-white'
+    : 'bg-opacity-50 bg-gray-100';
+
+  return (
+    <div ref={ref} className={`${baseClasses} ${variantClass}`}>
+      {children}
+    </div>
+  );
+});
+
+// dialog.tsx
+import * as Dialog from '@headlessui/react';
+
+export function AppDialog({ open, onClose, children }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-999 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-xl p-6 w-[480px] transition-all" onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// menu-button.tsx
+export function MenuButton() {
+  return (
+    <button className="p-2">
+      <svg viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg>
+    </button>
+  );
+}
+
+// button.tsx
+export function Button({ label, color, size }) {
+  return (
+    <button
+      className={`bg-${color}-500 hover:bg-${color}-600 text-white
+        ${size === 'sm' ? 'px-2 py-1 text-[12px]' : 'px-4 py-2 text-[16px]'}
+        rounded transition-all`}
+    >
+      {label}
+    </button>
+  );
+}
+
+// hero.tsx
+export function Hero() {
+  return (
+    <section className="py-20 px-8 bg-white">
+      <h1 className="text-4xl font-bold text-[#1a1a1a]">Welcome</h1>
+      <p className="mt-4 text-gray-600">Subtitle here</p>
+      <button className="mt-8 bg-blue-500 text-white px-6 py-3 rounded">
+        Get Started
+      </button>
+    </section>
+  );
+}
+
+// avatar.tsx
+export function Avatar({ src, name }) {
+  return (
+    <div className="w-8 h-8 rounded-full overflow-hidden">
+      <img src={src} alt={name} className="w-8 h-8 object-cover" />
+    </div>
+  );
+}
+
+// theme.css
+@theme {
+  --color-primary: oklch(0.6 0.25 260);
+  --color-primary-hover: oklch(0.55 0.27 260);
+  --color-primary-50: rgba(59, 130, 246, 0.05);
+  --color-primary-10: rgba(59, 130, 246, 0.1);
+}
+
+// layout.tsx
+export function Layout({ children }) {
+  return (
+    <html>
+      <body className="min-h-screen">
+        {children}
+      </body>
+    </html>
+  );
+}
+
+// user-grid.tsx
+export function UserGrid({ users }) {
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {users.map(u => (
+        <div key={u.id} className="p-4 border">
+          <span className="truncate">{u.name}</span>
+          <p className="text-sm text-gray-500 truncate">{u.email}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// price-tag.tsx
+export function PriceTag({ price }) {
+  return (
+    <span className="text-sm font-medium text-gray-900">
+      ${price}
+    </span>
+  );
+}
+
+// skeleton.tsx
+export function CardSkeleton() {
+  return (
+    <div className="animate-pulse space-y-3">
+      <div className="h-40 bg-gray-300 rounded-sm" />
+      <div className="h-4 bg-gray-300 rounded-sm w-3/4" />
+      <div className="h-4 bg-gray-300 rounded-sm w-1/2" />
+    </div>
+  );
+}
+
+// popover.tsx
+export function Popover({ children }) {
+  return (
+    <div popover className="p-4 rounded-lg shadow-lg bg-white">
+      {children}
+    </div>
+  );
+}
+
+// dark-mode.css
+@variant dark {
+  .dark {
+    --color-background: oklch(0.15 0 0);
+  }
+}
+
+// dropdown.tsx
+import { useState, useRef, useEffect } from 'react';
+
+export function Dropdown({ items, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(!open)} className="px-3 py-2 border rounded">
+        Select
+      </button>
+      {open && (
+        <ul className="absolute mt-1 bg-white border rounded shadow-lg z-10">
+          {items.map(item => (
+            <li key={item} onClick={() => { onSelect(item); setOpen(false); }}
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer">{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// container-card.tsx
+export function ContainerCard({ children }) {
+  return (
+    <div className="p-4 border rounded-lg">
+      <h3 className="text-lg font-semibold">Title</h3>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+// card.css
+.card {
+  @apply rounded-lg p-4 bg-white shadow-md hover:shadow-lg;
+  @apply text-gray-800 border border-gray-200;
+}
+
+// app.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+Tailwind v4. Output fixed code only.

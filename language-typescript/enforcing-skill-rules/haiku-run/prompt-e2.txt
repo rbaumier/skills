@@ -1,0 +1,75 @@
+Fix all issues:
+
+```typescript
+// 1. Numeric enum instead of discriminated union
+enum Shape { Circle, Square, Triangle }
+function area(shape: Shape, radius?: number, side?: number) {
+  if (shape === Shape.Circle) return Math.PI * radius! * radius!;
+  if (shape === Shape.Square) return side! * side!;
+  return 0;
+}
+
+// 2. Missing strict tsconfig flags
+// tsconfig.json: { "strict": true }
+const items: string[] = ["a", "b", "c"];
+const char = items[5].toUpperCase();
+
+interface Config {
+  port?: number;
+  host?: string;
+}
+const cfg: Config = { port: undefined, host: "localhost" };
+
+// 3. Mutable array parameters
+function processIds(ids: number[]) {
+  ids.sort();
+  return ids.map(id => id * 2);
+}
+
+// 4. Type assertion instead of assertion function
+function getUser(data: unknown) {
+  const user = data as { name: string; age: number };
+  return user;
+}
+
+// 5. Function overloads instead of union/object
+function createDate(timestamp: number): Date;
+function createDate(year: number, month: number, day: number): Date;
+function createDate(a: number, b?: number, c?: number): Date {
+  if (b !== undefined && c !== undefined) return new Date(a, b, c);
+  return new Date(a);
+}
+
+// 6. String type where template literal would catch errors
+function route(method: string, path: string) { /* ... */ }
+route("DELTE", "/users");
+
+// 7. Using Biome instead of oxlint+oxfmt
+// biome.json config...
+
+// 8. Narrowing with typeof in wrong order
+function format(val: string | number | null) {
+  if (val !== null) {
+    if (typeof val === "string") return val.trim();
+    return val.toFixed(2);
+  }
+  return "N/A";
+}
+// Missing exhaustive check
+type Status = "active" | "inactive" | "pending";
+function label(s: Status): string {
+  switch (s) {
+    case "active": return "Active";
+    case "inactive": return "Inactive";
+  }
+}
+
+// 9. Object.freeze instead of as const satisfies
+const ROUTES = Object.freeze({
+  home: "/",
+  about: "/about",
+  contact: "/contact",
+});
+```
+
+Output fixed code only.

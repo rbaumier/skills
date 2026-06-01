@@ -1,0 +1,1 @@
+{"skill":"zod","passed":22,"total":23,"fails":[{"id":"cache-schema","why":"productSchema is still created inside the ProductCard component (out-e1-iter3.md L64-67) on every render instead of being hoisted to module scope; the exact trap is unfixed."}]}

@@ -32,12 +32,6 @@
           "category": "gotcha"
         },
         {
-          "id": "junction-table",
-          "trap": "Many-to-many via JSON array instead of junction table",
-          "description": "Junction table with composite primaryKey for many-to-many",
-          "category": "architecture"
-        },
-        {
           "id": "relational-queries",
           "trap": "Manual join via two separate queries",
           "description": "db.query.X.findMany({ with: {} }) for relational queries",

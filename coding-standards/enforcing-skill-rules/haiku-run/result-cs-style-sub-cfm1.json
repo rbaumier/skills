@@ -1,0 +1,1 @@
+{"skill":"coding-standards","eval":"cs-style-sub","iter":"cfm1","passed":7,"total":14,"fails":["fs-module-orientation","fs-term-explanations","fs-next-caller-effect","fs-return-value-intent","fs-jsdoc-with-example","fs-symmetry","fs-pipeline-flow-documented"]}

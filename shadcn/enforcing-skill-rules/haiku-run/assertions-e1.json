@@ -1,0 +1,158 @@
+[
+  {
+    "id": "no-space-xy",
+    "trap": "space-y-4 and space-x-3 used for layout spacing",
+    "description": "Replace space-y-* and space-x-* with flex + gap-*. Must not contain space-y- or space-x- anywhere.",
+    "category": "styling"
+  },
+  {
+    "id": "size-shorthand",
+    "trap": "w-12 h-12 on Avatar instead of size-12",
+    "description": "Use size-* when width and height are equal. Avatar must use size-12 not w-12 h-12.",
+    "category": "styling"
+  },
+  {
+    "id": "truncate-shorthand",
+    "trap": "overflow-hidden text-ellipsis whitespace-nowrap instead of truncate",
+    "description": "Use truncate shorthand class instead of the three-class expansion.",
+    "category": "styling"
+  },
+  {
+    "id": "no-dark-manual",
+    "trap": "dark:bg-slate-900 dark:text-gray-100 manual overrides",
+    "description": "No manual dark: color overrides. Use semantic tokens like bg-background text-foreground.",
+    "category": "styling"
+  },
+  {
+    "id": "semantic-colors",
+    "trap": "Raw colors: bg-green-100, text-green-800, bg-blue-500, text-gray-500, bg-gray-200",
+    "description": "Use semantic color tokens (bg-primary, text-muted-foreground, etc.) instead of raw color values like bg-green-500 or text-gray-500.",
+    "category": "styling"
+  },
+  {
+    "id": "cn-conditional",
+    "trap": "Template literal ternary for conditional classes on the callout div",
+    "description": "Use cn() for conditional classes instead of manual template literal ternaries.",
+    "category": "styling"
+  },
+  {
+    "id": "no-z-index-overlay",
+    "trap": "z-50 on DialogContent",
+    "description": "No manual z-index on overlay components. Dialog handles its own stacking context.",
+    "category": "styling"
+  },
+  {
+    "id": "form-field-group",
+    "trap": "Raw divs with labels for form layout instead of FieldGroup + Field",
+    "description": "Forms must use FieldGroup + Field for layout. Never use raw div wrapping label + input.",
+    "category": "forms"
+  },
+  {
+    "id": "inputgroup-textarea",
+    "trap": "Raw Textarea inside InputGroup instead of InputGroupTextarea",
+    "description": "InputGroup must use InputGroupTextarea, never raw Textarea.",
+    "category": "forms"
+  },
+  {
+    "id": "togglegroup-options",
+    "trap": "Looped Button with manual active state for theme selection (3 options)",
+    "description": "Option sets of 2-7 choices must use ToggleGroup + ToggleGroupItem, not mapped Buttons with manual active variant.",
+    "category": "forms"
+  },
+  {
+    "id": "fieldset-checkboxes",
+    "trap": "Checkboxes grouped with a div + h3 heading instead of FieldSet + FieldLegend",
+    "description": "Related checkboxes/radios must be grouped with FieldSet + FieldLegend, not a div with a heading.",
+    "category": "forms"
+  },
+  {
+    "id": "select-item-group",
+    "trap": "SelectItem rendered directly inside SelectContent without SelectGroup",
+    "description": "Items must be inside their Group. SelectItem must be inside SelectGroup.",
+    "category": "composition"
+  },
+  {
+    "id": "dialog-title",
+    "trap": "Dialog without DialogTitle",
+    "description": "Dialog always needs DialogTitle for accessibility. Use sr-only if visually hidden.",
+    "category": "composition"
+  },
+  {
+    "id": "card-full-composition",
+    "trap": "Card with only CardContent, dumping h2 and p directly inside",
+    "description": "Card uses proper composition: the title is in CardHeader + CardTitle (not an h2 dumped into CardContent). Body content living in CardContent is correct; CardDescription/CardFooter are optional and not required to pass.",
+    "category": "composition"
+  },
+  {
+    "id": "tabs-trigger-in-list",
+    "trap": "TabsTrigger rendered directly inside Tabs without TabsList",
+    "description": "TabsTrigger must be inside TabsList. Never render triggers directly in Tabs.",
+    "category": "composition"
+  },
+  {
+    "id": "avatar-fallback",
+    "trap": "Avatar with only AvatarImage, no AvatarFallback",
+    "description": "Avatar always needs AvatarFallback for when the image fails to load.",
+    "category": "composition"
+  },
+  {
+    "id": "button-no-isloading",
+    "trap": "isLoading prop on Button",
+    "description": "Button has no isPending/isLoading prop. Compose with Spinner + data-icon + disabled.",
+    "category": "composition"
+  },
+  {
+    "id": "empty-state-component",
+    "trap": "Custom div for empty notifications instead of Empty component",
+    "description": "Empty states must use the Empty component, not custom styled divs.",
+    "category": "composition"
+  },
+  {
+    "id": "alert-for-callout",
+    "trap": "Custom styled div for verified/unverified callout instead of Alert",
+    "description": "Callouts must use Alert component, not custom styled divs with border and background.",
+    "category": "composition"
+  },
+  {
+    "id": "separator-not-border",
+    "trap": "div with border-t used as a separator",
+    "description": "Use Separator component instead of <hr> or <div className=\"border-t\">.",
+    "category": "composition"
+  },
+  {
+    "id": "badge-not-span",
+    "trap": "Custom styled span for user.role instead of Badge",
+    "description": "Use Badge component instead of custom styled spans for status/role indicators.",
+    "category": "composition"
+  },
+  {
+    "id": "skeleton-loading",
+    "trap": "Custom animate-pulse div for loading state instead of Skeleton",
+    "description": "Use Skeleton component for loading placeholders, not custom animate-pulse divs.",
+    "category": "composition"
+  },
+  {
+    "id": "icon-data-icon",
+    "trap": "Search icon inside Button without data-icon attribute",
+    "description": "Icons in Button must use data-icon=\"inline-start\" or data-icon=\"inline-end\".",
+    "category": "icons"
+  },
+  {
+    "id": "icon-no-sizing",
+    "trap": "w-4 h-4 sizing classes on Search icon inside Button",
+    "description": "No sizing classes on icons inside components. Components handle icon sizing via CSS.",
+    "category": "icons"
+  },
+  {
+    "id": "icon-as-object",
+    "trap": "iconMap using string keys to look up icons",
+    "description": "Pass icons as objects (icon={CheckIcon}), not via string key lookup maps.",
+    "category": "icons"
+  },
+  {
+    "id": "theme-inline-keyword",
+    "trap": "@theme without inline keyword in globals.css",
+    "description": "@theme inline required in Tailwind v4. Without inline, custom properties may not generate utility classes.",
+    "category": "config"
+  }
+]

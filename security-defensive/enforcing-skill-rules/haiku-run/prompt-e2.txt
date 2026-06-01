@@ -1,0 +1,56 @@
+Fix all issues:
+
+```typescript
+// 1. Prototype pollution via object merge
+function merge(target: any, source: any) {
+  for (const key in source) {
+    target[key] = source[key];
+  }
+  return target;
+}
+const config = merge({}, JSON.parse(userInput));
+
+// 2. Mass assignment — spreading req.body into DB update
+app.put("/users/:id", async (req, res) => {
+  await db.users.update({ where: { id: req.params.id }, data: req.body });
+  res.json({ ok: true });
+});
+
+// 3. ReDoS-vulnerable regex
+const emailRegex = /^([a-zA-Z0-9]+)*@[a-zA-Z0-9]+\.[a-zA-Z]+$/;
+if (emailRegex.test(userEmail)) { /* ... */ }
+
+// 4. Open redirect
+app.get("/redirect", (req, res) => {
+  const url = req.query.url as string;
+  res.redirect(url);
+});
+
+// 5. Error leaks stack trace
+app.use((err, req, res, next) => {
+  res.status(500).json({
+    error: err.message,
+    stack: err.stack,
+    query: req.query,
+  });
+});
+
+// 6. OAuth without state parameter
+app.get("/auth/callback", async (req, res) => {
+  const { code } = req.query;
+  const token = await exchangeCode(code as string);
+  res.cookie("token", token);
+  res.redirect("/dashboard");
+});
+
+// 7. IDOR — no ownership check
+app.get("/invoices/:id", async (req, res) => {
+  const invoice = await db.invoices.findUnique({ where: { id: req.params.id } });
+  res.json(invoice);
+});
+
+// 8. Only npm audit for supply chain security
+// package.json: { "scripts": { "security": "npm audit" } }
+```
+
+Output fixed code only.

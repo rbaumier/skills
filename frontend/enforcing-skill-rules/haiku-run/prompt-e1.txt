@@ -1,0 +1,182 @@
+Fix all issues:
+
+```tsx
+'use client';
+
+import React, { useState, useEffect, forwardRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchProducts } from '../index'; // barrel import
+import ProductChart from './ProductChart'; // heavy 200KB charting component, static import
+
+import { Product } from '@/types/product';
+
+export default function ProductPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const store = useStore(); // full store destructure
+
+  useEffect(() => {
+    fetchProducts()
+      .then(data => {
+        setProducts(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setIsLoading(false);
+      });
+  }, []);
+
+  // Derived state in effect
+  useEffect(() => {
+    setFilteredProducts(
+      products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [products, search]);
+
+  if (isLoading) return <Spinner />;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div>
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{ padding: '8px', color: '#333', backgroundColor: '#f5f5f5' }}
+      />
+      <ProductChart data={products} />
+      <div>
+        {filteredProducts.map((product, index) => (
+          <ProductCard
+            key={index}
+            isPrimary={product.featured}
+            isGhost={!product.active}
+            isCompact={false}
+            product={product}
+            onAddToCart={() => {}}
+            renderHeader={() => <h3>{product.name}</h3>}
+          />
+        ))}
+      </div>
+      {products.length === 0 && null}
+
+      <AddProductForm />
+
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>{products[0]?.name}</h2>
+            <p>{products[0]?.description}</p>
+            <p>${products[0]?.price}</p>
+            <button onClick={() => setIsModalOpen(false)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Sibling components sharing state via prop drilling ---
+
+function ProductSidebar({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
+  return <nav>{/* sidebar items, receives selectedId via props drilled from parent */}</nav>;
+}
+
+function ProductDetail({ selectedId }: { selectedId: string }) {
+  return <section>{/* detail view, receives same selectedId drilled from parent */}</section>;
+}
+
+// --- Card with renderX prop + boolean modes ---
+
+function ProductCard({
+  product,
+  isPrimary,
+  isGhost,
+  isCompact,
+  onAddToCart,
+  renderHeader,
+}: {
+  product: Product;
+  isPrimary: boolean;
+  isGhost: boolean;
+  isCompact: boolean;
+  onAddToCart: () => void;
+  renderHeader: () => React.ReactNode;
+}) {
+  return (
+    <div
+      className={isPrimary ? 'primary' : isGhost ? 'ghost' : 'default'}
+      onClick={onAddToCart}
+    >
+      {renderHeader()}
+      <p>${product.price}</p>
+    </div>
+  );
+}
+
+// --- Form without disabled button / loading state ---
+
+function AddProductForm() {
+  const [name, setName] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name) {
+      alert('Name is required'); // alert for validation error
+      return;
+    }
+    await fetch('/api/products', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={name} onChange={e => setName(e.target.value)} />
+      <button type="submit">Add Product</button>
+    </form>
+  );
+}
+
+// --- RSC data loader passing full object across boundary ---
+
+async function ProductLoader() {
+  const res = await fetch('https://api.example.com/products');
+  const products: Product[] = await res.json();
+  // passes entire Product objects (with internal fields) to client component
+  return <ProductPage products={products} />;
+}
+
+const FancyInput = forwardRef<HTMLInputElement, { label: string }>(
+  ({ label }, ref) => (
+    <label>
+      {label}
+      <input ref={ref} />
+    </label>
+  )
+);
+
+// --- Styles with no prefers-reduced-motion and low contrast ---
+
+const styles = `
+  .modal-overlay {
+    animation: fadeIn 0.3s ease-in;
+    transform: translateY(-10px);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .low-contrast-hint {
+    color: #aaa;
+    background: #fff;
+  }
+`;
+```
+
+Output ALL component code inline. No unshown imports — every component referenced must have its full implementation in the output. EXCEPTION: `ProductChart` is a separate heavy module that stays in its own file `./ProductChart` — do NOT inline its body and do NOT delete it; keep importing it and keep rendering it.

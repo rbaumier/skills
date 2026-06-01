@@ -1,0 +1,134 @@
+[
+  {
+    "id": "minimize-observable-surface",
+    "trap": "Order exposes internalDbRowId and _sequelizeTimestamp to clients",
+    "category": "architecture",
+    "description": "Minimize observable surface — every field exposed is a commitment that cannot be safely removed"
+  },
+  {
+    "id": "never-leak-implementation-details",
+    "trap": "Error handler returns err.stack; ship endpoint returns queryPlan and internalDbRowId when internal=true",
+    "category": "security",
+    "description": "Never leak implementation details like stack traces, internal IDs, or query plans to clients"
+  },
+  {
+    "id": "plan-deprecation-at-design-time",
+    "trap": "v2 exists alongside v1 with no deprecation headers on v1 endpoints",
+    "category": "architecture",
+    "description": "Plan deprecation at design time — add Deprecation and Sunset response headers before removing anything"
+  },
+  {
+    "id": "one-version-extend-not-fork",
+    "trap": "OrderV2 is a forked copy of Order instead of extending the original with optional fields",
+    "category": "architecture",
+    "description": "Avoid parallel versions — extend with optional fields instead of creating v2 types"
+  },
+  {
+    "id": "contract-first",
+    "trap": "No typed input/output interfaces exist; handlers use raw req.body with no contract separating input from output",
+    "category": "architecture",
+    "description": "Define TypeScript interfaces for input and output before implementation — separate input from output, server-generated fields only in output"
+  },
+  {
+    "id": "consistent-error-shape",
+    "trap": "createOrder returns { message, stack }, getOrder returns { msg }, other endpoints have no error handling",
+    "category": "behavior",
+    "description": "One error shape everywhere — { error: { code, message, details? } } with no exceptions across endpoints"
+  },
+  {
+    "id": "correct-http-status-codes",
+    "trap": "createOrder returns 200 instead of 201; all errors in createOrder return 500 even for validation failures (400/422)",
+    "category": "behavior",
+    "description": "Use correct HTTP status codes — 201 for creation, 400 for bad request, 422 for semantic errors, 500 only for unexpected server errors"
+  },
+  {
+    "id": "no-mixed-error-patterns",
+    "trap": "createOrder throws exceptions, getOrder returns a JSON error, put handler throws unhandled, ship returns a success boolean",
+    "category": "behavior",
+    "description": "Never mix error handling patterns — pick one strategy and enforce it everywhere"
+  },
+  {
+    "id": "url-versioning-default",
+    "trap": "createOrder is at /api/createOrder with no version prefix while other endpoints use /v1/",
+    "category": "architecture",
+    "description": "Default to URL versioning (/v1/) consistently across all endpoints"
+  },
+  {
+    "id": "always-paginate-lists",
+    "trap": "GET /api/v1/orders returns a raw array with no pagination metadata",
+    "category": "behavior",
+    "description": "Always paginate list endpoints with proper pagination metadata (cursor or offset-based)"
+  },
+  {
+    "id": "pagination-response-shape",
+    "trap": "v2 orders returns { items, page, size } missing totalItems and totalPages for offset pagination",
+    "category": "format",
+    "description": "Offset pagination must include totalItems and totalPages; use 'data' as the collection key for consistency"
+  },
+  {
+    "id": "add-never-remove-fields",
+    "trap": "OrderV2 removes internalDbRowId and _sequelizeTimestamp fields present in Order",
+    "category": "architecture",
+    "description": "Add, never remove — removed fields break consumers (Hyrum's Law)"
+  },
+  {
+    "id": "never-change-field-types",
+    "trap": "priority is string in Order but number in OrderV2",
+    "category": "architecture",
+    "description": "Never change field types — changing priority from string to number is a breaking change"
+  },
+  {
+    "id": "discriminated-unions-for-variants",
+    "trap": "OrderV2 uses nullable trackingNumber, cancelledReason, shippedAt instead of discriminated unions per status",
+    "category": "architecture",
+    "description": "Use discriminated unions for variants — each state carries exactly the fields it needs, no nullable fields that only exist in certain statuses"
+  },
+  {
+    "id": "branded-types-for-ids",
+    "trap": "Order uses plain string for id and userId instead of branded OrderId and UserId types",
+    "category": "architecture",
+    "description": "Use branded types for IDs — OrderId and UserId must be distinct types to prevent misuse"
+  },
+  {
+    "id": "validate-at-boundaries-only",
+    "trap": "calculateTotal calls validateOrder internally — validation between internal functions sharing type contracts",
+    "category": "architecture",
+    "description": "Validate at boundaries only — trust internal code, validate only where external input enters (API handlers)"
+  },
+  {
+    "id": "no-verbs-in-rest-urls",
+    "trap": "/api/createOrder uses a verb in the URL instead of POST /api/v1/orders",
+    "category": "format",
+    "description": "No verbs in REST URLs — use HTTP methods with noun resources (POST /api/v1/orders, not /api/createOrder)"
+  },
+  {
+    "id": "no-get-for-mutations",
+    "trap": "GET /api/v1/orders/:id/cancel uses GET for a state-changing operation instead of POST or DELETE",
+    "category": "behavior",
+    "description": "Do not use GET for state-changing operations — cancel should be POST or DELETE"
+  },
+  {
+    "id": "patch-not-put-for-partial",
+    "trap": "PUT /api/v1/orders/:id is used for what clients actually want as partial update",
+    "category": "behavior",
+    "description": "Use PATCH where clients want partial updates — PUT implies full replacement"
+  },
+  {
+    "id": "no-boolean-branching-params",
+    "trap": "Ship endpoint uses ?internal=true query param to branch response shape",
+    "category": "gotcha",
+    "description": "Boolean params that control branching are a red flag — split into named endpoints instead"
+  },
+  {
+    "id": "validate-third-party-responses",
+    "trap": "processThirdPartyWebhook uses payload as any with no runtime validation",
+    "category": "security",
+    "description": "Third-party API responses and webhooks must be validated at the boundary — never trust external input"
+  },
+  {
+    "id": "endpoint-consistent-response-shape",
+    "trap": "Ship endpoint returns { shipped: true } or { shipped: true, internalDbRowId, queryPlan } depending on query param",
+    "category": "behavior",
+    "description": "Endpoints must not return different shapes depending on conditions — response schema must be stable"
+  }
+]

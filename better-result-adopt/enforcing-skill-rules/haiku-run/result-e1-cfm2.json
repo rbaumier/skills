@@ -1,0 +1,1 @@
+{"skill":"better-result-adopt","eval":"e1","iter":"cfm2","passed":11,"total":13,"fails":["async-to-tryPromise","null-to-result"]}
