@@ -1,0 +1,80 @@
+[
+  {
+    "id": "fs-factory-di",
+    "trap": "import { db }, import { cache }, import { mailer } are hardcoded global imports",
+    "description": "db, cache, mailer injected via factory, not imported as globals",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-extract-by-responsibility",
+    "trap": "handleOrderData mixes 7 concerns in one function: fetch user, loop-price items, check stock, big-order notification, create order, set priority, send email, update cache, log",
+    "description": "handleOrderData is split by RESPONSIBILITY (not line count): at minimum fetch user, price items, persist order, and notify are separate named operations. The split is driven by mixing concerns, not by hitting an arbitrary line threshold.",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-srp-cqs",
+    "trap": "Order creation, email sending, cache update, and logging all in one function",
+    "description": "Order creation (command) separated from notification (side-effect)",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-externalize-config",
+    "trap": "'FREE50', 'FREE20' discount codes and 1000 threshold hardcoded in function body",
+    "description": "Discount codes/thresholds in config, not inline",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-crosscutting-wrapper",
+    "trap": "console.log('Order created') inside business logic",
+    "description": "No logging in business logic \u2014 use crosscutting wrapper (withLogging/withTracing)",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-dto-mapping",
+    "trap": "return order.rows[0] \u2014 raw DB row returned to caller",
+    "description": "Map DB entities to DTOs \u2014 dedicated response type, not raw rows",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-exports-at-top",
+    "trap": "Single export mixed in with all implementation",
+    "description": "Exports/public API at top of file, private helpers at bottom",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-rule-of-three",
+    "trap": "formatEmail, formatReceipt, formatInvoice are 3 functions with identical params (to, name, amount, currency) and similar bodies \u2014 a pattern has emerged",
+    "description": "3 similar functions with identical signatures extracted into a shared abstraction or parameterized function",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-data-clumps-value-object",
+    "trap": "to, name, amount, currency appear as the same 4 params across formatEmail, formatReceipt, formatInvoice",
+    "description": "Repeated param group (to, name, amount, currency) extracted to a Value Object / named type",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-one-abstraction-level",
+    "trap": "validateOrder mixes high-level validation (check city exists, check total) with low-level string formatting (template literal with toFixed)",
+    "description": "validateOrder split \u2014 validation logic separated from string formatting, no mixing of abstraction levels",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-pull-complexity-down",
+    "trap": "applyBulkDiscount forces callers to pass retryCount, retryDelayMs, maxRetries \u2014 retry logic pushed to caller instead of absorbed internally",
+    "description": "Retry config params removed from applyBulkDiscount \u2014 module handles retry internally or removes it (caller shouldn't deal with retry complexity)",
+    "category": "behavior"
+  },
+  {
+    "id": "fs-divergent-change-business-domain",
+    "trap": "formatEmail, formatReceipt, formatInvoice, getShippingLabel, validateOrder, applyBulkDiscount, handleOrderData all mixed together \u2014 order fulfillment, document formatting, shipping, and validation are multiple unrelated business domains",
+    "description": "The unrelated business domains are separated into clearly delimited sections/modules \u2014 order fulfillment, document formatting, shipping, validation are NOT interleaved or fused into one function. Since the prompt mandates all code inline in one file (no file writes), separation via distinct named sections + a noted split boundary (e.g. a comment 'belongs in its own module: shipping') counts; actual file split is NOT required here.",
+    "category": "architecture"
+  },
+  {
+    "id": "fs-law-of-demeter",
+    "trap": "order.customer.address.street, order.customer.address.city, order.customer.address.zip \u2014 3 levels deep into object graph",
+    "description": "Chained property access 2+ levels deep replaced with direct accessor or destructured at boundary",
+    "category": "behavior"
+  }
+]

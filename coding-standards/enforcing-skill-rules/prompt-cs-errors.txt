@@ -1,0 +1,46 @@
+Fix all issues:
+
+```typescript
+import { db } from './db';
+
+type OrderStatus = string;
+
+interface OrderInput {
+  userId: any;
+  items: any[];
+}
+
+export async function createOrder(input: OrderInput) {
+  const userResult = await db.query('SELECT * FROM users WHERE id = $1', [input.userId]);
+  const user = userResult.rows[0];
+  if (!user) throw new Error('not found');
+  if (user.blocked) throw new Error('blocked');
+
+  let total = 0;
+  for (const item of input.items) {
+    if (user.blocked) throw new Error('blocked');
+    const stock = await db.query('SELECT qty FROM stock WHERE id = $1', [item.id]);
+    if (stock.rows[0]?.qty < item.qty) throw new Error('stock');
+    total += item.price * item.qty;
+  }
+
+  if (total <= 0) throw new Error('invalid total');
+
+  const status: OrderStatus = 'pending';
+  const order = await db.query(
+    'INSERT INTO orders (user_id, total, status) VALUES ($1, $2, $3) RETURNING *',
+    [input.userId, total, status],
+  );
+  return order.rows[0];
+}
+
+export async function removeCartItem(userId: string, itemId: string) {
+  const cart = await db.query('SELECT * FROM carts WHERE user_id = $1', [userId]);
+  if (!cart.rows[0]) throw new Error('cart not found');
+  const item = cart.rows[0].items.find((entry: any) => entry.id === itemId);
+  if (!item) throw new Error('item not in cart');
+  await db.query('DELETE FROM cart_items WHERE cart_id = $1 AND item_id = $2', [cart.rows[0].id, itemId]);
+}
+```
+
+Output fixed code only.

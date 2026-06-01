@@ -42,9 +42,26 @@
 | language-swift | 32 | 24/32 | 23–28 | swiftdata-over-coredata | protocol-conformance **FIXED (R)**; swiftdata **F floor** (CoreData→SwiftData migration) |
 | testing e3 | 8 | — | 6–7 | zombies-coverage | **F** (coverage completeness; refactor can't invent cases) |
 | ui-ux | 35 | **7/35** | 29–32 | 2 concrete **FIXED (R)** | **CAPACITY** (35-rule trap); +22 |
-| coding-standards | 52 | 20/52 | 40–45 | 5 architecture rules | **CAPACITY** (52-rule trap); +25. Recommend splitting into 4 sub-skill sub-traps (design/errors/hygiene/style) for accurate per-rule measurement |
+| coding-standards | 52 | 20/52 | 40–45 | see split | **CAPACITY + 4 floors** (52-rule trap); +25. Split into 4 sub-traps resolves the ceiling → see "coding-standards split" below |
 | tanstack-start | 7→6 | 4/7 | 5–6 | — | clean (scroll-restoration retired A) |
 | make-interfaces-feel-better | 17 (new eval) | 7–14 | 11–13 | (optical-alignment, image-outline FIXED R; shadows-over-borders + interruptible-animations salience-fixed) | Cat A motion skill; demanding 17-rule trap, residual variance like ui-animations |
+
+## coding-standards split (capacity proof + isolated floors)
+
+The 52-rule umbrella plateaued at 40–45/52 — ambiguous between *capacity* (Haiku drops rules under load) and *capability* (some rules are simply beyond it). To resolve it, the 52 assertions were partitioned into 4 themed sub-traps (~13 rules each, scoped trap code per theme), Haiku reading the umbrella SKILL.md, 3 runs each (`cfm1-3`), strict Opus grading against the matching subset only.
+
+| sub-trap | assertions | 3-run band | consistent 3/3 fail | verdict |
+|---|---|---|---|---|
+| cs-errors | 12 | 11–12/12 | none | **capacity** — clean at sub-trap size ✓ |
+| cs-hygiene | 12 | 10–12/12 | none | **capacity** — clean at sub-trap size ✓ |
+| cs-style | 14 | 12–13/14 | `fs-pipeline-flow-documented` | **format floor** — Haiku documents the pipeline in prose, never the required bullet-list doc comment; rule already maximally explicit ("**bullet list** … Not a dense prose paragraph") |
+| cs-design | 13 | 7–9/13 | `fs-extract-by-responsibility`, `fs-srp-cqs`, `fs-divergent-change-business-domain` | **decomposition floor** — all 3 runs leave `placeOrder` fusing fetch+persist+notify+cache; Haiku won't split a god-function into separate single-responsibility ops even at 13-rule scope |
+
+**Conclusion.** The split disambiguates the umbrella ceiling: **errors + hygiene + style are capacity** (the same rules that missed in the 52-sweep pass cleanly at Haiku-tractable granularity), but **~4 of the 52 rules are genuine Haiku capability floors**, independent of trap size or wording:
+- **Architectural decomposition** (`extract-by-responsibility`, `srp-cqs`, `divergent-change-business-domain`) — multi-function extraction requires threading shared locals (`user`, `total`, `order`) through new functions; Haiku recognises the trigger (line 73-75 of SKILL.md) but triages local fixes and leaves the structure fused. Even its best run (cfm2 9/13) keeps the god-function.
+- **Bullet-list pipeline doc** (`pipeline-flow-documented`) — a pure format-adherence floor; the semantic content is present in prose, but Haiku's doc-comment default resists the bullet-list form.
+
+These were **documented, not "fixed"** — the umbrella is a deliberately-minimal recall surface that defers teaching to sub-skills (SKILL.md line 32); bloating it with a worked decomposition example to chase a structurally-hard transform would corrupt the skill and overfit the trap. Same treatment as the rust-arena / swift-swiftdata / testing-zombies floors. Real-world: kirby-bot applies `:design` per-file on Haiku where the narrow scope helps with the local rules, but god-function decomposition stays a known Haiku weak spot regardless.
 
 ## Eval corrections (assertion bugs — fixed in assertions-eX.json + evals.json, NOT skill)
 - **F (untestable in a single-component code-only refactor):** testing `api-seeding` (no seedable precondition in trap), testing `test-pyramid-ratio` (prose-awareness), web-performance `inline-critical-css` (needs separate stylesheet/build), tanstack-start `scroll-restoration` → **A** (trap has no `createRouter` to attach router-level config).
@@ -54,6 +71,6 @@
 ## Bottom line
 - **24 skills enforced** (23 with pre-existing evals + make-interfaces-feel-better, new eval created this campaign).
 - **20/23 skills: clean** at 3-run (no rule fails all 3 — remaining misses are run-to-run variance). 4 perfect (drizzle, zod, docker, security-defensive e2: N/N ×3).
-- **2 skills capacity-bound** (coding-standards 52, ui-ux 35): every rule is taught correctly and verifiable in isolation; the single 50-rule sweep exceeds Haiku's per-pass set. Action: split into sub-skill traps. Massive deltas regardless (+25, +22).
-- **Floor (F) documented, not corrupted:** language-rust arena, language-swift swiftdata migration, testing zombies-coverage. These need a stronger model than Haiku or a dedicated eval shape.
+- **coding-standards (52) resolved by the split**: errors/hygiene/style are pure capacity (clean at sub-trap size); 4 rules are real floors (3 decomposition + 1 bullet-doc). **ui-ux (35) remains capacity-bound** — every rule is taught correctly and verifiable in isolation; the single 35-rule sweep exceeds Haiku's per-pass set. Massive deltas regardless (+25, +22).
+- **Floor (F) documented, not corrupted:** language-rust arena, language-swift swiftdata migration, testing zombies-coverage, coding-standards architectural decomposition (`extract-by-responsibility` / `srp-cqs` / `divergent-change`) + bullet-list pipeline doc. These need a stronger model than Haiku or a dedicated eval shape.
 - Real-world note: kirby-bot applies these skills per-file/per-diff on Haiku, not as 50-rule sweeps — the narrow-scope path is where the body-embodied rules + checklists pay off, which the mega-trap can't show.
