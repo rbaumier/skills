@@ -44,6 +44,7 @@
 | ui-ux | 35 | **7/35** | 29–32 | 2 concrete **FIXED (R)** | **CAPACITY** (35-rule trap); +22 |
 | coding-standards | 52 | 20/52 | 40–45 | 5 architecture rules | **CAPACITY** (52-rule trap); +25. Recommend splitting into 4 sub-skill sub-traps (design/errors/hygiene/style) for accurate per-rule measurement |
 | tanstack-start | 7→6 | 4/7 | 5–6 | — | clean (scroll-restoration retired A) |
+| make-interfaces-feel-better | 17 (new eval) | 7–14 | 11–13 | (optical-alignment, image-outline FIXED R; shadows-over-borders + interruptible-animations salience-fixed) | Cat A motion skill; demanding 17-rule trap, residual variance like ui-animations |
 
 ## Eval corrections (assertion bugs — fixed in assertions-eX.json + evals.json, NOT skill)
 - **F (untestable in a single-component code-only refactor):** testing `api-seeding` (no seedable precondition in trap), testing `test-pyramid-ratio` (prose-awareness), web-performance `inline-critical-css` (needs separate stylesheet/build), tanstack-start `scroll-restoration` → **A** (trap has no `createRouter` to attach router-level config).
@@ -51,6 +52,7 @@
 - **Retargeted (kept but made testable):** testing page-object-model → no-repeated-inline-selectors; frontend virtualize-long-list / focus-trap-modal; i18n global-toast → no-alert.
 
 ## Bottom line
+- **24 skills enforced** (23 with pre-existing evals + make-interfaces-feel-better, new eval created this campaign).
 - **20/23 skills: clean** at 3-run (no rule fails all 3 — remaining misses are run-to-run variance). 4 perfect (drizzle, zod, docker, security-defensive e2: N/N ×3).
 - **2 skills capacity-bound** (coding-standards 52, ui-ux 35): every rule is taught correctly and verifiable in isolation; the single 50-rule sweep exceeds Haiku's per-pass set. Action: split into sub-skill traps. Massive deltas regardless (+25, +22).
 - **Floor (F) documented, not corrupted:** language-rust arena, language-swift swiftdata migration, testing zombies-coverage. These need a stronger model than Haiku or a dedicated eval shape.

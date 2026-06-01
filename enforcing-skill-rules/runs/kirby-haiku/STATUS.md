@@ -95,8 +95,14 @@ Bands = min–max passed across 3 independent Haiku runs (grader=Opus, strict).
 clean medium (no 3/3): security-defensive e1 18–21/23 & e2 8/8×3, language-typescript e1 14–16/16, tailwind e2 5–6/6, tanstack-start e1 (scroll-restoration retired A — trap has no createRouter).
 Fixes applied (R) held across re-runs. Assertion bugs (A/F) corrected in BOTH assertions-eX.json + evals.json: api-seeding(F), inline-critical-css(F), scroll-restoration(A), test-pyramid-ratio(F), page-object-model→no-repeated-inline-selectors, supply-chain-beyond-audit, drizzle-infer-type, createAPIFileRoute, jsdoc scoped, +coding-standards 3.
 
+## COMMITTED 2026-06-01
+Branch `enforce-skills-haiku`, commit 5b3660a (459 files). NOT pushed (no user ask). Benchmark: runs/kirby-haiku/BENCHMARK-2026-06-01-haiku.md. 23 skills enforced+measured 3-run; 20/23 clean, 2 capacity-bound (coding-standards 52, ui-ux 35), F-floors documented (rust arena, swift swiftdata, testing zombies).
+
 ## NEXT ACTIONS (resume here)
-0. DONE: wave-3 (11 skills) 3-run + fixes. Next:
+0. DONE: wave-1/2 + wave-3 3-run confirm + fixes + benchmark + commit. Remaining:
+1. **make-interfaces-feel-better**: create eval (Cat A design skill) → 3 Haiku runs → grade → fix. IN PROGRESS.
+2. **coding-standards split** (recommended, optional): split 52-rule e12 into design/errors/hygiene/style sub-traps (~13 rules each) — validates capacity hypothesis + measures the 4 sub-skills at Haiku-tractable size.
+--- (historical) ---
 1. **3-RUN CONFIRM wave-1/2 (12 skills)**: vue, drizzle-orm, tanstack-query, better-result-adopt, api-design, zod, kubernetes, docker, i18n, shadcn, frontend, ui-animations (small, already near-100%; confirm hold).
 2. Write benchmarks/2026-06-01-haiku.md per touched skill + commit skills+benchmarks. 3. Create evals for make-interfaces-feel-better (+ coding-standards sub-skills already covered by umbrella e12).
 OLD NEXT (superseded):

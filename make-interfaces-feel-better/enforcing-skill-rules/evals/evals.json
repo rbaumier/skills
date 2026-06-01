@@ -1,0 +1,115 @@
+{
+  "skill_name": "make-interfaces-feel-better",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-sweep",
+      "prompt": "Fix all issues:\n\n```tsx\n'use client';\n\nimport { useState } from 'react';\nimport { AnimatePresence, motion } from 'motion/react';\nimport { PlayIcon, PauseIcon, HeartIcon, StarIcon } from './icons';\n\n// package.json includes \"motion\": \"^11.0.0\"\n\n// Root layout — wraps the whole app\nexport function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"en\">\n      <body>{children}</body>\n    </html>\n  );\n}\n\n// Interactive side drawer toggled by a button\nconst drawerCss = `\n  .drawer {\n    transform: translateX(-100%);\n  }\n  .drawer.open {\n    animation: slideIn 250ms ease-out forwards;\n  }\n  @keyframes slideIn {\n    from { transform: translateX(-100%); }\n    to { transform: translateX(0); }\n  }\n`;\n\nfunction SideDrawer({ open }: { open: boolean }) {\n  return (\n    <>\n      <style>{drawerCss}</style>\n      <aside className={open ? 'drawer open' : 'drawer'}>Filters</aside>\n    </>\n  );\n}\n\nexport default function DashboardCard({ stats, avatarUrl }) {\n  const [isPlaying, setIsPlaying] = useState(false);\n  const [isModalOpen, setIsModalOpen] = useState(false);\n  const [drawerOpen, setDrawerOpen] = useState(false);\n  const [liveCount, setLiveCount] = useState(0);\n\n  return (\n    <div\n      className=\"rounded-xl p-3 border border-slate-200\"\n      style={{ transition: 'all 200ms ease-out' }}\n    >\n      <SideDrawer open={drawerOpen} />\n\n      <div className=\"flex items-center justify-between rounded-xl bg-white p-2 border border-slate-200\">\n        <h1>Your team's performance this quarter</h1>\n\n        <img\n          src={avatarUrl}\n          alt=\"avatar\"\n          className=\"size-12 rounded-full outline outline-1 outline-slate-700/20\"\n        />\n      </div>\n\n      <p>\n        A detailed breakdown of how every member contributed across the\n        sprint, including merged pull requests and review turnaround time.\n      </p>\n\n      {/* live-updating viewer count */}\n      <div className=\"text-2xl font-bold\">{liveCount} viewers</div>\n\n      {/* play / pause toggle */}\n      <button\n        onClick={() => setIsPlaying(!isPlaying)}\n        className=\"flex size-6 items-center justify-center rounded-full bg-black text-white transition\"\n        style={{ willChange: 'all' }}\n      >\n        {isPlaying ? <PauseIcon /> : <PlayIcon />}\n      </button>\n\n      {/* like button — icon swaps on click */}\n      <button\n        onClick={() => {}}\n        className=\"transition-transform active:scale-[0.9]\"\n        style={{ width: 24, height: 24 }}\n      >\n        {stats.liked ? <HeartIcon filled /> : <HeartIcon />}\n      </button>\n\n      <button\n        className=\"flex items-center gap-2 rounded-lg bg-blue-600 px-4 text-white\"\n        onClick={() => setDrawerOpen(!drawerOpen)}\n      >\n        <span>Open details</span>\n        <StarIcon />\n      </button>\n\n      {/* staggered? no — whole list fades in as one block */}\n      <AnimatePresence>\n        <motion.ul\n          initial={{ opacity: 0 }}\n          animate={{ opacity: 1 }}\n        >\n          {stats.members.map((m) => (\n            <motion.li\n              key={m.id}\n              exit={{ opacity: 0, height: 0, transition: { duration: 0.4 } }}\n            >\n              {m.name} — {m.commits}\n            </motion.li>\n          ))}\n        </motion.ul>\n      </AnimatePresence>\n\n      <button onClick={() => setIsModalOpen(true)}>More</button>\n\n      <AnimatePresence>\n        {isModalOpen && (\n          <motion.div\n            className=\"fixed inset-0 rounded-xl bg-white p-4 shadow-2xl border border-slate-200\"\n            initial={{ opacity: 0, scale: 0.5, filter: 'blur(4px)' }}\n            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}\n            transition={{ type: 'spring', duration: 0.3, bounce: 0.25 }}\n          >\n            <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }}>\n              Details\n            </motion.h2>\n            <p>Closed {stats.closed} issues.</p>\n            <button onClick={() => setIsModalOpen(false)}>Close</button>\n          </motion.div>\n        )}\n      </AnimatePresence>\n    </div>\n  );\n}\n```\n\nTarget: macOS, light and dark mode. Output fixed code only.",
+      "expected_output": "Full refactor applying every make-interfaces-feel-better principle",
+      "assertions": [
+        {
+          "id": "concentric-border-radius",
+          "trap": "Outer div `rounded-xl p-3` wraps an inner div with the same `rounded-xl` — identical radius on parent and child despite padding between them",
+          "description": "Nested rounded surfaces use concentric radii: outerRadius = innerRadius + padding. The outer card must get a larger radius (e.g. rounded-2xl) than the inner element, accounting for the padding.",
+          "category": "format"
+        },
+        {
+          "id": "optical-alignment",
+          "trap": "The text+icon button uses symmetric `px-4` with the StarIcon on the right, and the play button shows an asymmetric triangle (PlayIcon) with no optical shift",
+          "description": "Align optically, not geometrically: a text+icon button needs less padding on the icon side (icon-side = text-side - 2px, e.g. pl-4 pr-3.5), and triangular/asymmetric icons (play triangle) get a small shift (e.g. ml-px / margin-left: 2px) or an SVG-level fix.",
+          "category": "format"
+        },
+        {
+          "id": "shadows-over-borders",
+          "trap": "The card and inner surface use `border border-slate-200` for depth/elevation",
+          "description": "Use a layered transparent box-shadow for depth on cards/containers instead of a solid border (3 layers in light mode, single white ring in dark mode). Borders that exist purely for elevation should become shadows; true layout dividers stay borders.",
+          "category": "format"
+        },
+        {
+          "id": "interruptible-animations",
+          "trap": "SideDrawer toggles open with a CSS `@keyframes slideIn` animation on the `.open` class — a keyframe driving an interactive open/close state",
+          "description": "Interactive state changes (open/close, toggle, hover) must use interruptible CSS transitions, not keyframe animations. The drawer should animate via `transition: transform` between two transform states; keyframes are reserved for one-shot sequences.",
+          "category": "behavior"
+        },
+        {
+          "id": "split-stagger-enter",
+          "trap": "The member list animates in as one block (a single motion.ul fading opacity 0->1), not staggered children",
+          "description": "Enter animations are split into semantic chunks and staggered (~100ms between children) combining opacity + translateY + blur, instead of fading a single container as one block.",
+          "category": "behavior"
+        },
+        {
+          "id": "subtle-exit",
+          "trap": "List item exit uses `height: 0` (full collapse) with `duration: 0.4` — a dramatic exit longer than the enter",
+          "description": "Exit animations stay subtle: a small fixed translateY (e.g. -12px) with opacity/blur, and a shorter duration than the enter (~0.15s). Never collapse full height or run an exit longer/heavier than the enter.",
+          "category": "behavior"
+        },
+        {
+          "id": "contextual-icon-animation",
+          "trap": "Play/Pause and Heart icons swap instantly with no animation, and the modal spring uses `bounce: 0.25`",
+          "description": "Contextual icon swaps animate with the exact values opacity 0->1, scale 0.25->1, blur 4px->0px, transition { type: 'spring', duration: 0.3, bounce: 0 }. Since motion is in package.json, use the Motion approach; bounce must be 0 everywhere (the modal's bounce: 0.25 must become 0).",
+          "category": "behavior"
+        },
+        {
+          "id": "font-smoothing",
+          "trap": "RootLayout `<html>` (macOS target) has no `-webkit-font-smoothing: antialiased` / `antialiased` class",
+          "description": "Apply -webkit-font-smoothing: antialiased (Tailwind `antialiased`) once at the root layout (html/body) for crisper macOS text.",
+          "category": "format"
+        },
+        {
+          "id": "tabular-nums",
+          "trap": "`{liveCount} viewers` is a live-updating number rendered with default numerals",
+          "description": "Dynamically updating numbers (the live viewer count) use font-variant-numeric: tabular-nums (Tailwind `tabular-nums`) to prevent layout shift.",
+          "category": "format"
+        },
+        {
+          "id": "text-wrap-balance",
+          "trap": "The `<h1>` heading has no text-wrap rule",
+          "description": "Headings use text-wrap: balance (Tailwind `text-balance`) for even line distribution.",
+          "category": "format"
+        },
+        {
+          "id": "text-wrap-pretty",
+          "trap": "The `<p>` description paragraph has no text-wrap rule",
+          "description": "Short-to-medium body text uses text-wrap: pretty (Tailwind `text-pretty`) to avoid orphaned last-line words.",
+          "category": "format"
+        },
+        {
+          "id": "image-outline",
+          "trap": "The avatar img uses a tinted `outline-slate-700/20` outline and no dark-mode variant",
+          "description": "Image outlines must be a neutral 1px low-opacity outline: pure black `outline-black/10` in light mode and pure white `dark:outline-white/10` in dark mode, with `-outline-offset-1`. Never a tinted neutral like slate/zinc.",
+          "category": "format"
+        },
+        {
+          "id": "scale-on-press",
+          "trap": "The like button uses `active:scale-[0.9]` — below the 0.95 floor",
+          "description": "Scale on press must be exactly scale(0.96); never below 0.95 (the 0.9 must be raised to 0.96).",
+          "category": "behavior"
+        },
+        {
+          "id": "skip-animation-on-load",
+          "trap": "AnimatePresence wraps default-state content (icons/list) without `initial={false}`, so it animates on first page load",
+          "description": "AnimatePresence for elements already in their default state on mount uses `initial={false}` so they don't animate in on page load, only on subsequent state changes.",
+          "category": "behavior"
+        },
+        {
+          "id": "no-transition-all",
+          "trap": "Outer div has inline `transition: 'all 200ms ease-out'` and the play button uses Tailwind `transition` (which maps to transition-property: all)",
+          "description": "Never use `transition: all` or bare Tailwind `transition`. Specify exact properties (e.g. transition-[box-shadow] or transition-transform).",
+          "category": "behavior"
+        },
+        {
+          "id": "will-change-sparingly",
+          "trap": "Play button has inline `willChange: 'all'`",
+          "description": "will-change must be specific (transform / opacity / filter) and only added for observed first-frame stutter — never `will-change: all`. Here it should be removed or scoped to transform.",
+          "category": "behavior"
+        },
+        {
+          "id": "minimum-hit-area",
+          "trap": "Play button is `size-6` (24px) and the like button is 24x24px — both below the 40px minimum with no expanded hit area",
+          "description": "Interactive elements need at least a 40x40px hit area; small visible controls extend it with a pseudo-element (e.g. after:size-10 after:-translate-1/2), without overlapping neighbors.",
+          "category": "behavior"
+        }
+      ]
+    }
+  ]
+}
