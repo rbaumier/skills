@@ -32,7 +32,7 @@ description: Use when managing server state with TanStack Query v5, building tab
 - Throw errors in queryFn: `if (!res.ok) throw new Error(...)`
 - Invalidate queries after mutations via `queryClient.invalidateQueries()`
 - **Dependent queries with `enabled`**: `useQuery({ queryKey: ['posts', userId], queryFn: () => fetchPosts(userId), enabled: !!userId })`. Query won't execute until `userId` is truthy. Forgetting `enabled` causes fetch with `undefined` param
-- `invalidateQueries` only refetches active queries; use `refetchType: 'all'` for inactive. Use `refetchType: 'none'` to only mark as stale without any refetch (useful for expensive queries that should only refetch on next mount)
+- **`invalidateQueries` only refetches ACTIVE (currently-mounted) queries by default.** A bare `invalidateQueries({ queryKey })` marks inactive queries stale but does NOT refetch them — so a detail page you navigate back to shows stale data. **When in doubt after a mutation, pass `refetchType: 'all'`** so inactive cache entries also refetch: `invalidateQueries({ queryKey: ['todos'], refetchType: 'all' })`. Review check: every `invalidateQueries` call must justify its `refetchType` — omitting it is a silent default, not a decision. Use `refetchType: 'none'` only to deliberately mark-stale-without-refetch (expensive queries that should refetch on next mount)
 - **`placeholderData` vs `initialData`**: `placeholderData` is NOT persisted to cache — shown while fetching, then replaced. `initialData` IS persisted — treated as if query already fetched. Use `placeholderData` for loading UX, `initialData` for server-provided data (SSR). Wrong choice: `initialData` with stale data = no refetch until staleTime expires
 - No `enabled` on useSuspenseQuery; use conditional rendering instead
 - refetch() is for same params only; change queryKey for new params
@@ -93,16 +93,89 @@ When your backend supports realtime (Supabase Realtime, SSE, WebSocket), prefer 
 | Realtime events can arrive out of order | Version-checked `setQueryData` | Compare a `version` field before writing — stale events lose |
 
 ### SSR with Dehydrate/Hydrate
-Server: `const queryClient = new QueryClient()` -> `await queryClient.prefetchQuery(...)` -> `dehydrate(queryClient)`. Client: wrap app in `<HydrationBoundary state={dehydratedState}>`. This pre-populates the cache on the server so the client renders instantly without refetching. Without HydrationBoundary, SSR data is thrown away and re-fetched.
+**Prefetching on the server is only HALF the pattern. `ensureQueryData`/`prefetchQuery` in a loader alone does NOT make SSR work** — without dehydrate + HydrationBoundary the server-fetched cache is discarded and the client refetches everything, defeating the point. Both halves are mandatory:
+
+1. **Server**: `const queryClient = new QueryClient()` → `await queryClient.prefetchQuery(...)` → pass `dehydrate(queryClient)` to the client.
+2. **Client**: wrap the tree in `<HydrationBoundary state={dehydratedState}>`.
+
+Review check: if you see a server prefetch with no matching `dehydrate(...)` call AND no `<HydrationBoundary>` wrapping the consuming component, the SSR is broken — the data is fetched twice. A loader that only calls `ensureQueryData` is incomplete SSR, not complete SSR.
+
+```tsx
+// Server
+const queryClient = new QueryClient()
+await queryClient.prefetchQuery(todoOptions)
+const dehydratedState = dehydrate(queryClient)   // <-- required, do not skip
+
+// Client
+<HydrationBoundary state={dehydratedState}>       {/* <-- required, do not skip */}
+  <Todos />
+</HydrationBoundary>
+```
+
+Rationale: the cache lives in memory on a fresh server-side QueryClient. Serializing it (`dehydrate`) and rehydrating it client-side (`HydrationBoundary`) is the only bridge between the two — there is no other way to carry that fetched data across the network.
 
 ### Query Key Factory Pattern
-Organize keys hierarchically: `const todoKeys = { all: ['todos'] as const, lists: () => [...todoKeys.all, 'list'] as const, list: (filters) => [...todoKeys.lists(), filters] as const, detail: (id) => [...todoKeys.all, 'detail', id] as const }`. Invalidate at any level: `invalidateQueries({ queryKey: todoKeys.lists() })` clears all filtered lists.
+**Hand-written inline keys like `['todos']`, `['todos', id]`, `['todos', 'list', filter]` repeated across components are NOT acceptable — define a factory object instead.** Inline arrays are not "simpler"; they are the bug. A typo in one (`'todo'` vs `'todos'`) silently breaks cache matching, and you cannot invalidate a whole family at once.
+
+When two or more queries share a key prefix, build a single factory object so every key derives from one source of truth:
+
+```ts
+const todoKeys = {
+  all: ['todos'] as const,
+  lists: () => [...todoKeys.all, 'list'] as const,
+  list: (filters) => [...todoKeys.lists(), filters] as const,
+  detail: (id) => [...todoKeys.all, 'detail', id] as const,
+}
+// before:  useQuery({ queryKey: ['todos', 'list', filter], ... })
+// after:   useQuery({ queryKey: todoKeys.list(filter), ... })
+```
+
+Invalidate at any level of the hierarchy: `invalidateQueries({ queryKey: todoKeys.lists() })` clears all filtered lists in one call. Review check: any second occurrence of the same flat string literal in a query key means the factory is missing — refactor it.
 
 ### Optimistic Update with Rollback Context
-For complex list updates where `useMutationState` doesn't fit: in `onMutate`, cancel queries, snapshot previous data, set optimistic data, return `{ previous }` as context. In `onError`, restore from `context.previous`. In `onSettled`, invalidate to refetch. Use `useMutationState` (simpler) when only displaying pending state.
+**`setQueryData` inside `onMutate` ALONE is a broken optimistic update — it has no rollback, so a failed mutation leaves the user staring at data that was never saved.** A real optimistic update is a four-part contract; all four are mandatory, none is optional:
+
+1. **`onMutate`** — `await queryClient.cancelQueries({ queryKey })` first (so an in-flight refetch can't overwrite your optimistic write), THEN snapshot `const previous = queryClient.getQueryData(queryKey)`, THEN apply the optimistic `setQueryData`, THEN `return { previous }`.
+2. **`onError(err, vars, context)`** — restore: `queryClient.setQueryData(queryKey, context.previous)`.
+3. **`onSettled`** — `queryClient.invalidateQueries({ queryKey })` to reconcile with the server.
+
+```ts
+useMutation({
+  mutationFn: updateTodo,
+  onMutate: async (newTodo) => {
+    await queryClient.cancelQueries({ queryKey: ['todos'] })          // 1. stop races
+    const previous = queryClient.getQueryData(['todos'])              // 2. snapshot
+    queryClient.setQueryData(['todos'], (old) => [...old, newTodo])   // 3. optimistic write
+    return { previous }                                               // 4. hand snapshot to onError
+  },
+  onError: (_err, _vars, context) => {
+    queryClient.setQueryData(['todos'], context.previous)             // rollback
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['todos'] })           // reconcile
+  },
+})
+```
+
+Review check: if `onMutate` writes the cache but there is no `cancelQueries`, no snapshot returned as context, and no `onError` rollback, the update is NOT done — it's a UI that lies on failure. Use `useMutationState` (simpler) when you only need to DISPLAY pending state and don't manipulate the cache.
 
 ### Prefetching in Route Loaders
-In loader: `await queryClient.ensureQueryData(queryOptions(...))`. Use `ensureQueryData` (not `prefetchQuery`) to also return data for the loader. Coordinate `staleTime` between loader and component: set `staleTime >= navigation time` (~5-30s) to avoid double-fetch.
+In loader: `await queryClient.ensureQueryData(queryOptions(...))`. Use `ensureQueryData` (not `prefetchQuery`) so the loader both warms the cache and returns the data.
+
+**`ensureQueryData` WITHOUT a coordinated `staleTime` is the trap, not the fix.** If `staleTime` is left at the default (0 = always stale), the loader fetches, then the component mounts and immediately fetches the SAME data again — a guaranteed double-fetch on every navigation. You must set `staleTime >= navigation time` (~5-30s) so the loader-fetched data is still considered fresh when the component mounts:
+
+```ts
+const todoOptions = queryOptions({
+  queryKey: ['todos'],
+  queryFn: fetchTodos,
+  staleTime: 10_000,   // <-- REQUIRED: bridges loader → mount so the component reuses the loader's fetch
+})
+// loader:
+await queryClient.ensureQueryData(todoOptions)
+// component reads the same staleTime via the shared queryOptions — no second fetch
+```
+
+Review check: an `ensureQueryData`/loader prefetch with `staleTime` of 0 or unset means the prefetch buys nothing — flag it. The loader and the component must reference the SAME `queryOptions` so the `staleTime` is identical on both sides.
 
 ### Mutation Callbacks — Two Levels
 - `useMutation({ onSuccess })` — always runs, survives component unmount. Put cache updates here

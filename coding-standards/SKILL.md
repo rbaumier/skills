@@ -27,6 +27,57 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 
 **Most rules in the sub-skills are strict at system boundaries, lax internally.** A "boundary" is anywhere code outside your control reads/writes: HTTP handlers, library exports, persisted records, message contracts, IPC, plugins. DRY, no-boolean-params, named options, exhaustive validation, sealed interfaces — these earn their cost at boundaries because consumers can't be updated atomically. Internally (one team, one repo, atomic refactor possible), the same rules become friction without benefit. When a rule says "boundary", apply it strictly; otherwise apply it as taste. Reviews: rule applied uniformly without distinguishing boundary status -> flag "scope the rule to its applicable surface"
 
+## Pre-output checklist — run before returning ANY refactor
+
+**LOUD GATE.** When the task is "refactor", "clean up", "fix everything wrong", or any multi-rule rewrite, you are under a *capacity trap*: it is easy to apply five obvious rules and silently drop twenty. **Do not return code until you have walked this list top-to-bottom and acted on every trigger you can see in the diff.** Each line is `trigger → required transform`. Generic by design — applies to any language, any module. (Full rationale lives in the sub-skill named in brackets; this is the recall surface, not the teaching.)
+
+**Naming & comments** [`:style`]
+- Function name contains `handle`/`process`/`data`/`do`/`run`/`execute`/`perform` → rename to intent (`handleOrderData` → `placeOrder`). The options-object rename does NOT save the verb.
+- Abbreviated locals (`u`, `usr`, `itm`, `ct`, `amt`, `s`) → full words (`user`, `item`, `count`, `amount`, `stock`).
+- Boolean without `is`/`has`/`should`/`can`, positive form → add prefix (`sendEmail` → `shouldNotify`).
+- Comment restates the next line's mechanics (`// get user`, `// update cache`, `// create order`) → rewrite as the consumer/operator *consequence* or delete. "Update cache" → "next profile read sees this order without a DB hit."
+- Early return / no-op / `continue` with no reason → add the *why* inline ("blocked users can't transact — reject before any I/O").
+- Magic number / threshold (`1000`, `50`) → named constant AND a comment stating *why that value* ("orders over $1000 trip manual fraud review").
+- Domain term used cold (`big_orders`, a status string) → one-line definition on first use.
+- Archaeology (`was`, `previously`, `originally`, `refactored from`, `in Q3`) → delete; history lives in git.
+- Comment anchored to ONE caller ("exposed because the admin dashboard needs it") → rewrite to the stable domain purpose, name no caller.
+- Exported function → a function doc (~5 lines) naming the consumer-visible effect / return-value meaning. NOT a bare label, NOT a 6-line "steps" block, NOT `@example` filler.
+- Multi-step pipeline (3+ steps) → module/function doc with the steps as a **bullet list** (what / consumer consequence / how-as-bullets). Not a dense prose paragraph.
+
+**Control flow & data** [`:style` + `:design`]
+- Nested `if` inside loop, >3 indent levels → flatten with guard clauses + early `continue`/`return`.
+- `x === 'A' ? .. : x === 'B' ? .. : ..` ternary chain → object map or `switch`.
+- Compound expression (2+ ops: tax × qty − discount) → extract named intermediate vars.
+- `let acc = 0; acc += ...` / `arr.push(...)` accumulator in a loop → `map`/`filter`/`reduce`, return new data.
+- Independent `await` inside a `for` loop (per-item stock check) → `Promise.all(items.map(...))`.
+- `a.b.c.d` chain 2+ dots deep → destructure at boundary or add a direct accessor (Law of Demeter).
+- Boolean param that branches the body (`isUrgent`, `sendEmail`) → split into two named functions. An options object is NOT a fix — the flag still branches.
+- 4+ positional args, or 2+ same-typed neighbours → options object.
+
+**Types & errors** [`:design` + `:errors`]
+- `any` / untyped param / `type X = string` for a status → explicit interface; union (`'pending' | 'paid' | ...`) for finite states (make illegal states unrepresentable).
+- Untyped external input flowing inward → parse at the boundary into a typed domain object (parse, don't validate).
+- ANY external input enters the function (array, number, string from a param/request/row) → at the very top, BEFORE any I/O, emit explicit bound checks that **reject** (return a Result error), never skip/clamp/default: empty collection → reject; number that must be positive (`qty`, count, amount) → reject if `<= 0`; required string blank → reject. A `?? 0` / `|| ''` fallback or a `continue` that silently drops a bad item is a FAIL, not a fix — the invalid value must produce a Result error. If you wrote zero reject-on-invalid guards, you skipped this rule.
+- `throw` anywhere → return `Result<T,E>`; convert at the edge only.
+- Any error value you return or define (`new Error('msg')`, or a Result error type / discriminated union) → it MUST carry ALL FOUR fields `{ type, code, status, detail }` and preserve the cause. `{ type, detail }` or `{ type, code, detail }` is INCOMPLETE — `status` is mandatory. After removing `throw`, re-open every error variant and confirm all four fields are present; a typed union missing `code` or `status` still fails this rule.
+- "Impossible" guard (`total <= 0` after summing valid prices) → return `err({ type:'INVARIANT_VIOLATION' })` + a comment stating why it should never happen. Don't `throw`.
+- Function throws on a condition the caller can't prevent (`removeCartItem` on absent item) → redefine so the call succeeds idempotently (postcondition: "item not in cart").
+- EVERY I/O call without exception (`db.query`, `fetch`, `mailer.send`, `cache.get/set`, any network/disk await) → wrap it so it cannot hang: `withTimeout(db.query(...), MS)` or pass `{ signal: AbortSignal.timeout(MS) }`. Count your I/O calls, then count your timeouts — the two counts MUST match. A single un-timed `await db.query(...)` is a FAIL. If you wrote any raw `await someIo(...)` with no timeout/signal, you skipped this rule.
+- Caller forced to pass mechanism config (`retryCount`, `retryDelayMs`) → pull that complexity down into the module or drop it.
+
+**Architecture & structure** [`:design`]
+- `import { db }` / `cache` / `mailer` as module globals → inject via factory `createOp({ db, cache, mailer })`.
+- `console.log` / tracing inside business logic → move to a crosscutting wrapper / middleware.
+- Raw DB row returned (`return rows[0]`, column names like `user_id`) → map to a DTO response type.
+- Magic codes/thresholds inline in the body → a config object resolved once, not scattered literals.
+- One function mixing many concerns (fetch + price + persist + notify + cache) → split by **responsibility** into named operations.
+- One function/module mixing unrelated business domains (fulfillment + document formatting + shipping + validation) → separate into distinct named sections/modules; one reason-to-change each.
+- File has 2+ `export`s, or any `export` sits below a non-exported helper → enforce this exact top-to-bottom order: (1) imports, (2) shared types/constants, (3) ALL exported/public functions grouped together, (4) private helpers last. An exported function declared at the bottom of the file, or public functions interleaved with private ones, is a FAIL — move every `export` up so a reader sees the whole public API before any helper.
+- 3+ functions with the same signature + similar body (`formatEmail`/`formatReceipt`/`formatInvoice`) → one parameterized function (Rule of Three). The shared param group (`to, name, amount, currency`) → a named Value Object.
+- Validation re-checked deep inside a loop after it was already checked at entry → barricade once at the boundary, trust inside.
+
+**After the walk:** if any trigger fired and you did NOT transform it, either fix it or state explicitly which rules you skipped and why. Silent partial application is the failure mode this gate exists to stop.
+
 ## Sub-skills — load on demand
 
 This umbrella contains only the core philosophy. The detailed rules are split into focused sub-skills:

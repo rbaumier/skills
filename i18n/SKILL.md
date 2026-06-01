@@ -52,6 +52,7 @@ Use the singleton for: route `head()` functions (SEO), Zod error maps, error tra
 
 **Never use `<Trans>` component** unless interpolation requires JSX elements. `t()` is simpler and sufficient for 99% of cases.
 - Fallback locale chain: configure i18next with a fallback chain, not just a single fallback. Example: pt-BR -> pt -> en. Partially translated locales should gracefully show the closest language match, not jump straight to English.
+  - **A single value wrapped in an array (`fallbackLng: ["en"]`) is NOT a chain — it is still one target.** A real chain maps each regional locale to its base then to the default. Use the object form: `fallbackLng: { "pt-BR": ["pt", "en"], "de-AT": ["de", "en"], default: ["en"] }`. If you only write `fallbackLng: "en"` or `["en"]`, the rule is NOT satisfied.
 
 ### Pluralization
 - i18next suffix convention: base key + `_other` suffix for plural
@@ -79,11 +80,13 @@ Use the singleton for: route `head()` functions (SEO), Zod error maps, error tra
 - Map each code specifically: `too_small` (min=1, string) → `validation.required`, `too_small` (other) → `validation.tooShort`, `too_big` → `validation.tooLong`, `invalid_format` (email) → `validation.invalidEmail`
 - Pass to resolver: `zodResolver(Schema, { errorMap: formErrorMap })`
 - For `.refine()` messages: use bare key fragments (`message: "passwordsMismatch"`) and a `translateAuthError()` utility that prepends the domain and looks up via `i18n.t()`
+  - **The `message` must be a literal bare string, NOT an eager `i18n.t("...")` call.** Schemas are constructed once at module load, so `message: i18n.t("validation.passwordsMismatch")` freezes the translation at the load-time locale and never re-resolves when the user switches language. Store the fragment, resolve it at display time. `message: i18n.t(...)` inline does NOT satisfy this rule.
+- **Wire the error map into the resolver — defining `formErrorMap` is not enough.** Pass it explicitly: `zodResolver(Schema, { errorMap: formErrorMap })`. A bare `zodResolver(Schema)` ignores the map and falls back to Zod defaults, so the translations never run. Always check the resolver call, not just the map definition.
 - Return `null` from the error map to fall through to Zod's default — don't try to translate everything
 
 ### API Error Translation
 - Problem codes (`ProblemDetail.code`) map 1:1 to `errors.*` keys: `errors.repo_not_found`, `errors.unauthorized`
-- `getErrorMessage(error)` resolves any error: check `isProblemDetail(error)` → `i18n.t("errors.${error.code}")` → fallback to `error.detail` → fallback to `i18n.t("common.error")`
+- `getErrorMessage(error)` resolves any error in this EXACT order: (1) `isProblemDetail(error)` → `i18n.t("errors." + error.code)`, (2) fall back to `error.detail`, (3) fall back to `i18n.t("common.error")`. **Never return a raw `error.message` as the user-facing string** — a generic `instanceof Error` branch that returns `error.message` is the anti-pattern. Untranslated developer/exception text must terminate at `i18n.t("common.error")`, not leak to the user.
 - Global toast handler in `QueryCache.onError` / `MutationCache.onError`: auto-translate and toast every error. Opt-out via `meta: { skipGlobalToast: true }` on mutations that handle errors locally (e.g. auth forms using `form.setError("root", ...)`)
 - Always add a new `errors.*` key when defining a new `ProblemDefinition` — the two must stay in sync
 
@@ -101,7 +104,7 @@ Use the singleton for: route `head()` functions (SEO), Zod error maps, error tra
 ### SSR Considerations
 - Initialize i18n synchronously (static imports, no async loading) — must be available during SSR
 - Set `<html lang={i18n.language}>` in root route
-- Use `suppressHydrationWarning` on elements with client-dependent values (dates, relative times)
+- Use `suppressHydrationWarning` on elements with client-dependent values (dates, relative times). **This is a per-element component fix, not app-shell config:** any JSX element rendering `new Date()`, `toLocaleDateString(...)`, `Intl.RelativeTimeFormat`, or `i18n.language`-formatted output must carry `suppressHydrationWarning`, because the server and client render in potentially different locales/timezones. Example: `<p suppressHydrationWarning>{t("settings.lastSaved", { date })}</p>`.
 - ProblemError serialization: TanStack Start only serializes `Error.message` across SSR boundary — encode structured data in message string
 
 ## Other Frameworks
@@ -199,3 +202,14 @@ Text(pluralStringResource(R.plurals.items_selected, count, count))
 4. If API error: add `errors.*` key matching `ProblemDefinition.code`
 5. If page title: add `seo.*` key for `head()` and/or `staticData.titleKey`
 6. Never skip — "it's just one string" is how hardcoded text accumulates
+
+## STOP — Pre-output verification (do this before returning any refactor)
+
+Before you emit fixed code, re-scan YOUR output for these frequently-missed traps. Each line is a hard gate — if you cannot tick it, you are not done:
+
+- [ ] **Fallback chain**: `fallbackLng` is the object map form (`{ "pt-BR": ["pt","en"], default: ["en"] }`), NOT `"en"` and NOT `["en"]`.
+- [ ] **Zod resolver wired**: every `zodResolver(Schema)` call passes `{ errorMap: formErrorMap }`. A defined-but-unused error map counts as a failure.
+- [ ] **Refine message is a bare fragment**: `.refine(..., { message: "passwordsMismatch" })` — never `message: i18n.t(...)` inline (it freezes the locale at module load).
+- [ ] **getErrorMessage order**: ProblemDetail key → `error.detail` → `i18n.t("common.error")`. No branch returns a raw `error.message` to the user.
+- [ ] **Error UX, not `alert()`**: mutation/query errors surface through the app's error channel (e.g. global toast handler / opt-out via `meta: { skipGlobalToast: true }`), never a browser `alert()`. Do not silently swallow.
+- [ ] **Hydration-sensitive elements**: every element rendering a date/relative-time/locale-formatted value carries `suppressHydrationWarning`.

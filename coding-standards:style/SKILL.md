@@ -63,6 +63,20 @@ description: Use when writing or reviewing comments, docstrings, names, control 
   (2) Consumer consequence, one sentence (using the mapping above).
   (3) How, as a **bullet list**. *A single prose paragraph is NOT a module doc.*
 
+  **A multi-step function/pipeline (3+ sequential steps) MUST carry this doc — write it, do not delete it and do not collapse it into one prose sentence.** Worked example:
+  ```ts
+  /**
+   * Places an order and confirms it to the buyer.
+   * Buyer sees a confirmation email; their next profile load shows the order without a DB hit.
+   * How:
+   * - price the cart and persist the order row
+   * - email the buyer their confirmation
+   * - warm the per-user cache with the new order id
+   */
+  export async function placeOrder(userId: string, items: CartItem[]): Promise<Order> { /* ... */ }
+  ```
+  This names the consumer-visible outcome (1-2) then lists the *phases* as bullets (3). It is NOT a line-by-line code paraphrase — it survives refactors, so it is the one top-of-function comment you KEEP, not delete.
+
 ### 6. EXCEPTION: Logs and Errors
 - Error and log messages are a separate class, NOT comments. The telegraphic 10-word rule DOES NOT apply.
 - Go detailed and helpful. Name what went wrong, relevant identifiers, and the user's/operator's next action.
