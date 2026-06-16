@@ -95,6 +95,7 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag a verb given a 2nd meaning; overloaded validate/build/resolve; synonym aliases.
 - Flag dishonest escape hatch (no `dangerous_`/`unsafe_`/`experimental_` prefix).
 - Flag comment paraphrasing the next line instead of why/consequence; TODO with no action/issue link.
+- Flag same rationale across 2+ comments (per codebase, not per file) → keep one, point to it.
 - Flag unreferenced export / unused import / unreachable branch / commented-out code → remove.
 
 ### Docs & method
