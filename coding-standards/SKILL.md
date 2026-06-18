@@ -50,7 +50,6 @@ Make invalid states unrepresentable. Functional core, imperative shell. Parse, d
 - Compound expression (2+ ops: tax × qty − discount) → extract named intermediate vars.
 - `let acc = 0; acc += ...` / `arr.push(...)` accumulator in a loop → `map`/`filter`/`reduce`, return new data.
 - Independent `await` inside a `for` loop (per-item stock check) → `Promise.all(items.map(...))`.
-- `a.b.c.d` chain 2+ dots deep → destructure at boundary or add a direct accessor (Law of Demeter).
 - Boolean param that branches the body (`isUrgent`, `sendEmail`) → split into two named functions. An options object is NOT a fix — the flag still branches.
 - 4+ positional args, or 2+ same-typed neighbours → options object.
 

@@ -106,7 +106,7 @@ Pour chaque compte, demander la clé API :
 > Quelle est votre **Secret key** pour [nom du compte] ?
 
 - Pour Stripe Connect, demander aussi le `stripe_account_id` (`acct_xxx`) de chaque sous-compte.
-- Écrire les clés dans `.env` (une variable par compte : `STRIPE_SECRET_MELIES`, `STRIPE_SECRET_BEANVEST`, etc.).
+- Écrire les clés dans `.env` (une variable par compte : `STRIPE_SECRET_PRODUCT1`, `STRIPE_SECRET_PRODUCT2`, etc.).
 - Tester la connexion pour chaque compte : `node integrations/stripe/fetch.js --account <id> --start $(date +%Y-%m-%d) --end $(date +%Y-%m-%d)`. Confirmer ou demander de vérifier si erreur.
 
 **Si non** : laisser `stripe_accounts` vide (`[]`).
@@ -118,8 +118,8 @@ Les clés API sont stockées dans `.env` à la racine du projet (jamais dans `co
 ```
 QONTO_ID=votre-slug-organisation
 QONTO_API_SECRET=votre-cle-secrete
-STRIPE_SECRET_MELIES=sk_live_...
-STRIPE_SECRET_BEANVEST=sk_live_...
+STRIPE_SECRET_PRODUCT1=sk_live_...
+STRIPE_SECRET_PRODUCT2=sk_live_...
 ```
 
 ## Étape 5 : Récapitulatif et génération
