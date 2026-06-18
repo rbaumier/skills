@@ -102,6 +102,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Don't add a 2nd meaning for a verb already used here. No overloaded validate/build/resolve, no synonym aliases.
 - Escape hatches honest: `dangerous_`/`unsafe_`/`experimental_`.
 - Comment = why/consequence, not paraphrase of next line. Next to the statement.
+- One rationale, one place (per codebase, not per file). Recopied across comments → keep one, point to it; recurring across files → ADR/canonical doc the comments cite.
 - TODO carries action + issue link. No vague "fix later".
 - Exports/public API top, private helpers bottom (stepdown).
 
