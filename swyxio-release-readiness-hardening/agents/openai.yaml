@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Readiness Hardening"
+  short_description: "Build safe deploy, rollback, and smoke gates"
+  default_prompt: "Use $release-readiness-hardening to prepare this repo for safe release with env validation, smoke tests, rollback planning, and post-deploy checks."

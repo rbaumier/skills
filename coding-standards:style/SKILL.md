@@ -1,6 +1,6 @@
 ---
 name: coding-standards:style
-description: Use when writing or reviewing comments, docstrings, names, control flow, or file organization. Use when evaluating readability, choosing identifiers, splitting files, or applying naming conventions. Covers the visible surface of code.
+description: Use when writing or reviewing comments, docstrings, names, control flow, or file organization. Use when evaluating readability, choosing identifiers, splitting files, or applying naming conventions. Use when removing AI tells (slop) from code prose — comments, docs, error messages, commit messages, PR descriptions. Covers the visible surface of code.
 ---
 
 ## Comments
@@ -41,12 +41,13 @@ description: Use when writing or reviewing comments, docstrings, names, control 
   - **Detector:** Is the comment's first verb a synonym of the called function's name? E.g., `// Fetch subscriptions...` above `list_candidates(...)` → `fetch` paraphrases `list`. Delete the paraphrase, keep ONLY the *why-here* ("same tx as cursor advance").
 - **Never define a language keyword:** `useMemo`, `Arc`, `ON CONFLICT`: docs exist. Comment adds *why*, never the definition.
 - **Inaction needs a reason:** Empty branch, no-op, early return: state why.
-- **One insight, one place:** State invariant once per file at earliest useful spot.
+- **One insight, one place — per codebase, not per file:** State each rationale ONCE, at its canonical spot (the guard's test, the shared helper, the earliest useful line). Elsewhere: nothing, or a one-line pointer. **Detector:** writing a comment whose argument you already wrote 20 lines up, in a sibling file, or in the colocated test → delete this copy, keep the canonical one. Reviews: same rationale in 2+ places → flag "keep one, point to it".
+- **Cite canonical docs, never recopy them:** Mechanism explained in a project doc/ADR (`docs/agents/*`, ADRs) → comment is one line naming the hazard + the pointer. Re-explaining the full mechanism inline duplicates the doc and rots when it changes. ❌ 8-line plan-cache walkthrough above `SET LOCAL`. ✅ *"Parameterized VALUES misestimates under generic plan — see docs/agents/backend-handlers.md."*
 
 ### 4. Domain & Boundaries
 - **Domain terms:** Keep verbatim. Introduce once. NEVER use synonyms. NEVER abbreviate (`subscription` stays `subscription`, never `sub`).
 - **Limits/invariants:** Caps: state why + leftovers. TX: state in-tx vs post-commit.
-- **No archaeology:** History = git. Never `was`, `previously`, or `refactored`.
+- **No archaeology:** History = git. Never `was`, `previously`, or `refactored`. **Trap — archaeology without the trigger words:** a comment explaining absent code (*"No preliminary X row: it would never be observable"*, *"no TS reshape needed"*) narrates the refactor to the reviewer. Post-merge readers never saw that code; the justification belongs in the MR description / commit message. **Detector:** comment only makes sense compared against code NOT in the file (a removed step, a rejected alternative, the old implementation) → delete. Reviews: comment defending the change instead of stating a live constraint → flag "move to MR description".
 
 ### 5. Documentation Structure
 - **Struct doc:** JSDoc/Rustdoc/etc. Role only, not fields. No "and also" filler.
@@ -94,6 +95,37 @@ description: Use when writing or reviewing comments, docstrings, names, control 
 
 **Never**: code paraphrases, commented-out code, `TODO`/`FIXME` without issue link, name-restating. **Reviews**: any bullet violated → flag with bullet name.
 
+## Prose & Anti-Slop
+
+Comments and docstrings already get the telegraphic concision above — that terseness is itself anti-slop. This section adds the AI *tells* to scrub, and governs the **longer prose a coding agent emits**: function/module docs, error & log messages (Section 6), commit messages, PR/MR descriptions, ADRs.
+
+**Two regimes:**
+- **Telegraphic** (comments, docstrings): concision wins — fragments fine, no subject required. Still scrub the *content tells* below: false agency, vague declaratives, throat-clearing, jargon, hedge adverbs.
+- **Full prose** (docs, errors, logs, commits, PRs, ADRs): complete sentences, active voice, a named actor. The whole regime below applies.
+
+### 1. Content tells — banned in ALL prose, grep-able
+- **Throat-clearing openers — cut, state the point:** `Here's the thing`, `Here's what/why/how`, `It turns out`, `The truth is`, `Note that`, `It's worth noting`, `At its core`, `When it comes to`, `The reality is`.
+- **Emphasis crutches — cut:** `Full stop.`, `Period.`, `Let that sink in.`, `This matters because`, `Make no mistake`.
+- **Hedge / intensifier adverbs — cut:** `really`, `just`, `simply`, `actually`, `literally`, `genuinely`, `honestly`, `truly`, `fundamentally`, `inherently`, `basically`, `essentially`. Extends the comment word-ban (§2); same shorter-older-plainer test.
+- **Business jargon — plain verb instead:** `leverage`→use, `navigate`→handle, `unpack`→explain, `deep dive`→analysis, `lean into`→accept, `circle back`→revisit, `moving forward`→next, `game-changer`→significant.
+- **Lazy extremes — name the real scope:** `every`, `always`, `never`, `everyone`, `nobody` doing vague work → the actual count or case.
+- **Vague declaratives — name the specific thing:** ❌ *"The implications are significant."* / *"The reasons are structural."* ✅ *"Replays now double-charge the buyer."*
+
+### 2. Structural tells — every artifact
+- **No false agency — name the actor.** Inanimate nouns don't perform human verbs. ❌ *"the decision emerges from config"* ✅ *"`loadConfig` picks the tier"*. ❌ *"the data tells us"* ✅ *"the p99 query returns 800ms"*. **Detector:** subject is a noun that can't act (decision, data, complaint, market, culture) + a human verb → rewrite with the real actor, or `you`.
+- **No binary contrast — state Y.** Kill `not X, it's Y` / `isn't X, it's Y` / `the question isn't X, it's Y`. ❌ *"Not a cache bug. A lifetime bug."* ✅ *"The bug is in the lifetime."*
+- **No rhetorical setup / negative listing.** Cut `What if…?`, `Think about it`, `Here's what I mean`, and `Not X… Not Y… Z` runways — make the point.
+- **No meta-commentary.** Code prose never announces its own structure: `Let me walk you through`, `In this section`, `As we'll see`, `but that's another story`.
+
+### 3. Full-prose regime — errors, logs, commits, PR/MR, ADRs
+- **Active voice, named actor.** ❌ *"The decision was reached to retry."* ✅ *"`fetchOrder` retries on 503 because the gateway is flaky."* Passive hides who acts. Telegraphic comments are exempt — they carry no subject by design.
+- **No em-dash for drama** — comma or two sentences. In comments `—` is already a split trigger (§2).
+- **Vary rhythm, trust the reader.** Don't stack three same-length punchy fragments. Drop permission tails (`And that's okay.`) and pull-quotes — if a line reads like a tweet, rewrite it. Two items beat three.
+- **Reader in the seat.** `you` over `people` / `one`; specifics over `the system handles the cases`.
+- **Self-score before shipping a PR/MR description or ADR** — rate 1–10: **Directness** (states, not announces), **Rhythm** (varied), **Trust** (no hand-holding), **Authenticity** (human), **Density** (nothing cuttable). Below 35/50 → revise.
+
+**Reviews:** banned phrase, false-agency subject, binary contrast, vague declarative, passive voice in full prose, or em-dash drama → flag with the pattern name.
+
 ## Naming
 
 - **Intent over implementation**: `closeAccount()` not `setStatusToClosed()`. **Banned function-name words: `process`, `handle`, `data`, `do`, `execute`, `run`, `perform`** -- vague mechanics. Replace: `processOrder` -> `fulfillOrder`, `handlePayment` -> `chargeCustomer`. Reviews: any function with banned word -> rename
@@ -111,7 +143,6 @@ description: Use when writing or reviewing comments, docstrings, names, control 
 
 - Guard clauses, early return, max 3 indent levels
 - `switch`/object maps over `if/else` chains
-- **Law of Demeter -- max one dot deep** -- a method should only call methods on: its own fields, its parameters, objects it creates, or its direct dependencies. `order.getCustomer().getAddress().getCity()` couples the caller to the entire object graph -- expose `order.shippingCity()` instead. Reviews: chained property access 2+ levels deep on a dependency -> flag "Law of Demeter violation, add direct accessor"
 - **Split boolean flags into two named functions**: `sendUrgentNotification()` / `sendNormalNotification()` not `sendNotification(msg, isUrgent)`. **A ternary, if/else, or options object is NOT a fix** -- boolean still exists as param. Result: two independently callable functions with zero boolean params. Reviews: boolean controlling branch -> split
 - Return new data, don't mutate inputs
 - **`Promise.all` for independent async ops** -- even when using Result types: run all async calls with `Promise.all`, then check each Result. `const results = await Promise.all(items.map(i => checkStock(i)))` → `const firstError = results.find(r => !r.ok)`. Never sequential `for...await` when calls are independent

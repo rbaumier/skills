@@ -14,6 +14,7 @@ description: Use when designing functions, modeling data, choosing types, drawin
 - CQS -- command OR query. Composition over inheritance
 - Focused modules -- no `common`/`shared` grab-bags
 - **No default parameters -- use explicit factory methods** -- default params hide behavior and create invisible coupling. `createUser(name, role = 'viewer')` -> `createViewer(name)` / `createAdmin(name)`. Each factory is self-documenting and independently testable. Reviews: function with default params controlling behavior -> flag 'extract named factory'
+- **No flag arguments -- split the function** -- a boolean (or enum) parameter that makes the function do two fundamentally different things is two functions wearing one signature: `render(node, isPreview)` -> `render(node)` / `renderPreview(node)`. The caller passing a literal `true`/`false` never reads better than two named calls. (Same root as "no default parameters" above: a param that switches behavior is hidden control flow.) Reviews: boolean/enum param gating two distinct code paths -> flag "split into named functions"
 
 ## Data & Types
 
