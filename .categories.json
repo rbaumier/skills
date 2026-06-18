@@ -4,14 +4,25 @@
     "matt-diagnose",
     "matt-grill-me",
     "matt-grill-with-docs",
+    "matt-handoff",
     "matt-improve-codebase-architecture",
-    "matt-pocock-skills",
+    "matt-prototype",
+    "matt-review",
+    "matt-setup-matt-pocock-skills",
     "matt-tdd",
     "matt-to-issues",
     "matt-to-prd",
     "matt-triage",
     "matt-write-a-skill",
     "matt-zoom-out"
+  ],
+  "Architecture & DDD": [
+    "api-design",
+    "design-an-interface",
+    "domain-model",
+    "ubiquitous-language",
+    "modularize",
+    "request-refactor-plan"
   ],
   "Backend - TypeScript": [
     "database",
@@ -24,21 +35,43 @@
     "coding-standards",
     "zod"
   ],
-  "Code Review": ["code-review", "coding-standards"],
+  "Code Review": [
+    "code-review",
+    "code-review-loop",
+    "coding-standards",
+    "kirby-review",
+    "thermo-nuclear-code-quality-review"
+  ],
+  "Coding Standards": [
+    "coding-standards",
+    "coding-standards:design",
+    "coding-standards:errors",
+    "coding-standards:hygiene",
+    "coding-standards:quality-bar",
+    "coding-standards:quality-bar-review",
+    "coding-standards:style"
+  ],
   "Dev Process": [
     "parallel-agents",
     "subagent-development",
     "git-worktrees",
+    "git-archaeology",
     "finishing-branch",
     "using-skills",
     "build-fix",
-    "refactor-clean"
+    "refactor-clean",
+    "setup-pre-commit",
+    "kirby",
+    "loop-issues"
   ],
   "DevOps": ["ci-cd", "docker", "kubernetes"],
   "Frontend - React": [
     "frontend",
     "react",
     "shadcn",
+    "shadcn-improve",
+    "coss",
+    "coss-particles",
     "tailwind",
     "ui-ux",
     "ui-animations",
@@ -49,6 +82,7 @@
     "i18n",
     "coding-standards",
     "web-interface-guidelines",
+    "modern-web-guidance",
     "zod"
   ],
   "Frontend - Vue": [
@@ -61,11 +95,13 @@
     "language-typescript",
     "i18n",
     "coding-standards",
+    "modern-web-guidance",
     "zod"
   ],
   "Languages": ["language-typescript", "language-rust", "language-swift"],
   "Legal & Finance": [
     "paperasse:comptable",
+    "paperasse:fiscaliste",
     "paperasse:notaire",
     "paperasse:syndic",
     "paperasse:commissaire-aux-comptes",
@@ -75,17 +111,50 @@
     "skill-creator",
     "enforcing-skill-rules",
     "using-skills",
+    "find-skills",
+    "load-skills",
     "learn",
     "update-codemaps",
     "claude-hud:setup",
     "claude-hud:configure"
   ],
   "Mobile": ["react-native", "language-swift", "coding-standards"],
-  "Planning": ["brainstorming", "plans", "grill-me", "plan", "generate-visual-plan", "plan-review"],
+  "Planning": [
+    "brainstorming",
+    "plans",
+    "grill-me",
+    "orc-auto-grill",
+    "plan",
+    "generate-visual-plan",
+    "plan-review",
+    "request-refactor-plan",
+    "domain-model"
+  ],
   "Review & Docs": ["vscode-diff-review", "diff-review", "documentation", "project-recap", "update-docs", "fact-check"],
   "Rust": ["language-rust", "coding-standards"],
-  "Skills": ["prompt-engineering", "writing", "skill-creator", "enforcing-skill-rules"],
+  "Skills": ["prompt-engineering", "writing", "skill-creator", "enforcing-skill-rules", "steipete-skill-cleaner"],
+  "Swyx - Hardening": [
+    "swyxio-antislop-codebase",
+    "swyxio-codebase-maintainability-guardrails",
+    "swyxio-observability-hardening",
+    "swyxio-productionize-app-with-services",
+    "swyxio-release-readiness-hardening",
+    "swyxio-security-hardening",
+    "swyxio-test-strategy-hardening"
+  ],
   "Testing": ["tdd", "debugging", "testing", "expect", "dogfood", "e2e", "test-coverage"],
+  "UI Design": [
+    "ui",
+    "ui-ux",
+    "make-interfaces-feel-better",
+    "ui-sh-design",
+    "ui-sh-ideas",
+    "ui-sh-componentize",
+    "ui-sh-markup-from-image",
+    "ui-sh-dark-mode-image",
+    "ui-sh-make-responsive",
+    "ui-sh-canonicalize-tailwind"
+  ],
   "Writing": [
     "writing",
     "documentation",
@@ -94,6 +163,8 @@
     "visual-explainer",
     "frontend-slides",
     "generate-slides",
-    "generate-web-diagram"
+    "generate-web-diagram",
+    "write-romain-chat",
+    "write-romain-mail"
   ]
 }

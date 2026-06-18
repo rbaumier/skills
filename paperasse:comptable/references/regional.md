@@ -38,16 +38,94 @@ Achat avec octroi de mer:
 - Siège et activité principale dans les DOM
 - Effectif minimum de 3 salariés (selon secteur)
 
-#### Exonérations ZFA (Zone Franche d'Activité)
+#### ~~Exonérations ZFA (Zone Franche d'Activité)~~ — REMPLACÉ par ZFANG depuis 2019
 
-Dispositif de soutien aux entreprises ultramarines:
+> ⚠️ La ZFA est éteinte. Le dispositif applicable depuis le 1er janvier 2019 est la **ZFANG** (art. 19 Loi de finances 2018). Ne pas appliquer les anciens taux ZFA.
 
-| Impôt | Exonération |
-|-------|-------------|
-| IS | Abattement jusqu'à 80% (secteur prioritaire) |
-| CFE | Exonération totale possible |
-| CVAE | Exonération totale possible |
-| Taxe foncière | Exonération possible |
+#### ZFANG — Zone Franche d'Activité Nouvelle Génération
+
+**Base légale :** Art. 44 quaterdecies CGI (abattement IS/IR) — Art. 1466 F CGI (CFE) — Art. 49 ZB-ZC annexe III CGI (modalités) — Loi n°2018-1317 du 28 décembre 2018, art. 19
+
+**Source BOFiP :** BOI-BIC-CHAMP-80-10-85 (consulté 2026-05-08 via https://bofip.impots.gouv.fr/bofip/11833-PGP.html)
+
+**Durée du dispositif :** jusqu'au 31 décembre 2030 (abrogation au 1er janvier 2031)
+
+##### Abattement IS / IR (bénéfices)
+
+Deux régimes selon le secteur d'activité. Les taux sont **fixes** (pas de dégressivité annuelle contrairement à l'ancienne ZFA) :
+
+| Régime | Abattement | Plafond bénéfice abattu/an |
+|--------|-----------|---------------------------|
+| **Standard** (droit commun) | **50%** | 150 000 € |
+| **Majoré** (secteurs prioritaires) | **80%** | 300 000 € (dont 150 000 € max sur base standard) |
+| **Mayotte uniquement** 2025-2029 | **100%** | — (temporaire, régime exceptionnel) |
+
+**Secteurs prioritaires** (régime majoré 80%) applicables à La Réunion :
+- Recherche et développement
+- Technologies de l'information et de la communication (TIC)
+- Tourisme (hôtellerie, restauration inclus)
+- Agro-nutrition
+- Environnement et énergies renouvelables
+- BTP
+- Réparation navale, édition de jeux électroniques
+
+**Régime standard (50%)** : activités commerciales, industrielles, artisanales, agricoles (BIC/BA) hors secteurs exclus.
+
+##### Conditions cumulatives d'éligibilité
+
+1. **Taille** : effectif < 250 salariés ET CA < 50 millions €
+2. **Activité principale** : exercée dans un DOM, secteur éligible
+3. **Régime fiscal** : régime réel (IS ou IR) ou micro
+4. **Localisation** : exploitation physique située dans la ZFANG
+
+**Secteurs exclus :**
+- Professions libérales BNC (médecins, avocats, experts-comptables…)
+- Activités financières et assurances
+- Sièges sociaux intragroupes sans activité propre
+- Sidérurgie, charbon, lignite
+- Jeux d'argent et de hasard
+- Achat-revente sans transformation (négoce pur)
+
+##### CFE (Cotisation Foncière des Entreprises) — Art. 1466 F CGI
+
+Exonération totale possible — **soumise à délibération de la collectivité**. Vérifier que la commune a adopté la délibération avant d'annoncer l'exonération au client.
+
+##### CVAE
+
+Exonération proportionnelle à la fraction de valeur ajoutée bénéficiant de l'abattement ZFANG.
+
+##### Taxe Foncière
+
+Exonération possible sur délibération des collectivités (non automatique).
+
+##### Cumul
+
+**Compatible avec :**
+- Crédit Impôt Recherche (CIR)
+- Déduction art. 217 undecies CGI (investissements outre-mer)
+
+**Incompatible (option irrévocable requise) :**
+- Art. 44 sexies CGI (entreprises nouvelles)
+- Art. 44 terdecies CGI (ZRR)
+- Art. 44 sexdecies CGI (zones de revitalisation des commerces)
+- Art. 73 B CGI (jeunes agriculteurs)
+
+##### Comptabilisation de l'abattement
+
+L'abattement ZFANG ne génère pas d'écriture comptable — il s'applique extra-comptablement lors du calcul IS :
+
+```
+Bénéfice fiscal avant ZFANG :       200 000 €
+Abattement 80% (secteur prioritaire): -160 000 €  → plafonné à 300 000 €/an
+Base IS imposable :                   40 000 €
+IS à 15% (PME, < 42 500 €) :          6 000 €
+```
+
+##### Obligations déclaratives
+
+- **Formulaire 2082-SD** (CERFA 14043) à joindre obligatoirement à la déclaration de résultats (2065 IS ou 2031/2035 IR)
+- Le 2082-SD détaille : CA, effectifs, exploitations concernées, bénéfices par exploitation, taux appliqué, répartitions
+- Conserver les justificatifs d'éligibilité (secteur, siège social, effectifs, CA)
 
 #### Cotisations Sociales
 
