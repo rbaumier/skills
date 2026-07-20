@@ -150,7 +150,12 @@ hardcoded:
      (`git -C <worktree> diff origin/<default>...HEAD`), the
      changed-file list. The review is EXHAUSTIVE — every finding, never
      a top-N — each tagged `blocker`/`major`/`minor`/`nit` with
-     `file:line` and a fix, call sites read before flagging.
+     `file:line` and a fix, call sites read before flagging. Each round
+     it writes its findings to a file outside the worktree (scratchpad
+     or `/tmp`) and ends with ONE line — verdict + that path. It must
+     NOT SendMessage its report: a background child is never given its
+     parent's id, and a name-addressed reply fails ("No agent named …
+     is reachable").
    - Disposition EVERY finding yourself (the reviewer never edits), none
      dropped as "scope creep":
        - in this MR's scope → fix now (new commits); every `blocker`/`major`
@@ -162,10 +167,16 @@ hardcoded:
        - false positive or against the repo's conventions → drop it with a
          one-line reason.
      Relevant means it improves the codebase at any severity (a helper
-     duplicated 4× belongs in a shared module).
-   - Next round: `SendMessage` the SAME reviewer only the fix commits'
-     diff (`git diff <head-before-fixes>..HEAD`) — its skills and the
-     full diff stay in its context. Never respawn a reviewer mid-loop.
+     duplicated 4× belongs in a shared module). Fix from the findings
+     and the current diff — do not re-read files the fixes don't touch.
+   - Next round: the reviewer cannot wake you directly — its completion
+     notification goes to the orchestrator, which forwards you a
+     one-liner (verdict + report path). End your turn while a round
+     runs (never poll); on the wake, read the report file, disposition,
+     then `SendMessage` the SAME reviewer BY AGENT ID (from the spawn
+     result) with only the fix commits' diff
+     (`git diff <head-before-fixes>..HEAD`) — its skills and the full
+     diff stay in its context. Never respawn a reviewer mid-loop.
    - **Converged** = the reviewer reports nothing above `nit`; hard cap
      8 rounds.
    - **QA gate AFTER the review loop** — prove the change works by
@@ -179,14 +190,18 @@ hardcoded:
      phases: target + launch command (Step 0 discovery, the repo's
      docs, or the `/run` skill), host allowlist, a use-case matrix
      scoped to the issue's deliverables and their error paths (never
-     the whole app), a ~15 min budget, and a run dir OUTSIDE the
+     the whole app), the tooling matched to the surfaces the MR/PR
+     touches (no browser when no UI changed — an API-only change is
+     driven over HTTP), a ~15 min budget, and a run dir OUTSIDE the
      worktree (scratchpad — evidence must never land in the branch).
-     It executes smoke, harness, assault, report, and returns the
-     verdict.
+     It executes smoke, harness, assault, report, and — like the
+     reviewer — ends with ONE line: verdict + the `<run-dir>/report.md`
+     path, never a SendMessage.
    - QA verdicts: **GO** and **GO-PROVISIONAL** pass — copy
      GO-PROVISIONAL's reservations (BLOCKED rows) into the MR/PR
      description. **NO-GO** → fix the findings, send the fix diff to
-     the still-alive reviewer, re-run the failed rows; cap 2 QA
+     the still-alive reviewer, re-run the failed rows (`SendMessage`
+     the QA executor by agent id); cap 2 QA
      rounds, else the flagged-draft path below. **ABORTED** (broken
      env, no launch path): draft mode → note it in the description;
      autonomous mode → never merge an un-QA'd surface change: open a
@@ -212,6 +227,13 @@ hardcoded:
      each finding's
      disposition (fixed / filed-issue link / dropped-with-reason), files
      touched.
+
+   While the implementer runs, its children's (reviewer, QA) completion
+   notifications land on YOU, the orchestrator — not on it. Forward
+   each to the implementer via `SendMessage` as the one-liner it
+   carries (verdict + report path) and nothing more: recopying a full
+   report into your thread wastes the cache the loop is designed to
+   save.
 
 4. **Verify** — when the implementer finishes, check yourself: the MR/PR
    exists, the agent reported verification AND comply green (if a
@@ -286,6 +308,12 @@ hardcoded:
   Absent it, the loop runs in **draft mode**: it opens draft MRs/PRs,
   never merges, and never writes issue labels; a human owns the merge and
   the labels. When the opt-in is unclear, you are in draft mode.
+- Report routing is a harness constraint: a background child cannot
+  address its parent, and its completion notification lands on the
+  orchestrator. Reviewer and QA report via a file + one-line verdict;
+  the orchestrator forwards only that line to the implementer, who
+  reads the file and owns every disposition. Recopying a verbatim
+  report anywhere is a process failure.
 - Never push directly to the default branch: everything goes through an
   MR/PR.
 - Never merge while the local verification commands are not green (or
