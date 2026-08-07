@@ -1,14 +1,15 @@
 ---
 name: coding-standards:quality-bar
-description: Use whenever writing, implementing, or refactoring code in any language — always apply when touching source code. The synthesized one-page pre-handoff checklist over the coding-standards family: scope, simplicity, module boundaries, types, error handling, tests, naming. Clear it as you write to pre-empt review findings. Invoke as /coding-standards:quality-bar.
+description: Quality bar — the synthesized one-page pre-handoff checklist over the coding-standards family, cleared as you write to pre-empt review findings. Use whenever writing or refactoring source code in any language.
 ---
 
 # Quality bar — clean first pass
 
 Standards to clear *as you write*, before the code is reviewed — each one cleared
 up front is a review round-trip saved. Aim for the version a senior would call
-inevitable, not just code that passes: delete complexity rather than rearrange it,
-and rework a messy-but-green first cut before you call it done. **SUBORDINATE to the
+inevitable, not just code that passes: rework a messy-but-green first cut before
+you call it done. Before handoff, account for every section below; any bar you
+leave uncleared, name it and why — don't drop it silently. **SUBORDINATE to the
 repo**: when a rule here conflicts with the repo's `CLAUDE.md`/`AGENTS.md` or
 established patterns, follow the repo. `⟦repo⟧` = apply only if the repo already does it.
 
@@ -16,6 +17,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Build only what the task requires. No speculative feature/param/export/"flexibility".
 - Question necessity first: framework/lib/stdlib already does this? Pattern kept by inertia → delete (in code you're touching; flag the rest, don't expand scope).
 - New abstraction needs ≥1 real caller now. 0–1-caller wrapper/option = dead weight → inline/drop.
+- Compat path with no caller (old mode flag/prop/wrapper/route alias/fallback) → delete, not polish. Grep callers first.
 - Rule of Three: don't abstract until 3rd occurrence (2 = coincidence). Exception: 2nd case already concrete/named.
 - Prefer boring/proven tech. Justify any novel dep or pattern before adding.
 - Consolidate into existing module. No near-duplicate helper.
@@ -44,6 +46,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 ### Module boundaries & vertical slices
 - Organize by domain/operation, not role. One op file = full vertical (handler+logic+query+types). Read feature = open 1 file, scroll. No use-case split across `services/`/`repositories/`/`handlers/`. Repo already structured → match it.
 - Public API = forever cost on consumers (Hyrum's Law). Default private, minimize observable surface.
+- Pit of success: obvious call = correct call. Push the invariant into the seam — safe API > narrow type > rename/split the dangerous path > helper last (only if all natural callers use it). A helper you must remember to call ≠ fix.
 - Wrap third-party types at the boundary; keep the dep private. No vendor types in your signatures.
 - One module = one absorbed assumption (Parnas). Name the change it hides. No nameable assumption → just a folder.
 - Domain-shared helper: extract only on real reuse, never by anticipation. No `shared/` for domain logic (only pure tech utils, 3+ domains).
@@ -102,6 +105,9 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Don't add a 2nd meaning for a verb already used here. No overloaded validate/build/resolve, no synonym aliases.
 - Escape hatches honest: `dangerous_`/`unsafe_`/`experimental_`.
 - Comment = why/consequence, not paraphrase of next line. Next to the statement.
+- Comment prose follows ASD-STE100 (Simplified Technical English): sentences ≤ 20 words, active voice, one topic per paragraph, one word = one meaning. No metaphor, no synonym variation, plain words a non-native reader gets first pass.
+- Comment budget: ≤ 50 words. A why that needs more moves to the module doc, MR description, or an ADR — the comment keeps one sentence and points there.
+- Comments are timeless: they describe the code as it is, never the change that produced it. Ban delivery-relative narration — "this MR/delivery", "follow-up MR", "behavior unchanged", "new in issue #N", "was/previously" — it's reviewer-talk that rots the moment the change merges. Issue refs live in TODOs only.
 - One rationale, one place (per codebase, not per file). Recopied across comments → keep one, point to it; recurring across files → ADR/canonical doc the comments cite.
 - TODO carries action + issue link. No vague "fix later".
 - Exports/public API top, private helpers bottom (stepdown).
@@ -111,7 +117,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Don't guess performance — measure before optimizing.
 - Behavior change → update touched docs/comments/README/CLAUDE.md, same diff.
 - Verify your change matches any stated domain model/invariants; surface contradictions.
-- Read repo `CLAUDE.md`/`AGENTS.md` first, obey (commit format/layout/banned imports/naming). Outranks this list.
+- Read repo `CLAUDE.md`/`AGENTS.md` first, obey (commit format/layout/banned imports/naming).
 - Don't mix broad cleanup with behavioral change in one commit. Commit only intended files; never revert/format a pre-existing dirty worktree.
 - Each commit leaves repo buildable + reviewable; small enough to test/review/revert.
 - Deliver full spec. No scope creep, nothing asked-for dropped.

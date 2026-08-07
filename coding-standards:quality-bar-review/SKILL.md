@@ -20,6 +20,7 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag novel dep/pattern added over a boring/proven one without justification.
 - Flag near-duplicate helper that belongs in an existing module.
 - Flag orphans the diff creates (unused import/param/helper). Don't flag pre-existing dead code unless the diff worsens it.
+- Flag a compat path with no caller — mode flag / prop / wrapper / route alias / fallback kept "just in case" → delete, not polish (grep callers first).
 
 ### Simplicity & structure
 - Flag complexity rearranged where it could be deleted.
@@ -42,6 +43,7 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 ### Module boundaries & vertical slices
 - Flag organize-by-role split (`services/`/`repositories/`/`handlers/`) where a vertical slice reads better.
 - Flag public surface wider than necessary (Hyrum's Law) — should default private.
+- Flag a public seam whose obvious call bypasses required semantics (`setSelection(null)` not clearing; prop needing a sibling prop) → move the invariant into the seam (safe API > narrow type > rename/split > helper last).
 - Flag vendor/third-party type in a signature; dep not wrapped at the boundary.
 - Flag module with no nameable absorbed assumption (just a folder).
 - Flag domain logic in `shared/`; helper extracted by anticipation, not real reuse.
@@ -95,6 +97,9 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag a verb given a 2nd meaning; overloaded validate/build/resolve; synonym aliases.
 - Flag dishonest escape hatch (no `dangerous_`/`unsafe_`/`experimental_` prefix).
 - Flag comment paraphrasing the next line instead of why/consequence; TODO with no action/issue link.
+- Flag comment prose breaking ASD-STE100: sentences > 20 words, passive voice, metaphor, synonym variation for one idea.
+- Flag any comment over 50 words → compress, or move the rationale to module doc/ADR/MR description and keep one pointing sentence.
+- Flag delivery-relative comments ("this MR/delivery", "follow-up MR", "behavior unchanged", "new in issue #N", "was/previously") — reviewer-talk that rots once merged; a comment must read true to someone who never saw the diff. Issue refs belong in TODOs only.
 - Flag same rationale across 2+ comments (per codebase, not per file) → keep one, point to it; recurring across files → ADR/canonical doc the comments cite.
 - Flag unreferenced export / unused import / unreachable branch / commented-out code → remove.
 
