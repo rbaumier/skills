@@ -73,7 +73,17 @@ never its source files; nothing is hardcoded:
   (from CLAUDE.md or the repo's docs): typically symlinking
   `node_modules` from the main repo (or installing deps), copying
   `.env`, and running any required codegen step (route generation,
-  prisma generate…). Pass these exact steps to each implementer.
+  prisma generate…). **Rust projects**: the wiring ALWAYS includes
+  `export CARGO_TARGET_DIR=<main-repo>/target` — the loop is
+  sequential, so every worktree reuses one warm build cache instead of
+  cold-compiling per issue. Pass these exact steps to each implementer.
+- **QA launch pack** — from the same docs, assemble what a QA run
+  needs to drive the app: the launch command(s), the readiness probe
+  (URL + expected response), env vars beyond `.env`, and the fastest
+  DB-prepare path the repo supports (prefer cloning a template DB over
+  re-running migrations + seeds per issue). Pass it to each
+  implementer with the wiring — measured: past QA executors received
+  none of it and re-derived everything, a third of their setup time.
 - **Fresh base** — run `git fetch origin <default>` once now so the
   first planner reads an up-to-date `origin/<default>` ref (a ref
   update, not a source read; step 5's cleanup keeps it fresh for later
@@ -139,6 +149,15 @@ never its source files; nothing is hardcoded:
      skipped), the plan-contract that follows details ONLY the current
      task — the checklist comment carries the rest; a detailed plan
      written before the previous task merged would be stale;
+   - **lane check** — the plan-contract opens with `Lane: express`
+     when the task is ONE mechanical transformation applied uniformly
+     — rename, wording, config value, dead-code removal, dependency
+     bump without code adaptation — every hunk an instance of that
+     transformation, behavior preserved. File and line counts are
+     irrelevant: a cross-file rename touching 40 files is still
+     express. Never express: any behavior change, or any externally
+     consumed contract (HTTP routes, DB schema, auth, published API).
+     On any doubt, omit the line — standard is the default;
    - writes the **plan-contract** to a file OUTSIDE any worktree
      (scratchpad): scope (files/modules to touch), approach decisions —
      with rationale where non-obvious — tests to add or update,
@@ -191,7 +210,12 @@ never its source files; nothing is hardcoded:
      next one.
    - Verify locally with the project's check + test + build commands
      (Step 0). When the repo has no blocking per-MR CI, this local trio
-     IS the merge gate and must be green in the worktree.
+     IS the merge gate and must be green in the worktree. **Rust**: run
+     tests with `cargo nextest run` when installed (else `cargo test`),
+     and treat the warm cache as merge-critical — mass `touch` of
+     sources, `CARGO_INCREMENTAL=0`, and `cargo clean` are BANNED
+     unless the MR/PR description records why (measured: 83 % of past
+     cargo wall-time was self-inflicted cache invalidation).
    - **comply gate** — when the `comply` binary is on PATH, run
      `comply <worktree>` (exit 0 = clean) and fix every violation BEFORE
      the review loop (deterministic findings cost zero review tokens).
@@ -205,14 +229,46 @@ never its source files; nothing is hardcoded:
      task of a split issue). Never bypass a pre-commit
      hook with `--no-verify` unless the repo's docs name a legitimate
      exception.
-   - **Review/fix loop BEFORE pushing** — spawn ONE read-only reviewer
-     subagent (`model: "opus"`) loading
+   - **Express lane** — when the plan-contract says `Lane: express`,
+     every gate below stays but shrinks to the change's surface; the
+     bars (nits-only convergence, comply green, QA GO) never move:
+       - review: the reviewer loads
+         `/coding-standards:quality-bar-review` and the language skill
+         ONLY — no thermo-nuclear, no area skills;
+       - QA: smoke phase only, on the QA-matrix rows the diff touches,
+         ~5 min budget (the no-user-surface skip rule is unchanged);
+       - MR assembly: presentation prose of 3–5 lines plus the
+         `à valider :` line, humanizer voice without the
+         write-romain-chat rewrite pass; structural diff per its
+         existing no-structure-change rule.
+     **Escalation is one-way**: at the FIRST red signal — the
+     implementation exceeds the planned scope, the reviewer emits any
+     `blocker`/`major`, a QA row fails, comply reports beyond listed
+     false positives — the lane reverts to standard for the rest of
+     the pipeline: the next reviewer message instructs it to load the
+     missing standard skills, QA re-runs the full plan, the MR
+     presentation follows the standard rules. A misclassified issue
+     pays full price; express is never a discount on the bar.
+   - **Review/fix loop BEFORE pushing** — first assemble the **round
+     pack**: ONE file outside the worktree (scratchpad) holding the
+     issue body (fetch it yourself: `mcp__gitlab__get_issue` /
+     `gh issue view <n>`), the plan-contract path, the changed-file
+     list, and the full diff (`git -C <worktree> diff
+     origin/<default>...HEAD`). YOU run these commands, once — the
+     reviewer runs none of them.
+     Then spawn ONE read-only reviewer subagent (`model: "opus"`,
+     `subagent_type: "loop-reviewer"` — the lean agent type defined in
+     `~/.claude/agents/loop-reviewer.md`, no MCP servers: the ~10k
+     tokens of schemas a full agent drags are repaid on every one of
+     the reviewer's turns) loading
      `/coding-standards:quality-bar-review`, the language skill and
      `/thermo-nuclear-code-quality-review`, plus the area skills in the
-     MR/PR's scope. Round 1 input: the issue (fetch it with
-     `mcp__gitlab__get_issue` / `gh issue view <n>`), the plan-contract,
-     the full diff (`git -C <worktree> diff origin/<default>...HEAD`),
-     the changed-file list. The review is EXHAUSTIVE — every finding, never
+     MR/PR's scope. Its round-1 input is the round pack path — nothing
+     else. The reviewer never runs `git` and never calls the forge:
+     everything it judges is in the pack, and regenerating handed-over
+     material is a process failure. Beyond the diff it reads only call
+     sites, BATCHED — one Bash command for N files (`sed -n` ranges),
+     never N one-file reads. The review is EXHAUSTIVE — every finding, never
      a top-N — each tagged `blocker`/`major`/`minor`/`nit` with
      `file:line` and a fix, call sites read before flagging. It also
      judges every `## Écarts au plan` deviation against the
@@ -245,20 +301,31 @@ never its source files; nothing is hardcoded:
    - Next round: the reviewer cannot wake you directly — its completion
      notification goes to the orchestrator, which forwards you a
      one-liner (verdict + report path). End your turn while a round
-     runs (never poll); on the wake, read the report file, disposition,
-     then `SendMessage` the SAME reviewer BY AGENT ID (from the spawn
-     result) with the fix commits' diff
+     runs. Waiting in Bash is BANNED: no `until`/`while`/`for` around
+     `sleep` — `until [ -f <report> ]; do sleep 10; done` blocks a
+     shell for minutes and the wake arrives regardless; one poll loop,
+     in any agent of this skill, is a process failure. (A wait with no
+     notification gets the Monitor tool or a single background
+     `Bash sleep`, then a turn end.) On the wake, read the report file,
+     disposition, then `SendMessage` the SAME reviewer BY AGENT ID
+     (from the spawn result) with the fix commits' diff
      (`git diff <head-before-fixes>..HEAD`) AND the disposition table —
      one line per finding: `fixed <commit>` / `filed <issue link>` /
-     `dropped — <reason>`. The reviewer re-raises any drop it judges
+     `dropped — <reason>`. Rounds 2+ are fix-diff-only on BOTH sides:
+     you send only that diff + table, and the reviewer judges them
+     against what it already holds — the pack, its skills, the prior
+     rounds. At round 2+, a full-branch diff, a re-read of a file no
+     fix touched, or a re-fetch of the issue is a process failure.
+     The reviewer re-raises any drop it judges
      unjustified as a new finding, so a contested drop blocks
      convergence — except a drop citing the out-of-scope `minor`/`nit`
-     policy, justified by definition and never contested. Its skills
-     and the full diff stay in its context.
+     policy, justified by definition and never contested.
      Never respawn a reviewer mid-loop.
    - **Converged** = the reviewer reports nothing above `nit`; hard cap
      8 rounds. Before it may declare convergence, the reviewer runs an
-     **accretion sweep**: it audits the diff against the plan-contract's
+     **accretion sweep**: from the diffs it already holds (pack + fix
+     rounds — no regeneration), it audits the net change against the
+     plan-contract's
      scope and non-goals and flags what the fix rounds piled on —
      speculative abstractions, configurability nobody asked for,
      defensive code for impossible cases, useless tests (tautological,
@@ -274,12 +341,18 @@ never its source files; nothing is hardcoded:
      (user-invoked skill — not reachable via the Skill tool) and
      follows it. Hand it the QA plan, pre-filling its Scope/Enumerate
      phases from the plan-contract's QA matrix — adjusted only where
-     the implementation deviated — plus: target + launch command
-     (Step 0 discovery, the repo's docs, or the `/run` skill), host
+     the implementation deviated. BEFORE spawning it, boot the target
+     YOURSELF in the worktree with the QA launch pack (Step 0), wait
+     for the readiness probe, then hand the executor a RUNNING app:
+     its URL/port, the launch pack (restart-if-dead only), host
      allowlist, the tooling matched to the surfaces the MR/PR touches
      (no browser when no UI changed — an API-only change is driven
      over HTTP), a ~15 min budget, and a run dir OUTSIDE the worktree
-     (scratchpad — evidence must never land in the branch). When the
+     (scratchpad — evidence must never land in the branch). The
+     executor never discovers launch commands or env wiring: every
+     minute it re-derives setup is a minute the gate loses. When QA
+     ends (any verdict), kill the processes you started and free
+     their ports — an orphan poisons the next issue's QA. When the
      MR/PR changes UI, QA screenshots each changed screen at least
      once — they double as the images of the reviewer presentation
      below. It
@@ -313,12 +386,33 @@ never its source files; nothing is hardcoded:
      `~/.claude/skills/write-romain-chat/SKILL.md`): Mode A softened
      for a human reviewer, dense over exhaustive; that last pass owns
      the tone. Both apply to the opening only — the agent sections
-     below stay technical. Add a
-     visual when it beats prose: a small `mermaid` block for a flow or
-     architecture, and for a UI change one or two QA screenshots (from
-     the QA run dir) uploaded with `mcp__gitlab__upload_markdown` and
-     embedded (GitHub: skip the embeds — no CLI upload path). Never a
-     screen recording — the harness has no video capture. The agent
+     below stay technical. After the prose, a **structural diff**: load
+     the `show-me` skill and pick the diff shape matched to the change
+     — call tree for a changed call flow (the default), component tree
+     for changed UI structure, shallow file tree for a file-layout
+     refactor, state/pseudocode for a changed control flow — as a
+     ` ```diff ` fenced block (the forge colors the margin), left-margin
+     `-` on what the MR removes, `+` on what it adds, unchanged nodes
+     unmarked as context. For a call tree: root is the entry point (the
+     user action or caller that triggers the flow), one node per call,
+     `├──`/`└──` branches, condition/outcome nodes allowed:
+     ```diff
+       user clicks Send
+       └── ChatService.send(message)
+     -     ├── LegacyQueue.push()
+     +     ├── OutboxQueue.enqueue()
+           └── MessageStore.append()
+     ```
+     Build it from the diff and the real code — every `-`/`+` maps to
+     a hunk; one tree per changed flow; skip it only when the MR
+     changes no structure at all (docs, config, pure styling). Add
+     another visual only when it beats prose: a small `mermaid` block
+     for architecture, and for a UI change one or two QA screenshots
+     (from the QA run dir) uploaded with
+     `mcp__gitlab__upload_markdown` and embedded (GitHub: skip the
+     embeds — no CLI upload path). Never a screen recording — the
+     harness has no video capture — and never show-me's HTML artifact:
+     the description must render on the forge. The agent
      material follows under a `# AI Slop` heading: everything below it
      (`Closes`, `## Plan`, deviations, reviews, QA, gates) is for
      agents and audit, not the reviewer. Done when the opening alone
