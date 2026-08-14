@@ -19,19 +19,19 @@ Three qualities gate creation:
   the repo. No placeholders.
 - **Self-contained** — exact files, a named pattern to mirror, an explicit
   test list. The implementer guesses nothing.
-- **Converged** — the review loop (step 5) refuted the draft's grounding,
+- **Converged** — the review loop (step 4) refuted the draft's grounding,
   architecture, complexity, and standards until only nits remained.
 
 ## Your role
 
-You sit at the judgment pole: you rule on the scout's verdict, decide
-splits, write the drafts, and disposition findings. Everything mechanical —
-forge reads, repo exploration, review — runs in subagents pinned
-`model: "opus"` in the Agent call; a spawn without the pin is a process
-failure. You never read the repository yourself: your evidence is the
-subagents' files, plus the forge writes of step 6, which are yours. In a
-fable session this routing spends fable only where quality is decided —
-the draft is the contract every reviewer judges against.
+You sit at the judgment pole: you rule on the recon verdict, decide
+splits, write the drafts, and disposition findings. Everything mechanical
+— forge reads, repo exploration, review, forge writes — runs in subagents
+pinned `model: "opus"` in the Agent call; a spawn without the pin is a
+process failure. You never read the repository and never call the forge
+yourself: your evidence is the subagents' files. In a fable session this
+routing spends fable only where quality is decided — the draft is the
+contract every reviewer judges against.
 
 Report routing: every subagent writes its report to a scratchpad file and
 ends with ONE line — verdict + path. It never pastes the report into its
@@ -41,13 +41,13 @@ into the conversation is a process failure.
 ## Session cache
 
 `<scratchpad>/issue-cache.md` holds what a session shares across /issue
-runs: forge, project path, label list, issue language. The scout writes it
-on first run and reads it on later ones — in a batch loop, only the
-backlog search is paid per issue.
+runs: forge, project path, label list, issue language. The recon agent
+writes it on first run and reads it on later ones — in a batch loop, only
+the backlog search is paid per issue.
 
 ## Forge commands
 
-Reference for the scout's prompt and for step 6. Host `github.com` →
+Reference for the recon and publisher prompts. Host `github.com` →
 GitHub; `gitlab.com` or any host containing `gitlab` → GitLab (from
 `git remote get-url origin`; on a fork prefer `upstream` when it exists —
 issues belong on the canonical repo). Not a repo, no remote, or another
@@ -68,41 +68,24 @@ host → ask the user.
 Empty `$ARGUMENTS` → stop and ask what the issue is about. Never invent a
 topic.
 
-### 1. Scout — opus, forge recon
+### 1. Recon — opus, one agent, forge then repo
 
-Spawn ONE scout (`model: "opus"`, read-only) with `$ARGUMENTS`, the cache
-path, and the forge commands above. It:
+Spawn ONE recon agent (`model: "opus"`, read-only) with `$ARGUMENTS`, the
+cache path, and the forge commands above. One spawn covers both phases —
+a second agent here would pay a second bootstrap for nothing. In order:
 
-- resolves the forge from the cache, else detects it and writes the cache;
-- searches issues — all states — by the salient keywords of `$ARGUMENTS`
-  (entity, feature, bug symptom — not the whole sentence), retrying once
-  from a different keyword angle if empty;
-- reads a few recent issues for their language and picks fitting labels
-  from the existing list — never a new label. Empty backlog → language
-  from the README;
-- writes labels, language, and the duplicate evidence (URL + one line per
-  hit) to its file; ends
-  `SCOUT <duplicate-open|duplicate-closed|related|new> <path>`.
+**Forge phase.** Resolve the forge from the cache, else detect it and
+write the cache. Search issues — all states — by the salient keywords of
+`$ARGUMENTS` (entity, feature, bug symptom — not the whole sentence),
+retrying once from a different keyword angle if empty. Read a few recent
+issues for their language and pick fitting labels from the existing list
+— never a new label; empty backlog → language from the README. On
+**duplicate-open**, stop here: skip the grounding phase — the issue won't
+be created, grounding it would be waste.
 
-Rule on the verdict yourself:
-
-- **duplicate-open** → stop, report the existing URL, ask whether to
-  extend it instead. Do not create.
-- **duplicate-closed** → proceed, prepend `> **Previously #N** — <one
-  line: fixed or rejected, when>`; a fixed bug resurfacing is a
-  regression — say so.
-- **related** → prepend `> **Related to #N** — <one line how>` at the top
-  of the body.
-
-Done when: the verdict is ruled on and labels + language are fixed, every
-label pre-existing.
-
-### 2. Grounding — opus, one agent, no fan-out
-
-Spawn ONE grounding agent (`model: "opus"`, read-only) with `$ARGUMENTS`.
-Exactly one: it explores inline and never fans out Explore subagents —
-the briefing, not breadth, is the deliverable. It reads the project's
-`CONTEXT.md` and `docs/adr/` when present, then digs out:
+**Grounding phase.** Explore inline, never fan out subagents — the
+briefing, not breadth, is the deliverable. Read the project's
+`CONTEXT.md` and `docs/adr/` when present, then dig out:
 
 - exact files to modify or create, by path;
 - the pattern to follow, named, with an existing file to mirror;
@@ -114,26 +97,39 @@ the briefing, not breadth, is the deliverable. It reads the project's
 - the constraining ADRs, by name — a plan that contradicts an ADR is
   wrong before review ever sees it.
 
-It writes the **briefing** — cited paths, the file to mirror, the ADRs,
-the neighbouring tests — and ends `BRIEFING-READY <path>`, or
-`CONTRADICTION <path>` when the code contradicts `$ARGUMENTS` (bug not
-reproducible, feature already there). On CONTRADICTION, stop and surface
-it instead of writing around it.
+It writes ONE report file — `## Forge` (labels, language, duplicate
+evidence: URL + one line per hit) then `## Briefing` (cited paths, the
+file to mirror, the ADRs, the neighbouring tests) — and ends
+`RECON <duplicate-open|duplicate-closed|related|new>
+<briefing-ready|contradiction|skipped> <path>`. `contradiction` = the
+code contradicts `$ARGUMENTS` (bug not reproducible, feature already
+there): stop and surface it instead of writing around it.
 
-Done when: the one-liner is `BRIEFING-READY` and every claim in the
-briefing carries a path.
+Rule on the duplicate verdict yourself:
 
-### 3. Scope to one MR
+- **duplicate-open** → stop, report the existing URL, ask whether to
+  extend it instead. Do not create.
+- **duplicate-closed** → proceed, prepend `> **Previously #N** — <one
+  line: fixed or rejected, when>`; a fixed bug resurfacing is a
+  regression — say so.
+- **related** → prepend `> **Related to #N** — <one line how>` at the top
+  of the body.
+
+Done when: the verdict is ruled on, labels + language are fixed (every
+label pre-existing), and every claim in the briefing carries a path.
+
+### 2. Scope to one MR
 
 One issue = one review-able MR. If bigger, propose a split via
 `AskUserQuestion` (title + one-line scope per piece, in dependency order)
 and create only after confirmation. Each piece gets the full template.
-Create in dependency order — `#A` must exist before a dependent's body
-cites it. Link dependents (blocked-by) and always prepend
-`> **Blocked by #A** — <why>` to the body — the text is the durable
-signal.
+Dependency numbers don't exist before creation: cite a sibling piece as
+`#{<its-draft-filename>}` — the publisher (step 5) creates in dependency
+order and substitutes the real numbers. Always prepend
+`> **Blocked by #{<slug>}** — <why>` to a dependent's body — the text is
+the durable signal; the publisher also links it (blocked-by).
 
-### 4. Draft
+### 3. Draft
 
 Load `coding-standards:design` (once per session), then fill the template
 below from the briefing (section names may be translated to the project's
@@ -144,33 +140,55 @@ in the body. Derive an imperative title ≤ 70 chars — the type lives in
 the label, not the title. Write each draft to a scratchpad file for
 review.
 
+Add ONE visual where it beats prose, per the `show-me` skill (load it
+once per session): the smallest view — a file-tree diff when the issue
+creates or moves files, a call-tree diff when it changes a flow, a
+component-tree diff for UI structure; `mermaid` only when a tree can't
+say it. It lands in `## Implementation details` (or `## Expected
+behavior` for a user-visible flow). Every node is a grounded claim: it
+resolves in the briefing, or the issue creates it (`+` margin).
+Two exclusions: no HTML artifact — the body must render on the forge —
+and no solution pseudocode — the "what and why, never how" rule holds.
+A visual that decorates instead of answering is filler: omit it.
+
 Done when: every draft exists as a file, template filled.
 
-### 5. Review loop — opus, until converged
+### 4. Review loop — opus, until converged
 
 Nothing is created until the draft converges. Spawn ONE reviewer
-(`model: "opus"`, read-only) with the draft path(s) and the briefing
-path; it loads `coding-standards:quality-bar-review` +
-`coding-standards:design` (Skill tool, its own context). Its job is to
-refute the draft, not approve it: every citation resolves and the
-described behavior matches the code; **blast radius** — the importers,
-callers, tests, and schemas the draft misses (grep them); architecture —
-deletion test on every module the plan creates, ADR conflicts;
-complexity — a reframing that deletes steps outranks any local cleanup;
-standards — the named pattern, proposed signatures, the `## Tests` list.
+(`model: "opus"`, `subagent_type: "issue-reviewer"` — the lean agent type
+in `~/.claude/agents/issue-reviewer.md`, no MCP servers: the ~10k tokens
+of schemas a full agent drags are repaid on every round) with the draft
+path(s) and the recon report path. It loads
+`coding-standards:quality-bar-review` + `coding-standards:design` (Skill
+tool, its own context), plus — only when the draft creates a new module
+or endpoint — `thermo-nuclear-code-quality-review` and the repo's
+language skill (`Cargo.toml` → `language-rust`; `package.json`/`tsconfig`
+→ `language-typescript`). Its job is to refute the draft, not approve it,
+across four lenses in one pass:
 
-**Panel instead of the single reviewer** when the draft creates a new
-module or endpoint, or on a split (one panel reviews all drafts; split
-boundaries and dependency order belong to the Archi lens). Four
-reviewers, all `model: "opus"`, spawned parallel in one message, each
-loading its skills in its own context:
+- **Grounding** — every citation resolves — visual tree/diagram nodes
+  included — and the described behavior matches the code; **blast
+  radius** — the importers, callers, tests, and schemas the draft misses
+  (grep them);
+- **Architecture** — deletion test on every module the plan creates; ADR
+  conflicts;
+- **Complexity** — a reframing that deletes steps outranks any local
+  cleanup; yagni/stdlib/wrapper findings one line each;
+- **Standards** — the named pattern, proposed signatures, the `## Tests`
+  list, any snippet in the body.
 
-| Lens | Loads | Answers |
-|---|---|---|
-| Grounding | — | Citations and blast radius, as above. |
-| Archi | `coding-standards:design`, `matt-improve-codebase-architecture` + its LANGUAGE.md | Is the proposed architecture right? Deletion test on every module the plan creates; ADR conflicts. Judges from the draft, the briefing, and the ADRs it names — no repo-wide search, Grounding owns the facts. |
-| Complexity | `thermo-nuclear-code-quality-review`, `ponytail-review` | Is complexity controlled? A code-judo reframing that would delete steps outranks any local cleanup; yagni/stdlib/wrapper findings one line each; `Lean already. Ship.` when nothing. |
-| Standards | `coding-standards:quality-bar-review`, the repo's language skill (`Cargo.toml` → `language-rust`; `package.json`/`tsconfig` → `language-typescript`), framework skills matching manifest deps (`react`, `vue`, `tanstack-query`, `drizzle-orm`, `zod`, `tailwind`, …) when they exist | Does the suggested code pass the bar? The named pattern, proposed signatures/types, the `## Tests` list, any snippet in the body. |
+On a split, the same reviewer reviews all drafts in one context — split
+boundaries and dependency order belong to the Architecture lens.
+
+**Panel** — only when the user explicitly asks for a panel or deep
+review: four reviewers instead of one, one lens each, all
+`model: "opus"` + `subagent_type: "issue-reviewer"`, spawned parallel in
+one message, each loading its skills in its own context. The Architecture
+lens adds `matt-improve-codebase-architecture` + its LANGUAGE.md; the
+Complexity lens `ponytail-review`; the Standards lens the framework
+skills matching manifest deps (`react`, `vue`, `tanstack-query`,
+`drizzle-orm`, `zod`, `tailwind`, …) when they exist.
 
 Each reviewer writes findings tagged `BLOCKER`/`NIT` to a scratchpad file
 and ends ONE line — `OK` or `FINDINGS <path>`.
@@ -188,9 +206,15 @@ creating.
 
 Done when: converged, or the user has ruled on each surviving blocker.
 
-### 6. Create, report
+### 5. Publish — opus, forge writes
 
-Create, then print the web URL(s), in dependency order on a split.
+Creation is mechanical once the drafts converged: spawn ONE publisher
+(`model: "opus"`) with the draft path(s), the cache path, and the forge
+commands above. It creates in dependency order, substitutes each
+`#{<slug>}` placeholder with the number the forge returned, links
+dependents (blocked-by), and ends `CREATED <url> [<url> …]` — or
+`PUBLISH-FAILED <path>` with the error in the file. Print the URL(s) to
+the user, in dependency order on a split.
 
 ## Body template
 

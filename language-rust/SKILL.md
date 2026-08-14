@@ -3,95 +3,82 @@ name: language-rust
 description: Use when writing, reviewing, or refactoring Rust — ownership, lifetimes, type-driven design, async, error handling, FFI, and performance.
 ---
 
-## When to use
-- Writing, reviewing, refactoring Rust (systems, CLI, web, Wasm)
-- Safe API wrappers around unsafe FFI
-- Hot-path CPU/memory optimization
-- Debugging lifetimes, borrow checker, data races
+Make invalid states unrepresentable — bugs must not compile. Panics are for bugs; `Result` is for runtime conditions. Rule IDs (`num-1`, `rev-2`…) are stable — cite them in review findings.
 
-## When not to use
-- Loose prototyping where types hinder speed (rare)
-- Build scripts better suited to bash/python
-- Graph-heavy architectures fighting the borrow checker — use arenas/indices
+## Types & Public API
 
-## Core Philosophy
-- Make invalid states unrepresentable — bugs must not compile
-- Ownership is the API — signatures encode lifetime + mutability
-- Zero-cost abstractions — high-level code compiles to hand-written asm
-- Panics for bugs; Results for runtime conditions
-- Fearless concurrency — Send/Sync guarantee thread safety at compile time
-
-## Critical Rules
-
-### Type System & API Design
-- Parse, don't validate — newtypes (struct Email(String)) guarantee validity post-construction
-- Typestate pattern — generics enforce compile-time state transitions (Builder<Pending> -> Builder<Ready>)
-- Accept &str over &String, &[T] over &Vec<T>
-- impl Trait for flexible args/returns; avoid unnecessary monomorphization
-- **Builder `build()` returns `Result`** — required fields are `Option` internally; `build()` errors when missing. **Never `unwrap_or_default()` a required field** — that silently produces a broken value:
+- **api-1 — Parse, don't validate.** Newtypes (`struct Email(String)`) guarantee validity post-construction. Prefer stdlib invariant types over hand-rolled ones: `NonZeroU32` for counts and divisors (`Option<NonZeroU32>` stays 4 bytes).
+- **api-2 — Typestate for compile-time state machines** — `Builder<Pending>` → `Builder<Ready>`; invalid transitions don't compile.
+- **api-3 — Builder `build()` returns `Result`.** Required fields are `Option` internally; `build()` errors when one is missing. Never `unwrap_or_default()` a required field — that silently ships a broken value:
   ```rust
   // WRONG: pub fn build(self) -> Pool { Pool { dsn: self.dsn.unwrap_or_default(), .. } }
   // RIGHT: pub fn build(self) -> Result<Pool, BuildError> {
   //            let dsn = self.dsn.ok_or(BuildError::MissingDsn)?;
   //            Ok(Pool { dsn, max_conns: self.max_conns.unwrap_or(10), .. }) }
   ```
-- **Sealed traits** — any library `pub trait` whose impls you control (pipeline stages, visitor hooks, plugin interfaces) gets a private supertrait so downstream `impl` is impossible, letting you add methods later without breaking callers. Default to sealing a `pub trait` unless it is explicitly an extension point users are meant to implement. Adding only `Send + Sync` supertraits is NOT sealing — you need a *private* supertrait:
+- **api-4 — Seal `pub` traits you control.** Any library trait that is not an explicit user extension point gets a *private* supertrait, so adding methods later breaks nobody. Adding `Send + Sync` supertraits is NOT sealing:
   ```rust
-  mod sealed { pub trait Sealed {} }                              // private module
-  pub trait Transform: sealed::Sealed + Send + Sync {             // sealed: + sealed::Sealed
-      fn apply(&self, x: &[f64]) -> Vec<f64>;
-  }
-  impl sealed::Sealed for MyStage {}                              // only this crate can do this
-  impl Transform for MyStage { fn apply(&self, x: &[f64]) -> Vec<f64> { x.to_vec() } }
+  mod sealed { pub trait Sealed {} }
+  pub trait Transform: sealed::Sealed + Send + Sync { fn apply(&self, x: &[f64]) -> Vec<f64>; }
+  impl sealed::Sealed for MyStage {}   // only this crate can
   ```
-- #[must_use] on Result-returning functions and builders — annotate public functions returning Result, Option, or builder types with `#[must_use]` to catch silently ignored errors at compile time. Also use on types like `MutexGuard` wrappers.
-- Serde best practices — `#[serde(deny_unknown_fields)]` on deserialization types to catch typos. `#[serde(rename_all = "camelCase")]` for API boundaries. `#[serde(default)]` with explicit Default impl for forward-compatible schemas. **Serde derives belong ONLY on API/config boundary types. Internal types (metrics, in-memory state, domain structs that never cross a wire) must NOT derive Serialize/Deserialize** — strip the derive when a type is internal, even if it "could" be serialized.
-- **Encode invariants deeper** — `PhantomData<T>` to distinguish structurally identical types. Zero-sized types as verification proofs. `compile_error!` for invalid feature flag combinations. `#[must_use]` on RAII guards and handles
-- **Descriptive generic parameters** — when 2+ type params, use descriptive names: `fn transform<Source, Target>(input: Source) -> Target` not `fn transform<T, U>(input: T) -> U`. Single param `T` is fine
-- **Newtypes derive standard traits** — systematically `#[derive(Clone, Debug, PartialEq, Eq, Hash)]` on newtypes. Validate at construction, trust downstream. Implement `Display` for user-facing types, `FromStr` for parseable ones
-- **Const assertions for Send+Sync** — verify thread safety at compile time:
+- **api-5 — `#[must_use]`** on public fns returning `Result`/`Option`, on builders, and on RAII guard types.
+- **api-6 — Serde only at boundaries.** `deny_unknown_fields` on deserialized configs; `rename_all = "camelCase"` at API edges; `#[serde(default)]` for forward-compatible schemas. Internal types (metrics, in-memory state) must NOT derive `Serialize`/`Deserialize` — strip it.
+- **api-7 — Newtypes derive `Clone, Debug, PartialEq, Eq, Hash`**; add `Display` for user-facing types, `FromStr` for parseable ones. Validate at construction, trust downstream.
+- **api-8 — Encode invariants deeper** — `PhantomData` to split structurally identical types; zero-sized proof types; `compile_error!` for invalid feature combinations.
+- **api-9 — Const-assert auto-traits** on concurrency-facing types:
   ```rust
-  const _: () = { fn assert_send_sync<T: Send + Sync>() {} assert_send_sync::<MyType>(); };
+  const _: () = { fn ok<T: Send + Sync + Sized + Unpin>() {} ok::<MyType>(); };
   ```
+- **api-10 — Naming contract**: `as_` borrows (cheap), `to_` allocates (expensive), `into_` consumes. No `get_` prefix on getters.
+- **api-11 — Two-variant enum over `bool` params** in public APIs — `Mode::Recursive` reads at the call site; `true` doesn't.
+- **api-12 — `#[non_exhaustive]`** on public enums and error types meant to grow — adding a variant stays non-breaking.
+- **api-13 — No `Deref` inheritance.** `impl Deref` to expose an inner domain type's methods fakes inheritance; write delegation methods or a trait.
 
-### Ownership & Memory Management
-- **Copy small types (<= 24 bytes) by value; large types by reference** — deriving `Copy` is not enough: the *parameters* must pass by value too. A `Span { start: u32, end: u32 }` is 8 bytes — `fn overlaps(a: Span, b: Span)`, never `&Span`:
+## Numeric Safety
+
+- **num-1 — Checked arithmetic on external input.** Overflow panics in debug but wraps silently in release. Arithmetic on parsed, user, or wire integers uses `checked_`/`saturating_` (choose deliberately), never bare `+`/`*`:
+  ```rust
+  // WRONG: let total = qty * unit_price;                    // qty came from the request
+  // RIGHT: let total = qty.checked_mul(unit_price).ok_or(PriceError::Overflow)?;
+  ```
+- **num-2 — `TryFrom`, never `as`, to narrow integers.** `as` truncates silently:
+  ```rust
+  // WRONG: let idx = offset as u32;
+  // RIGHT: let idx = u32::try_from(offset)?;   // widening: use From, it's lossless
+  ```
+- **num-3 — `total_cmp` for float ordering.** `.sort_by(|a, b| a.partial_cmp(b).unwrap())` panics on NaN → `a.total_cmp(b)`. (Float `==` is already caught by pedantic `float_cmp`, ci-2.)
+
+## Ownership & Memory
+
+- **own-1 — Copy small types (≤ 24 bytes) by value.** Deriving `Copy` is not enough — the parameters must pass by value too:
   ```rust
   #[derive(Clone, Copy)] struct Span { start: u32, end: u32 } // 8 bytes
   // WRONG: fn overlaps(a: &Span, b: &Span) -> bool   (pointer-chasing a Copy type)
   // RIGHT: fn overlaps(a: Span, b: Span) -> bool
   ```
-- **Cow<'_, T>** for mostly-read, occasionally-modified data — **if a function takes `&str`/`&[T]` but sometimes needs to modify (normalize, escape, default), use `Cow` not `.to_owned()`**:
+- **own-2 — `Cow<'_, str>` for borrow-or-modify.** A fn taking `&str`/`&[T]` that sometimes modifies (normalize, escape, default) returns `Cow`, not an always-allocated `String`:
   ```rust
-  // WRONG: fn normalize(s: &str) -> String { if needs_change { modified } else { s.to_owned() } }
-  // RIGHT: fn normalize(s: &str) -> Cow<'_, str> { if needs_change { Cow::Owned(modified) } else { Cow::Borrowed(s) } }
+  // WRONG: fn normalize(s: &str) -> String { if changed { modified } else { s.to_owned() } }
+  // RIGHT: fn normalize(s: &str) -> Cow<'_, str> { if changed { Cow::Owned(modified) } else { Cow::Borrowed(s) } }
   ```
-- **Cell/RefCell for single-threaded interior mutability** — if a struct has `&self` methods but needs internal mutable state (caches, counters, lazy fields), use `Cell<T>`/`RefCell<T>`, not `Mutex`. **`Mutex` in single-threaded code is a code smell**
-- Weak<T> back-references prevent reference-cycle leaks
-- **Arena + index references over pointer trees** — for graphs/ASTs/trees, an `Arc<Mutex<Node>>` (or `Box<Node>`/`Rc<RefCell<Node>>`) field web fights the borrow checker and leaks on cycles. Store every node once in an arena `Vec` and reference others by an index newtype (`NodeId(usize)`), not by pointer. Removing the `Mutex`/`Arc` but keeping a pointer tree is NOT the fix — the references themselves must become indices.
+- **own-3 — `Cell`/`RefCell` for single-threaded interior mutability** (caches, counters behind `&self`). `Mutex` in single-threaded code is a smell.
+- **own-4 — `Weak<T>` for back-references** — parent links via `Rc`/`Arc` leak on cycles.
+- **own-5 — Arena + indices for graphs/trees/ASTs.** A pointer web (`Arc<Mutex<Node>>`, `Rc<RefCell<Node>>`) fights the borrow checker and leaks on cycles. Store nodes once in a `Vec` arena; reference by index newtype. Dropping the `Mutex` but keeping a pointer tree is NOT the fix:
   ```rust
-  // WRONG: pointer tree — interior locking, cycle leaks, borrow-checker fights
-  struct AstNode { expr: Expr, parent: Option<Arc<Mutex<AstNode>>>, children: Vec<Arc<Mutex<AstNode>>> }
-
-  // RIGHT: arena owns the nodes; parent/children are indices into it
-  #[derive(Clone, Copy, PartialEq, Eq)]
-  struct NodeId(usize);
+  // WRONG: struct AstNode { parent: Option<Arc<Mutex<AstNode>>>, children: Vec<Arc<Mutex<AstNode>>> }
+  // RIGHT:
+  #[derive(Clone, Copy, PartialEq, Eq)] struct NodeId(usize);
   struct AstNode { expr: Expr, parent: Option<NodeId>, children: Vec<NodeId> }
-  struct Ast { nodes: Vec<AstNode> }   // the arena; resolve a NodeId with self.nodes[id.0]
+  struct Ast { nodes: Vec<AstNode> }   // resolve with self.nodes[id.0]; bumpalo for true bump allocation
   ```
-  (`bumpalo` is the crate when you want true bump allocation; the `Vec` + `NodeId` shape above is the borrow-checker-friendly default.)
-- **Box large enum variants** — an enum is as big as its largest variant. When one variant holds a big payload (`HashMap`, large struct, `[u8; N]`) and others are tiny (`Literal(i64)`), `Box` the big field so every value of the enum stays small:
-  ```rust
-  // WRONG: Call { callee: Box<Expr>, args: Vec<Expr>, source_map: HashMap<String, Span> }
-  // RIGHT: Call { callee: Box<Expr>, args: Vec<Expr>, source_map: Box<HashMap<String, Span>> }
-  ```
-  Clippy's `large_enum_variant` flags this.
+- **own-6 — `mem::take`/`replace`/`swap` to move out of `&mut`.** Cloning a field just to satisfy the borrow checker is the wrong fix — take it, transform it, put it back.
 
-### Error Handling
-- **thiserror for library error types** — derive it; never hand-write `impl Display` + `impl std::error::Error` for an error enum. If you see a manual `Display` match arm per variant plus `impl Error for E {}`, replace the whole thing with `#[derive(thiserror::Error)]` + `#[error("...")]` attributes:
+## Error Handling
+
+- **err-1 — `thiserror` for libraries and domain code; `anyhow`/`miette` for application shells — never `anyhow` in domain code.** Never hand-write `impl Display` + `impl Error`:
   ```rust
-  // WRONG: impl fmt::Display for AppError { match self { Self::NotFound(m) => write!(f, "not found: {m}"), .. } }
-  //        impl std::error::Error for AppError {}
+  // WRONG: impl fmt::Display for AppError { /* match per variant */ } + impl Error for AppError {}
   // RIGHT:
   #[derive(Debug, thiserror::Error)]
   pub enum AppError {
@@ -99,134 +86,165 @@ description: Use when writing, reviewing, or refactoring Rust — ownership, lif
       #[error("unauthorized")]    Unauthorized,
   }
   ```
-  anyhow/miette for applications.
-- **`.context()`/`.with_context()` — explain WHY and include the inputs, not just WHAT failed.** "read failed: {e}" is wrong (restates the io error). Name the operation and the path:
+- **err-2 — Context explains WHY and carries the inputs.** "read failed: {e}" restates the error; name the operation and the path:
   ```rust
   // WRONG: .map_err(|e| AppError::Internal(format!("read failed: {e}")))
   // RIGHT: .with_context(|| format!("failed to load template from {}", path.display()))
   ```
-- No unwrap()/expect() in production — use unwrap_or_else or ?
-- Errors are values — ignore only with explicit let _ =
-- **Crate-wide Result alias** — define `pub type AppResult<T> = Result<T, AppError>;` centralized in each workspace. All functions use the alias, never repeat `Result<T, AppError>` everywhere
-- **Error variants name the business problem** — `ColumnNotFound(String)`, `SchemaMismatch { expected, got }`, never `HashMapError(String)` or `Other(String)` catch-all. No catch-all `Other(String)` variant
-- **Error structs carry structured context** — variants hold typed context data for diagnostics, never format to string: `InvalidRange { start: usize, end: usize, len: usize }` not `InvalidRange(String)` with `format!(...)`
-- **Error strategy per layer** — domain: thiserror enums with specific variants. Infra/CLI: anyhow for rich user messages. Analysis tools: never Result, collect diagnostics. Never mix anyhow in domain code
-- **Resilient error handling for tools** — parsers/linters never crash. Parse errors become structured diagnostics (code, category, message, position). Parser resynchronizes and continues to maximize feedback. Invalid configs use defaults with warnings
+- **err-3 — No `unwrap()`/`expect()` on production paths** — `?`, `unwrap_or_else`, or a typed error. Ignore an error only with explicit `let _ =`.
+- **err-4 — One `pub type AppResult<T>` alias per crate** — don't repeat `Result<T, AppError>` in every signature.
+- **err-5 — Variants name the business problem and carry typed context.** `SchemaMismatch { expected, got }`; never `Other(String)`, never a stringly `InvalidRange(String)`.
+- **err-6 — Tools degrade, never crash.** Parsers/linters turn errors into structured diagnostics (code, message, position), resynchronize, and continue. Invalid config → defaults + warning.
 
-### Concurrency & Async (Tokio/Rayon)
-- Never block async runtime — offload CPU work to spawn_blocking/Rayon
-- Send moves ownership across threads; Sync shares references. Rc is !Send, RefCell is !Sync
-- Minimize MutexGuard scope; drop before .await to prevent deadlocks
-- **Channels over shared state** — if collecting results from `spawn_blocking`/spawned tasks, use `mpsc::channel` not `Arc<Mutex<Vec>>`:
-  ```rust
-  // WRONG: Arc<Mutex<Vec>> for collecting task results
-  // RIGHT: let (tx, rx) = mpsc::channel(items.len());
-  //        for item in items { let tx = tx.clone(); spawn(async move { tx.send(process(item)).await; }); }
-  //        let results: Vec<_> = rx.collect().await;
-  ```
-- Cancellation safety — if code has `.await` with owned resources (files, connections, locks), **document cancellation behavior or implement Drop**. Silent resource leaks at `.await` points are bugs
-- **`tracing` over `println!`/`eprintln!` everywhere — and instrument silent I/O paths.** Replace every `println!`/`eprintln!` with the matching `tracing` macro (`info!`/`warn!`/`error!`/`debug!`). Beyond replacing existing prints: a function that loads config, opens files, or runs at startup must not be *silent* — add a `tracing::info!`/`debug!` recording what it did (and `warn!`/`error!` on failure paths). Use structured fields, not interpolation:
-  ```rust
-  // WRONG: fn load_routes() -> Vec<Route> { let raw = read_to_string("routes.json").unwrap(); .. }  // silent
-  // WRONG: eprintln!("fetch {url} failed: {e}");
-  // RIGHT:
-  fn load_routes() -> Vec<Route> {
-      let routes = /* ... */;
-      tracing::info!(count = routes.len(), "loaded routes");   // startup path is observable
-      routes
-  }
-  tracing::warn!(%url, error = %e, "fetch failed");            // structured fields, not format args
-  ```
+## Concurrency & Async
 
-### Performance & Optimization
-- Pre-allocate — Vec::with_capacity/String::with_capacity when size known
-- Iterator chains over raw loops — better compiler vectorization (SIMD)
-- **`Vec`/`VecDeque` over `LinkedList`, always** — cache locality dominates; `LinkedList` is almost never the right choice even when the variable is named "queue". A FIFO queue is `VecDeque`, a stack/list is `Vec`. Rewrite any `LinkedList` to `VecDeque` (`push_back`/`pop_front`) — do not just delete the function.
-- **Generics (monomorphization) for hot-path trait dispatch; `dyn Trait` only for binary size or heterogeneous collections.** A pipeline / per-element loop calling a trait method should be generic, not `&[Box<dyn Trait>]`:
+- **con-1 — Never block the async runtime** — CPU work goes to `spawn_blocking` or Rayon.
+- **con-2 — Drop `MutexGuard` before `.await`.** With several locks, document one acquisition order — deadlocks are silent.
+- **con-3 — Channels over `Arc<Mutex<Vec>>`** when collecting from tasks:
+  ```rust
+  // WRONG: Arc<Mutex<Vec>> for task results
+  // RIGHT: let (tx, rx) = mpsc::channel(items.len()); ... rx.collect().await
+  ```
+- **con-4 — Bounded channels only.** `unbounded_channel` is an OOM waiting for a slow consumer — pick a capacity and handle send backpressure.
+- **con-5 — `select!` loses data by default.** In a loop, every non-winning branch's future is dropped with its partial progress. Pin long-lived futures outside the loop, add `biased;` when priority matters, keep non-cancel-safe ops out of branches:
+  ```rust
+  // WRONG: loop { select! { r = read_frame(&mut conn) => .., _ = tick.tick() => .. } }  // frame lost mid-read
+  // RIGHT: let read = read_frame(&mut conn); tokio::pin!(read);
+  //        loop { select! { r = &mut read => .., _ = tick.tick() => .. } }
+  ```
+- **con-6 — `JoinSet` over loose `tokio::spawn`.** A dropped `JoinHandle` swallows the task's panic; `JoinSet` joins every task and surfaces panics as `JoinError`.
+- **con-7 — Cancellation is Drop.** Cancelling a task = dropping its future at an `.await`; every `.await` holding resources is an exit point — implement `Drop` or document the contract. Writing any `select!`, timeout, or shutdown path → load `references/async.md` (cancel-safety table) first.
+- **con-8 — Public async APIs return `Send` futures.** Bound them (`-> impl Future<Output = T> + Send`) or callers can't `tokio::spawn` them — and only you, the library author, can fix it.
+- **con-9 — Atomics over `Mutex<bool>`/`Mutex<usize>`.** Using any `Ordering::` beyond a Relaxed counter, or touching lock-free code → load `references/concurrency.md` first.
+- **con-10 — `thread::scope` for borrow-only threads** — no `Arc` cloning just to let short-lived threads read local data.
+- **con-11 — `tracing`, never `println!`/`eprintln!`.** Structured fields, not format interpolation. Startup and I/O paths must not be silent — record what was loaded, warn on failure:
+  ```rust
+  tracing::info!(count = routes.len(), "loaded routes");
+  tracing::warn!(%url, error = %e, "fetch failed");
+  ```
+- **con-12 — Libraries emit, binaries subscribe.** Never init `tracing_subscriber` in library code. `#[instrument]` gets `skip()` for large or sensitive args — credentials/PII never enter spans.
+
+## Performance
+
+- **perf-1 — `Vec::with_capacity`/`String::with_capacity`** when the size is known.
+- **perf-2 — `VecDeque`, never `LinkedList`.** FIFO = `VecDeque` (`push_back`/`pop_front`); stack = `Vec`. Rewrite the usage — don't delete the function.
+- **perf-3 — Generics for hot-path dispatch; `dyn Trait` only for binary size or heterogeneous collections**:
   ```rust
   // WRONG: fn run_pipeline(stages: &[Box<dyn Transform>], data: &[f64]) -> Vec<f64>
   // RIGHT: fn run_pipeline<T: Transform>(stages: &[T], data: &[f64]) -> Vec<f64>
   ```
-- Release profile: lto = "fat", codegen-units = 1
-- **Fast hashers (FxHashMap / AHashMap) for integer-key maps — never default `HashMap<u64, _>`.** Default `HashMap` uses SipHash (DoS-resistant, slow); integer keys want `rustc_hash::FxHashMap` or `ahash::AHashMap`. Changing only a code *comment* to say "FxHashMap" is wrong — change the actual type and its `use`/`with_capacity_and_hasher` constructor:
+- **perf-4 — `FxHashMap`/`AHashMap` for integer keys** — default `HashMap` pays SipHash. Change the type and constructor, not a comment:
   ```rust
-  // WRONG: fn count_tags(t: &[u64]) -> HashMap<u64, usize>   (SipHash)
+  // WRONG: fn count_tags(t: &[u64]) -> HashMap<u64, usize>
   // RIGHT: use rustc_hash::FxHashMap;  fn count_tags(t: &[u64]) -> FxHashMap<u64, usize>
   ```
-- Benchmarking with criterion/divan — before optimizing, measure with `criterion` (statistical, regression-detecting) or `divan` (simpler API). Compare against baselines. Never optimize without benchmarks proving the need.
-- Profiling before optimizing — use `cargo flamegraph` for CPU profiling, `cargo-llvm-lines` to find monomorphization bloat, `cargo bloat` for binary size analysis. Profile in release mode with debug symbols (`[profile.release] debug = true`).
-- **Targeted inlining** — `#[inline]` only on hot paths proven by benchmarks. Never sprinkle "just in case". LTO + codegen-units=1 handles the rest. `#[inline(always)]` requires benchmark justification
-- **File-level parallelism** — parallelize at file/module level via `par_iter()` or work-stealing, not intra-file. Share config via immutable `Arc<Config>` (never behind Mutex). Cap the thread pool. Directory scan once at startup with `HashSet` for O(1) lookups
-- **Fine-grained crates for incremental compilation** — many small crates with explicit dependencies maximize incremental compilation and make architectural boundaries visible. Critical structs in internal crates (not external deps) for full control. Each crate compiles in parallel
+- **perf-5 — Buffer all file I/O.** Looped `File` reads/writes go through `BufReader`/`BufWriter` — a syscall per line is a 100x tax.
+- **perf-6 — Deterministic iteration for output.** `HashMap` order changes per run: anything user-visible (reports, codegen, serialized output) iterates a `BTreeMap`/`IndexMap` or sorts first.
+- **perf-7 — Measure before optimizing**: `criterion`/`divan` benchmarks against baselines; `cargo flamegraph` (CPU), `cargo-llvm-lines` (monomorphization bloat), `cargo bloat` (size); profile release builds with `debug = true`.
+- **perf-8 — `#[inline]` only on benchmark-proven hot paths**; LTO + `codegen-units = 1` handle the rest.
+- **perf-9 — Release profile: `lto = "fat"`, `codegen-units = 1`.** `panic = "abort"` also skips `Drop` on panic — drop guards and trace flushing die with it; opt in knowingly.
+- **perf-10 — Parallelize at file/module grain** (`par_iter`, work stealing); share config as immutable `Arc<Config>`; cap the thread pool.
 
-### Safety & Unsafe
-- Every unsafe block needs // SAFETY: comment justifying invariants
-- NonNull<T> for covariance; MaybeUninit<T> for uninitialized memory
-- **After ANY unsafe block** → recommend running `cargo miri test` to verify undefined behavior. This is not optional
-- Separate safe wrappers from unsafe FFI — **always isolate in a `mod sys` or `-sys` crate** with safe public API on top
-- Fuzzing critical parsers — use `cargo-fuzz` (libFuzzer) for any code parsing untrusted input (network protocols, file formats, user strings). Add fuzz targets to `fuzz/` directory. Run in CI with time-limited sessions.
-- **Credential and secret safety** — types containing secrets implement `Debug`/`Display` with masking (`****`). Sensitive buffers zeroed with `Zeroizing<T>` (from `zeroize` crate) at Drop. Logs never contain secrets. `impl fmt::Debug for ApiKey { fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "ApiKey(****)") } }`
-- **Graceful degradation** — shutdown gracefully: `CancellationToken` + join all tasks + flush traces. When threading is unavailable, transparent sequential fallback. Adapt rendering for `TERM=dumb`. Interruption via `AtomicBool` + signal handler
-- **Disallowed methods via clippy.toml** — ban dangerous or convention-breaking APIs at the linter level: `println!` (use tracing), `HashMap` on hot paths (use FxHashMap), `Instant::now()` (use injectable TimeProvider). Enforce with `clippy.toml` `disallowed-methods` and `disallowed-types`
+## Unsafe & FFI
 
-### Modern Rust Idioms (2024+)
-- **`std::sync::LazyLock` replaces `lazy_static!` / `once_cell::Lazy`.** A `lazy_static! { static ref X: T = init(); }` block maps directly to `static X: LazyLock<T> = LazyLock::new(init);` — prefer `LazyLock` over `OnceLock` for lazily-initialized globals (no `get_or_init` boilerplate):
+- **saf-1 — Every `unsafe` block carries `// SAFETY:`** justifying its invariants; cheap preconditions also get a `debug_assert!`.
+- **saf-2 — After ANY unsafe change, run `cargo miri test`.** Not optional.
+- **saf-3 — Isolate FFI in a `mod sys`/`-sys` crate** with a safe wrapper on top. `#[repr(C)]` on every type crossing `extern "C"`; `#[repr(transparent)]` for FFI newtypes.
+- **saf-4 — No unwinding across `extern "C"`.** A panic escaping a callback aborts the process — wrap callback bodies in `catch_unwind` and return an error code.
+- **saf-5 — Guards bind to names.** `let _ = guard` drops it immediately (lock released, span closed, tempdir deleted) — write `let _guard = ...`.
+- **saf-6 — Fuzz untrusted-input parsers** with `cargo-fuzz`; targets in `fuzz/`, time-boxed in CI.
+- **saf-7 — Secrets never leak**: mask in `Debug`/`Display` (`ApiKey(****)`), zero buffers with `zeroize`, keep them out of logs and spans.
+- **saf-8 — Graceful shutdown**: `CancellationToken` → join all tasks → flush traces.
+- **saf-9 — Ban dangerous APIs in `clippy.toml`** (`disallowed-methods`/`disallowed-types`): `println!`, default `HashMap` on hot paths, raw `Instant::now()` where a clock should be injected.
+
+## Modern Rust (edition 2024)
+
+- **mod-1 — `LazyLock` replaces `lazy_static!`/`once_cell::Lazy`** (prefer it over `OnceLock` for lazy globals):
   ```rust
   // WRONG: lazy_static! { static ref ROUTES: Vec<Route> = load_routes(); }
   // RIGHT: static ROUTES: LazyLock<Vec<Route>> = LazyLock::new(load_routes);
   ```
-- Const generics for matrix/array ops
-- Let chains — if let Some(x) = a && let Some(y) = b (if MSRV supports)
-- **`impl AsRef<Path>` for filesystem functions, not `String`/`&str`** — accepts `String`, `&str`, `PathBuf`, `Path` interchangeably. Changing a `String` param to `&str` is NOT the fix; the target is `impl AsRef<Path>`:
+- **mod-2 — `impl AsRef<Path>` for filesystem params** — not `String`, and not `&str` either:
   ```rust
-  // WRONG: fn load_template(path: String)   // and equally wrong: path: &str
-  // RIGHT: fn load_template(path: impl AsRef<Path>) -> AppResult<String> {
-  //            let path = path.as_ref(); std::fs::read_to_string(path) .. }
+  // WRONG: fn load_template(path: String)      // equally wrong: path: &str
+  // RIGHT: fn load_template(path: impl AsRef<Path>) -> AppResult<String>
   ```
+- **mod-3 — Edition 2024 RPIT captures all in-scope lifetimes.** A `-> impl Trait` return that must not borrow its inputs needs `+ use<>` (or list captures: `+ use<'a>`).
+- **mod-4 — Edition 2024 drops `if let` temporaries early.** A `MutexGuard` created in the scrutinee no longer lives through the `else` — bind guards explicitly instead of relying on drop timing.
 
-### Project Structure
-- Cargo workspace organization — use `[workspace]` for multi-crate projects. `[workspace.dependencies]` to centralize versions. `[workspace.lints]` for shared clippy/rustc lint config. Keep `-sys` crates separate from safe wrapper crates.
+## Testing
 
-### Testing
-- Property-based testing with proptest — for parsers, serializers, and data transformations, use `proptest!` to generate random inputs and verify invariants (round-trip, idempotence, no-panic). Complement unit tests, don't replace them.
-- Mutation testing with `cargo-mutants` — after test suite passes, run `cargo mutants` to find code where mutations survive (tests don't catch behavioral changes). Prioritize fixing surviving mutants in critical paths.
-- Use `cargo nextest` over `cargo test` — parallel test execution, better output formatting, per-test timeout support, JUnit XML output for CI. Drop-in replacement: `cargo nextest run`.
+- **test-1 — proptest for parsers/serializers/transforms** — round-trip, idempotence, no-panic invariants; complements unit tests.
+- **test-2 — `#[should_panic(expected = "...")]`.** Without `expected`, any panic passes and the test lies.
+- **test-3 — `insta` snapshots for structured output** (CLI output, diagnostics, codegen) — review diffs instead of hand-maintaining assertions.
+- **test-4 — `cargo mutants` once the suite is green** — surviving mutants on critical paths are missing tests.
+- **test-5 — `cargo nextest run` over `cargo test`** — parallel, per-test timeouts, JUnit output.
 
-### Supply Chain & CI
-- Supply chain security — run `cargo audit` (known CVEs) and `cargo deny check` (licenses + advisories + banned crates) in CI. Pin dependencies with `=version` in security-critical crates. Use `cargo-vet` for first-party audit of new deps.
+## Workspace, CI & Hygiene
 
-### Tooling & Project Hygiene
-- **Xtask over Makefile** — `cargo xtask codegen`, `cargo xtask release`, `cargo xtask bench`. Type-safe, cross-platform, with error handling. No Makefiles with complex shell variables
-- **Deny missing docs on public APIs** — `#![deny(missing_docs)]` on public crates. Compiler forces documentation of every public item. `doc(hidden)` for generated code items
-- **`#[expect]` over `#[allow]`** — `#[expect(clippy::too_many_arguments, reason = "FFI boundary")]` breaks compilation when the warning disappears, forcing cleanup. `#[allow]` hides forever. Every suppression requires a `reason`
-- **CI verification of generated code** — generated files have a header with the regen command. CI runs `cargo xtask codegen && git diff --exit-code`. PR that modifies source but not generated output fails
-- **Workspace-level lint configuration** — `[workspace.lints.clippy]` with `pedantic = "warn"`, `todo = "deny"`, `dbg_macro = "deny"`. All crates inherit via `[lints] workspace = true`. `-D warnings` in CI
+- **ci-1 — Workspace discipline**: `[workspace.dependencies]` for versions; fine-grained crates compile in parallel and make boundaries visible; keep `-sys` crates separate.
+- **ci-2 — Workspace lints**: `[workspace.lints.clippy]` with `pedantic = "warn"`, `todo = "deny"`, `dbg_macro = "deny"`; crates inherit via `[lints] workspace = true`; `-D warnings` in CI.
+- **ci-3 — Supply chain**: `cargo audit` + `cargo deny check` in CI; `cargo-vet` for new deps; pin `=version` in security-critical crates.
+- **ci-4 — `cargo-semver-checks` in CI for libraries.** Cutting a release or changing a `pub` API → load `references/semver.md` (breaking-change table, MSRV policy).
+- **ci-5 — Features are additive, never mutually exclusive** — feature unification across the dep graph enables them all at once.
+- **ci-6 — `#![deny(missing_docs)]` on public crates**; public rustdoc carries `# Errors`, `# Panics`, and `# Safety` sections where they apply.
+- **ci-7 — `#[expect(lint, reason = "...")]` over `#[allow]`** — it fails the build when the warning disappears.
+- **ci-8 — `cargo xtask` over Makefiles**; generated code is CI-checked with `xtask codegen && git diff --exit-code`.
+
+## Review Mode (reviewing Rust you didn't write)
+
+- **rev-1 — Severity first**: Critical (UB, data loss, deadlock, injection) / Major (wrong behavior) / Minor (perf, idiom) / Info. Few high-conviction findings beat many nits.
+- **rev-2 — Do not flag** — idioms, not findings:
+
+  | Pattern | Why it's valid |
+  |---|---|
+  | `unwrap`/`expect` in tests, examples, `build.rs` | the panic IS the failure report |
+  | `Arc::clone(&x)` | idiomatic explicit refcount |
+  | `let _ = tx.send(..)` | receiver gone = normal shutdown |
+  | `unsafe {}` blocks inside an `unsafe fn` | required style since edition 2024 |
+  | `use super::*` in `#[cfg(test)]` modules | convention |
+  | `Box<dyn Error>` in binaries | apps don't need typed errors |
+
+- **rev-3 — Flag a `.clone()` only when ALL hold**: hot path + non-`Copy` + not in tests + not forced by `Send`/`'static` bounds.
+- **rev-4 — Verify before flagging**: read the file:line in this session; check `Cargo.toml` edition/MSRV before idiom claims; grep call sites before claiming dead code. Every finding cites file:line.
+- Diagnosing recurring borrow-checker or trait errors (E0382, E0499, E0502, E0507, E0277, E0038…) → load `references/rustc-errors.md`: each maps to a design question, and the reflex `.clone()`/`Arc<Mutex>` fix is usually wrong.
 
 ## Pre-Output Checklist (scan EVERY time before returning Rust)
 
-Before you output Rust, grep your own code for these triggers and apply the fix. These are the rules most often missed — applying one (e.g. `Copy`) is NOT enough, the whole pattern must change.
+Grep your own diff for each trigger and apply the fix. Applying half the pattern (e.g. deriving `Copy` but keeping `&Span` params) is not done — the whole pattern must change.
 
-- `lazy_static!` or `once_cell::Lazy` or `static ref` → **`LazyLock`** (not `OnceLock`). Trigger: any lazily-initialized global.
-- Manual `impl fmt::Display for <Error>` + `impl Error` → **`#[derive(thiserror::Error)]`** with `#[error("...")]`.
-- `.map_err(|e| ...format!("X failed: {e}"))` / context that restates the error → **explain WHY + include the path/input**.
-- Filesystem fn taking `String` or `&str` (path param) → **`impl AsRef<Path>`** (not `&str`).
-- enum with one big variant (`HashMap`, big struct, big array) next to tiny ones → **`Box` the big payload**.
-- tree/graph/AST node with `Arc<Mutex<Node>>` / `Box<Node>` / `Rc<RefCell<Node>>` in `parent`/`children` fields → **arena `Vec<Node>` + `NodeId(usize)` index references** (rewrite the reference fields to indices; dropping the `Mutex`/`Arc` while keeping a pointer tree is NOT the fix).
-- `HashMap<u64, _>` / `HashMap<integer, _>` → **`FxHashMap` / `AHashMap`** (change the type, not a comment).
-- `LinkedList<_>` → **`VecDeque`** (rewrite to `push_back`/`pop_front`; never drop the function).
-- `Builder::build(self) -> T` returning the struct directly → **`-> Result<T, _>`**; required fields error via `.ok_or(...)?`, no `unwrap_or_default()`.
-- Internal type (metrics, in-memory state) with `#[derive(Serialize, Deserialize)]` → **remove the serde derive**; keep it only on API/config boundary types.
-- `Copy` type passed as `&T` (e.g. `&Span`, two `u32`s) → **pass by value** (`Span`, not `&Span`).
-- Per-element / pipeline loop over `&[Box<dyn Trait>]` (hot path) → **generic `<T: Trait>` `&[T]`**.
-- Library `pub trait` whose impls you control (pipeline/visitor/plugin), not an explicit user extension point → **seal it** with a *private* supertrait: `mod sealed { pub trait Sealed {} }` then `pub trait Foo: sealed::Sealed { .. }`. Adding `Send + Sync` is NOT sealing.
-- `println!` / `eprintln!` anywhere → swap to **`tracing`** (`info!`/`warn!`/`error!`/`debug!`). Plus: any fn that loads config / reads files / runs at startup but logs *nothing* → add a `tracing::info!`/`debug!` (and `warn!`/`error!` on failure) so the path is observable. Use structured fields.
+1. `lazy_static!` / `once_cell::Lazy` / `static ref` → `LazyLock` (mod-1)
+2. Manual `impl Display` + `impl Error` on an error enum → `thiserror` (err-1)
+3. `.map_err(|e| format!("X failed: {e}"))` → context with WHY + input (err-2)
+4. Path param typed `String`/`&str` → `impl AsRef<Path>` (mod-2)
+5. `as` narrowing an integer → `TryFrom` (num-2)
+6. Bare `+`/`*` on externally-supplied integers → `checked_`/`saturating_` (num-1)
+7. `.partial_cmp(..).unwrap()` in a sort → `total_cmp` (num-3)
+8. `unbounded_channel` → bounded + backpressure (con-4)
+9. `tokio::spawn` with the `JoinHandle` dropped → `JoinSet` / await it (con-6)
+10. `select!` in a loop → pin long-lived futures, check `biased`, cancel-safety (con-5)
+11. `Mutex<bool>` / `Mutex<usize>` → `AtomicBool` / `AtomicUsize` (con-9)
+12. `tracing_subscriber` init inside a library → emit only; binaries subscribe (con-12)
+13. `println!` / `eprintln!` → `tracing` macros; silent startup/I/O fns get an `info!` (con-11)
+14. `.clone()` added to satisfy the borrow checker → `mem::take` / restructure (own-6)
+15. `Copy` type passed as `&T` → pass by value (own-1)
+16. Tree/graph node with `Arc<Mutex<Node>>`/`Rc<RefCell<Node>>` links → arena + `NodeId` (own-5)
+17. Unbuffered `File` read/write in a loop → `BufReader`/`BufWriter` (perf-5)
+18. `HashMap<integer, _>` → `FxHashMap`/`AHashMap` — change the type, not a comment (perf-4)
+19. `LinkedList` → `VecDeque` — rewrite the usage, don't delete (perf-2)
+20. Hot loop over `&[Box<dyn Trait>]` → generic `<T: Trait>` (perf-3)
+21. `Builder::build()` returning the struct bare → `Result`; required fields `.ok_or(..)?` (api-3)
+22. Serde derive on an internal type → strip it (api-6)
+23. Unsealed library `pub trait` you control → private-supertrait seal (api-4)
+24. `let _ =` binding a guard (lock, span, tempfile) → `let _guard =` (saf-5)
+25. `#[should_panic]` without `expected = ".."` → add it (test-2)
 
 ## Post-Modification Audit
 
-**MANDATORY: After ANY modification to Rust files, run clippy before considering your work done.** No exceptions -- not for "small changes," not for "I'll run it later."
+MANDATORY after ANY change to Rust files — run before considering the work done, no exceptions:
 
 ```bash
 cargo clippy --all --all-features --all-targets -- -D warnings
 ```
 
-Fix all warnings before committing. Clippy warnings are errors (`-D warnings`) — no `#[allow]` unless you can justify why the lint is wrong for that specific case.
+Fix every warning. Suppress only with `#[expect(.., reason = "...")]` when the lint is provably wrong there (ci-7).
