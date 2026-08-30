@@ -3,7 +3,7 @@ name: qa
 description: "Adversarial manual acceptance testing of any user surface (UI, API, CLI, TUI, and more): exhaustive use-case matrix, two merciless agents, proven verdict."
 disable-model-invocation: true
 argument-hint: "[target url|command] [time budget]"
-version: 1.2.0
+version: 1.3.0
 ---
 
 # QA: Adversarial Manual Acceptance Testing
@@ -70,6 +70,11 @@ Each detected surface needs a harness before Phase 4:
 - **Covered surfaces** map to a file: UI → `references/ui.md`, HTTP API (incl.
   GraphQL) → `references/api.md`, CLI → `references/cli.md`, TUI →
   `references/tui.md`. Load only the ones in play.
+- **Domain skills** — every skill of `~/.claude/skills/_shared/SKILLS.md`
+  the change under test calls for, loaded for its matrix rows.
+  `database` among them ⇒ one row on a production-like
+  volume with the response time recorded — a parity check on ten rows
+  proves nothing about a plan.
 - **Any other surface** (websocket/SSE, gRPC, webhooks, email/SMS/push,
   chat/voice, file import-export, SDK/library, desktop, mobile, scheduled jobs,
   message queues, …) has no file. Derive an **ad-hoc harness** by answering three
@@ -100,6 +105,9 @@ paths AND error paths — each with status `UNTESTED`. Cover, at minimum:
 - **Limits** — boundary values, pagination edges, oversized payloads.
 - **Concurrency / interruption** — double-submit, back/refresh mid-flow, cancel,
   rapid repeat.
+- **UI quality sweep** (UI surfaces only) — one row per changed screen for the
+  per-screen checks in `references/ui.md`: dead controls, copy language, native
+  dialogs, flicker on open AND close, token drift, entry from a real login.
 
 Re-read the inventory once to catch entry points you missed.
 
