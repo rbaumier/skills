@@ -18,9 +18,10 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Question necessity first: framework/lib/stdlib already does this? Pattern kept by inertia → delete (in code you're touching; flag the rest, don't expand scope).
 - New abstraction needs ≥1 real caller now. 0–1-caller wrapper/option = dead weight → inline/drop.
 - Compat path with no caller (old mode flag/prop/wrapper/route alias/fallback) → delete, not polish. Grep callers first.
-- Rule of Three: don't abstract until 3rd occurrence (2 = coincidence). Exception: 2nd case already concrete/named.
 - Prefer boring/proven tech. Justify any novel dep or pattern before adding.
-- Consolidate into existing module. No near-duplicate helper.
+- **Second copy = refactor.** Grep the workspace FIRST: a block, helper, mapping or mechanism (cache, retry, redaction, truncation, HTTP-client config, test helper…) the repo already has is consumed or extended, never rewritten — not "locally", not "for now". The moment you would write the 2nd copy, extract to the shared module/crate and ship the lint lock (clippy `disallowed-methods`, oxlint rule) in the same change. There is no rule of three: two is the pattern.
+- Your change touches a block that already has a copy elsewhere? Consolidate it in this change when the grep is short; when it fans wide, this change is the expand + the sites it touches and names the rest (the grep list) in the MR — never a silent Nth copy.
+- Never hand-imitate platform behavior (HTML via regex, shell escaping by hand, URL string surgery): use the real parser/lib — if it's already a dep, string ops instead of it is a bug.
 - Remove orphans your change creates (unused import/param/helper). Don't touch pre-existing dead code.
 
 ### Simplicity & structure
@@ -34,6 +35,8 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Concentrate inherent complexity (DI/routing/parsing) in named modules; rest stays simple.
 - Business logic lives once. Entry points (http/cli/job/webhook) parse+delegate to one operation, no dup.
 - Independent work runs concurrently — don't serialize async steps that don't depend on each other.
+- No query in a loop: batch reads (`= ANY`/`UNNEST`/`IN`, dataloader). N+1 is a defect, not a style.
+- Ownership/authorization filters live in the query (JOIN/WHERE), never fetch-all + in-app filter.
 - Guard clauses + early return; max ~3 indent levels.
 - Return new data; don't mutate inputs.
 - No clever code: no nested ternaries, no implicit coercion, no multi-op one-liners.
@@ -59,12 +62,16 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Illegal states unrepresentable. Domain forbids combo → type forbids it, not runtime check.
 - Workflow/status = one discriminated union/enum (1 variant/state); unhandled variant fails at compile time (e.g. TS assertNever). No status strings, no parallel booleans.
 - Parse untrusted input → typed domain object at boundary. Then trust inside; no re-validation in loops.
+- Domain-closed value (country, plan, channel) validates against the product's explicit allowlist — the reject names the allowed values. Shape-only validation (regex, length) is not validation.
 - Contract-first: typed input/output schema before the handler. Separate Input (no server-set fields) from Output.
 - No silent fallback masking invalid input (`?? 0`, `|| ''`).
 - No escape-hatch type erasing the contract (e.g. TS `any`/`unknown`, untyped cast) → make boundary explicit.
+- Generated API/client types are the source of truth: consume them directly — no local alias, mirror type, or convenience Pick/Omit of a generated type. Missing shape → expose it server-side, don't re-declare it client-side.
+- Don't re-model state a library already exposes (query `status`, form/router state): switch on the library's discriminant, never a parallel homemade union or boolean flags.
 - Return-type ladder: `void` < `bool` < `T` < `Option<T>` < `Result<T,E>`. Pick simplest; each step up forces a branch at every call site.
 - Options object > 4+ positional args / 2+ same-type adjacent (swap-proof).
 - Behavior-branching bool/enum param → split into named fns.
+- Bool return carrying business meaning → 2-variant enum (`Applied`/`AlreadyApplied`): `true` teaches the caller nothing.
 - Same 3+ fields always travel together → named value object.
 
 ### Error handling
@@ -78,6 +85,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Handle or propagate every error — never catch-and-ignore.
 - Multi-step mutation: atomic or recoverable — no half-applied state on failure.
 - No secret/token/PII in logs, error messages, test fixtures, or commits.
+- Raw error from a credential-holding dep (DB pool, authed HTTP client) can replay the connection string/token → wrap and redact before logging, never log the driver error raw.
 - Long-running service: fail the unit of work, not the process (exit the process only at boot).
 - Barricade exception: auth/crypto/PII checks never skipped, even inside the trusted zone.
 - Error crossing the boundary back to caller/user strips stack trace + raw provider payload (cause preserved internally).
@@ -96,6 +104,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Snapshots only for deterministic output (formatters/codegen); trap for UI.
 - Regression test per bug fix. Mark known-bug as expected-fail + tracking note (e.g. `it.fails`/xfail), never silent skip.
 - Mock only real boundaries (net/fs/db/time/rand), not internal collaborators.
+- Fixture of a parsed/branded value = the parser on a literal (`schema.parse({...})`), never `as Brand`; a cast in a test hides the contract the type exists to prove.
 - Tests deterministic + independent: no sleep, no wall-clock/network/shared mutable state across tests.
 
 ### Naming & hygiene
@@ -104,16 +113,14 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Explicit units (`delayMs`/`sizeKb`).
 - Don't add a 2nd meaning for a verb already used here. No overloaded validate/build/resolve, no synonym aliases.
 - Escape hatches honest: `dangerous_`/`unsafe_`/`experimental_`.
-- Comment = why/consequence, not paraphrase of next line. Next to the statement.
-- Comment prose follows ASD-STE100 (Simplified Technical English): sentences ≤ 20 words, active voice, one topic per paragraph, one word = one meaning. No metaphor, no synonym variation, plain words a non-native reader gets first pass.
-- Comment budget: ≤ 50 words. A why that needs more moves to the module doc, MR description, or an ADR — the comment keeps one sentence and points there.
-- Comments are timeless: they describe the code as it is, never the change that produced it. Ban delivery-relative narration — "this MR/delivery", "follow-up MR", "behavior unchanged", "new in issue #N", "was/previously" — it's reviewer-talk that rots the moment the change merges. Issue refs live in TODOs only.
-- One rationale, one place (per codebase, not per file). Recopied across comments → keep one, point to it; recurring across files → ADR/canonical doc the comments cite.
-- TODO carries action + issue link. No vague "fix later".
+- Comments: tag-led (`why:` / `gotcha:` / `TODO(#n):`) or absent — rule, shape and examples in `coding-standards:style` § Comments.
+- A comment failing the tag test is deleted, not rewritten; a doc comment is one line stating what the name doesn't.
 - Exports/public API top, private helpers bottom (stepdown).
 
 ### Docs & method
 - Verify third-party API from official docs, never assume from memory.
+- Every factual claim you ship (version, "unused", "already fixed") is re-verified today against registry/code, with its scope: "orphan declaration in X; real usages in Y". "The schema allows it" ≠ "the code does it".
+- Removing config/env/flag: the MR proves death (zero readers, file:line) and states the reintroduction plan. Removing a colleague's WIP/scaffold: say it in the MR and notify the author — "dead code" is not a reason for someone else's scaffold.
 - Don't guess performance — measure before optimizing.
 - Behavior change → update touched docs/comments/README/CLAUDE.md, same diff.
 - Verify your change matches any stated domain model/invariants; surface contradictions.

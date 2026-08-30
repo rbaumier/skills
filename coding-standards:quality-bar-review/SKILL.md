@@ -8,17 +8,19 @@ description: Use whenever reviewing code, a diff, a PR, or staged changes in any
 What to flag in a diff. Mirror of `coding-standards:quality-bar` (author side):
 each item is the review-side catch for a bar the author should have cleared.
 **SUBORDINATE to the repo**: a flag that conflicts with the repo's
-`CLAUDE.md`/`AGENTS.md` or established patterns → defer to the repo. Prefer few
-high-conviction findings over many nits; don't flag pre-existing debt unless the
-diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if the repo uses it.
+`CLAUDE.md`/`AGENTS.md` or established patterns → defer to the repo. **Exhaustive**:
+every finding, every occurrence, severity-tagged — never a top-N or a selection;
+don't flag pre-existing debt unless the diff materially worsens it; skip
+machine-enforced style. `⟦repo⟧` = only if the repo uses it.
 
 ### Scope & necessity
 - Flag anything built beyond what the task needs — speculative feature/param/export/"flexibility".
 - Flag reinvented framework/lib/stdlib; pattern kept by inertia.
 - Flag abstraction with 0–1 real callers (wrapper/option = dead weight) → inline.
-- Flag DRY-ing before the 3rd occurrence (premature; 2 = coincidence).
 - Flag novel dep/pattern added over a boring/proven one without justification.
-- Flag near-duplicate helper that belongs in an existing module.
+- Flag the 2nd copy — a block, helper, mapping or mechanism (cache, retry, redaction, truncation, HTTP-client config, test helper…) the repo already has, rewritten instead of consumed or extended; grep the workspace before accepting any new helper. Fix = extraction to the shared module AND the lint lock in the same MR; "wait for a third" is never a reason to drop it.
+- Flag a diff touching a block that has a copy elsewhere without consolidating it (short grep) or naming the remaining sites (wide grep) — a silent Nth copy.
+- Flag hand-imitated platform behavior (HTML via regex, manual shell escaping, URL string surgery) when the real parser/lib is in the deps.
 - Flag orphans the diff creates (unused import/param/helper). Don't flag pre-existing dead code unless the diff worsens it.
 - Flag a compat path with no caller — mode flag / prop / wrapper / route alias / fallback kept "just in case" → delete, not polish (grep callers first).
 
@@ -33,6 +35,7 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag inherent complexity (DI/routing/parsing) smeared instead of concentrated in a named module.
 - Flag business logic duplicated across entry points (http/cli/job/webhook) instead of one operation.
 - Flag independent async work serialized where it could run concurrently.
+- Flag a DB query inside a loop (N+1) → batch (`= ANY`/`UNNEST`/`IN`); flag an ownership check done by fetch-all + app-side filter instead of in the query (JOIN/WHERE).
 - Flag >~3 indent levels / missing guard clauses; input mutation where new data should be returned.
 - Flag clever code: nested ternaries, implicit coercion, multi-op one-liners.
 - Flag global/singleton/magic-registry state not traceable from a single root.
@@ -56,12 +59,15 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag a representable-but-illegal state — name the union/brand/parser that removes it.
 - Flag status strings / parallel booleans instead of one discriminated union; missing exhaustiveness guard.
 - Flag untrusted input consumed without parsing to a typed domain object at the boundary; re-validation in loops.
+- Flag shape-only validation (regex/length) of a domain-closed value (country, plan, channel) → demand the explicit allowlist constant, with a reject naming the allowed values.
 - Flag handler with no input/output schema; Input not separated from Output (server-set fields accepted).
 - Flag silent fallback masking invalid input (`?? 0`, `|| ''`).
 - Flag escape-hatch type erasing the contract (`any`/`unknown`/untyped cast) with no nearby runtime check.
+- Flag a local alias, mirror type, or convenience Pick/Omit of a generated API/DB type; a homemade async-state union beside a library `status` → consume the generated type / the library discriminant; a missing shape is exposed server-side.
 - Flag return type heavier than needed (ladder `void` < `bool` < `T` < `Option<T>` < `Result<T,E>`).
 - Flag 4+ positional args / 2+ same-type adjacent (swap risk) → options object.
 - Flag behavior-branching bool/enum param → split into named fns.
+- Flag a bool return carrying business meaning (applied? already-existed?) → named 2-variant enum.
 - Flag the same 3+ fields traveling together → value object.
 
 ### Error handling
@@ -74,6 +80,7 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag swallowed error (catch that neither handles nor propagates).
 - Flag multi-step mutation with no atomicity/rollback (half-applied state on failure).
 - Flag secret/token/PII in logs, error messages, test fixtures, or commits.
+- Flag a raw driver/provider error logged from a credential-holding dep (pg pool, authed client) — it replays the connection string; demand wrap+redact.
 - Flag the process killed from a work unit (`process.exit` outside boot).
 - Flag auth/crypto/PII check skipped inside the trust zone.
 - Flag stack trace / raw provider payload leaked in a boundary-crossing error.
@@ -83,10 +90,11 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 ### Tests
 - Flag untested behavior, prioritizing crossed trust boundaries over pure logic.
 - Flag tests asserting implementation not behavior (break on refactor).
-- Flag tautological/framework-semantics/passthrough tests; truthiness over specific matchers.
+- Flag tautological/framework-semantics/passthrough tests; truthiness over specific matchers; round-trip tests of trivial/derived impls (`FromStr`/`Display` on an id newtype) — tautological by construction.
 - Flag missing edge coverage (ZOMBIES: zero/one/many/boundary/interface/exception).
 - Flag missing characterization test before a refactor/deletion; missing contract test at a provider boundary.
 - Flag mocks of internal collaborators (mock only real boundaries: net/fs/db/time/rand).
+- Flag a fixture minting a parsed/branded value by cast (`as Brand`) instead of the parser on a literal (`schema.parse({...})`) — test files meet the production bar, whatever a linter excludes.
 - Flag bug fix with no regression test; known-bug silently skipped instead of expected-fail + issue.
 - Flag flaky test: sleep/wall-clock/network/random or shared mutable state across tests (order-dependent).
 - Flag snapshot on non-deterministic output / broad UI snapshot.
@@ -96,15 +104,15 @@ diff materially worsens it; skip machine-enforced style. `⟦repo⟧` = only if 
 - Flag abbreviations / negative-form booleans (should read is/has/should/can, positive); missing units (`delayMs`/`sizeKb`).
 - Flag a verb given a 2nd meaning; overloaded validate/build/resolve; synonym aliases.
 - Flag dishonest escape hatch (no `dangerous_`/`unsafe_`/`experimental_` prefix).
-- Flag comment paraphrasing the next line instead of why/consequence; TODO with no action/issue link.
-- Flag comment prose breaking ASD-STE100: sentences > 20 words, passive voice, metaphor, synonym variation for one idea.
-- Flag any comment over 50 words → compress, or move the rationale to module doc/ADR/MR description and keep one pointing sentence.
-- Flag delivery-relative comments ("this MR/delivery", "follow-up MR", "behavior unchanged", "new in issue #N", "was/previously") — reviewer-talk that rots once merged; a comment must read true to someone who never saw the diff. Issue refs belong in TODOs only.
-- Flag same rationale across 2+ comments (per codebase, not per file) → keep one, point to it; recurring across files → ADR/canonical doc the comments cite.
+- Flag any added comment without a `why:`/`gotcha:`/`TODO(#n):` tag, a block past 25 words, a paraphrase of the next line, delivery narration (`this MR`, `previously`, `now`) or a rejected option (`rather than`, `on purpose`), a doc comment past one line → fix is "delete" (`coding-standards:style` § Comments). TODO with no action/issue link.
+- Flag same rationale across 2+ comments (per codebase, not per file) → keep one, point to it.
 - Flag unreferenced export / unused import / unreachable branch / commented-out code → remove.
 
 ### Docs & method
 - Flag third-party API used from memory instead of verified against official docs.
+- Flag any factual claim not re-verified today — version numbers, "unused", "dead", "already fixed" — and any "unused" without scope ("orphan declaration in X; real usages in Y"). "The schema allows it" ≠ "the code does it".
+- A green linter/comply/CI never exonerates review: judge the pattern (manual validation, generic name), not the tool's silence; if a tool should have caught it, also file an issue on the tool.
+- Flag a config/env removal whose description carries no zero-reader proof (file:line).
 - Flag perf claim/optimization with no measurement.
 - Flag behavior change leaving touched docs/comments/README/CLAUDE.md stale. Materiality: don't flag on internal refactors, dep bumps, CSS-only.
 - Flag a change contradicting a stated domain model/invariant.
