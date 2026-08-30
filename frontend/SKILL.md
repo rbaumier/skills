@@ -165,6 +165,11 @@ export function TaskListSection() {
 - Error hierarchy: inline (field) > toast (recoverable) > banner (partial) > full screen (fatal)
 - Disable buttons + loading indicator during async submission. Every list needs empty state
 - Skeleton loading for content areas, spinners only for actions. Use `aria-busy="true"` on loading regions
+- Never ship a dead control: every rendered button/icon/menu item has a wired action, or it doesn't render. A `disabled` placeholder needs a linked issue
+- UI copy speaks the product's language to humans: no API identifiers (`client_prompt`), protocol names (WebRTC), or English tech terms in user-facing strings — labels, empty states, errors included
+- Controls earn their place at real scale: a list of ≤ ~5 known items gets no filter/search/counter chrome
+- A screen of a shape the app already has (list, form, settings) starts from the reference screen — same shell, design tokens, query patterns (`placeholderData: keepPreviousData`); divergence is a bug, not creativity
+- Never native `confirm()`/`alert()`/`prompt()` — always the app's modal/toast system
 
 ### Accessibility
 
@@ -288,6 +293,9 @@ These are the rules most often missed. Each is a concrete IF → THEN. Scan your
 - **Component tree that fetches/renders remote data** → wrap it in an Error Boundary with a retry action — import `{ ErrorBoundary }` from `react-error-boundary`, give it a `FallbackComponent` whose fallback renders a Retry button wired to `resetErrorBoundary`, and an `onReset` that refetches. See the canonical "Error Boundary with retry" example above. An inline `if (error) return ...` is NOT an Error Boundary (it can't catch render throws) — you need the actual `<ErrorBoundary>` wrapper AND a retry button.
 - **A list that can exceed ~50 items** (any `.map` over fetched/filtered data with no fixed small cap) → virtualize with `@tanstack/react-virtual` (`useVirtualizer`). When item count is unbounded, assume it can be long and virtualize.
 - **A heavy or below-fold component** (chart, rich editor, map, large modal body, any 100KB+ dependency, or one flagged "heavy") → wrap it in `next/dynamic`, JAMAIS le supprimer ni le décrire en prose. Replace the static import with `const X = dynamic(() => import('./X'), { ssr: false, loading: () => <Skeleton/> })` and keep rendering `<X .../>` exactly where it was. Deleting the component, or writing "would use next/dynamic" / "à loader si lourd" instead of the actual `dynamic(() => import(...))` call, is the trap. The component remains its own module — you do NOT inline its body.
+- **A rendered control with no handler or route** (button, bell icon, menu item) → wire it or remove it; keep a `disabled` placeholder only with a linked issue.
+- **`confirm(`, `alert(` or `prompt(` in UI code** → replace with the app's modal/toast system.
+- **A user-facing string carrying a technical identifier or English term in a non-English product** → rewrite in product language; identifiers never surface to users.
 - **A modal/dialog/overlay** → mandatory minimum, never ship without BOTH: (a) close on `Escape` (keydown listener, cleaned up on unmount), and (b) move focus into the dialog (close button or first focusable element) on open. Overlay-click-only close is the trap. Then add the two best-practice mechanisms for a complete dialog: trap Tab focus inside (Tab/Shift+Tab cycle within, never escape behind) and restore focus to the trigger element on close (save `document.activeElement` on open, `.focus()` it on cleanup).
 
 ### Verification Checklist

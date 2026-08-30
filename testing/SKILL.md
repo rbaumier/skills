@@ -3,6 +3,29 @@ name: testing
 description: "Use when writing tests, choosing test strategies, or setting up test infrastructure — TDD, unit tests, E2E, Vitest, Playwright, coverage."
 ---
 
+## What to test / what not to test
+
+The gate, before any other rule — for every test, new or existing: **name the real bug this test catches that nothing else catches.** No answer → don't write it; delete it on sight.
+
+**Test** (write it, keep it):
+- **Behavior at a boundary** — HTTP endpoint, public function, user-visible interaction — against an **external oracle**: an expected value from the spec, the business rule, or a fixed bug. Black-box check: swap the implementation for an opaque correct one; the test must stay valid.
+- **Hot code far from the boundary** — parser, state machine, boundary math, retry/backoff — where a focused unit test shortens the debug loop.
+
+**Don't test** (delete on sight):
+- **TAUTO** — the test rebuilds the value the code builds and compares; passes by construction.
+- **LIB** — exercises the library/framework (serde parses, zod validates, the router routes); that's their suite.
+- **TYPE** — asserts what the compiler already guarantees.
+- **MIRROR** — mocks internal collaborators and asserts the calls; breaks on refactor, catches nothing.
+- **NO-ORACLE** — expected copied from the output; every fix is "copy actual into expected".
+- **DUPLICATE** — a boundary test already covers the same behavior; keep the boundary one.
+- **WEAK** — only vacuous assertions (`toBeTruthy` alone, `is_ok()` alone, "doesn't panic").
+- **ROUNDTRIP** — trivial round-trip of a wrapper/newtype (`Display`/`FromStr`, encode/decode).
+- **HARNESS** — tests a test helper, builder, or mock — the scaffolding, not the product.
+
+Genuine hesitation on an internal seam → "The urge to test an internal collaborator is a signal" under Strategy below.
+
+---
+
 ## Gotchas
 - `vi.mock()` hoists to top — variable refs inside factory are `undefined` unless declared via `vi.hoisted()`. A `const mockDb = vi.fn()` above `vi.mock(...)` is the trap: the mock is hoisted above the const, so the factory reads `mockDb` before it exists. Move the var into `vi.hoisted()`:
   ```ts
@@ -37,7 +60,7 @@ A test is code; the same rules apply to its lifecycle. Tests are not a monotonic
 Use these as a first-pass filter on every new test:
 
 - **The Neural Network test**: imagine the entire implementation under test is replaced by an opaque ML model that produces correct outputs for known inputs. Would the test still be valid? If yes, you're testing behavior. If no (because the test mocks an internal function the NN wouldn't have, or asserts on an intermediate value the NN wouldn't expose), you're testing implementation. Single sharpest framing for "is this a behavior test."
-- **Do not add tests which simply restate the implementation. These provide zero confidence.** If the test mirrors the code (same branches, same constants, same mocks shaped like the function body), it cannot catch a bug — any bug in the impl is duplicated in the test. The test passes by tautology. In reviews: test asserting the exact return shape the function literally constructs, with no transformation/edge-case/interaction being verified -> flag "tautological, delete or rewrite at a real oracle"
+- **Do not add tests which simply restate the implementation. These provide zero confidence.** If the test mirrors the code (same branches, same constants, same mocks shaped like the function body), it cannot catch a bug — any bug in the impl is duplicated in the test. The test passes by tautology. Round-trip tests of trivial/derived impls (`FromStr`/`Display` on an id newtype, encode/decode of a plain wrapper) are tautological by construction — delete them. In reviews: test asserting the exact return shape the function literally constructs, with no transformation/edge-case/interaction being verified -> flag "tautological, delete or rewrite at a real oracle"
 - **Debug-distance**: write a unit test specifically where bugs are *cheap to introduce* and *expensive to debug from an integration test*. Not "isolation is virtuous" — "this code is hot for bugs and far from the system boundary, so a focused test there shortens debug loops." Picks: parsers, edge-case math, state-machine transitions, retry/backoff logic.
 - **Cost of adding one more test**: this is the metric for test-infra health. If writing a new test costs more than fixing the bug, your test infrastructure is broken — fix the infra (better builders, the `check()` idiom below, snapshot machinery, fast in-memory DB), not the team's "discipline". Reviews: 30+ lines of setup boilerplate for a 3-line assertion -> flag "extract a builder; the infra is the bug here"
 
@@ -57,6 +80,7 @@ If an async API doesn't return a handle (Promise, AbortController, task ID) you 
 
 Test behavior not implementation. Determinism is king. Fast feedback. No test-to-test deps.
 Testing Trophy: integration > unit (complex logic only) > E2E (critical paths).
+**A suite is measured by real flows covered, not test count.** A suite named e2e must drive the real system (browser, app, binary); tests that only exercise the harness and its helpers count as zero coverage of the objective. In reviews: an "e2e" suite where no test drives the real product -> flag "scaffolding only, 0 real coverage"
 **Test pyramid ratios**: ~70% unit (pure logic, transforms, edge cases), ~20% integration (API contracts, DB interactions), ~10% E2E (critical user flows only). Inverting the pyramid (too many E2E, few unit) leads to slow, flaky CI. In reviews: if a project has more E2E tests than unit tests, flag the inverted pyramid
 AAA pattern. One concept per test. Descriptive names (scenario + outcome). No logic in tests.
 Don't test what types guarantee. **Specific matchers over generic equality/truthiness.** `expect(x).toBeTruthy()` passes for `1`, `"unexpected"`, `{}` — it proves almost nothing. Name the exact expectation so a wrong value fails loudly:
@@ -181,6 +205,10 @@ const ctx = await TestBuilder.create()
   .build();
 ```
 In reviews: copy-pasted setup boilerplate across 5+ tests -> flag "extract test builder"
+
+**Generic helpers are born shared.** An integration helper any other module could use (DB pool setup, seeding, app-state builder, response-body reader) goes to the shared test-support package/crate at FIRST use — never local to one module's tests. In reviews: generic setup helper local to one test file -> move to test-support.
+
+**Test infrastructure stays scaffolding.** Never harden a test-only server/harness like production code — no graceful shutdown, retry logic, or config surface a test never exercises. If the harness outweighs the code under test or eats review rounds, shrink it. In reviews: test harness with production-grade hardening -> flag over-engineering.
 
 **The `check()` idiom — one helper per API under test.** Don't call the function-under-test directly from each test. Wrap it in a single `check(input, expected)` helper. When the API signature changes (added argument, renamed, error shape moves), you fix one place. Tests then read as input → expected pairs, not as setup ceremony.
 ```typescript
