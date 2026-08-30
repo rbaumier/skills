@@ -1,21 +1,57 @@
 ---
 name: show-me
-description: Help the user understand the current topic visually with concise diagrams, code-shape sketches, and focused HTML artifacts.
+description: Show the current topic visually — pick the right diagram from the 27-type catalog (architecture, sequence, flowchart, quadrant, timeline…) and render it; fall back to code-shape sketches only when a diagram adds nothing.
 ---
 
-Help the user understand the current topic of conversation visually. Skip the preamble and keep prose brief. Pick the smallest view that makes the key point clear.
+Help the user understand the current topic of conversation visually. Skip the preamble and keep prose brief. **Default to a diagram**: pick a type from the catalog, then render it at the smallest tier that makes the key point clear.
 
-- Show logic or an algorithm as pseudocode:
+## Don't draw when
 
-```text
-on(save)
-  if content is unchanged
-    return cached result
-  write new content
-  return fresh result
-```
+A diagram must teach more than prose. Write a sentence, bullets, or a table instead when the topic is:
 
-- Show runtime control flow as a call tree:
+- a list of things,
+- a single shape or one generic step,
+- a simple before/after (use a table or a `diff`).
+
+## Pick the diagram type
+
+| To show | Draw |
+|---|---|
+| Components and connections in a system | Architecture |
+| Legacy IT landscape by phase or department | IT current-state |
+| Decision branches | Flowchart |
+| Time-ordered messages between actors | Sequence |
+| States and transitions with guards | State machine |
+| Entities, fields, relationships | ER / data model |
+| Events positioned in time | Timeline |
+| Cross-functional process with handoffs | Swimlane |
+| Two-axis positioning or prioritization | Quadrant |
+| Entities scored across 3–5 criteria | Radar / Spider |
+| Reinforcing cycle feeding back into itself | Loop / Flywheel |
+| Hierarchy through containment | Nested |
+| Parent → children relationships | Tree |
+| Ownership, reporting, escalation | Org chart |
+| Stacked abstraction levels | Layer stack |
+| Overlap between sets | Venn |
+| Ranked hierarchy or conversion drop-off | Pyramid / Funnel |
+| Quantitative comparison across categories | Bar chart |
+| Continuous trends over time | Line chart |
+| Tasks and phases on a schedule | Gantt |
+| Distribution and correlation | Scatter plot |
+| End-to-end stack on a deployment or cluster | High-level |
+| Multi-actor sequential process with data | Process |
+| Multi-tier data storage (raw → curated → refined) | Medallion |
+| Role-scoped data flow at each pipeline step | Data flow |
+| Data platform integration topology | DP integration |
+| Per-role or per-component access permissions | DP security matrix |
+
+## Render it
+
+Two tiers. Pick the smallest that makes the point clear.
+
+### 1. Code-shape sketch (inline text)
+
+Only when the shape **is** the point and a drawn diagram adds nothing: pseudocode for logic, call tree for runtime flow, component tree for UI structure, shallow file tree for responsibilities. Use `diff` on any of these when the point is what changes; match the diff shape to the topic. Show a whole code block when the user needs a copyable target shape.
 
 ```text
 submitForm
@@ -25,103 +61,34 @@ submitForm
   navigateToSession
 ```
 
-- Show UI structure as a component tree, including state and module boundaries that matter:
-
-```tsx
-<SessionPage> (apps/example/src/routes/session.tsx)
-  useSessionEvents()
-  <SessionToolbar>
-    <RunSkillButton> (packages/ui)
-```
-
-- Show file responsibility or a broad refactor as a shallow file tree:
-
-```text
-src/
-├── commands/       # parses user actions
-├── sessions/       # owns session state
-└── transport/      # sends API requests
-```
-
-- Show component interaction, control flow, or data flow with Mermaid:
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant UI
-    participant Daemon
-    User->>UI: choose command
-    UI->>Daemon: send expanded prompt
-    Daemon-->>UI: stream result
-```
-
-- Use `diff` when the point is what changes and the surrounding shape already exists. Match the diff shape to the topic.
-
-For a component change:
-
-```diff
- <SessionPage>
-   useSessionEvents()
-   <SessionToolbar>
-+    <RunSkillButton />
-   <SessionTimeline>
-+    <SkillResultCard />
-```
-
-For a file-layout change:
-
-```diff
- src/
- ├── commands/
-+│   └── show-me.ts       # expands the slash command
- ├── sessions/
--└── transport.ts
-+└── transport/
-+    ├── client.ts
-+    └── stream.ts
-```
-
-For a call-tree or call-stack change:
-
-```diff
- submitForm
-   createSession
-     persistPrompt
-+    expandSkillMention
-     launchAgent
--  navigateToSession
-+  navigateToSession
-+    subscribeToEvents
-```
-
-For a state or control-flow change:
-
 ```diff
  on(save)
 -  write content
 +  if content is unchanged
 +    return cached result
 +  write new content
-+  invalidate cache
 ```
 
-- Show the whole block when most of it is new, when omitted context would hide ownership or order, or when the user needs a copyable target shape:
+### 2. Diagram
 
-```ts
-function expandSkill(command: string): string {
-  const skillName = command.slice(1)
-  return `use the ${skillName} skill`
-}
-```
+The medium depends on the destination.
 
-- For a visual UI, layout, state comparison, or concept too dense for Mermaid, write one focused HTML file — a diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile. Then open it for the user:
+**Local conversation** — HTML/SVG, for every catalog type. Read [references/design-rules.md](references/design-rules.md) first, write one focused, self-contained HTML file (inline SVG, no external assets), then open it:
 
 ```
 Bash(open path/to/show-me-{description}.html)
 ```
 
-### guidance
+**GitLab issue or MR** — GitLab strips raw HTML and inline SVG from markdown, but renders ` ```mermaid ` blocks natively:
 
-Place each visual next to the short text it supports. Keep only the calls, files, props, states, and boundaries needed to answer the user's current question or the options to resolve the current discussion point.
+- The type maps natively to Mermaid — Flowchart, Sequence, State machine, ER, Gantt, Timeline → write a ` ```mermaid ` block directly in the ticket body. Stick to these six types; newer Mermaid types (quadrantChart, xychart, sankey) may not render on the instance and would show as raw code.
+- Any other type → render the HTML/SVG diagram, then embed it as an image:
+  1. Screenshot the HTML to PNG (chrome-devtools MCP: `navigate_page` → `take_screenshot`).
+  2. Upload the PNG with the GitLab MCP `upload_markdown` (or `glab api projects/:id/uploads`).
+  3. Insert the returned `![diagram](/uploads/…)` next to the text it supports.
 
-You may use one of these, you may use several, it is unlikely you will use all of them. Use your judgement and don't overwhelm the user.
+  PNG always renders inline. An uploaded `.svg` may display as a link only — prefer PNG.
+
+## Guidance
+
+Place each visual next to the short text it supports. Keep only the nodes, calls, files, and states needed to answer the user's current question. Several diagrams per answer is fine; don't overwhelm the user.

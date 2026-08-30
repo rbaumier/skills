@@ -5,108 +5,38 @@ description: Use when writing or reviewing comments, docstrings, names, control 
 
 ## Comments
 
-**Default: no comment.** Each = tax on every reader. 3 load-bearing beat 15 fillers.
+**Default: no comment.** The name and the types carry the what. A comment exists only when it starts with a tag — no tag, no comment:
 
-### 1. The 5 Exceptions (ALWAYS comment)
-1. **Silent correctness protections:** Fallbacks, clamps, saturating casts, `unwrap_or`. Name the protection *(e.g., "bounded upstream", "prevents verdict flip")*.
-2. **State & Idempotency guards:** CAS loops, deduplication, retry blockers. State the exact consequence of a replay, rewind, or bypass.
-3. **Cross-cutting invariants:** Shared `now`, "all in one TX". State what breaks if the execution is split or the assumption changes.
-4. **Struct role:** ONE line naming what ONE instance represents in domain terms.
-5. **Dense code / non-trivial algorithms:** Complex SQL, heavy math, atomic state machines. Name the invariant protected. Hard code with zero comment is a bug.
+- `why:` — a decision the code cannot show. `// why: 404 means the version was purged; fall back to the latest one.`
+- `gotcha:` — a trap that bit or will bite. `// gotcha: getSession() returns null for ~200 ms after a refresh.`
+- `TODO(#n):` / `WORKAROUND(upstream#n):` / `HACK(upstream#n):` — an action or a bypass with its link.
+- A lint suppression (`#[expect]` over `#[allow]`, `eslint-disable`, `@ts-expect-error`) carries a `why:` on the same line.
 
-*Else: Delete unless absence lets a fast reader miss deliberate protection.*
+Shape: one idea, one short plain sentence — ≤ 25 words for the whole block, tag included — placed on the statement it guards, never a step list atop the function. One exception: dense SQL, math or a state machine may carry one `why:` block naming the invariant. Public symbol (`///`, `/** */`, docstring): one line stating what the name doesn't, else nothing — never a step inventory of the body. Module doc (`//!`, file header): ≤ 3 lines, role + consumer-visible effect. Domain terms verbatim, never abbreviated. Errors and logs are not comments: they go detailed (`coding-standards:errors`).
 
-### 2. Form & Style: Extreme Concision
-- **Plain English only:** The reader is a junior dev, English as second language, skimming at 2am. Pick the short Germanic word over the Latinate one.
-- **30 words MAX, hard cap. Count them.** Sacrifice grammar entirely for the sake of concision. Flow is NOT the goal.
-- **MANDATORY OMISSIONS:** Drop articles (`the`, `a`), copulas (`is`, `are`, `was`), auxiliaries (`would`, `will`, `can`, `has`), and pronouns (`it`, `this`, `that`) wherever meaning survives.
-- **Before / After shape:**
-  - ❌ 28w: *"A rewind would re-count attempts we already folded into closed groups, inflating the failure rate."*
-  - ✅ 4+3w: *"Rewind double-counts closed groups. Failure rate inflates."*
-- **Self-check on every comment before save:**
-  1. Scan for split triggers: `and`, `so`, `but`, `—` between clauses, `then`, `, which`, `;`, `that`. Found one? Split.
-  2. Count words in each sentence.
-  3. Still over 10? The sentence holds 2 ideas. Split. Break lines on idea end, not column.
-- **Banned words — closed list, grep-able, zero exceptions:** `tally`, `tallies`, `flapping`, `hog`, `spurious`, `singleton`, `contended`, `bookmarking`, `trailing`, `leaky`, `flush`, `starve`. Presence = violation, rewrite. **The closed list is the floor, not the ceiling** — apply the same test to every word you write: shorter-older-more-childlike wins.
+A comment that fails the tag test is **deleted, not rewritten** — rewrite only when a `why:` survives "which bug does a reader make without it?". From real diffs:
 
-### 3. Content Rules: Why over How
-- **Place comments inline next to the statement they guard.** A multi-line "steps" block at the top of a function paraphrases the code, rots on the first refactor, and forces the reader to mentally re-pair abstract steps with lines. If a comment would describe N steps, write N separate inline comments next to N different statements — not one block. Function doc (above the signature) is the ONLY top-of-function prose and names consumer-visible behavior, never steps (see Section 5).
-  - ❌ 6-line block atop the function: *"1. Validate input. 2. Fetch user. 3. Check permission. 4. Update record. 5. Emit event. 6. Return result."*
-  - ✅ Each line lives where it applies, e.g. above `if (!isAllowed(user, record))`: *"Permission re-checked here: caller's check is advisory."*
-  - **Counter-example (when a top block IS correct):** dense SQL or an atomic state-machine algorithm (Section 1, Exception 5) — walking through the invariant once at the top is the point. Outside Exception 5, this rule applies.
-  - Reviews: 3+ line "what this function does" block above an ordinary function body → flag "split per-statement and move next to the relevant line, or delete if the code already says it."
-- **How -> Code. Why -> Comment. Never both.** The code shows the mechanics. Dense SQL/math (Exception 5) is the only exception where you walk through invariant steps.
-- **Customer/operator consequence:** Document what happens for the customer/operator. What human-visible symptom occurs if it fails?
-- **Don't paraphrase the callee:**
-  - **Detector:** Is the comment's first verb a synonym of the called function's name? E.g., `// Fetch subscriptions...` above `list_candidates(...)` → `fetch` paraphrases `list`. Delete the paraphrase, keep ONLY the *why-here* ("same tx as cursor advance").
-- **Never define a language keyword:** `useMemo`, `Arc`, `ON CONFLICT`: docs exist. Comment adds *why*, never the definition.
-- **Inaction needs a reason:** Empty branch, no-op, early return: state why.
-- **One insight, one place — per codebase, not per file:** State each rationale ONCE, at its canonical spot (the guard's test, the shared helper, the earliest useful line). Elsewhere: nothing, or a one-line pointer. **Detector:** writing a comment whose argument you already wrote 20 lines up, in a sibling file, or in the colocated test → delete this copy, keep the canonical one. Reviews: same rationale in 2+ places → flag "keep one, point to it".
-- **Cite canonical docs, never recopy them:** Mechanism explained in a project doc/ADR (`docs/agents/*`, ADRs) → comment is one line naming the hazard + the pointer. Re-explaining the full mechanism inline duplicates the doc and rots when it changes. ❌ 8-line plan-cache walkthrough above `SET LOCAL`. ✅ *"Parameterized VALUES misestimates under generic plan — see docs/agents/backend-handlers.md."*
+- ❌ 63 words above a zod schema: *"One schema for both POST … and GET …: the read is the POST body minus cache_hit …, so both are optional here rather than split across two schemas. Left non-strict on purpose: the server grows the payload additively …"* → `// why: shared by POST /synthesis and GET /versions/{id}; non-strict, the server adds fields.`
+- ❌ *"Refetch the mounted list for this key either way: a stored run added or reshuffled a version, and an empty run may still leave older archives to show."* → delete: the call reads alone; "either way" narrates a branch that no longer exists.
+- ❌ *"First refetchInterval of the app"*, *"the card's helpers are a verbatim move"*, *"no setState in an effect"* → delete: delivery narration and rejected options belong to the MR description.
+- ❌ *"A true result also guarantees at least two entries"* → delete: the signature says it.
+- ❌ *"Fetch subscriptions …"* above `listCandidates(...)` → delete: paraphrase of the callee.
+- ✅ `// gotcha: parameterized VALUES misestimates under the generic plan; see docs/agents/backend-handlers.md` — one line, the doc holds the mechanism.
 
-### 4. Domain & Boundaries
-- **Domain terms:** Keep verbatim. Introduce once. NEVER use synonyms. NEVER abbreviate (`subscription` stays `subscription`, never `sub`).
-- **Limits/invariants:** Caps: state why + leftovers. TX: state in-tx vs post-commit.
-- **No archaeology:** History = git. Never `was`, `previously`, or `refactored`. **Trap — archaeology without the trigger words:** a comment explaining absent code (*"No preliminary X row: it would never be observable"*, *"no TS reshape needed"*) narrates the refactor to the reviewer. Post-merge readers never saw that code; the justification belongs in the MR description / commit message. **Detector:** comment only makes sense compared against code NOT in the file (a removed step, a rejected alternative, the old implementation) → delete. Reviews: comment defending the change instead of stating a live constraint → flag "move to MR description".
-
-### 5. Documentation Structure
-- **Struct doc:** JSDoc/Rustdoc/etc. Role only, not fields. No "and also" filler.
-  - ❌ *"Operational knobs for the monitor. Everything the tick needs to decide."*
-  - ✅ *"Tuning for one running monitor: thresholds, windows, scan caps."*
-- **Function doc:** ~5 lines max. Must answer "what does the system's consumer observe?". **The consumer depends strictly on the module type:**
-  - API handler → end user (visible HTTP response, screen)
-  - Background job / cron → operator (reading logs) + side effect (event emitted, endpoint disabled)
-  - Library → caller (return value meaning, contract guarantees)
-
-  **Banned opening verbs:** `reads`, `pulls`, `fetches`, `loads`, `sums`, `counts`, `aggregates`, `iterates`, `loops`, `processes`, `handles`, `computes`, `calculates`. Three or more of these verbs and zero outward sentence naming a consumer-visible effect → rewrite.
-- **Module doc — mandatory shape:**
-  (1) What, one sentence.
-  (2) Consumer consequence, one sentence (using the mapping above).
-  (3) How, as a **bullet list**. *A single prose paragraph is NOT a module doc.*
-
-  **A multi-step function/pipeline (3+ sequential steps) MUST carry this doc — write it, do not delete it and do not collapse it into one prose sentence.** Worked example:
-  ```ts
-  /**
-   * Places an order and confirms it to the buyer.
-   * Buyer sees a confirmation email; their next profile load shows the order without a DB hit.
-   * How:
-   * - price the cart and persist the order row
-   * - email the buyer their confirmation
-   * - warm the per-user cache with the new order id
-   */
-  export async function placeOrder(userId: string, items: CartItem[]): Promise<Order> { /* ... */ }
-  ```
-  This names the consumer-visible outcome (1-2) then lists the *phases* as bullets (3). It is NOT a line-by-line code paraphrase — it survives refactors, so it is the one top-of-function comment you KEEP, not delete.
-
-### 6. EXCEPTION: Logs and Errors
-- Error and log messages are a separate class, NOT comments. The telegraphic 10-word rule DOES NOT apply.
-- Go detailed and helpful. Name what went wrong, relevant identifiers, and the user's/operator's next action.
-- See `coding-standards:errors` for the full diagnostic-complete rule.
-
-### 7. Workaround Comments with Upstream Link
-- When code contains a workaround, hack, or edge-case bypass, the comment MUST include a link to the upstream issue/PR documenting the problem.
-- Prefix with `HACK:` or `WORKAROUND:` for greppability. This enables knowing when the workaround can be removed.
-- Format: `// WORKAROUND(rustc#12345): remove when MSRV >= 1.78` or `// HACK: esbuild doesn't tree-shake enums, see https://...`
-
-### 8. Lint Suppressions Must Be Justified
-- Every lint suppression (`#[allow]`, `// eslint-disable`, `@ts-ignore`, `@ts-expect-error`) requires a comment explaining WHY.
-- In Rust, prefer `#[expect]` over `#[allow]` — `expect` breaks compilation when the warning disappears, forcing cleanup.
-- Reviews: bare suppression without justification -> flag "add reason for suppression"
-
-**Never**: code paraphrases, commented-out code, `TODO`/`FIXME` without issue link, name-restating. **Reviews**: any bullet violated → flag with bullet name.
+**Reviews:** untagged comment, block > 25 words, paraphrase (the comment shares its identifiers with the next line), delivery narration (`this MR`, `previously`, `now`, `no longer`, `first … of the app`), rejected option (`rather than`, `instead of`, `on purpose`), type restated → flag "delete". Same rationale in 2+ places (per codebase, not per file) → keep one, point to it.
 
 ## Prose & Anti-Slop
 
-Comments and docstrings already get the telegraphic concision above — that terseness is itself anti-slop. This section adds the AI *tells* to scrub, and governs the **longer prose a coding agent emits**: function/module docs, error & log messages (Section 6), commit messages, PR/MR descriptions, ADRs.
+Comments follow the tag rule above. This section adds the AI *tells* to scrub, and governs the **longer prose a coding agent emits**: function/module docs, error & log messages (Section 6), commit messages, PR/MR descriptions, ADRs.
 
 **Two regimes:**
-- **Telegraphic** (comments, docstrings): concision wins — fragments fine, no subject required. Still scrub the *content tells* below: false agency, vague declaratives, throat-clearing, jargon, hedge adverbs.
+- **Comments** (tag-led, one idea): still scrub the *content tells* below: false agency, vague declaratives, throat-clearing, jargon, hedge adverbs.
 - **Full prose** (docs, errors, logs, commits, PRs, ADRs): complete sentences, active voice, a named actor. The whole regime below applies.
 
 ### 1. Content tells — banned in ALL prose, grep-able
 - **Throat-clearing openers — cut, state the point:** `Here's the thing`, `Here's what/why/how`, `It turns out`, `The truth is`, `Note that`, `It's worth noting`, `At its core`, `When it comes to`, `The reality is`.
 - **Emphasis crutches — cut:** `Full stop.`, `Period.`, `Let that sink in.`, `This matters because`, `Make no mistake`.
-- **Hedge / intensifier adverbs — cut:** `really`, `just`, `simply`, `actually`, `literally`, `genuinely`, `honestly`, `truly`, `fundamentally`, `inherently`, `basically`, `essentially`. Extends the comment word-ban (§2); same shorter-older-plainer test.
+- **Hedge / intensifier adverbs — cut:** `really`, `just`, `simply`, `actually`, `literally`, `genuinely`, `honestly`, `truly`, `fundamentally`, `inherently`, `basically`, `essentially`.
 - **Business jargon — plain verb instead:** `leverage`→use, `navigate`→handle, `unpack`→explain, `deep dive`→analysis, `lean into`→accept, `circle back`→revisit, `moving forward`→next, `game-changer`→significant.
 - **Lazy extremes — name the real scope:** `every`, `always`, `never`, `everyone`, `nobody` doing vague work → the actual count or case.
 - **Vague declaratives — name the specific thing:** ❌ *"The implications are significant."* / *"The reasons are structural."* ✅ *"Replays now double-charge the buyer."*
@@ -118,8 +48,8 @@ Comments and docstrings already get the telegraphic concision above — that ter
 - **No meta-commentary.** Code prose never announces its own structure: `Let me walk you through`, `In this section`, `As we'll see`, `but that's another story`.
 
 ### 3. Full-prose regime — errors, logs, commits, PR/MR, ADRs
-- **Active voice, named actor.** ❌ *"The decision was reached to retry."* ✅ *"`fetchOrder` retries on 503 because the gateway is flaky."* Passive hides who acts. Telegraphic comments are exempt — they carry no subject by design.
-- **No em-dash for drama** — comma or two sentences. In comments `—` is already a split trigger (§2).
+- **Active voice, named actor.** ❌ *"The decision was reached to retry."* ✅ *"`fetchOrder` retries on 503 because the gateway is flaky."* Passive hides who acts.
+- **No em-dash for drama** — comma or two sentences. In a comment `—` chains two ideas: split or delete.
 - **Vary rhythm, trust the reader.** Don't stack three same-length punchy fragments. Drop permission tails (`And that's okay.`) and pull-quotes — if a line reads like a tweet, rewrite it. Two items beat three.
 - **Reader in the seat.** `you` over `people` / `one`; specifics over `the system handles the cases`.
 - **Self-score before shipping a PR/MR description or ADR** — rate 1–10: **Directness** (states, not announces), **Rhythm** (varied), **Trust** (no hand-holding), **Authenticity** (human), **Density** (nothing cuttable). Below 35/50 → revise.

@@ -1,5 +1,5 @@
 ---
-name: coding-standards
+name: coding-standards-eval-snapshot
 description: Enforce engineering standards — readability, robustness, maintainability, type safety.
 ---
 

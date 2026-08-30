@@ -34,6 +34,9 @@ Make invalid states unrepresentable — bugs must not compile. Panics are for bu
 - **api-11 — Two-variant enum over `bool` params** in public APIs — `Mode::Recursive` reads at the call site; `true` doesn't.
 - **api-12 — `#[non_exhaustive]`** on public enums and error types meant to grow — adding a variant stays non-breaking.
 - **api-13 — No `Deref` inheritance.** `impl Deref` to expose an inner domain type's methods fakes inheritance; write delegation methods or a trait.
+- **api-14 — Enum↔string derived, never mirrored.** Two hand-written `match` arms mapping one enum to/from strings, or a hand-maintained `const ALL: [T; N]` of variants → strum (`Display`/`EnumString` + `serialize_all`, `VariantArray`), with a test pinning the literals to the wire/DB schema. Adopt strum ONLY where it deletes code — `IntoStaticStr` + an `as_str` façade loses `const` and `match` exhaustiveness for zero gain: cargo-cult, not a fix.
+- **api-15 — 3rd copy of a newtype impl → one macro/derive.** Identical `FromStr`/`Display`/ctor blocks recopied across id newtypes collapse into a `macro_rules!`/derive — and trivial impls earn no round-trip test.
+- **api-16 — Orphan rule is per crate, not per module.** When domain and infrastructure live in one crate, foreign-trait impls (`sqlx::Type`/`Decode`/`Encode`) go directly on domain types — an `XRow` + `From` mirror per entity is boilerplate, not a boundary. Check the crate layout before claiming "hexagonal frontier".
 
 ## Numeric Safety
 
@@ -171,6 +174,7 @@ Make invalid states unrepresentable — bugs must not compile. Panics are for bu
   ```
 - **mod-3 — Edition 2024 RPIT captures all in-scope lifetimes.** A `-> impl Trait` return that must not borrow its inputs needs `+ use<>` (or list captures: `+ use<'a>`).
 - **mod-4 — Edition 2024 drops `if let` temporaries early.** A `MutexGuard` created in the scrutinee no longer lives through the `else` — bind guards explicitly instead of relying on drop timing.
+- **mod-5 — `url::Url` for URLs.** A URL param/config typed `String` with `trim_end_matches('/')`/`format!` surgery → parse to `Url` at the boundary (boot/clap), fail fast there; mind `Url::join` (`"a/b"` and `"a/b/"` resolve differently).
 
 ## Testing
 
@@ -238,6 +242,9 @@ Grep your own diff for each trigger and apply the fix. Applying half the pattern
 23. Unsealed library `pub trait` you control → private-supertrait seal (api-4)
 24. `let _ =` binding a guard (lock, span, tempfile) → `let _guard =` (saf-5)
 25. `#[should_panic]` without `expected = ".."` → add it (test-2)
+26. Mirrored `match` enum↔string pair or hand-maintained `const ALL` of variants → strum derive / `VariantArray` (api-14)
+27. URL as `String` + trim/concat surgery → `url::Url` parsed at the boundary (mod-5)
+28. 2nd identical newtype impl block → macro/derive; delete trivial round-trip tests (api-15)
 
 ## Post-Modification Audit
 

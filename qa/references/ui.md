@@ -27,6 +27,25 @@ Drive the running web app through `mcp__chrome-devtools__*`. The matrix rows say
 - `emulate` slow network/CPU to observe flickers and disabled states "too fast
   to see".
 
+## UI quality sweep (one pass per changed screen)
+
+Beyond the matrix rows, sweep every changed screen once; each hit is a finding:
+
+- **Dead controls** — every visible button/icon/menu item does something; a
+  `disabled` item with no wired page or linked issue is a finding.
+- **Copy language** — UI strings speak the product's language to humans: an
+  English leak in a non-English product, a visible identifier
+  (`client_prompt`), or user-facing technical jargon (WebRTC, "Phone number
+  ID") is a finding.
+- **Native dialogs** — `confirm()`/`alert()`/`prompt()` anywhere is a finding;
+  the app must use its own modal system.
+- **Flicker** — watch open AND close of every modal/panel (use `emulate` slow
+  CPU); a content flash or layout jump is a finding.
+- **Token drift** — control heights, radii, placeholder styles inconsistent
+  with sibling screens.
+- **Entry journey** — reach the changed screen from a real login, never only a
+  deep link; anything broken on the way is a finding.
+
 ## Rule
 
 Never conclude "works" from a page that merely rendered. The console must be
