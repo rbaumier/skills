@@ -9,6 +9,8 @@ Detect broadly, *err toward triggering* — a spurious persona run is cheap (per
 
 ## Surface → skill agents
 
+The globs below are the rationale; the catalog agents pick from is `~/.claude/skills/_shared/SKILLS.md`. Keep both in step: a trigger added here is added to the catalog.
+
 | Trigger (path globs) | Skill agents | What they review |
 |---|---|---|
 | `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.astro`, `*.mdx`, `app/**/page.*`, `pages/**`, `src/routes/**`, server actions | **ui-ux**, **frontend**, **make-interfaces-feel-better**, **web-performance** | design quality, visual hierarchy, polish, perf budgets, layout discipline, component shape |

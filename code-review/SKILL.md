@@ -108,9 +108,7 @@ Occam Razor sits alongside the Funnel: L1/L2 are prose evaluated face-value, Occ
 **Conditional spawns:**
 
 - **`claude-md-compliance`** — when any `CLAUDE.md` exists (repo root or monorepo workspace root). Reads file(s), extracts rules, walks diff for violations introduced. Distinct from claude-md-materiality (doc staleness); compliance flags code breaking rules. Multiple `CLAUDE.md` → one agent handles all.
-- **By extension** — `.ts`/`.tsx` → language-typescript, `.rs` → language-rust, `.swift` → language-swift, `.vue` → vue.
-- **By imports** — one agent per detected skill from: `better-result-adopt`, `database`, `docker`, `drizzle-orm`, `i18n`, `kubernetes`, `react`, `shadcn`, `tailwind`, `tanstack-query`, `tanstack-start-best-practices`, `ui-animations`, `vue`, `zod`.
-- **By surface touched** — UI/frontend/API skill agents triggered by path globs (no import signal). Triggers, skill list, dedup notes: `reference/surfaces-and-dogfood.md`.
+- **By domain** — pick from `~/.claude/skills/_shared/SKILLS.md` every skill the unified file-set calls for (the catalog says when each loads); one agent per skill. Never hand-match extensions or imports here; a missing trigger is fixed in the catalog, not in this list. Dedup notes for the surface skills: `reference/surfaces-and-dogfood.md`.
 - **By subsystem touched** — diff touches a high-stakes subsystem → spawn the framed agent alongside generic Correctness. Trigger rows, agent names, failure-mode hints: `reference/subsystems.md`.
 - **Codex** — only on explicit user request.
 
