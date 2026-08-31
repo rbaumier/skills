@@ -95,7 +95,8 @@ scratchpad, never re-narrated:
 - review ≤2 lines: rounds, converged?, majors fixed;
 - QA ONE line: verdict + blocking reservations, or
   `QA: not run — <reason>` (the justification lives in the report);
-- gates one line each; comply false positives listed for triage.
+- gates one line each; comply zero on branch files, FPs listed for
+  triage — never a repo-wide delta.
 
 No `## Plan` — the contract is never restated.
 
