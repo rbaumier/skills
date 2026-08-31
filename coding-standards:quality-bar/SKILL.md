@@ -113,8 +113,9 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Explicit units (`delayMs`/`sizeKb`).
 - Don't add a 2nd meaning for a verb already used here. No overloaded validate/build/resolve, no synonym aliases.
 - Escape hatches honest: `dangerous_`/`unsafe_`/`experimental_`.
-- Comments: tag-led (`why:` / `gotcha:` / `TODO(#n):`) or absent — rule, shape and examples in `coding-standards:style` § Comments.
-- A comment failing the tag test is deleted, not rewritten; a doc comment is one line stating what the name doesn't.
+- A comment earns its place by one test: "which bug or misreading does a reader make without it?" — no answer, no comment; the name and types carry the what. What earns it: a decision the code can't show, a trap that bit or will bite, an action with its link (`TODO(#n):`). Rule and examples in `coding-standards:style` § Comments.
+- Place it on the statement it guards, never a steps block atop the function. Doc comment states what the name doesn't (contract, unit, surprise), not the body's steps.
+- Rationale lives once per codebase: the 2nd site points to the 1st. What changed and what you rejected go to the MR description, not the code.
 - Exports/public API top, private helpers bottom (stepdown).
 
 ### Docs & method
