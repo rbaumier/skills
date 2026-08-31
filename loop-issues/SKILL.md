@@ -124,7 +124,8 @@ All from repo docs/config (CLAUDE.md, `package.json` scripts,
    implementer's deviation rule, not by re-planning.
 
 5. **Verify** — from the report + forge API only: MR exists,
-   verification AND comply green (pipeline not red), review pass
+   verification green, comply ZERO on the branch's files (a repo-wide
+   delta = failed gate), pipeline not red, review pass
    converged (`IMPLEMENTER.md`: nothing to fix, or the last re-check
    `RECHECK OK`), QA GO/GO-PROVISIONAL or skipped-with-reason, AND
    the MR description holds the gabarit of `PRESENTATION.md` (read
