@@ -5,32 +5,32 @@ description: Use when writing or reviewing comments, docstrings, names, control 
 
 ## Comments
 
-**Default: no comment.** The name and the types carry the what. A comment exists only when it starts with a tag — no tag, no comment:
+**Default: no comment.** The name and the types carry the what. A comment earns its place by one test — **which bug or misreading does a reader make without it?** No answer, no comment. What earns it:
 
-- `why:` — a decision the code cannot show. `// why: 404 means the version was purged; fall back to the latest one.`
-- `gotcha:` — a trap that bit or will bite. `// gotcha: getSession() returns null for ~200 ms after a refresh.`
-- `TODO(#n):` / `WORKAROUND(upstream#n):` / `HACK(upstream#n):` — an action or a bypass with its link.
-- A lint suppression (`#[expect]` over `#[allow]`, `eslint-disable`, `@ts-expect-error`) carries a `why:` on the same line.
+- a decision the code cannot show. `// 404 means the version was purged; fall back to the latest one.`
+- a trap that bit or will bite. `// getSession() returns null for ~200 ms after a refresh.`
+- an action or a bypass with its link: `TODO(#n):` / `WORKAROUND(upstream#n):` / `HACK(upstream#n):`.
+- A lint suppression (`#[expect]` over `#[allow]`, `eslint-disable`, `@ts-expect-error`) carries its justification on the same line.
 
-Shape: one idea, one short plain sentence — ≤ 25 words for the whole block, tag included — placed on the statement it guards, never a step list atop the function. One exception: dense SQL, math or a state machine may carry one `why:` block naming the invariant. Public symbol (`///`, `/** */`, docstring): one line stating what the name doesn't, else nothing — never a step inventory of the body. Module doc (`//!`, file header): ≤ 3 lines, role + consumer-visible effect. Domain terms verbatim, never abbreviated. Errors and logs are not comments: they go detailed (`coding-standards:errors`).
+Shape: one idea, one short plain sentence, placed on the statement it guards, never a step list atop the function. One exception: dense SQL, math or a state machine may carry one block naming the invariant. Public symbol (`///`, `/** */`, docstring): state what the name doesn't (contract, unit, surprise), else nothing — never a step inventory of the body. Module doc (`//!`, file header): role + consumer-visible effect. Domain terms verbatim, never abbreviated. Errors and logs are not comments: they go detailed (`coding-standards:errors`).
 
-A comment that fails the tag test is **deleted, not rewritten** — rewrite only when a `why:` survives "which bug does a reader make without it?". From real diffs:
+A comment that fails the bug test is **deleted, not rewritten** — rewrite only when a rationale survives the test. From real diffs:
 
-- ❌ 63 words above a zod schema: *"One schema for both POST … and GET …: the read is the POST body minus cache_hit …, so both are optional here rather than split across two schemas. Left non-strict on purpose: the server grows the payload additively …"* → `// why: shared by POST /synthesis and GET /versions/{id}; non-strict, the server adds fields.`
+- ❌ 63 words above a zod schema: *"One schema for both POST … and GET …: the read is the POST body minus cache_hit …, so both are optional here rather than split across two schemas. Left non-strict on purpose: the server grows the payload additively …"* → `// shared by POST /synthesis and GET /versions/{id}; non-strict, the server adds fields.`
 - ❌ *"Refetch the mounted list for this key either way: a stored run added or reshuffled a version, and an empty run may still leave older archives to show."* → delete: the call reads alone; "either way" narrates a branch that no longer exists.
 - ❌ *"First refetchInterval of the app"*, *"the card's helpers are a verbatim move"*, *"no setState in an effect"* → delete: delivery narration and rejected options belong to the MR description.
 - ❌ *"A true result also guarantees at least two entries"* → delete: the signature says it.
 - ❌ *"Fetch subscriptions …"* above `listCandidates(...)` → delete: paraphrase of the callee.
-- ✅ `// gotcha: parameterized VALUES misestimates under the generic plan; see docs/agents/backend-handlers.md` — one line, the doc holds the mechanism.
+- ✅ `// parameterized VALUES misestimates under the generic plan; see docs/agents/backend-handlers.md` — one line, the doc holds the mechanism.
 
-**Reviews:** untagged comment, block > 25 words, paraphrase (the comment shares its identifiers with the next line), delivery narration (`this MR`, `previously`, `now`, `no longer`, `first … of the app`), rejected option (`rather than`, `instead of`, `on purpose`), type restated → flag "delete". Same rationale in 2+ places (per codebase, not per file) → keep one, point to it.
+**Reviews:** paraphrase (the comment shares its identifiers with the next line), delivery narration (`this MR`, `previously`, `now`, `no longer`, `first … of the app`), rejected option (`rather than`, `instead of`, `on purpose`), type restated, rationale parked atop the function instead of on the statement it guards → flag "delete". Missing comment where the diff clearly learned something (a workaround, a fragile ordering, a non-obvious fallback) → flag "record it". Same rationale in 2+ places (per codebase, not per file) → keep one, point to it.
 
 ## Prose & Anti-Slop
 
-Comments follow the tag rule above. This section adds the AI *tells* to scrub, and governs the **longer prose a coding agent emits**: function/module docs, error & log messages (Section 6), commit messages, PR/MR descriptions, ADRs.
+Comments follow the bug test above. This section adds the AI *tells* to scrub, and governs the **longer prose a coding agent emits**: function/module docs, error & log messages (Section 6), commit messages, PR/MR descriptions, ADRs.
 
 **Two regimes:**
-- **Comments** (tag-led, one idea): still scrub the *content tells* below: false agency, vague declaratives, throat-clearing, jargon, hedge adverbs.
+- **Comments** (bug-test-gated, one idea): still scrub the *content tells* below: false agency, vague declaratives, throat-clearing, jargon, hedge adverbs.
 - **Full prose** (docs, errors, logs, commits, PRs, ADRs): complete sentences, active voice, a named actor. The whole regime below applies.
 
 ### 1. Content tells — banned in ALL prose, grep-able

@@ -104,7 +104,9 @@ machine-enforced style. `⟦repo⟧` = only if the repo uses it.
 - Flag abbreviations / negative-form booleans (should read is/has/should/can, positive); missing units (`delayMs`/`sizeKb`).
 - Flag a verb given a 2nd meaning; overloaded validate/build/resolve; synonym aliases.
 - Flag dishonest escape hatch (no `dangerous_`/`unsafe_`/`experimental_` prefix).
-- Flag any added comment without a `why:`/`gotcha:`/`TODO(#n):` tag, a block past 25 words, a paraphrase of the next line, delivery narration (`this MR`, `previously`, `now`) or a rejected option (`rather than`, `on purpose`), a doc comment past one line → fix is "delete" (`coding-standards:style` § Comments). TODO with no action/issue link.
+- Flag a comment that fails the bug test ("which bug or misreading does a reader make without it?") — paraphrase of the code, choice-defense, restated type → delete, not rewrite (`coding-standards:style` § Comments). Judge the content; size/history/slop are machine-enforced (skip).
+- Flag a missing comment where the diff clearly learned something — a workaround, a fragile ordering, a non-obvious fallback — and didn't record it.
+- Flag rationale parked atop the function instead of on the statement it guards; a doc comment restating the signature.
 - Flag same rationale across 2+ comments (per codebase, not per file) → keep one, point to it.
 - Flag unreferenced export / unused import / unreachable branch / commented-out code → remove.
 
