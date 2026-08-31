@@ -44,11 +44,15 @@ and your children report (`<report>.done` as the last write).
   bar when no CI). Rust: `cargo nextest run` when installed; warm cache is
   merge-critical — mass `touch`, `CARGO_INCREMENTAL=0`, `cargo clean`
   BANNED unless the MR records why.
-- **comply gate** — `comply` on PATH → `comply <worktree>`, fix every
-  violation BEFORE review. Two comply passes per task MAX: this one
-  and the pre-push re-run; at the re-run read only the delta. NEVER
-  write a `comply-ignore`: judged false positives are listed in the MR
-  for human triage; gate green = nothing beyond those.
+- **comply gate** — `comply` on PATH → `comply --working-tree
+  <worktree>` (post-commit: `--range origin/<base> HEAD`). ZERO
+  diagnostics on the branch's files BEFORE review, pre-existing
+  included; never `--diff-only`, never a repo-wide count or delta —
+  each limit holds alone (chopping sentences to pay for a bloated
+  block trades one rule for another: rewrite properly). Two passes
+  per task MAX: this one and the pre-push re-run. NEVER write a
+  `comply-ignore`: judged false positives are listed in the MR for
+  human triage; gate green = nothing beyond those.
 - **Measure gate** — the contract's `Mesure` line (`none` → skip): run
   it now and again after the fixes; both outputs join the round pack.
 - **Commit** — `git add <explicit files>` (never `-A`); message per
