@@ -69,8 +69,9 @@ and your children report (`<report>.done` as the last write).
 
 Assemble the **round pack**: ONE scratchpad file with the issue body
 (fetch it yourself), contract path, changed-file list, a `## Skills`
-section = your picks, one `<skill> — <trigger>` line each (`none`
-when empty), full diff, the measure output. Spawn BOTH reviewers in ONE message, each handed the
+section = your picks, one `<skill> — <trigger> — <the decision it
+changed>` line each (`none` when empty; a pick with no decision to
+name was not applied — drop it), full diff, the measure output. Spawn BOTH reviewers in ONE message, each handed the
 pack path, its own findings path and `REVIEW.md` (path — its
 section): the code reviewer (`model: "opus"`,
 `subagent_type: "loop-reviewer"`) and the fond reviewer
@@ -167,4 +168,5 @@ surface change).
 - **Report back** — MR URL, verification results, code findings
   count + fond verdict + re-checks, QA verdict (or skip reason),
   `UI touched: yes <n> captures embedded | no`, every disposition,
-  deviations, files touched.
+  deviations, files touched, and every step of this brief you skipped
+  as `skip: <step> — <reason>` — a silent skip is a stall.

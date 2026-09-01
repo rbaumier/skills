@@ -25,7 +25,10 @@ implementer reads the bodies.
    server-side. Async state is the query's `status`, never a homemade
    union.
 3. **Highest existing seam, ideally one.** The change enters through
-   the seam that already owns the concern; one seam beats three.
+   the seam that already owns the concern; one seam beats three. A NEW
+   interface (function, endpoint, props) is written call-site-first:
+   quote the real caller and derive the signature from it, never the
+   reverse.
 4. **Deletion test.** A module the contract creates must fail "delete
    it and nothing is lost"; if it passes, it doesn't exist.
 5. **Least code.** Start from the smallest diff that closes the
