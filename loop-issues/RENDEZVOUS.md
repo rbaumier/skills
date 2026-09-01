@@ -36,6 +36,11 @@ A long-lived process (dev server) is backgrounded and never awaited.
 Needing a child again (re-check, QA re-run) = a NEW spawn handed
 the previous report path — never a SendMessage to the old one.
 
+Context close to compacting mid-issue: commit `wip:` in the worktree
+and write `<report-dir>/resume-note.md` (done, next step, open gates)
+BEFORE it hits — the auto-summary is not the trail; resume from the
+note.
+
 ## Report — every agent
 
 Write the report in the scratchpad (outside any worktree), then
@@ -60,8 +65,11 @@ with this prompt:
 
 > loop-issues watchdog. A user message since the loop's last spawn
 > that does not ask to continue (an interruption, a stop) → CronDelete
-> this job, reply ⏹. Else ListAgents: a planner or implementer of
-> this loop running → reply ⏳. Else an implementer finished without
+> this job, reply ⏹ + `💡 /reflect — miner ce run`. Else ListAgents:
+> a planner or implementer of this loop running → reply ⏳ — but a
+> second consecutive ⏳ with no new side effect from it (commit, push,
+> report file, forge note) → it stalled: § Fall-through. Else an
+> implementer finished without
 > its `.done` → resume it (RENDEZVOUS.md § Fall-through). Else run the
 > loop from step 1 — step 5 first when a report awaits verification.
 > No recap.
