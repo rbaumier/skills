@@ -81,7 +81,11 @@ All from repo docs/config (CLAUDE.md, `package.json` scripts,
 - **QA launch pack** — launch command(s) + port override (the `avant`
   capture serves `<main-repo>` on a second port), readiness probe
   (URL + expected response), extra env, fastest DB-prepare path
-  (prefer cloning a template DB). Passed to each implementer with the wiring.
+  (prefer cloning a template DB). A project `verify` skill
+  (`<main-repo>/.claude/skills/verify/`) is the authoritative source
+  when present; absent → derive the pack yourself and print once
+  `💡 /create-verification-skill — fige le boot de ce repo` (never
+  block on it). Passed to each implementer with the wiring.
 - **Fresh base** — `git fetch origin <default>` once now.
 - **Watchdog** — arm it (`RENDEZVOUS.md` § Watchdog); it is also the
   empty-queue re-poll.
@@ -125,7 +129,8 @@ All from repo docs/config (CLAUDE.md, `package.json` scripts,
 
 5. **Verify** — from the report + forge API only: MR exists,
    verification green, comply ZERO on the branch's files (a repo-wide
-   delta = failed gate), pipeline not red, review pass
+   delta = failed gate), pipeline not red (red → ONE fresh retry max;
+   a second identical failure is real, never a flake — fix it), review pass
    converged (`IMPLEMENTER.md`: nothing to fix, or the last re-check
    `RECHECK OK`), QA GO/GO-PROVISIONAL or skipped-with-reason, AND
    the MR description holds the gabarit of `PRESENTATION.md` (read
@@ -202,7 +207,9 @@ All from repo docs/config (CLAUDE.md, `package.json` scripts,
   on the diff or on a mechanism the diff touches is a process failure,
   and so is waving findings off as "scope creep"; a drop is evidence
   (`IMPLEMENTER.md`), never an opinion.
-- Never stop on your own; only user interruption ends the loop.
+- Never stop on your own; only user interruption ends the loop. The
+  reply acknowledging the stop ends with one line:
+  `💡 /reflect — miner ce run pour des deltas de skills`.
 - Per-iteration summary line, printed after the next spawn (step 7):
   `✅ #<n> merged (!<mr>/#<pr>) after <r> re-check(s)` |
   `📝 #<n> drafted …` | `⚠️ #<n> drafted flagged … — <review|qa> not

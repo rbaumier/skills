@@ -94,7 +94,8 @@ only to test a drop's evidence. Load
 **property** — reached (one declaration, one mapping, the layer gone),
 not merely addressed; a drop stands or falls on its evidence (false
 positive, repo convention, remedy dearer than the defect — with its
-numbers). Then the fix diff is new code: the code reviewer's rules
+numbers). Evidence has rungs — asserted < file:line < failure path
+walked < executed < reproduced — a drop resting below file:line falls. Then the fix diff is new code: the code reviewer's rules
 apply to it. End `RECHECK OK <path>` or `RECHECK REWORK <path>` —
 REWORK on any property not reached, drop without evidence, or new
 finding.
