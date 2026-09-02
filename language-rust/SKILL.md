@@ -217,34 +217,19 @@ Make invalid states unrepresentable — bugs must not compile. Panics are for bu
 
 Grep your own diff for each trigger and apply the fix. Applying half the pattern (e.g. deriving `Copy` but keeping `&Span` params) is not done — the whole pattern must change.
 
-1. `lazy_static!` / `once_cell::Lazy` / `static ref` → `LazyLock` (mod-1)
-2. Manual `impl Display` + `impl Error` on an error enum → `thiserror` (err-1)
-3. `.map_err(|e| format!("X failed: {e}"))` → context with WHY + input (err-2)
-4. Path param typed `String`/`&str` → `impl AsRef<Path>` (mod-2)
-5. `as` narrowing an integer → `TryFrom` (num-2)
-6. Bare `+`/`*` on externally-supplied integers → `checked_`/`saturating_` (num-1)
-7. `.partial_cmp(..).unwrap()` in a sort → `total_cmp` (num-3)
-8. `unbounded_channel` → bounded + backpressure (con-4)
-9. `tokio::spawn` with the `JoinHandle` dropped → `JoinSet` / await it (con-6)
-10. `select!` in a loop → pin long-lived futures, check `biased`, cancel-safety (con-5)
-11. `Mutex<bool>` / `Mutex<usize>` → `AtomicBool` / `AtomicUsize` (con-9)
-12. `tracing_subscriber` init inside a library → emit only; binaries subscribe (con-12)
-13. `println!` / `eprintln!` → `tracing` macros; silent startup/I/O fns get an `info!` (con-11)
-14. `.clone()` added to satisfy the borrow checker → `mem::take` / restructure (own-6)
-15. `Copy` type passed as `&T` → pass by value (own-1)
-16. Tree/graph node with `Arc<Mutex<Node>>`/`Rc<RefCell<Node>>` links → arena + `NodeId` (own-5)
-17. Unbuffered `File` read/write in a loop → `BufReader`/`BufWriter` (perf-5)
-18. `HashMap<integer, _>` → `FxHashMap`/`AHashMap` — change the type, not a comment (perf-4)
-19. `LinkedList` → `VecDeque` — rewrite the usage, don't delete (perf-2)
-20. Hot loop over `&[Box<dyn Trait>]` → generic `<T: Trait>` (perf-3)
-21. `Builder::build()` returning the struct bare → `Result`; required fields `.ok_or(..)?` (api-3)
-22. Serde derive on an internal type → strip it (api-6)
-23. Unsealed library `pub trait` you control → private-supertrait seal (api-4)
-24. `let _ =` binding a guard (lock, span, tempfile) → `let _guard =` (saf-5)
-25. `#[should_panic]` without `expected = ".."` → add it (test-2)
-26. Mirrored `match` enum↔string pair or hand-maintained `const ALL` of variants → strum derive / `VariantArray` (api-14)
-27. URL as `String` + trim/concat surgery → `url::Url` parsed at the boundary (mod-5)
-28. 2nd identical newtype impl block → macro/derive; delete trivial round-trip tests (api-15)
+1. Manual `impl Display` + `impl Error` on an error enum → `thiserror` (err-1)
+2. `.map_err(|e| format!("X failed: {e}"))` → context with WHY + input (err-2)
+3. Bare `+`/`*` on externally-supplied integers → `checked_`/`saturating_` (num-1)
+4. `.partial_cmp(..).unwrap()` in a sort → `total_cmp` (num-3)
+5. `.clone()` added to satisfy the borrow checker → `mem::take` / restructure (own-6)
+6. Tree/graph node with `Arc<Mutex<Node>>`/`Rc<RefCell<Node>>` links → arena + `NodeId` (own-5)
+7. Hot loop over `&[Box<dyn Trait>]` → generic `<T: Trait>` (perf-3)
+8. `Builder::build()` returning the struct bare → `Result`; required fields `.ok_or(..)?` (api-3)
+9. Serde derive on an internal type → strip it (api-6)
+10. Unsealed library `pub trait` you control → private-supertrait seal (api-4)
+11. 2nd identical newtype impl block → macro/derive; delete trivial round-trip tests (api-15)
+
+The rest of the family is mechanical and comply catches it on the diff — do not re-audit by hand, run comply (Post-Modification Audit): `lazy_static` (`rust-prefer-once-lock`), path params as `String` (`rust-asref-path-for-fs-fns`), `as` narrowing (`rust-no-as-numeric-cast`), `unbounded_channel` (`rust-unbounded-channel`), dropped `JoinHandle` (`rust-tokio-spawn-without-handle`), `select!` in a loop (`rust-select-in-loop-unpinned`), `Mutex<bool>` (`rust-mutex-over-atomic`), subscriber init in a lib (`rust-tracing-subscriber-in-library`), `println!`/`eprintln!` (`rust-no-print-macros`, `rust-eprintln-in-library`), `Copy` passed as `&T` (`rust-trivially-copy-pass-by-ref`), unbuffered `File` in a loop (`rust-unbuffered-file-io-in-loop`), `HashMap<integer, _>` (`rust-hashmap-integer-key`), `LinkedList` (`rust-no-linkedlist`), `let _ = guard` (`rust-let-underscore-guard`), `#[should_panic]` without `expected` (`rust-should-panic-without-expect`), mirrored enum↔string `match` (`rust-prefer-strum`), URL as `String` + surgery (`rust-url-as-string`).
 
 ## Post-Modification Audit
 
@@ -252,6 +237,7 @@ MANDATORY after ANY change to Rust files — run before considering the work don
 
 ```bash
 cargo clippy --all --all-features --all-targets -- -D warnings
+comply <changed files>   # ~2000 rules incl. the Rust family above; comply also runs clippy with its own lint set
 ```
 
-Fix every warning. Suppress only with `#[expect(.., reason = "...")]` when the lint is provably wrong there (ci-7).
+Fix every warning and every comply diagnostic (false positive → open an issue on comply, don't suppress). Suppress only with `#[expect(.., reason = "...")]` when the lint is provably wrong there (ci-7).
