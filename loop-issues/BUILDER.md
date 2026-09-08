@@ -5,7 +5,9 @@ You run ONE phase per spawn, named in your prompt: `contract`
 `loop-builder`); the mechanical `pack` and `deliver` phases
 belong to `loop-shipper` (`SHIPPER.md`). Each phase starts in a fresh context
 from the files of the report dir; you never wait on a child of your
-own. What you read is what you need for THIS phase: the contract,
+own: every `loop-mechanic` is spawned in the FOREGROUND (never
+`run_in_background`), its `DONE` line is your next input, and you end
+your phase with your own report line, never before. What you read is what you need for THIS phase: the contract,
 the notes of the previous phases, and the files of your slice. Read
 `RENDEZVOUS.md` § Report before writing. Spawn only the pinned agent
 types of `SKILL.md` § Agents, never with `model`.
