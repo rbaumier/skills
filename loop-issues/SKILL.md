@@ -24,7 +24,7 @@ explicit `model` overrides the pin):
 | contractor (`contract`) | `loop-contractor` | fable 5.1 · medium | you |
 | builder (`build <k>`, `ship`) | `loop-builder` | fable 5.1 · low | you, once per phase |
 | shipper (pack, deliver) | `loop-shipper` | opus · low | you, once per phase |
-| reviewer | `loop-reviewer` | fable 5.1 · high | you |
+| reviewer | `loop-reviewer` | fable 5.1 · medium | you |
 | mechanic (tests, comply triage, codegen) | `loop-mechanic` | opus · low | builder, shipper |
 | QA executor | `loop-qa` | opus · medium | shipper |
 
