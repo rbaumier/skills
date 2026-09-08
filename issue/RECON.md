@@ -46,12 +46,18 @@ ranges on signatures, never a whole file.
   reaches, listed by criterion (the grep + the list), never totalled.
 - **Constraints** — ADRs and `CLAUDE.md`/`CONTEXT.md` rules that bind
   the change, by name; product intent visible there.
+- **Domain rules** — pick the skills of
+  `~/.claude/skills/_shared/SKILLS.md` whose line matches the
+  mechanisms above, read each `SKILL.md`, and copy the 3 to 5 rules
+  that bind THIS ask, one line each ending on its source
+  (`… (database)`). The scoper loads no skill: what is not here does
+  not reach the draft.
 - **Bug** — root cause by symbol, or `not located — investigate
   <area>`.
 
 ## Report
 
-ONE file — `## Forge` (labels, language, duplicate evidence: URL + one
+ONE file, ≤ 80 lines — `## Forge` (labels, language, duplicate evidence: URL + one
 line per hit) then `## Briefing` (the bullets above, symbols only).
 End with ONE line, nothing pasted:
 `RECON <duplicate-open|duplicate-closed|related|new>
