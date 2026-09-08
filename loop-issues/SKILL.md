@@ -1,217 +1,157 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — fable plan-contract, opus implementer in a worktree, comply gate, one review pass (opus code ‖ fable fond judged against the issue), fix everything, issue-scoped /qa gate (GO required), push, verify, merge, repeat.
+description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — a fable builder in fresh phases (contract of shapes, build slices with opus-written tests, ship), an opus shipper for pack and deliver (gates, comply triage, QA, MR), ONE fable review pass judged on unpaid shapes, push as draft, verify, repeat.
 ---
 
-# Continuous implementation loop orchestrator
+# Loop orchestrator
 
-## Role
+You orchestrate; you implement NOTHING. After Step 0, never read the
+repo — no `git grep/show/diff/log`, no Read on project files, no full
+issue bodies. Your only evidence: agent reports + forge API.
 
-You orchestrate; you implement NOTHING. Spawn agents, verify gates,
-merge. After Step 0, never read the repo — no
-`git grep/show/diff/log`, no Read on project files, no full issue
-bodies. Your only evidence: agent reports + forge API.
+Briefs live next to this file: the builder reads `BUILDER.md`, the
+shipper `SHIPPER.md`, the reviewer `REVIEW.md`; every agent reads
+`RENDEZVOUS.md` — the only way anyone waits or reports. A spawn prompt hands facts and the
+brief's absolute path, never a paraphrase of it.
 
-Role briefs live next to this file: the planner reads `PLANNER.md`,
-the implementer reads `IMPLEMENTER.md`, both reviewers read
-`REVIEW.md`; you and the implementer read `RENDEZVOUS.md` — the only
-way anyone waits or reports. A spawn prompt hands facts and the
-brief's absolute path — never a paraphrase of the brief, and only
-the inputs its section lists: the re-check never sees the pack, QA
-never sees the reviews.
+## Agents
 
-Model routing: fable = judgment pole, **two calls per issue, hard
-cap** — the planner and the fond reviewer, once each (the fond judges
-against the issue, free to contradict the contract); opus = everything
-else (implementer, code reviewer, re-checks, QA). Run the loop from an
-**opus session** (each spawn pins its own model). Fable session → print
-one warning, continue.
+Every spawn names a pinned agent type and NEVER passes `model` (an
+explicit `model` overrides the pin):
 
-Invoking this skill is standing authorization to commit, push, open
-MRs/PRs and — in autonomous mode — merge.
+| Role | `subagent_type` | Model · effort | Spawned by |
+|---|---|---|---|
+| contractor (`contract`) | `loop-contractor` | fable 5.1 · medium | you |
+| builder (`build <k>`, `ship`) | `loop-builder` | fable 5.1 · low | you, once per phase |
+| shipper (pack, deliver) | `loop-shipper` | opus · low | you, once per phase |
+| reviewer | `loop-reviewer` | fable 5.1 · high | you |
+| mechanic (tests, comply triage, codegen) | `loop-mechanic` | opus · low | builder, shipper |
+| QA executor | `loop-qa` | opus · medium | shipper |
 
-## Rendezvous
+Fable phases: `contract` (contractor), one `build <k>` per slice of
+the contract's `Tranches` and `ship` (builder). Opus phases (shipper): `pack`,
+`deliver`. Every phase is a fresh context; nobody waits on a child
+except the shipper on the QA executor. Review and QA run once per
+issue; a NO-GO gets one fable answer and one targeted re-verify.
 
-Read `RENDEZVOUS.md` once, before Step 0: the harness facts, the only
-way to wait (end your turn while an `Agent` child runs), the
-fall-through rules for a notification that reaches you when it
-shouldn't, and the watchdog.
+There is NO path that spawns an implementer without a contract:
+"spawn des agents opus", "vague de corrections", "rattrapage" mean
+run THIS loop on those issues. A bypass exists only when the user
+writes "hors loop" — say back what it costs (no contract, no review,
+no cap) and wait for the confirmation.
+
+Invoking this skill authorizes commits, pushes and draft MRs;
+merging needs autonomous mode.
 
 ## Step 0 — Discover the project (once)
 
-All from repo docs/config (CLAUDE.md, `package.json` scripts,
-`Makefile`, `justfile`) — never source files:
+From repo docs/config only (CLAUDE.md, `package.json` scripts,
+`Makefile`, `justfile`):
 
 - **Forge** — `git rev-parse --show-toplevel` → `<main-repo>`;
-  `git remote get-url origin` → forge + project path. GitLab → `gitlab`
-  MCP tools (`project_id: "<group>/<project>"`), never `glab`; load
-  schemas via ToolSearch (every spawned agent does the same before its
-  first call). GitHub → `gh` CLI; label/merge semantics map 1:1.
-  Going the other way — an MR URL in hand, its checkout to find — never
-  infer the directory from the project name: they diverge here
-  (`dashboard-v2` lives in `natalia-dashboard-v2`, `voicehandler` in
-  `natalia-voicehandler`, project `natalia-v2` in `natalia-v3`). Match on
-  the remote instead: `git -C <dir> remote get-url origin` across the
-  candidate roots, or `git worktree list` from one you already know. A
-  name glob that returns nothing is not evidence the checkout is absent.
-- **Verification trio** — the repo's check + test + build commands and
-  pinned tooling. A documented merge gate is law; else default to the
-  package manager's `check`/`lint`, `test`, `build`.
-- **CI posture** — blocking MR pipeline? If none, the local trio IS the
-  merge gate; if yes, pipeline must also be green.
-- **Mode** — label mutation + auto-merge require a documented per-repo
-  opt-in (e.g. `loop-issues: automerge` in CLAUDE.md).
-  - **autonomous** (opt-in present): lock issues with labels,
-    auto-merge, re-queue failures.
-  - **draft** (default, or unclear): NEVER write queue labels, NEVER
-    merge; every MR/PR opens as a draft; human owns merge + labels.
-    (Follow-up issues filed with `needs-triage` are still allowed.)
-- **Worktree wiring** — what a fresh worktree needs (deps
-  symlink/install, `.env` copy, codegen). Rust: ALWAYS
-  `export CARGO_TARGET_DIR=<main-repo>/target` (sequential loop = one
-  warm cache).
-- **Frontend app dirs** — the source dirs whose files a user sees
-  (e.g. `apps/webapp/src`, `apps/widget/src`), from the repo layout
-  docs. Step 5 judges `UI touched` against this list.
-- **Generated types** — the generated API/DB type files
-  (openapi-typescript output, Supabase `types.ts`, prost/sqlx output),
-  by path from the codegen scripts; handed to the implementer — a
-  type the diff declares that one of them already holds is
-  `Reinvented`.
-- **QA launch pack** — launch command(s) + port override (the `avant`
-  capture serves `<main-repo>` on a second port), readiness probe
-  (URL + expected response), extra env, fastest DB-prepare path
-  (prefer cloning a template DB). A project `verify` skill
-  (`<main-repo>/.claude/skills/verify/`) is the authoritative source
-  when present; absent → derive the pack yourself and print once
-  `💡 /create-verification-skill — fige le boot de ce repo` (never
-  block on it). Passed to each implementer with the wiring.
-- **Fresh base** — `git fetch origin <default>` once now.
-- **Watchdog** — arm it (`RENDEZVOUS.md` § Watchdog); it is also the
-  empty-queue re-poll.
+  `git remote get-url origin` → forge + project path. GitLab →
+  `glab api` (project `<group>%2F<project>`), narrowed queries;
+  GitHub → `gh`. No MCP server in any agent of the loop. A checkout is matched on its remote,
+  never on its directory name.
+- **Verification trio** — check + test + build commands and pinned
+  tooling; a documented merge gate is law.
+- **CI posture** — blocking MR pipeline? None → the trio IS the gate.
+- **Mode** — `loop-issues: automerge` documented in the repo →
+  **autonomous** (labels, merge, re-queue); else **draft**: never
+  write queue labels, never merge, every MR opens as a draft.
+- **Worktree wiring** — deps, `.env`, codegen a fresh worktree needs.
+  Rust: `export CARGO_TARGET_DIR=<main-repo>/target`.
+- **Frontend app dirs** — where a user-visible file lives (`UI
+  touched` at step 4).
+- **Generated paths** — generated types, lockfiles, `.sqlx/`,
+  `openapi.json`: excluded from the line count; a type the diff
+  declares that one of them holds is `Reinvented`.
+- **QA launch pack** — launch command + port override, readiness
+  probe, extra env, DB-prepare path; `<main-repo>/.claude/skills/verify/`
+  is authoritative when present.
+- `git fetch origin <default>`; arm the watchdog (`RENDEZVOUS.md`).
 
 ## The loop
 
-1. **Select** — split issue with unchecked tasks → take next task, go
-   to step 3 (lock + checklist already exist). Else fetch the oldest
-   open `ready-for-agent` issue (lowest IID; list only — reading the
-   full issue is the planner's job). Draft mode: also skip candidates
-   with an open MR from an `agent/issue-<n>` branch or on the
-   in-session skip list. None → end your turn; the watchdog re-polls.
+1. **Select** — an issue named in the invocation arguments is
+   selected as is, whatever its labels, and the loop stops after its
+   summary line. Else a split issue with unchecked tasks → next task,
+   step 3. Else the oldest open `ready-for-agent` issue (lowest IID,
+   list only). Draft mode: skip candidates with an open MR from an
+   `agent/issue-<n>` branch or on the skip list. None → end your turn.
 
-2. **Lock** (autonomous only) — swap `ready-for-agent` →
-   `picked-by-agent` (read current labels, write adjusted set). Draft
-   mode: skip.
+2. **Lock** (autonomous only) — `ready-for-agent` → `picked-by-agent`.
 
-3. **Plan** — a pre-planned contract already on disk for this
-   candidate (step 4) → go straight to step 4. Else spawn ONE planner
-   (`model: "fable"`, else `opus`; background) with: issue number
-   (+ task for a split issue), `<main-repo>`, report path, and
-   `PLANNER.md` (path). It ends `PLAN-READY <path>` or
-   `NEEDS-CLARIFICATION <path>` → step 6.
+3. **Build** — one spawn per phase (background), each with: the
+   phase name, issue number (+ task `<k>`), `<main-repo>`, Step 0
+   facts (generated clients included), report dir, the brief's path,
+   and the files of the previous phases. End your turn after each
+   spawn.
+   - `loop-contractor` `contract` → `CONTRACTED <contract.md>` (or
+     `NEEDS-CLARIFICATION <path>`). Check the contract has `Formes`,
+     a closed `Tests` list and `Tranches`, then spawn `build 1`.
+   - `loop-builder` `build <k>` → `SLICED <k> <note>`. Spawn
+     `build <k+1>` while slices remain, else `loop-shipper` `pack`.
+   - `loop-shipper` `pack` → `PACKED <pack.md>`. Spawn ONE
+     `loop-reviewer` with the pack path, its findings path,
+     `REVIEW.md` path, `<main-repo>`.
+   - reviewer → `MERGEABLE`/`REWORK <path>`. Spawn `loop-builder`
+     `ship` with the findings path. One review per issue, never a
+     second.
+   - `loop-builder` `ship` → `SHIPPED <ship.md>`. Spawn
+     `loop-shipper` `deliver` with ship.md.
+   - `loop-shipper` `deliver` → `DELIVERED <report>`; `BLOCKED
+     <deliver.md>` (QA NO-GO, comply residue, red gate) → spawn
+     `loop-builder` `ship` once more with deliver.md, then `deliver`
+     again with its `re-verify` list; a second `BLOCKED` → step 4 as
+     flagged draft. `FAILED <path>` → step 5.
 
-4. **Implement** — spawn ONE implementer (`model: "opus"`, background)
-   with: contract path, issue number (+ task `<k>`), Step 0 facts
-   (mode, trio, wiring, QA pack, generated types), report dir, and
-   `IMPLEMENTER.md` (path). It owns worktree → gates → review pass →
-   fix → QA →
-   presentation → push + MR, and reports back.
+4. **Verify** — from the report + forge only:
+   - MR exists, draft in draft mode, title `(closes #<n>)`;
+   - contract with `Formes` and `Tests`; reviewer `Nécessaire`
+     written, zero `Unpaid shape` left open; ship.md disposition
+     table complete;
+   - trio green, comply ZERO on branch files, pipeline not red (red →
+     one fresh retry, then it is real);
+   - review `MERGEABLE`, or `REWORK` with every finding `fixed`,
+     `→ issue #<m>` or `dropped — <evidence>`;
+   - QA GO/GO-PROVISIONAL or `QA: not run — <reason>`;
+   - description per `PRESENTATION.md` (read once); a user-visible
+     changed file → ≥1 `![…](/uploads/…)` capture.
+   Non-conforming → SendMessage the shipper ONCE with the missing
+   items; still non-conforming → step 5. Cap-hit review or ABORTED
+   QA → confirm draft + findings comment, never merge, cleanup.
+   Autonomous → merge squash, remove source branch, confirm the issue
+   closed (split → tick the task). Both modes:
+   ```bash
+   git worktree remove ../<repo>-worktrees/issue-<n> --force && git worktree prune
+   git branch -D agent/issue-<n> 2>/dev/null
+   git -C <main-repo> pull --ff-only origin <default>
+   ```
 
-   While the implementer runs, none of its children's notifications
-   should reach you — one that does is a fall-through
-   (`RENDEZVOUS.md`). Use the wait to PRE-PLAN: right after spawning the implementer,
-   spawn the next candidate's planner (step 3) — unless the candidate
-   depends on the current issue, or is the next task of the current
-   split (their base is still moving: plan those after the current
-   push). A contract waiting at select time starts the next iteration
-   at step 4; stale vs a merge that landed meanwhile is handled by the
-   implementer's deviation rule, not by re-planning.
+5. **Failure** — never merge, close the MR if opened, comment the
+   issue with the summary, clean the worktree. NEEDS-CLARIFICATION:
+   autonomous → both labels off + `agent-failed`; draft → skip list.
+   Other: autonomous → `ready-for-agent` + `agent-failed`; draft →
+   skip list.
 
-5. **Verify** — from the report + forge API only: MR exists,
-   verification green, comply ZERO on the branch's files (a repo-wide
-   delta = failed gate), pipeline not red (red → ONE fresh retry max;
-   a second identical failure is real, never a flake — fix it), review pass
-   converged (`IMPLEMENTER.md`: nothing to fix, or the last re-check
-   `RECHECK OK`), QA GO/GO-PROVISIONAL or skipped-with-reason, AND
-   the MR description holds the gabarit of `PRESENTATION.md` (read
-   that file once, at first use): headingless prose funnel, one
-   short sentence per line, `à valider :` bullets, required visual,
-   agent record below the fold in ONE `<details>` block, no
-   `## Plan`. **UI touched is judged from the MR's changed files**
-   (forge API: any non-test, non-generated file under a frontend
-   app dir from Step 0), never from the report alone — files say
-   yes → ≥1 `![…](/uploads/…)` capture embedded, or the MR goes
-   back. One item of the gabarit missing = non-conforming.
-   Non-conforming description → SendMessage the implementer to
-   rewrite it in place (`update_merge_request`, title and draft state
-   intact; re-verify `draft:true` after the PATCH), then re-check.
-   Missing review pass or QA = failure (step 6). Cap-hit review/QA or ABORTED
-   QA is NOT: confirm the MR is a draft carrying the findings comment,
-   never merge it, skip to cleanup. Then:
-   - **draft mode** — no merge, no issue touches; leave the draft for a
-     human;
-   - **autonomous mode** — merge (GitLab
-     `merge_merge_request squash: true` + remove source branch; GitHub
-     `gh pr merge --squash --delete-branch`). GitLab flake: fresh MR
-     may report false "conflicts" ~30s — retry before concluding (real
-     conflict = local rebase + push). Confirm the issue closed (close
-     manually if not). Split issue → tick the task checkbox instead.
-   - **both** — cleanup + sync:
-     ```bash
-     git worktree remove ../<repo>-worktrees/issue-<n> --force && git worktree prune
-     git branch -D agent/issue-<n> 2>/dev/null
-     git -C <main-repo> pull --ff-only origin <default>
-     ```
-     Not on `<default>` or can't fast-forward → `fetch` only, never
-     touch the working tree.
+6. **Relay** — the next spawn is in flight BEFORE the summary line:
+   `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
+   `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
+   needs clarification` | `❌ #<n> failed → re-queued`.
 
-6. **Failure** — planner NEEDS-CLARIFICATION, implementer failure, or
-   verification red after 2 fix attempts (cap-hit review/QA or ABORTED
-   QA is NOT a failure — step 5 handles it):
-   - never merge; close the MR if opened;
-   - NEEDS-CLARIFICATION (blocked-on-human, not retryable):
-     autonomous → remove BOTH labels, add `agent-failed` (re-adding
-     `ready-for-agent` would re-pick the same unclear issue); draft →
-     in-session skip list;
-   - other failures: autonomous → remove `picked-by-agent`, re-add
-     `ready-for-agent` + `agent-failed`; draft → skip list (human
-     triages the reported failure);
-   - comment the issue with a short failure summary (split issue: name
-     the failed task);
-   - clean up the worktree; next issue.
+## Rules
 
-7. **Relay before the recap** — the next iteration's spawn (steps
-   1–3, or step 4 on a pre-planned contract) is in flight BEFORE this
-   iteration's summary line prints; a turn that ends with nothing
-   running is the gap the user pays for. Empty queue → end the turn;
-   the watchdog re-polls.
-
-## Strict rules
-
-- One task at a time — sequential merges keep each worktree based on a
-  default branch containing the previous MR. (Pre-planning the next
-  candidate is read-only and exempt.)
-- Forge list calls are narrowed on the FIRST attempt (`per_page`, an
-  explicit field list, a state or label filter). A response that
-  overflows the token cap is never re-issued unchanged: it already
-  landed in a persisted file, so parse that file.
-- An open unmerged dependency MR never stops the loop — stack on it
-  (the planner's stack check); "blocked by an unmerged MR" is not a
-  failure reason.
-- Never push to the default branch; everything through an MR/PR.
-- Never merge with the trio red, comply beyond listed FPs, a red
-  pipeline, a review not converged, or without QA GO/GO-PROVISIONAL (or
-  a stated skip). Cap hits never cancel the MR — flagged draft, both
-  modes.
-- Every finding fixed, `nit` included; a follow-up issue for a finding
-  on the diff or on a mechanism the diff touches is a process failure,
-  and so is waving findings off as "scope creep"; a drop is evidence
-  (`IMPLEMENTER.md`), never an opinion.
-- Never stop on your own; only user interruption ends the loop. The
-  reply acknowledging the stop ends with one line:
-  `💡 /reflect — miner ce run pour des deltas de skills`.
-- Per-iteration summary line, printed after the next spawn (step 7):
-  `✅ #<n> merged (!<mr>/#<pr>) after <r> re-check(s)` |
-  `📝 #<n> drafted …` | `⚠️ #<n> drafted flagged … — <review|qa> not
-  converged` | `❓ #<n> needs clarification → commented` |
-  `❌ #<n> failed → re-queued` — with ` task <k>/<K>` when split.
+- One issue in flight: usage is the binding constraint of a fable
+  loop.
+- Forge list calls narrowed on the first attempt (`per_page`,
+  `labels`, `state`); an overflowing response is parsed from its
+  persisted file.
+- An open dependency MR never stops the loop: stack on it.
+- Never push to the default branch. Never merge with the trio red,
+  comply beyond listed FPs, a red pipeline, an unpaid shape, a review
+  not converged, or without QA GO.
+- A finding that removes or corrects code is fixed in the MR; one
+  that adds behaviour becomes an issue. The MR never grows in review.
+- Only user interruption ends the loop; the acknowledging reply ends
+  with `💡 /reflect — miner ce run pour des deltas de skills`.
