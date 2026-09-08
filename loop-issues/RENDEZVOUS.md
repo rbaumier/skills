@@ -1,8 +1,8 @@
 # Rendezvous — loop-issues
 
 How a parent waits on a child and how a child reports. One protocol
-for the orchestrator and the implementer; a leaf (planner, reviewer,
-QA executor) needs only § Report.
+for the orchestrator, the builder and the shipper; a leaf (reviewer,
+mechanic, QA executor) needs only § Report.
 
 ## Harness facts
 
@@ -50,12 +50,12 @@ The notification wakes the parent; the `.done` carries the verdict.
 
 ## Fall-through — orchestrator only
 
-- A grandchild's notification (reviewer, QA executor) lands on you ⇒
-  the implementer finished without its report. SendMessage it that
+- A grandchild's notification (QA executor, opus helper) lands on
+  you ⇒ the builder finished without its report. SendMessage it that
   notification's one line + `resume`, once per notification.
-- The implementer's own notification without its `.done` ⇒ stalled.
+- A builder's or shipper's notification without its `.done` ⇒ stalled.
   SendMessage `resume: finish #<n> — <what its last line promised>`.
-  Third stall on one issue ⇒ step 6.
+  Third stall on one issue ⇒ step 5.
 
 ## Watchdog — orchestrator only
 
@@ -66,12 +66,11 @@ with this prompt:
 > loop-issues watchdog. A user message since the loop's last spawn
 > that does not ask to continue (an interruption, a stop) → CronDelete
 > this job, reply ⏹ + `💡 /reflect — miner ce run`. Else ListAgents:
-> a planner or implementer of this loop running → reply ⏳ — but a
+> a builder or reviewer of this loop running → reply ⏳ — but a
 > second consecutive ⏳ with no new side effect from it (commit, push,
-> report file, forge note) → it stalled: § Fall-through. Else an
-> implementer finished without
-> its `.done` → resume it (RENDEZVOUS.md § Fall-through). Else run the
-> loop from step 1 — step 5 first when a report awaits verification.
+> report file, forge note) → it stalled: § Fall-through. Else a
+> builder finished without its `.done` → resume it (RENDEZVOUS.md § Fall-through). Else run the
+> loop from step 1 — step 4 first when a report awaits verification.
 > No recap.
 
 It fires only while you are idle — exactly the dead state it exists

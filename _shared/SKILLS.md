@@ -18,7 +18,7 @@ surface for UI/API, the wording for text a user reads.
 | `zod` | `zod` imports, `z.object(`, `safeParse(` |
 | `better-result-adopt` | `better-result` imports, Result types replacing try/catch |
 | `better-auth-best-practices` | `better-auth` imports — sessions, OAuth, multi-tenant auth |
-| `api-design` | routes / handlers, OpenAPI, `utoipa`, `axum::` routers — an endpoint's contract, pagination, error semantics |
+| `api-design` | a NEW route, or a changed wire contract (request/response shape, pagination, error semantics) — never for a handler whose wire stays identical |
 | `security-defensive` | passwords, cookies, `Authorization`, JWT, hashing, RLS (`CREATE POLICY`, `SECURITY DEFINER`, `auth.uid()`), permissions, XSS / CSRF, secrets |
 | `testing` | `*.test.*` / `*.spec.*`, `tests/`, `e2e/`, `__tests__/`, Vitest / Playwright config, `describe(`, `#[test]` / `#[tokio::test]` / `#[sqlx::test]` |
 | `react` | `.tsx` / `.jsx` with `react` imports — hooks, components, rendering |
