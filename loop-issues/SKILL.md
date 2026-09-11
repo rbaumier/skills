@@ -1,6 +1,6 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — a fable builder in fresh phases (contract of shapes, build slices with opus-written tests, ship), an opus shipper for pack and deliver (gates, comply triage, QA, MR), ONE fable review pass judged on unpaid shapes, push as draft, verify, repeat.
+description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — a fable builder in fresh phases (contract of shapes, build slices with opus-written tests, ship), an opus shipper for pack and deliver (gates, comply triage, QA, MR), ONE opus review pass (ponytail-review + quality-bar-review) judged on unpaid shapes, push as draft, verify, repeat.
 ---
 
 # Loop orchestrator
@@ -21,15 +21,16 @@ explicit `model` overrides the pin):
 
 | Role | `subagent_type` | Model · effort | Spawned by |
 |---|---|---|---|
-| contractor (`contract`) | `loop-contractor` | fable 5.1 · medium | you |
+| contractor (`contract`, + `build 1` when one slice) | `loop-contractor` | fable 5.1 · medium | you |
 | builder (`build <k>`, `ship`) | `loop-builder` | fable 5.1 · low | you, once per phase |
-| shipper (pack, deliver) | `loop-shipper` | opus · low | you, once per phase |
-| reviewer | `loop-reviewer` | fable 5.1 · medium | you |
-| mechanic (tests, comply triage, codegen) | `loop-mechanic` | opus · low | builder, shipper |
-| QA executor | `loop-qa` | opus · medium | shipper |
+| shipper (pack, deliver) | `loop-shipper` | opus 5 · low | you, once per phase |
+| reviewer | `loop-reviewer` | opus 5 · high | you |
+| mechanic (tests, comply triage, codegen) | `loop-mechanic` | opus 5 · low | builder, shipper |
+| QA executor | `loop-qa` | opus 5 · medium | shipper |
 
-Fable phases: `contract` (contractor), one `build <k>` per slice of
-the contract's `Tranches` and `ship` (builder). Opus phases (shipper): `pack`,
+Fable phases: `contract` (contractor, which carries on into `build 1`
+when the contract has one slice), one `build <k>` per remaining slice
+and `ship` (builder). Opus phases (shipper): `pack`,
 `deliver`. Every phase is a fresh context; nobody waits on a child
 except the shipper on the QA executor. Review and QA run once per
 issue; a NO-GO gets one fable answer and one targeted re-verify.
@@ -87,9 +88,12 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    facts (generated clients included), report dir, the brief's path,
    and the files of the previous phases. End your turn after each
    spawn.
-   - `loop-contractor` `contract` → `CONTRACTED <contract.md>` (or
+   - `loop-contractor` `contract` → `SLICED 1 <note>` when the
+     contract has one slice (the contractor built it in the same
+     context), else `CONTRACTED <contract.md>` (or
      `NEEDS-CLARIFICATION <path>`). Check the contract has `Formes`,
-     a closed `Tests` list and `Tranches`, then spawn `build 1`.
+     a closed `Tests` list and `Tranches`; on `CONTRACTED` spawn
+     `build 1`, on `SLICED 1` spawn `loop-shipper` `pack`.
    - `loop-builder` `build <k>` → `SLICED <k> <note>`. Spawn
      `build <k+1>` while slices remain, else `loop-shipper` `pack`.
    - `loop-shipper` `pack` → `PACKED <pack.md>`. Spawn ONE
