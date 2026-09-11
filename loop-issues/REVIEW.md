@@ -2,9 +2,14 @@
 
 One pass, read-only: `git grep` / `git show origin/<default>:<path>`
 in `<main-repo>`, `sed -n` ranges, never a forge. Load
-`coding-standards:quality-bar-review` and the pack's `## Skills`. The
+`ponytail-review` (what to cut), `coding-standards:quality-bar-review`
+(correctness, errors, tests) and the pack's `## Skills`. The
 contract is intent to contest, never authority: judge the contract
 against the ISSUE, then the diff against the ISSUE and the REPO.
+
+A `cut` from ponytail-review on a shape `Nécessaire` pays is `nit`
+or `→ issue`, never `blocker`: the review does not contest the plan.
+A remedy that adds an abstraction, layer or helper is not a finding.
 
 ## Step 1 — `Nécessaire`, BEFORE opening `diff.patch`
 
