@@ -28,8 +28,9 @@ stop before a `#[cfg(test)]` line.
 ## Phase `contract` — before any code
 
 Read the issue, then `CLAUDE.md`/`AGENTS.md`, `CONTEXT.md`,
-`docs/adr/`. Read code with `git grep` and `sed -n` ranges. Load
-`coding-standards:quality-bar`. Write `<report-dir>/contract.md`:
+`docs/adr/`. Read code with `git grep` and `sed -n` ranges.
+Load `coding-standards:quality-bar` and `ponytail`.
+Write `<report-dir>/contract.md`:
 
 - `Besoin` — one line per acceptance criterion, as what a user or
   operator observes. A criterion that names a code shape ("one
@@ -53,7 +54,7 @@ Read the issue, then `CLAUDE.md`/`AGENTS.md`, `CONTEXT.md`,
   <existing double or none>`. Nobody adds a test outside this list.
 - `Tranches` — the ordered build slices, each one fresh context:
   the files, shapes and tests of the contract it delivers, the
-  skills beyond quality-bar + language it needs (each with the
+  skills beyond quality-bar + ponytail + language it needs (each with the
   trigger that pays it, else none), and the gate it must pass alone
   (`cargo check -p <crate>`, `pnpm check`).
   A slice compiles on its own; the test file of a slice belongs to
@@ -68,7 +69,11 @@ Read the issue, then `CLAUDE.md`/`AGENTS.md`, `CONTEXT.md`,
   refuting grep).
 
 Write nothing you would not defend against "delete it and nothing is
-lost". End: `CONTRACTED <contract.md>`.
+lost". Write `contract.md`, then: `Tranches` has ONE slice → carry
+on with `build 1` below in this same context, the contract now frozen
+(a shape it lacks is an `## Écarts au plan` line, never an edit of
+`contract.md`); end with `SLICED 1 <slice-1.md>`. Two slices or
+more → end here: `CONTRACTED <contract.md>`.
 
 ## Phase `build <k>` — one slice
 
@@ -80,8 +85,8 @@ lost". End: `CONTRACTED <contract.md>`.
   Stacked → `origin/<base>`; split → suffix `-t<k>`. Wire it. Later
   slices read `<report-dir>/slice-<k-1>.md` first. Edit ONLY
   worktree paths.
-- Load `coding-standards:quality-bar` and the language skill of the
-  slice's files, nothing else by default. Another skill of
+- Load `coding-standards:quality-bar`, `ponytail` and the language
+  skill of the slice's files, nothing else by default. Another skill of
   `~/.claude/skills/_shared/SKILLS.md` is loaded only when the
   contract's `Tranches` line names it with its trigger (`testing` —
   a harness or double changes; `api-design` — a new route or a
