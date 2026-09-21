@@ -69,7 +69,10 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   Rust: `export CARGO_TARGET_DIR=<main-repo>/target-slot-<s>`, `s` =
   the lowest of 1-3 no issue in flight holds, handed in every spawn
   of the issue. A slot outlives its issue (warm cache); never a
-  per-issue target, never the shared `<main-repo>/target`.
+  per-issue target, never the shared `<main-repo>/target`. A slot
+  also owns its database (gates and QA, migrated before each run:
+  branches carry different migrations) and its QA ports. Slot 0 is
+  kept for the repair of `<default>`, which never waits for a slot.
 - **Frontend app dirs** — where a user-visible file lives (`UI
   touched` at step 4).
 - **Generated paths** — generated types, lockfiles, `.sqlx/`,
@@ -180,7 +183,10 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 ## Rules
 
 - One issue in flight per slot, three at most and only on disjoint
-  files: usage is the binding constraint of the loop.
+  files: usage is the binding constraint of the loop. Every phase
+  runs in parallel across slots except the browser: ONE `loop-qa`
+  or `publish` with captures at a time (the MCP Chrome and its
+  selected page are global); the next one waits for its verdict.
 - Forge list calls narrowed on the first attempt (`per_page`,
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.

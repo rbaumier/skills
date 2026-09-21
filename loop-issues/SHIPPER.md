@@ -35,7 +35,10 @@ on the FP groups the builder decided, at `deliver`.
 Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
 <report-dir>/fix-<r>.patch`.
 
-1. Gates run on a tree that changed. `r ≥ 2`: only the crates or
+1. Gates run on a tree that changed. A rebase since the last full
+   trio → the full trio again, whatever the round or the phase: a
+   new base changes what compiles, and a merge without textual
+   conflict can be wrong. Else `r ≥ 2`: only the crates or
    packages `fix-<r>.patch` touches, plus the workspace check and
    the repo's global guards; an empty patch → copy `## Gates`,
    `## Comply` and `## Mesure` of `pack-<r-1>.md` with its sha, run
@@ -71,8 +74,8 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
 
 1. Comply decisions: FP groups not yet filed → `comply report-fp
    <rule_id> <path:line> --reason "<why>" --model claude-fable-5`
-   for each. Gates: `pack 1` ran the full trio and the MR pipeline
-   runs it again, so here only the crates or packages touched since
+   for each. Gates: a full trio already ran on this base and the MR
+   pipeline runs it again, so here only the crates or packages touched since
    `pack 1`, plus the workspace check and the global guards; HEAD =
    the last pack's sha → its gates stand, run nothing. Re-run
    comply; a finding on an added line → `BLOCKED`. A red gate
@@ -81,8 +84,9 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
 2. `git log origin/<base>..HEAD` = this task's commits only; more
    than one → squash as in `pack`.
 3. **QA.** `QA: not run — <reason>` in ship.md → skip; neither that
-   line nor a plan → `BLOCKED` naming it, never QA-less. Else launch
-   the slot's stack per the QA launch pack (binary built in the
+   line nor a plan → `BLOCKED` naming it, never QA-less. Else kill
+   whatever listens on the slot's ports (an orphan dev server gives
+   a false capture), launch the slot's stack per the QA launch pack (binary built in the
    slot's target), one `curl` probe, then write
    `<report-dir>/qa-handoff.md` for the `loop-qa` the orchestrator
    spawns (it reads `~/.claude/skills/qa/SKILL.md`): the QA plan, URL/port,
@@ -91,11 +95,15 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
    hunt reported `hunt: partial` and downgrading nothing — run dir
    outside the worktree, verdict path `qa/verdict-<k>.md`. A
    `re-verify` list in your prompt (second round) → the handoff
-   carries ONLY those rows, never the full plan. Leave the stack
-   up, end `QA-READY <qa-handoff.md>`.
+   carries ONLY those rows, never the full plan. Write
+   `<report-dir>/qa-stack.md` (PIDs, ports, database, log paths),
+   leave the stack up, end `QA-READY <qa-handoff.md>`.
    QA skipped → steps 5 to 7 in this same phase.
 
 ## Phase `publish` — after the QA verdict handed in your prompt
+
+The stack is the one of `qa-stack.md`: one `curl` probe proves it;
+dead → kill its PIDs and relaunch from the file, never assume.
 
 4. NO-GO → kill the QA processes, write `<report-dir>/deliver.md`
    with the verdict path, end `BLOCKED <deliver.md>`: the `ship`
@@ -104,7 +112,7 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
 5. GO → UI touched → captures per `PRESENTATION.md` § Captures on
    the running stack (paths named in ship.md), upload with `glab
    api`, embed the returned markdown at the placement ship.md marks.
-   THEN kill every process QA started.
+   THEN kill every PID of `qa-stack.md` and check its ports are free.
 6. Push `agent/issue-<n>`, open the MR on `<default>` (`<base>` if
    stacked), title `(closes #<n>)`, body = `mr-description.md`,
    DRAFT in draft mode; `## Not converged` present → title prefix
