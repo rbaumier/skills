@@ -74,4 +74,12 @@ with this prompt:
 > No recap.
 
 It fires only while you are idle — exactly the dead state it exists
-for — and it IS the empty-queue re-poll.
+for — and it IS the empty-queue re-poll: an empty queue never
+deletes it, only a user stop does.
+
+After every spawn, rewrite `<report-root>/state.md` (≤ 20 lines):
+per issue in flight its phase, slot, last report path; the skip
+list; the Step 0 facts path. A compaction, or a fire answered
+`Prompt is too long`, means the session is spent: the user's next
+`/loop-issues` in a fresh session resumes from `state.md`, so it is
+always current. A usage-limit stop is resumed the same way.
