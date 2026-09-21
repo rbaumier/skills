@@ -3,13 +3,12 @@
 You run ONE phase per spawn, named in your prompt: `contract`,
 `build <k>` or `ship <r>` (agent `loop-builder`); the mechanical
 `pack` and `deliver` phases belong to `loop-shipper` (`SHIPPER.md`). Each phase starts in a fresh context
-from the files of the report dir; you never wait on a child of your
-own: every `loop-mechanic` is spawned in the FOREGROUND (never
-`run_in_background`), its `DONE` line is your next input, and you end
-your phase with your own report line, never before. What you read is what you need for THIS phase: the contract,
+from the files of the report dir. You spawn nothing: mechanical
+work you cannot do in the phase is a task line under `## Mechanic`
+of your note, which the orchestrator hands to a `loop-mechanic`
+after you. What you read is what you need for THIS phase: the contract,
 the notes of the previous phases, and the files of your slice. Read
-`RENDEZVOUS.md` § Report before writing. Spawn only the pinned agent
-types of `SKILL.md` § Agents, never with `model`.
+`RENDEZVOUS.md` § Report before writing.
 
 The forge is `glab api` in Bash (issues, MR, uploads: `glab api
 --method POST projects/:id/uploads -F file=@<png>`); list calls are
@@ -115,15 +114,14 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   `*.test.*`. You
   write the code and, per test file of the contract, the FIRST test:
   it fixes the file, the helpers, the double and the assertion
-  style. Then ONE `loop-mechanic` writes the remaining
-  tests of the contract's `Tests` list, handed: the list verbatim,
-  the worktree, the reference test path per file, and the rule "no
-  new helper, double, type or test outside the list". Spawn it, then
-  run the slice's gate on your code in the SAME turn (the gate never
-  waits for the tests), then end the turn. Resumed: read its diff;
-  a test that locks an implementation choice is deleted.
-- Other mechanical work (rebase, codegen, comply reformatting,
-  fixture rewrites) → ONE `loop-mechanic` per batch, exact task.
+  style. The remaining tests of the contract's `Tests` list go
+  under `## Mechanic` of the slice note: the list verbatim, the
+  worktree, the reference test path per file, the slice's test
+  command, and the rule "no new helper, double, type or test
+  outside the list; commit `wip(<scope>): tests slice <k>`". Three
+  tests or fewer: write them yourself, no task.
+- Other mechanical work (codegen, fixture rewrites) is yours; a
+  batch too long for the phase → one more `## Mechanic` line.
 - Then the slice's tests only (`cargo nextest run -p <crate>`,
   `pnpm test -- <file>`); `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned; no comply here, the pack runs it. A slice that
@@ -132,7 +130,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   with explicit files. Write `<report-dir>/slice-<k>.md`: what
   exists now (symbols, files), what the next slice must know, écarts
   so far, `## Skills` (`<skill> — <trigger> — <decision it
-  changed>`), ≤ 25 lines. End: `SLICED <k> <slice-k.md>`. The last slice
+  changed>`), `## Mechanic` when tasks remain, ≤ 25 lines. End: `SLICED <k> <slice-k.md>`. The last slice
   ends the same way; the orchestrator spawns `pack`.
 
 ## Phase `ship <r>` — after review round `r`

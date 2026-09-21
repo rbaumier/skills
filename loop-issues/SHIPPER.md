@@ -1,7 +1,7 @@
 # Shipper brief — loop-issues
 
-You run ONE mechanical phase per spawn, `pack` or `deliver`, in a
-fresh context, on the worktree named in your prompt. You judge
+You run ONE mechanical phase per spawn, `pack`, `deliver` or
+`publish`, in a fresh context, and you spawn nothing, on the worktree named in your prompt. You judge
 nothing about code: what fails is written down for the builder,
 with the exact lines, and you end. Read `RENDEZVOUS.md`
 § Report before writing. Forge = `glab api`; Rust gates with the
@@ -26,9 +26,9 @@ then file, one line per group: `<rule> — <file> — <n> findings —
 Generated paths (Step 0 list, `.complyignore`) → proposal
 `FP: generated`. A comment rule on a line this branch did not add →
 `pre-existing, delete or FP`. A finding on an added line →
-`fix`, with the line. Never run `comply report-fp` yourself: the
-builder decides each group in its next phase and hands the FP list to
-a `loop-mechanic`.
+`fix`, with the line. Group with `jq`/`sort | uniq -c` on the file;
+the raw output never enters your context. `comply report-fp` only
+on the FP groups the builder decided, at `deliver`.
 
 ## Phase `pack <r>` — after the last slice (`r` = 1) or `ship <r-1>`
 
@@ -39,12 +39,11 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    packages `fix-<r>.patch` touches, plus the workspace check and
    the repo's global guards; an empty patch → copy `## Gates`,
    `## Comply` and `## Mesure` of `pack-<r-1>.md` with its sha, run
-   nothing. Else spawn ONE `loop-mechanic` for the comply triage
-   (above), THEN the trio in the worktree, foreground of the same
-   turn, split per command (Rust: `cargo nextest run` when
+   nothing. Else the comply triage (above), then the trio in the
+   worktree, foreground, split per command (Rust: `cargo nextest run` when
    installed; a suite over the 10-min cap → `--partition
    count:<k>/<n>`, EVERY `k` run and summed), each through
-   `tail -40`; end the turn, the triage resumes you. A gate that
+   `tail -40`. A gate that
    exits 0 on zero tests run is red. Every generated
    client of Step 0 regenerated and `git status` clean of it, or the
    regeneration listed as a failure.
@@ -70,12 +69,12 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
 Your prompt hands `<report-dir>/ship-<r>.md` (disposition table, comply
 decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
 
-1. Comply decisions: FP groups not yet filed → spawn ONE
-   `loop-mechanic` running `comply report-fp <rule_id> <path:line>
-   --reason "<why>" --model claude-fable-5` for each, THEN the full
-   trio in the foreground of the same turn, split per command — the
-   one full run after the last `ship`; HEAD = the last pack's sha →
-   its gates stand, run nothing. End the turn. Resumed: re-run
+1. Comply decisions: FP groups not yet filed → `comply report-fp
+   <rule_id> <path:line> --reason "<why>" --model claude-fable-5`
+   for each. Gates: `pack 1` ran the full trio and the MR pipeline
+   runs it again, so here only the crates or packages touched since
+   `pack 1`, plus the workspace check and the global guards; HEAD =
+   the last pack's sha → its gates stand, run nothing. Re-run
    comply; a finding on an added line → `BLOCKED`. A red gate
    reproduced on the branch's base (detached worktree, same command)
    is inherited: recorded with that command, it blocks nothing.
@@ -84,15 +83,20 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
 3. **QA.** `QA: not run — <reason>` in ship.md → skip; neither that
    line nor a plan → `BLOCKED` naming it, never QA-less. Else launch
    the slot's stack per the QA launch pack (binary built in the
-   slot's target), one `curl` probe, spawn ONE `loop-qa` that reads
-   `~/.claude/skills/qa/SKILL.md`, handed: the QA plan, URL/port,
+   slot's target), one `curl` probe, then write
+   `<report-dir>/qa-handoff.md` for the `loop-qa` the orchestrator
+   spawns (it reads `~/.claude/skills/qa/SKILL.md`): the QA plan, URL/port,
    host allowlist (the login console included), ~15 min budget — plan
    rows first, the exploratory hunt capped at a third, an unfinished
    hunt reported `hunt: partial` and downgrading nothing — run dir
-   outside the worktree, verdict path `qa/verdict-<k>.md`. End your turn; you
-   are resumed by its notification. A `re-verify` list in your prompt
-   (second round) → the executor gets ONLY those rows, never the
-   full plan.
+   outside the worktree, verdict path `qa/verdict-<k>.md`. A
+   `re-verify` list in your prompt (second round) → the handoff
+   carries ONLY those rows, never the full plan. Leave the stack
+   up, end `QA-READY <qa-handoff.md>`.
+   QA skipped → steps 5 to 7 in this same phase.
+
+## Phase `publish` — after the QA verdict handed in your prompt
+
 4. NO-GO → kill the QA processes, write `<report-dir>/deliver.md`
    with the verdict path, end `BLOCKED <deliver.md>`: the `ship`
    phase answers it, once. `GO-PROVISIONAL` is a GO: its

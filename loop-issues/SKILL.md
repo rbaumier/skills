@@ -24,16 +24,17 @@ explicit `model` overrides the pin):
 |---|---|---|---|
 | builder (`contract`, `build <k>`, `ship`) | `loop-builder` | opus 5 · medium | you, once per phase |
 | contract reviewer | `loop-contract-reviewer` | fable 5.1 · medium | you, once per contract round |
-| shipper (pack, deliver) | `loop-shipper` | opus 5 · low | you, once per phase |
+| shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | opus 5 · low | you, once per phase |
 | code reviewer | `loop-reviewer` | opus 5 · high | you, once per round |
-| mechanic (tests, comply triage, codegen) | `loop-mechanic` | opus 5 · low | builder, shipper |
-| QA executor | `loop-qa` | opus 5 · medium | shipper |
+| mechanic (tests of the closed list, codegen) | `loop-mechanic` | opus 5 · low | you, after a `build <k>` that lists tasks |
+| QA executor | `loop-qa` | opus 5 · medium | you, on `QA-READY` |
 
 Builder phases: `contract`, one `build <k>` per slice, `ship`.
-Shipper phases: `pack`, `deliver`. Fable reviews the contract (cap
+Shipper phases: `pack`, `deliver`, `publish`. Fable reviews the contract (cap
 3 rounds): the fond is decided there and costs no rework. Every phase is a
-fresh context; nobody waits on a child except the shipper on the QA
-executor. Review rounds (pack, review, ship) run until `MERGEABLE`,
+fresh context. Only YOU spawn: builder and shipper have no `Agent`
+tool — a child's notification never resumes a subagent, it froze a
+thread 30-60 min each time. Review rounds (pack, review, ship) run until `MERGEABLE`,
 cap 6; QA runs once, a NO-GO gets one answer and one re-verify.
 
 There is NO path that spawns an implementer without a contract:
@@ -117,8 +118,10 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      (amends, answers each finding), then reviewer round `c+1`. After
      review 3 → `build 1` whatever the verdict; the shipper copies
      the open findings into `pack-1.md`.
-   - `loop-builder` `build <k>` → `SLICED <k> <note>`. Spawn
-     `build <k+1>` while slices remain, else `loop-shipper` `pack`.
+   - `loop-builder` `build <k>` → `SLICED <k> <note>`. A `## Mechanic`
+     section in the note → spawn ONE `loop-mechanic` with it
+     verbatim → `DONE <path>`. Then `build <k+1>` while slices
+     remain, else `loop-shipper` `pack`.
    - `loop-shipper` `pack <r>` → `PACKED <pack-<r>.md>`. Spawn ONE
      `loop-reviewer` with `r`, the pack path, its findings path
      `review-<r>.md`, `REVIEW.md` path, `<main-repo>`.
@@ -128,7 +131,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      `r = 6` or a `ship` that committed no code → `loop-shipper`
      `deliver` with it (open findings ship flagged `[review not
      converged]`); else `pack <r+1>`.
-   - `loop-shipper` `deliver` → `DELIVERED <report>`; `BLOCKED
+   - `loop-shipper` `deliver` → `QA-READY <qa-handoff.md>` → spawn
+     ONE `loop-qa` with it → verdict path → `loop-shipper` `publish`
+     with it. `deliver` (no QA) or `publish` → `DELIVERED <report>`; `BLOCKED
      <deliver.md>` (QA NO-GO, comply residue, red gate) → spawn
      `loop-builder` `ship` once more with deliver.md, then `deliver`
      again with its `re-verify` list; a second `BLOCKED` → step 4 as
