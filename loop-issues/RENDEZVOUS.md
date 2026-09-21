@@ -1,8 +1,8 @@
 # Rendezvous — loop-issues
 
-How a parent waits on a child and how a child reports. One protocol
-for the orchestrator, the builder and the shipper; a leaf (reviewer,
-mechanic, QA executor) needs only § Report.
+How the orchestrator waits on a child and how a child reports. Only
+the orchestrator spawns and waits; every other agent is a leaf and
+needs only § Report.
 
 ## Harness facts
 
@@ -50,8 +50,8 @@ The notification wakes the parent; the `.done` carries the verdict.
 
 ## Fall-through — orchestrator only
 
-- A grandchild's notification (QA executor, opus helper) lands on
-  you ⇒ the builder finished without its report. SendMessage it that
+- A grandchild's notification (a child of the QA executor) lands on
+  you ⇒ it finished without its verdict. SendMessage it that
   notification's one line + `resume`, once per notification.
 - A builder's or shipper's notification without its `.done` ⇒ stalled.
   SendMessage `resume: finish #<n> — <what its last line promised>`.
