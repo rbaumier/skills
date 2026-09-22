@@ -33,6 +33,16 @@ command that cannot finish inside the 10-min Bash cap is split
 (check / test / build apart, tests by package), never backgrounded.
 A long-lived process (dev server) is backgrounded and never awaited.
 
+A gate you background does not wake you — it puts you to sleep. A
+phase that answers "the suite is in flight, I'll report on
+completion" has reported nothing and burnt a turn; the orchestrator
+has to resume it by hand. Measured 2026-09-21/22: one rebase lost an
+hour to two such turns, and four phases each fired five to eight
+phantom completions afterwards, one per leftover timer, every one of
+them saying only "no action needed". Never arm a Monitor or a
+background timer to wait on your OWN command: block on it in the
+foreground, and when it exceeds the cap, split it.
+
 Needing a child again (re-check, QA re-run) = a NEW spawn handed
 the previous report path — never a SendMessage to the old one.
 
@@ -40,6 +50,16 @@ Context close to compacting mid-issue: commit `wip:` in the worktree
 and write `<report-dir>/resume-note.md` (done, next step, open gates)
 BEFORE it hits — the auto-summary is not the trail; resume from the
 note.
+
+## Where reports live
+
+NEVER under `/tmp` (nor `/private/tmp`). The OS purges it: measured
+2026-09-22, a full disk triggered a purge that wiped an entire loop's
+trail mid-flight — three issues lost their contract, pack and review
+files while their agents were still reading them. Reports live beside
+the checkout, outside every worktree: on natalia-v3,
+`/Users/rbaumier/www/natalia/loop-reports/loop-<n>/`. The orchestrator
+hands that absolute path in every spawn.
 
 ## Report — every agent
 
@@ -71,7 +91,8 @@ with this prompt:
 > report file, forge note) → it stalled: § Fall-through. Else a
 > builder finished without its `.done` → resume it (RENDEZVOUS.md § Fall-through). Else run the
 > loop from step 1 — step 4 first when a report awaits verification.
-> No recap.
+> Before any of it: a phase over its budget or a report naming an
+> obstacle → SKILL.md § Slowness is yours, first. No recap.
 
 It fires only while you are idle — exactly the dead state it exists
 for — and it IS the empty-queue re-poll: an empty queue never
