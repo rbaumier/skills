@@ -69,6 +69,11 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   the lowest of 1-3 no issue in flight holds, handed in every spawn
   of the issue. A slot outlives its issue (warm cache); never a
   per-issue target, never the shared `<main-repo>/target`. A slot
+  that does not exist yet is SEEDED from a warm one, never filled
+  from scratch: on APFS, `cp -Rc target-slot-<warm> target-slot-<s>`
+  clones 32 GB in 3.5 s at copy-on-write cost (measured
+  2026-09-22). Disk space is the user's concern, not a reason to
+  skip a gate. A slot
   also owns its database and its QA ports. **Its OWN model
   database**, one per slot, never the shared one: a harness that
   clones `CREATE DATABASE … TEMPLATE` refuses the clone while any
@@ -80,7 +85,11 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   `postgres://natalia:natalia@localhost:5432/natalia_slot<s>`
   (created 2026-09-22), migrated from the slot's own worktree before
   the gate: branches carry different migrations, so the model is
-  rebuilt per run, never shared and never inherited. Slot 0 is kept for the repair of `<default>`,
+  rebuilt per run, never shared and never inherited. The slot's QA
+  stack runs on a DIFFERENT database from its model: an `api` binary
+  left connected to the model reddens the slot's own gates exactly
+  like a foreign session would (measured 2026-09-22, one `ship` fell
+  back to a throwaway database for it). Slot 0 is kept for the repair of `<default>`,
   which never waits for a slot.
 - **Frontend app dirs** — where a user-visible file lives (`UI
   touched` at step 4).
@@ -119,8 +128,20 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    spawn.
    - `loop-builder` `contract` → `CONTRACTED <contract.md>` (or
      `NEEDS-CLARIFICATION <path>`; on an open dependency without MR
-     → select that dependency next). Check `Formes`, a closed `Tests`
-     list, `Tranches`. `Formes: aucune neuve` + one slice under ~150
+     → select that dependency next). The FIRST `CONTRACTED` is never
+     the contract: `SendMessage` the SAME builder (still live, its
+     context intact — never a new spawn) this message, always the
+     same, exactly once per issue, and nothing about it earlier (the
+     builder must not know it is coming; `BUILDER.md` says nothing
+     of it):
+     ```
+     now come up with a much simpler solution that provides 80% of the benefits we are talking about here
+
+     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and which criterion (or none) loses it. End with the same `CONTRACTED <contract.md>` line.
+     ```
+     → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
+     `Tranches`.
+     `Formes: aucune neuve` + one slice under ~150
      changed lines → `build 1`, no contract review. Else spawn ONE
      `loop-contract-reviewer` with the contract path, its findings
      path, `CONTRACT-REVIEW.md`, `<main-repo>`.
@@ -160,7 +181,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 
 4. **Verify** — from the report + forge only:
    - MR exists, draft in draft mode, title `(closes #<n>)`;
-   - contract with `Formes` and `Tests`; reviewer `Nécessaire`
+   - contract with `Formes`, `Tests` and a `## Simplification`
+     section (the 80 % pass ran); reviewer `Nécessaire`
      written, zero `Unpaid shape` left open; ship.md disposition
      table complete;
    - trio green, no comply finding on an added line. The forge
