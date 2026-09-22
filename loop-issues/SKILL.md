@@ -1,6 +1,6 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), fable contract reviews before any code (cap 3), an opus shipper for pack and deliver (gates, comply triage, QA, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 6), push as draft, verify, repeat.
+description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one fable contract review before any code, an opus shipper for pack and deliver (gates, comply triage, QA, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 6), push as draft, verify, repeat.
 ---
 
 # Loop orchestrator
@@ -23,15 +23,14 @@ explicit `model` overrides the pin):
 | Role | `subagent_type` | Model · effort | Spawned by |
 |---|---|---|---|
 | builder (`contract`, `build <k>`, `ship`) | `loop-builder` | opus 5 · medium | you, once per phase |
-| contract reviewer | `loop-contract-reviewer` | fable 5.1 · medium | you, once per contract round |
+| contract reviewer | `loop-contract-reviewer` | fable 5.1 · medium | you, ONCE per issue |
 | shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | opus 5 · low | you, once per phase |
 | code reviewer | `loop-reviewer` | opus 5 · high | you, once per round |
 | mechanic (tests of the closed list, codegen) | `loop-mechanic` | opus 5 · low | you, after a `build <k>` that lists tasks |
 | QA executor | `loop-qa` | opus 5 · medium | you, on `QA-READY` |
 
 Builder phases: `contract`, one `build <k>` per slice, `ship`.
-Shipper phases: `pack`, `deliver`, `publish`. Fable reviews the contract (cap
-3 rounds): the fond is decided there and costs no rework. Every phase is a
+Shipper phases: `pack`, `deliver`, `publish`. Fable reviews the contract ONCE: the fond is decided there and costs no rework. Every phase is a
 fresh context. Only YOU spawn: builder and shipper have no `Agent`
 tool — a child's notification never resumes a subagent, it froze a
 thread 30-60 min each time. Review rounds (pack, review, ship) run until `MERGEABLE`,
@@ -70,9 +69,19 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   the lowest of 1-3 no issue in flight holds, handed in every spawn
   of the issue. A slot outlives its issue (warm cache); never a
   per-issue target, never the shared `<main-repo>/target`. A slot
-  also owns its database (gates and QA, migrated before each run:
-  branches carry different migrations) and its QA ports. Slot 0 is
-  kept for the repair of `<default>`, which never waits for a slot.
+  also owns its database and its QA ports. **Its OWN model
+  database**, one per slot, never the shared one: a harness that
+  clones `CREATE DATABASE … TEMPLATE` refuses the clone while any
+  session holds the model open (`55006`), so one `psql` in another
+  session reddens every slot at once. Measured 2026-09-22: one pack
+  replayed its suite six times for this. Each slot exports its own
+  `DATABASE_URL` on a database it created and migrated itself, and
+  drops nobody else's. On natalia-v3 that is
+  `postgres://natalia:natalia@localhost:5432/natalia_slot<s>`
+  (created 2026-09-22), migrated from the slot's own worktree before
+  the gate: branches carry different migrations, so the model is
+  rebuilt per run, never shared and never inherited. Slot 0 is kept for the repair of `<default>`,
+  which never waits for a slot.
 - **Frontend app dirs** — where a user-visible file lives (`UI
   touched` at step 4).
 - **Generated paths** — generated types, lockfiles, `.sqlx/`,
@@ -115,12 +124,19 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      changed lines → `build 1`, no contract review. Else spawn ONE
      `loop-contract-reviewer` with the contract path, its findings
      path, `CONTRACT-REVIEW.md`, `<main-repo>`.
-   - contract reviewer (round `c`) → `CONTRACT-OK` → `build 1`,
-     handed the review path (its `minor` lines amend the contract);
-     `CONTRACT-REWORK <path>` → `contract` again with that path
-     (amends, answers each finding), then reviewer round `c+1`. After
-     review 3 → `build 1` whatever the verdict; the shipper copies
-     the open findings into `pack-1.md`.
+   - contract reviewer, **one round, never two** → `CONTRACT-OK` →
+     `build 1`, handed the review path (its `minor` lines amend the
+     contract); `CONTRACT-REWORK <path>` → `contract` once more with
+     that path (amends, answers each finding) → `build 1` whatever
+     that amendment says. The shipper copies the open findings into
+     `pack-1.md` and the code review judges them on the diff.
+     The first pass catches what a contract review is for — a defect
+     already paid, a shape reinvented, a scope that fabricates work.
+     Rounds beyond it argue prose: measured 2026-09-21 on #631, four
+     contract rounds and three reviews preceded a diff the code
+     review passed `MERGEABLE` first try, and review 3 prescribed a
+     migration order that was plainly wrong. A contract finding is
+     cheap to carry into the code review; a round is not.
    - `loop-builder` `build <k>` → `SLICED <k> <note>`. A `## Mechanic`
      section in the note → spawn ONE `loop-mechanic` with it
      verbatim → `DONE <path>`. Then `build <k+1>` while slices
@@ -147,11 +163,13 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    - contract with `Formes` and `Tests`; reviewer `Nécessaire`
      written, zero `Unpaid shape` left open; ship.md disposition
      table complete;
-   - trio green, no comply finding on an added line, pipeline
-     `success` — running is not green, wait for it; red → one fresh
-     retry, then it is real, or inherited (§ Rules);
-   - contract findings `applied` or `refuted — <evidence>`, ≤ 3
-     contract reviews; last
+   - trio green, no comply finding on an added line. The forge
+     pipeline does NOT gate the merge (user, 2026-09-22: "tant que
+     ça passe en local c'est bon") — it runs the same trio, minutes
+     to hours later, and waiting on it stalled finished work. Record
+     its id, never block on it;
+   - contract findings `applied` or `refuted — <evidence>`, ONE
+     contract review; last
      review `MERGEABLE` with every finding `fixed`, `→ issue #<m>` or
      `dropped — <evidence>`, or `[review not converged]` at round 6
      with the open findings as an MR comment;
@@ -180,6 +198,26 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
    needs clarification` | `❌ #<n> failed → re-queued`.
 
+## Slowness is yours
+
+Every stall of the loop is your defect to remove, never a fact to
+report and wait out. Budgets, spawn → notification: builder 40 min,
+shipper 60, reviewer 15, mechanic 15, QA 25. A phase over budget, a
+report naming an obstacle outside the diff (stuck process, taken
+port, stale or locked database, cold or purged target, missing env
+var, workaround flag, tool missing from PATH, red inherited from
+`<default>`), or the same cause in two reports of any issue → it is
+a **brake**: before the next phase spawn, remove it — a
+`loop-mechanic` with the exact command (kill, free the port, migrate
+the slot's database, restore the env, drop the flag) when it is
+environmental, an issue selected at slot 0 like a red `<default>`
+when it is code — and write `state.md` § Freins: cause, action,
+hours lost. A brake you cannot remove (usage limit, a decision only
+the user owns) is reported at once in one line `🐢 <cause> —
+<what it costs per hour> — <the one action needed>`, never buried
+in a relay line. The next relay line carries every brake handled
+since the last: `🔧 <cause> → <action>`.
+
 ## Rules
 
 - One issue in flight per slot, three at most and only on disjoint
@@ -187,17 +225,27 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   runs in parallel across slots except the browser: ONE `loop-qa`
   or `publish` with captures at a time (the MCP Chrome and its
   selected page are global); the next one waits for its verdict.
+- Disjoint means disjoint at the FILE level, not the theme level.
+  Three issues that all touch one screen are serial work wearing a
+  parallel costume: each merge rebases the other two, and a rebase
+  replays the full trio. Measured 2026-09-21: #635 was rebased three
+  times in one evening, behind #639, #712 and #644. When the queue
+  offers nothing disjoint, run TWO issues, or one — a slot left idle
+  costs less than a rebase chain. Name the touched surface of each
+  issue in flight and check the next candidate against it before
+  selecting, rather than trusting a shared label to separate them.
 - Forge list calls narrowed on the first attempt (`per_page`,
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.
 - An open dependency MR never stops the loop: stack on it.
 - Never push to the default branch. Never merge with the trio red,
-  comply beyond listed FPs, a pipeline other than `success`, an
-  unpaid shape, a review not converged, or without QA GO.
-- An inherited red — a gate or pipeline red reproduced on the
-  branch's base — is not this issue's: `deliver` records it with the
-  reproducing command and proceeds as draft. It still forbids the
-  merge: the repair of `<default>` is selected first (step 1).
+  comply beyond listed FPs, an unpaid shape, a review not converged,
+  or without QA GO. A pipeline pending or red does NOT hold a merge
+  whose local trio is green.
+- An inherited red — a gate red reproduced on the branch's base —
+  is not this issue's: `deliver` records it with the reproducing
+  command and proceeds as draft. It still forbids the merge: the
+  repair of `<default>` is selected first (step 1).
 - A finding that removes or corrects code is fixed in the MR; one
   that adds behaviour becomes an issue. The MR never grows in review.
 - Only user interruption ends the loop; the acknowledging reply ends
