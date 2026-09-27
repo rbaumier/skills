@@ -82,9 +82,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   session reddens every slot at once. Measured 2026-09-22: one pack
   replayed its suite six times for this. Each slot exports its own
   `DATABASE_URL` on a database it created and migrated itself, and
-  drops nobody else's. On natalia-v3 that is
-  `postgres://natalia:natalia@localhost:5432/natalia_slot<s>`
-  (created 2026-09-22), migrated from the slot's own worktree before
+  drops nobody else's — the repo's launch pack names its URL —
+  migrated from the slot's own worktree before
   the gate: branches carry different migrations, so the model is
   rebuilt per run, never shared and never inherited. The slot's QA
   stack runs on a DIFFERENT database from its model: an `api` binary
@@ -97,7 +96,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 - **Generated paths** — generated types, lockfiles, `.sqlx/`,
   `openapi.json`: excluded from the line count; a type the diff
   declares that one of them holds is `Reinvented`.
-- **QA launch pack** — launch command + port override, readiness
+- **QA launch pack** — per-slot values (model database URL, test
+  clone pattern, report dir, dev sign-in), launch command + port override, readiness
   probe, the COMPLETE env block (every provider variable, every
   prompt id), DB-prepare path; `<main-repo>/.claude/skills/verify/`
   is authoritative when present. One stack per slot — its own ports
@@ -143,10 +143,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
      `Tranches`.
      One slice under ~150 changed lines and no new table, route or
-     dependency in `Formes` → `build 1`, no contract review: #830,
-     #353, #956 and #439 shipped in 30-60 min that way, where a
-     contract review costs ~25 min and returned `CONTRACT-REWORK`
-     24 times out of 25 (2026-09-24→27). Else spawn ONE
+     dependency in `Formes` → `build 1`, no contract review: small
+     issues ship in 30-60 min that way, where a contract review
+     costs ~25 min for findings the code review catches as well. Else spawn ONE
      `loop-contract-reviewer` with the contract path, its findings
      path, `CONTRACT-REVIEW.md`, `<main-repo>`.
    - contract reviewer, **one round, never two** → `CONTRACT-OK` →
@@ -157,7 +156,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      `pack-1.md` and the code review judges them on the diff.
      The first pass catches what a contract review is for — a defect
      already paid, a shape reinvented, a scope that fabricates work.
-     Rounds beyond it argue prose: measured 2026-09-21 on #631, four
+     Rounds beyond it argue prose: measured 2026-09-21 on one issue, four
      contract rounds and three reviews preceded a diff the code
      review passed `MERGEABLE` first try, and review 3 prescribed a
      migration order that was plainly wrong. A contract finding is
@@ -255,11 +254,10 @@ since the last: `🔧 <cause> → <action>`.
 - Disjoint means disjoint at the FILE level, not the theme level.
   Three issues that all touch one screen are serial work wearing a
   parallel costume: each merge rebases the other two, and a rebase
-  replays the full trio. Measured 2026-09-21: #635 was rebased three
-  times in one evening, behind #639, #712 and #644; again on
-  2026-09-24, the WhatsApp group trio #974, #975, #976 paid 50 + 21
-  + 19 min of rebases. Issues on one surface go to ONE slot, in
-  sequence. When the queue
+  replays the full trio. Measured 2026-09-21: one issue was rebased three
+  times in one evening; another run paid 50 + 21 + 19 min of
+  rebases on three issues of one feature. Issues on one surface go
+  to ONE slot, in sequence. When the queue
   offers nothing disjoint, run TWO issues, or one — a slot left idle
   costs less than a rebase chain. Name the touched surface of each
   issue in flight and check the next candidate against it before
