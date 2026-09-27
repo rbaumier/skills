@@ -40,11 +40,10 @@ Write `<report-dir>/contract.md`:
   Every acceptance criterion and every constraint the issue states
   (a ceiling, a bound, a per-organization limit) keeps its `Besoin`
   line through any later rewrite of the contract: dropping one, or
-  reducing it to a log line, is the blocker the contract review
-  raised on #810 and #811, and the major the code review raised on
-  #960. A new secret or env var names its deployment sites
-  (`.env.example`, the chart, the values, the README) in `Formes`
-  (#974).
+  reducing it to a log line, is the recurring blocker of contract
+  reviews and a major at code review. A new secret or env var names
+  its deployment sites (env example, deploy manifests, README) in
+  `Formes`.
 - `Formes` — the shapes the diff will contain, and nothing else:
   files touched, and every NEW type, trait, module, table, column,
   route or dependency, each paying with a second caller on `<base>`
@@ -59,9 +58,8 @@ Write `<report-dir>/contract.md`:
   webhook, a claim) carries the hostile cases QA otherwise finds
   after `deliver`, one test each where it applies: invisible or NUL
   characters in a text field, two concurrent requests on the same
-  id, another organization's id, a deleted organization. Five QA
-  NO-GO of 2026-09-24→27 (#974, #976, #960, #969, #961) were these,
-  each paid 35 min to 2 h after delivery. Each line:
+  id, another tenant's id, a deleted tenant. Most QA NO-GO are
+  these, each paid 35 min to 2 h after delivery. Each line:
   `<file>::<test_name> — <layer> — <the bug that slips if it
   breaks> — arrange / act / assert in one sentence — doubles:
   <existing double or none>`. Nobody adds a test outside this list.
@@ -77,8 +75,8 @@ Write `<report-dir>/contract.md`:
   its line names them. Two is the ceiling; more →
   NEEDS-CLARIFICATION with the proposed split, the issue is too big.
   A criterion deferred ("reporté", "suite") is a split decided here,
-  named in the contract, never a remainder found after delivery:
-  #964b, #966b and #971b came back 11 to 22 h later.
+  named in the contract, never a remainder found after delivery,
+  which comes back 11 to 22 h later.
 - `Stack` (`<base>` when a dependency has an open MR), `Mesure` (hot
   path + bar, or `none`), `QA` (deliverables + error paths),
   `Risques` (convention deleted, ADR bent, issue line lifted with the
@@ -126,10 +124,8 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - A shape outside `Formes`, or a decision changed against the
   contract → `## Écarts au plan` with the issue line that pays it.
 - **Tests.** Tests live in their own files, never inline, in the
-  repo's own convention (CLAUDE.md names it; natalia-v3: a sibling
-  `<module>.test.rs` wired by `#[cfg(test)] #[path = "<module>.test.rs"]
-  mod tests;`), integration tests in `tests/*_it.rs`, frontend in
-  `*.test.*`. You
+  repo's own convention (CLAUDE.md or the testing guide names the
+  unit, integration and frontend layouts). You
   write the code and, per test file of the contract, the FIRST test:
   it fixes the file, the helpers, the double and the assertion
   style. The remaining tests of the contract's `Tests` list go
@@ -143,9 +139,9 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - Then the slice's tests only (`cargo nextest run -p <crate>`,
   `pnpm test -- <file>`); `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned; no comply here, the pack runs it.
-  `cargo fmt --all` (and the frontend formatter of a touched
-  package) before every commit, `ship` included: a formatting red
-  cost #978 an amend after delivery. A slice that
+  The repo's formatters on the touched packages before every
+  commit, `ship` included: a formatting red found at `deliver` costs
+  an amend and a re-run. A slice that
   touches `openapi.json` regenerates every generated client of
   Step 0. Commit `wip(<scope>): slice <k>`
   with explicit files. Write `<report-dir>/slice-<k>.md`: what

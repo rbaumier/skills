@@ -57,8 +57,8 @@ NEVER under `/tmp` (nor `/private/tmp`). The OS purges it: measured
 2026-09-22, a full disk triggered a purge that wiped an entire loop's
 trail mid-flight — three issues lost their contract, pack and review
 files while their agents were still reading them. Reports live beside
-the checkout, outside every worktree: on natalia-v3,
-`/Users/rbaumier/www/natalia/loop-reports/loop-<n>/`. The orchestrator
+the checkout, outside every worktree, at the path the repo's launch
+pack names (default `<main-repo>/../loop-reports/loop-<n>/`). The orchestrator
 hands that absolute path in every spawn.
 
 ## Report — every agent
