@@ -37,6 +37,14 @@ Write `<report-dir>/contract.md`:
   for a product decision the issue leaves open or a dependency
   neither merged nor MR-covered; post the questions on the issue
   first.
+  Every acceptance criterion and every constraint the issue states
+  (a ceiling, a bound, a per-organization limit) keeps its `Besoin`
+  line through any later rewrite of the contract: dropping one, or
+  reducing it to a log line, is the blocker the contract review
+  raised on #810 and #811, and the major the code review raised on
+  #960. A new secret or env var names its deployment sites
+  (`.env.example`, the chart, the values, the README) in `Formes`
+  (#974).
 - `Formes` — the shapes the diff will contain, and nothing else:
   files touched, and every NEW type, trait, module, table, column,
   route or dependency, each paying with a second caller on `<base>`
@@ -46,7 +54,14 @@ Write `<report-dir>/contract.md`:
 - `Réutilise` — one line per transverse mechanism, `<symbol>
   (<file>)`, proven by your grep.
 - `Tests` — the CLOSED list of tests, one per acceptance criterion
-  and per named risk, none for an implementation choice. Each line:
+  and per named risk, none for an implementation choice. Every
+  boundary the diff opens or changes (a body, a query parameter, a
+  webhook, a claim) carries the hostile cases QA otherwise finds
+  after `deliver`, one test each where it applies: invisible or NUL
+  characters in a text field, two concurrent requests on the same
+  id, another organization's id, a deleted organization. Five QA
+  NO-GO of 2026-09-24→27 (#974, #976, #960, #969, #961) were these,
+  each paid 35 min to 2 h after delivery. Each line:
   `<file>::<test_name> — <layer> — <the bug that slips if it
   breaks> — arrange / act / assert in one sentence — doubles:
   <existing double or none>`. Nobody adds a test outside this list.
@@ -59,8 +74,11 @@ Write `<report-dir>/contract.md`:
   that slice. ONE slice is the default: every slice re-reads the
   brief, the contract and the files, so a second slice exists only
   when two disjoint crates or packages cannot compile together, and
-  its line names them. Three is the ceiling; more →
-  NEEDS-CLARIFICATION, the issue is too big.
+  its line names them. Two is the ceiling; more →
+  NEEDS-CLARIFICATION with the proposed split, the issue is too big.
+  A criterion deferred ("reporté", "suite") is a split decided here,
+  named in the contract, never a remainder found after delivery:
+  #964b, #966b and #971b came back 11 to 22 h later.
 - `Stack` (`<base>` when a dependency has an open MR), `Mesure` (hot
   path + bar, or `none`), `QA` (deliverables + error paths),
   `Risques` (convention deleted, ADR bent, issue line lifted with the
@@ -124,7 +142,10 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   batch too long for the phase → one more `## Mechanic` line.
 - Then the slice's tests only (`cargo nextest run -p <crate>`,
   `pnpm test -- <file>`); `cargo clean`, mass `touch`,
-  `CARGO_INCREMENTAL=0` banned; no comply here, the pack runs it. A slice that
+  `CARGO_INCREMENTAL=0` banned; no comply here, the pack runs it.
+  `cargo fmt --all` (and the frontend formatter of a touched
+  package) before every commit, `ship` included: a formatting red
+  cost #978 an amend after delivery. A slice that
   touches `openapi.json` regenerates every generated client of
   Step 0. Commit `wip(<scope>): slice <k>`
   with explicit files. Write `<report-dir>/slice-<k>.md`: what
@@ -143,10 +164,10 @@ comment, never by chopping its sentences — `FP` groups are listed
 for the shipper with the reason each. A remedy is re-read against
 the shape rules before the commit: a fix that breeds the next
 finding costs a round. A wrong sentence in a loop report (pack,
-ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings become `needs-triage`
-issues, never code here; before opening one, `glab api
-"projects/:id/issues?state=opened&search=<keyword>&per_page=5"` —
-a duplicate is linked, not created. A drop carries evidence: false
+ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
+loop files nothing on the forge. Small and inside a file the lot
+already touches → pay it here; otherwise ONE line under
+`## Constats non payés` in the report, and nothing else. A drop carries evidence: false
 positive (the line), repo convention (the file), or remedy dearer
 than the defect (the grep or measure). Re-run the gate of each
 crate or package you touched, never the whole trio: the shipper
@@ -154,7 +175,7 @@ does. Commit on top of the pack commit with explicit files.
 
 `REWORK` → your commit goes to `pack <r+1>` and a new review that
 re-judges each disposition, so a `fixed` names commit and line.
-Round 6 (the cap) ships anyway: what stays open goes under
+Round 3 (the cap) ships anyway: what stays open goes under
 `## Not converged`, posted as the MR comment.
 
 **QA plan.** No user-reachable surface changed → `QA: not run —
@@ -172,8 +193,8 @@ the issue asks; a refutation with no line is a fix. Then a
 `re-verify` list of the failed rows only. Cap: this one round; a
 second NO-GO ships flagged `[qa not converged]`.
 
-**Write.** `REWORK` before round 6: `<report-dir>/ship-<r>.md` =
-disposition table (`fixed <commit> <file:line>` / `→ issue #<m>` /
+**Write.** `REWORK` before round 3: `<report-dir>/ship-<r>.md` =
+disposition table (`fixed <commit> <file:line>` / `non payé — <raison>` /
 `dropped — <evidence>`) + comply decisions, nothing else. Otherwise
 read `PRESENTATION.md` NOW and write `<report-dir>/mr-description.md`
 in full (prose, `à valider :`, visual, `Closes #<n>`, the `<details>`
