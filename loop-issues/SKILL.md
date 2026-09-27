@@ -1,6 +1,6 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one fable contract review before any code, an opus shipper for pack and deliver (gates, comply triage, QA, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 6), push as draft, verify, repeat.
+description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, an opus shipper for pack and deliver (gates, comply triage, QA, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, verify, repeat.
 ---
 
 # Loop orchestrator
@@ -23,18 +23,19 @@ explicit `model` overrides the pin):
 | Role | `subagent_type` | Model · effort | Spawned by |
 |---|---|---|---|
 | builder (`contract`, `build <k>`, `ship`) | `loop-builder` | opus 5 · medium | you, once per phase |
-| contract reviewer | `loop-contract-reviewer` | fable 5.1 · medium | you, ONCE per issue |
-| shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | opus 5 · low | you, once per phase |
-| code reviewer | `loop-reviewer` | opus 5 · high | you, once per round |
-| mechanic (tests of the closed list, codegen) | `loop-mechanic` | opus 5 · low | you, after a `build <k>` that lists tasks |
+| contract reviewer | `loop-contract-reviewer` | opus 5 · medium | you, ONCE per issue |
+| shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | opus 5 · medium | you, once per phase |
+| code reviewer | `loop-reviewer` | opus 5 · medium | you, once per round |
+| mechanic (tests of the closed list, codegen) | `loop-mechanic` | opus 5 · medium | you, after a `build <k>` that lists tasks |
 | QA executor | `loop-qa` | opus 5 · medium | you, on `QA-READY` |
 
 Builder phases: `contract`, one `build <k>` per slice, `ship`.
-Shipper phases: `pack`, `deliver`, `publish`. Fable reviews the contract ONCE: the fond is decided there and costs no rework. Every phase is a
+Shipper phases: `pack`, `deliver`, `publish`. The contract reviewer reviews it ONCE: the fond is decided there and costs no rework. Every phase is a
 fresh context. Only YOU spawn: builder and shipper have no `Agent`
 tool — a child's notification never resumes a subagent, it froze a
 thread 30-60 min each time. Review rounds (pack, review, ship) run until `MERGEABLE`,
-cap 6; QA runs once, a NO-GO gets one answer and one re-verify.
+cap 3; QA runs once, a NO-GO gets one answer and one re-verify, a
+`GO-PROVISIONAL` goes straight to `publish`.
 
 There is NO path that spawns an implementer without a contract:
 "spawn des agents opus", "vague de corrections", "rattrapage" mean
@@ -141,8 +142,11 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      ```
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
      `Tranches`.
-     `Formes: aucune neuve` + one slice under ~150
-     changed lines → `build 1`, no contract review. Else spawn ONE
+     One slice under ~150 changed lines and no new table, route or
+     dependency in `Formes` → `build 1`, no contract review: #830,
+     #353, #956 and #439 shipped in 30-60 min that way, where a
+     contract review costs ~25 min and returned `CONTRACT-REWORK`
+     24 times out of 25 (2026-09-24→27). Else spawn ONE
      `loop-contract-reviewer` with the contract path, its findings
      path, `CONTRACT-REVIEW.md`, `<main-repo>`.
    - contract reviewer, **one round, never two** → `CONTRACT-OK` →
@@ -168,12 +172,13 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    - reviewer → `MERGEABLE`/`REWORK <path>`. Spawn `loop-builder`
      `ship <r>` with the findings path and the verdict.
    - `loop-builder` `ship <r>` → `SHIPPED <ship-<r>.md>`. `MERGEABLE`,
-     `r = 6` or a `ship` that committed no code → `loop-shipper`
+     `r = 3` or a `ship` that committed no code → `loop-shipper`
      `deliver` with it (open findings ship flagged `[review not
      converged]`); else `pack <r+1>`.
    - `loop-shipper` `deliver` → `QA-READY <qa-handoff.md>` → spawn
      ONE `loop-qa` with it → verdict path → `loop-shipper` `publish`
-     with it. `deliver` (no QA) or `publish` → `DELIVERED <report>`; `BLOCKED
+     with it — `GO-PROVISIONAL` included, never a `ship`. `deliver`
+     (no QA) or `publish` → `DELIVERED <report>`; `BLOCKED
      <deliver.md>` (QA NO-GO, comply residue, red gate) → spawn
      `loop-builder` `ship` once more with deliver.md, then `deliver`
      again with its `re-verify` list; a second `BLOCKED` → step 4 as
@@ -192,8 +197,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      its id, never block on it;
    - contract findings `applied` or `refuted — <evidence>`, ONE
      contract review; last
-     review `MERGEABLE` with every finding `fixed`, `→ issue #<m>` or
-     `dropped — <evidence>`, or `[review not converged]` at round 6
+     review `MERGEABLE` with every finding `fixed`, `non payé —
+     <raison>` or `dropped — <evidence>`, or `[review not converged]` at round 3
      with the open findings as an MR comment;
    - QA GO/GO-PROVISIONAL or `QA: not run — <reason>`;
    - description per `PRESENTATION.md` (read once); a user-visible
@@ -251,7 +256,10 @@ since the last: `🔧 <cause> → <action>`.
   Three issues that all touch one screen are serial work wearing a
   parallel costume: each merge rebases the other two, and a rebase
   replays the full trio. Measured 2026-09-21: #635 was rebased three
-  times in one evening, behind #639, #712 and #644. When the queue
+  times in one evening, behind #639, #712 and #644; again on
+  2026-09-24, the WhatsApp group trio #974, #975, #976 paid 50 + 21
+  + 19 min of rebases. Issues on one surface go to ONE slot, in
+  sequence. When the queue
   offers nothing disjoint, run TWO issues, or one — a slot left idle
   costs less than a rebase chain. Name the touched surface of each
   issue in flight and check the next candidate against it before
@@ -268,7 +276,24 @@ since the last: `🔧 <cause> → <action>`.
   is not this issue's: `deliver` records it with the reproducing
   command and proceeds as draft. It still forbids the merge: the
   repair of `<default>` is selected first (step 1).
-- A finding that removes or corrects code is fixed in the MR; one
-  that adds behaviour becomes an issue. The MR never grows in review.
+- **No phase of this loop ever opens an issue on the forge.** The
+  queue grew by 101 issues in three days because every phase filed
+  its leftovers (user, 2026-09-24: "je croyais que tu arrêtais d'en
+  créer et que tu les intégrais dans les mrs en cours"). A finding
+  that removes or corrects code is fixed in the MR; one that adds
+  behaviour is paid in the MR when it lands in a file the lot
+  already touches, and otherwise written as ONE line under
+  `## Constats non payés` in the phase report — never filed, never
+  referenced as `Refs #`. The MR never grows in review beyond that.
+  "Adds behaviour" is not the whole test — three findings are fixed in
+  the MR whatever they look like: a duplication THIS MR posted (the
+  second copy is the MR's own debt, never a successor's), any finding
+  inside a function the MR already rewrote, and any finding under
+  fifteen lines that opens no new file and settles no scope question.
+  Measured 2026-09-23 on the fifteen issues one evening opened: nine
+  fit their own MR, seven of them under fifteen lines without a new
+  file, and three of the five invisible debts were duplications the
+  MR itself had just posted. An issue is for work a successor must
+  scope, not for a remedy already under the author's hand.
 - Only user interruption ends the loop; the acknowledging reply ends
   with `💡 /reflect — miner ce run pour des deltas de skills`.

@@ -19,6 +19,16 @@ previous `Nécessaire`; re-judge each finding from the code (`fixed`
 proven at the line or `dropped` with evidence → closed, else `still
 open`), then judge the fix patch as new code under Step 2.
 
+A round `r ≥ 2` VERIFIES; it does not re-review. Measured over 27
+lots (2026-09-24): every second round closed the first round's
+findings and opened nothing but `nit`s, for ~25 min a lot. So its
+scope is the fix patch and the previous findings, nothing else, and
+it may open a NEW finding only at `major` — a defect the fix patch
+introduced or left standing. Anything smaller it notices outside
+that scope is one line under `## Vu, hors périmètre du round`, which
+costs no rework and blocks no merge. Re-opening the whole diff at
+round 2 is out of scope, whatever it would turn up.
+
 ## Step 1 — `Nécessaire`, BEFORE opening `diff.patch`
 
 Read `pack-1.md` (issue, contract, changed-file list) and the repo.
@@ -64,8 +74,9 @@ with the issue line or repo symbol it rests on, tagged
 - **Scope creep** — behaviour the issue didn't ask; remedy: remove.
 - **Debt** — the next MR cannot build on this cleanly.
 
-A remedy that would ADD behaviour or scope is tagged `→ issue` and
-never asks for code in this MR. Judge each `## Écarts au plan` line
+A remedy that would ADD behaviour or scope is tagged `non payé` and
+never asks for code in this MR — and never becomes an issue either:
+the loop files nothing on the forge, the line lives in the report. Judge each `## Écarts au plan` line
 against the issue line it cites.
 
 A finding rests on a line of the diff or of the repo, never on a
@@ -78,7 +89,7 @@ prove a finding.
 
 `MERGEABLE <path>` (no `blocker`, no `major`; `ship` pays the minors
 and the nits, step 4 checks each disposition) or `REWORK <path>`
-(the orchestrator caps at 6 rounds). A style or naming finding is
+(the orchestrator caps at 3 rounds). A style or naming finding is
 never above `minor`. Write
 `review-<r>.md`, then its `.done`; end with that one line. Never
 SendMessage.
