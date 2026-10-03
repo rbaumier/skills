@@ -38,9 +38,12 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - No query in a loop: batch reads (`= ANY`/`UNNEST`/`IN`, dataloader). N+1 is a defect, not a style.
 - Ownership/authorization filters live in the query (JOIN/WHERE), never fetch-all + in-app filter.
 - Guard clauses + early return; max ~3 indent levels.
+- Push ifs up, fors down: when splitting a fn, branches and state mutation stay in the parent; helpers get branch-free computation.
+- Declare next to first use; check right before use — distance between check and use is a stale-value bug.
 - Return new data; don't mutate inputs.
 - No clever code: no nested ternaries, no implicit coercion, no multi-op one-liners.
 - No globals/singletons/magic-registry state → single root state, traceable top-down.
+- Prefer a pull loop or direct call over a stored callback/event registry: "what runs next" must be traceable.
 - No ad-hoc conditional bolted on unrelated flow → own path/helper/typed dispatch.
 - Feature logic out of shared/general paths. Inject policy; don't hardcode in mechanism.
 - Extract by responsibility (distinct reason-to-change), not line count.
@@ -111,6 +114,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Name intent not mechanics (`closeAccount` not `setStatusToClosed`). Avoid filler-only names (process/handle/do/run); fine as part of a specific name.
 - Full words. Bool reads is/has/should/can, positive form.
 - Explicit units (`delayMs`/`sizeKb`).
+- Qualifiers last: `latencyMsMax`, not `maxLatencyMs` — related names sort and align together.
 - Don't add a 2nd meaning for a verb already used here. No overloaded validate/build/resolve, no synonym aliases.
 - Escape hatches honest: `dangerous_`/`unsafe_`/`experimental_`.
 - A comment earns its place by one test: "which bug or misreading does a reader make without it?" — no answer, no comment; the name and types carry the what. What earns it: a decision the code can't show, a trap that bit or will bite, an action with its link (`TODO(#n):`). Rule and examples in `coding-standards:style` § Comments.
@@ -120,6 +124,7 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 
 ### Docs & method
 - Verify third-party API from official docs, never assume from memory.
+- Prose (MR/commit/log/error message): active voice, named actor ("`loadConfig` picks the tier", not "the decision emerges"). No "not X, it's Y" contrast, no throat-clearing ("Note that", "Here's why"), no hedge adverbs (just/simply/really), no em-dash drama.
 - Every factual claim you ship (version, "unused", "already fixed") is re-verified today against registry/code, with its scope: "orphan declaration in X; real usages in Y". "The schema allows it" ≠ "the code does it".
 - Removing config/env/flag: the MR proves death (zero readers, file:line) and states the reintroduction plan. Removing a colleague's WIP/scaffold: say it in the MR and notify the author — "dead code" is not a reason for someone else's scaffold.
 - Don't guess performance — measure before optimizing.

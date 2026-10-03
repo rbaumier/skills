@@ -37,8 +37,10 @@ machine-enforced style. `⟦repo⟧` = only if the repo uses it.
 - Flag independent async work serialized where it could run concurrently.
 - Flag a DB query inside a loop (N+1) → batch (`= ANY`/`UNNEST`/`IN`); flag an ownership check done by fetch-all + app-side filter instead of in the query (JOIN/WHERE).
 - Flag >~3 indent levels / missing guard clauses; input mutation where new data should be returned.
+- Flag branches or state mutation buried in helpers instead of the parent (push ifs up, fors down); a check far from the use it guards (stale-value risk).
 - Flag clever code: nested ternaries, implicit coercion, multi-op one-liners.
 - Flag global/singleton/magic-registry state not traceable from a single root.
+- Flag a stored callback/event registry where a pull loop or direct call would keep "what runs next" traceable.
 - Flag ad-hoc conditional bolted onto an unrelated flow → own path/helper/typed dispatch.
 - Flag feature logic in a shared/general path; policy hardcoded into mechanism.
 - Flag a file pushed past repo norm (~500 LOC / 1k) without strong reason → decompose.
@@ -102,6 +104,7 @@ machine-enforced style. `⟦repo⟧` = only if the repo uses it.
 ### Naming & hygiene
 - Flag name describing mechanics not intent (`setStatusToClosed`); filler-only name (process/handle/do/run).
 - Flag abbreviations / negative-form booleans (should read is/has/should/can, positive); missing units (`delayMs`/`sizeKb`).
+- Flag a qualifier prefix breaking a name family (`maxLatencyMs` beside `latencyMsMin`) → qualifiers last.
 - Flag a verb given a 2nd meaning; overloaded validate/build/resolve; synonym aliases.
 - Flag dishonest escape hatch (no `dangerous_`/`unsafe_`/`experimental_` prefix).
 - Flag a comment that fails the bug test ("which bug or misreading does a reader make without it?") — paraphrase of the code, choice-defense, restated type → delete, not rewrite (`coding-standards:style` § Comments). Judge the content; size/history/slop are machine-enforced (skip).
@@ -112,6 +115,7 @@ machine-enforced style. `⟦repo⟧` = only if the repo uses it.
 
 ### Docs & method
 - Flag third-party API used from memory instead of verified against official docs.
+- Flag MR/commit/log/error prose with passive voice or a false-agency subject, "not X, it's Y" contrast, throat-clearing ("Note that"), hedge adverbs (just/simply/really), em-dash drama.
 - Flag any factual claim not re-verified today — version numbers, "unused", "dead", "already fixed" — and any "unused" without scope ("orphan declaration in X; real usages in Y"). "The schema allows it" ≠ "the code does it".
 - A green linter/comply/CI never exonerates review: judge the pattern (manual validation, generic name), not the tool's silence; if a tool should have caught it, also file an issue on the tool.
 - Flag a config/env removal whose description carries no zero-reader proof (file:line).
