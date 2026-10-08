@@ -23,7 +23,7 @@ Give each subsystem:
 
 Include frontend, backend, shared infrastructure, platform bridges, generated-contract ownership, and test/tooling infrastructure where materially relevant.
 
-Create one canonical scratchpad or report containing:
+Create one canonical scratchpad or report (in a temp directory, never inside the repository) containing:
 
 - the subsystem inventory;
 - confirmed opportunities;

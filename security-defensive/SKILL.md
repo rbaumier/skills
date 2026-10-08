@@ -40,7 +40,8 @@ description: "Secure coding, auth, vulnerability prevention. Trigger on 'securit
 - Schema allowlists (never blocklists), parameterized queries (never concat)
 - Array args for commands (never shell=True), realpath()+prefix for paths
 - Never eval/pickle/deserialize untrusted data
-- Validate uploads: size, MIME, extension. Allowlist URLs for SSRF
+- Validate uploads: size, MIME, extension
+- SSRF: resolve every DNS record, reject loopback, link-local (169.254.169.254) and private IPv4/IPv6, forbid redirects. A host allowlist alone is bypassable
 - **Prototype pollution prevention**: never use recursive merge/deep-extend on user input. `Object.assign({}, userInput)` is shallow-safe, but `lodash.merge({}, userInput)` with `__proto__` keys overwrites `Object.prototype`. **DO**: strip `__proto__`, `constructor`, `prototype` keys from all parsed JSON before merging. **DON'T**: `_.merge(config, JSON.parse(userBody))` without sanitization. WHY: prototype pollution can escalate to RCE via template engines or bypass auth checks
 - **Mass assignment / over-posting**: never spread request body directly into DB operations. **DO**: pick allowed fields explicitly: `const { name, email } = req.body; await db.update(users).set({ name, email })`. **DON'T**: `await db.update(users).set(req.body)` — attacker adds `{ role: 'admin' }` and escalates privilege. Use Zod `.pick()` to define exactly which fields are writable per endpoint
 - **ReDoS (Regular Expression Denial of Service)**: never use user input in regex patterns. Even hardcoded regex with nested quantifiers like `(a+)+$` causes exponential backtracking. **DO**: use `re2` or `safe-regex` library. Avoid nested quantifiers. Set timeout on regex operations. **DON'T**: `new RegExp(userInput)`. In reviews: flag any `new RegExp(variable)` and any regex with nested quantifiers
@@ -181,6 +182,7 @@ app.use('/api/auth/', rateLimit({
 }));
 ```
 - WHY separate tiers: credential stuffing attacks send thousands of login attempts. General rate limits are too generous for auth. Password reset, OTP verification, and signup also need strict limits
+- The default MemoryStore counts per process: limit becomes max × instances, and never fires on serverless. Multi-process → shared store (Redis)
 
 ### Secrets & Infra
 - .env in .gitignore, secret scanning (TruffleHog/GitGuardian), commit lockfiles

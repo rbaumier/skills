@@ -31,10 +31,6 @@ Vous étiez absent(e) et non représenté(e) lors de cette assemblée.
 Vous avez voté contre {{la/les}} résolution(s) mentionnée(s) ci-dessous.
 {{/si}}
 
-{{#si abstentionniste}}
-Vous vous êtes abstenu(e) lors du vote {{de la/des}} résolution(s) mentionnée(s) ci-dessous.
-{{/si}}
-
 ## Résolutions adoptées
 
 {{Pour chaque résolution :}}

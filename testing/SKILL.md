@@ -260,7 +260,7 @@ In reviews: generic library without type tests -> flag "add .test-d.ts for publi
 ## 2. TDD
 
 Vertical slices via tracer bullets. One test -> one impl -> repeat. Never all tests first.
-RED: write test -> fail. GREEN: minimal code -> pass. Refactor only when GREEN.
+RED: write test -> run it -> it fails for the expected reason (missing behavior, not a typo or import error). GREEN: minimal code -> pass. Refactor only when GREEN.
 Tests describe behavior through public interfaces. Good test survives refactor.
 Load `references/tdd-*.md` as needed.
 

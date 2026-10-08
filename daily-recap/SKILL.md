@@ -16,9 +16,9 @@ Récap de la journée de travail à partir des events GitLab de l'utilisateur, p
 
 - Résoudre la date cible `D`.
 - `mcp__gitlab__list_events` avec `after = D−1`, `before = D+1`, `per_page: 100` — **paginer jusqu'à épuisement** (une page pleine = il en reste peut-être).
-- `mcp__gitlab__list_todos` avec `state: pending` — ne retenir que les types **bloquants** : `review_requested`, `approval_required`, `build_failed`, `unmergeable`. Les todos `assigned`/`mentioned`/`directly_addressed` sont du backlog d'issues, pas des attentes du jour — écartés.
+- Si l'argument restreint les projets (« natalia uniquement »), ne garder que les events de ces projets (`project_id`), le reste est écarté.
 
-Fait quand : toutes les pages d'events sont lues et les todos pending récupérés.
+Fait quand : toutes les pages d'events sont lues.
 
 ## 2. Enrichissement
 
@@ -39,33 +39,33 @@ Fait quand : chaque item UI porte un PNG dans le scratchpad ou la mention « san
 
 ## 4. Classement
 
-Chaque event est classé dans une section ou écarté avec une raison (bruit : push technique sans MR, event dupliqué). **Zéro event ni classé ni écarté** — c'est le critère de complétude du skill.
+Chaque event est classé dans un scope ou écarté avec une raison (bruit : push technique sans MR, event dupliqué). **Zéro event ni classé ni écarté** — c'est le critère de complétude du skill.
 
-Sections (omises si vides) :
+Le récap est **groupé par scope uniquement** (Facturation, Console, WhatsApp, Voix, Imports, Sécurité, Outillage, Backlog…), jamais par grande partie (pas de sections Features / Correctifs / Divers). Un scope réunit les MRs d'un même sujet ; plusieurs MRs d'un même sujet peuvent tenir en un seul item portant tous leurs numéros.
 
-- **Features** — MRs de fonctionnalités créées/mergées, issues feature fermées.
-- **Correctifs** — fixes/hotfixes, issues bug fermées.
-- **Reviews** — données (commentaires, approbations, merge de la MR d'un autre) et reçues. Les events utilisateur ne remontent pas toutes les approbations : pour chaque todo `review_requested` frais, vérifier sur la MR (notes/approbation de l'utilisateur) si la review a été donnée le jour J — si oui, l'item va en Reviews.
-- **En attente** — uniquement ce qui bloque du travail : reviews demandées non encore faites (`review_requested`), approbations attendues (`approval_required`), pipelines rouges (`build_failed`), conflits (`unmergeable`) + MRs ouvertes ce jour toujours non mergées. Filtre de fraîcheur : todos ≤ 7 jours ou liés aux projets actifs du jour. Jamais : les issues simplement assignées/mentionnées (backlog), l'attente de réponses à ses propres commentaires, un `review_requested` dont la review a déjà été donnée.
-- **Divers** — le reste (docs, CI, config…).
-- **À suivre demain** — dérivé d'« En attente » : les actions concrètes du lendemain.
+Chaque item porte son type en préfixe, repris du titre de la MR (conventional commit) : `feat: `, `fix: `, `perf: `, `refactor: `, `docs: `, `chore: `… ; en cas de doute ou sans MR (tri de backlog, issues ouvertes) → `chore: `. Dans un scope, les items sont ordonnés feat, fix, puis le reste.
 
-Classer Features vs Correctifs via le titre de la MR/issue (préfixe `feat`/`fix`, labels) ; en cas de doute → Divers.
+Jamais de Reviews, En attente ni À suivre demain : les reviews données, les MRs encore ouvertes et les conflits sont écartés (raison : hors livré).
 
 ## 5. Rendu Slack (copie du rendu navigateur)
 
-Le collage riche dans Slack (gras + liens cliquables **sur les numéros**) passe par le rendu navigateur : générer le HTML, donner son lien `file://` — l'utilisateur l'ouvre, Cmd+A, Cmd+C, puis Cmd+V dans Slack.
+Le collage riche dans Slack (gras + liens cliquables **sur les descriptions**) passe par le rendu navigateur : générer le HTML, donner son chemin absolu (sans préfixe `file://`) — l'utilisateur l'ouvre, Cmd+A, Cmd+C, puis Cmd+V dans Slack.
 
 1. Construire le récap en HTML dans le scratchpad (`recap-<date>.html`) :
-   - Chaque ligne dans un `<p>` ; ligne vide entre sections = `<p><br></p>`.
-   - Titre : `🗓️ <b>Récap — <date></b>`. Sections en `<b>` avec emoji : ✨ Features, 🐛 Correctifs, 👀 Reviews, ⏳ En attente, 📌 Divers, 📅 À suivre demain.
-   - Item : `<p>&nbsp;&nbsp;&nbsp;&nbsp;•&nbsp;<projet> — <description> (<a href="URL">!55</a>,&nbsp;<a href="URL">#2</a>)</p>` — indentation par 4 `&nbsp;`, chaque numéro cité porte son lien, jamais d'URL nue visible.
-   - Item UI avec capture : sous sa ligne, `<p><img src="file:///…/recap-<date>-<projet>-<iid>.png" width="480"></p>` — aperçu dans le navigateur seulement, le transport vers Slack se fait à l'étape 3.
-   - Juste le numéro (!55, #2) — jamais son statut (mergée, fermée…).
+   - Chaque ligne dans un `<p>`.
+   - **Jamais de tiret cadratin « — »** nulle part dans le rendu (titre, items, légendes).
+   - Titre : `🗓️ <b>Récap du <date></b>`.
+   - Scope : une ligne vide puis le nom en gras : `<p><br></p><p><b><scope></b></p>`.
+   - Item : `<p>•&nbsp;<a href="URL"><type>: <description></a></p>` — le lien porte **sur toute la ligne, type compris**, aucun numéro affiché ; **un seul lien par item** (la MR principale ; l'issue et les MRs sœurs seulement dans le `.txt`), pas d'indentation, jamais d'URL nue visible. Préfixer `<projet> : ` seulement si le récap couvre plusieurs projets ; sur un seul projet, aucun préfixe.
+   - **Budget Slack** : le collage compte le texte visible **plus la longueur de chaque URL de lien** ; un récap à 6 340 caractères visibles et 170 liens a dépassé la limite de 5 892 (limite déduite ≈ 12 000). Mesurer avant de livrer (texte visible + somme des longueurs d'URL) et viser **≤ 8 000** : fusionner les items d'un même scope, descriptions de 60 caractères au plus, un lien par item. Au-delà, raccourcir, jamais scinder en deux messages sans le dire.
+   - Captures : **jamais dans le HTML** (ni image, ni section Captures). Les PNG restent seulement dans le dossier, l'utilisateur les glisse lui-même dans Slack.
+   - Jamais le statut d'une MR ou d'une issue (mergée, fermée…).
    - Tout espace adjacent à un `<a>` = `&nbsp;` — Slack avale les espaces normaux autour des liens au collage.
-   - Puces courtes, impersonnel actif (jamais « j'ai »/« on »), français, sections vides omises.
+   - Puces courtes, impersonnel actif (jamais « j'ai »/« on »), français, scopes vides omis.
 2. Écrire aussi `recap-<date>.txt` : même contenu en texte brut, chaque numéro suivi de son URL nue, chaque item UI suivi du chemin de son PNG — version de secours affichée dans le terminal.
-3. Afficher le lien cliquable `file:///…/recap-<date>.html` et annoncer : « Ouvrir le fichier, Cmd+A, Cmd+C, puis Cmd+V dans Slack. » S'il y a des captures : le collage navigateur ne les transporte pas de façon fiable — annoncer de les glisser ensuite dans le message Slack, et lister leurs chemins.
+3. Annoncer : « Ouvrir le fichier, Cmd+A, Cmd+C, puis Cmd+V dans Slack. » S'il y a des captures : le collage navigateur ne les transporte pas de façon fiable — annoncer de les glisser ensuite dans le message Slack depuis le dossier. Le message se termine **toujours** par ces deux lignes, dans cet ordre, rien après :
+   - `HTML : /…/recap-<date>.html` (chemin absolu nu, jamais `file://`)
+   - `Dossier : /…/` (le scratchpad qui contient le HTML, le `.txt` et les PNG)
 
 Pièges constatés (2026-07-15, ne pas y revenir) : coller la syntaxe HTML en texte → balises visibles ; presse-papiers via `«data HTML»` → collage vide ; via NSPasteboard `public.html` → fonctionne une fois puis retombe sur le texte ; `<div>` unique avec `<br>` → gras/liens perdus ; `<ul><li>` → puces non indentées et espaces avalés autour des liens.
 

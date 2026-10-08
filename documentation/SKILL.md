@@ -47,7 +47,7 @@ Do not mix types in one document. A tutorial that stops to explain theory loses 
 
 ### ADR template
 
-Store in `docs/decisions/` with sequential numbering. Copy-paste this:
+If the repo already has ADRs (or `.adr-dir`), match their location, numbering and headings, and report conflicts. Otherwise store in `docs/decisions/` with sequential numbering, using this:
 
 ```markdown
 # ADR-NNN: [Short decision title]

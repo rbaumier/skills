@@ -22,7 +22,7 @@ Voir `data/niches-fiscales.json` → `distinction_mecanismes`.
 
 ### Pension alimentaire
 
-- Versée à un enfant majeur (case 6GI / 6GJ) : plafond annuel à vérifier
+- Versée à un enfant majeur (case 6EL / 6EM ; 6GI / 6GJ si décision de justice antérieure à 2006) : plafond annuel à vérifier
 - Versée à un ascendant dans le besoin : plafond distinct
 - **Condition clé** : preuve du besoin du bénéficiaire et du versement effectif
 - Déduction plafonnée

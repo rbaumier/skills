@@ -41,7 +41,9 @@ ranges on signatures, never a whole file.
   session/token handling, date/money formatting, export, chunking,
   validation, generated types (OpenAPI `Schemas.*`, DB types,
   `z.infer`): the shared symbol for each, so the issue can require its
-  reuse under `Key interfaces`.
+  reuse under `Key interfaces`. A shape the ask itself names (type,
+  enum, port, runtime path): what the repo shows, without judging —
+  `copies <symbol>`, `beside <symbol>`, `single impl` or `new`.
 - **Blast radius** — callers, consumers, schemas, tests the change
   reaches, listed by criterion (the grep + the list), never totalled.
 - **Constraints** — ADRs and `CLAUDE.md`/`CONTEXT.md` rules that bind

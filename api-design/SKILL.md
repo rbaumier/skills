@@ -1,36 +1,9 @@
 ---
 name: api-design
-description: API design principles — contract-first, error semantics, versioning, pagination, Hyrum's Law, interface stability. Use when designing REST/GraphQL endpoints, TypeScript interfaces, module boundaries, or any public surface between systems.
+description: API design specifics — wire error semantics and status codes, versioning and deprecation, pagination, idempotency, health checks, interface stability, progressive disclosure, API families. Use when designing REST/GraphQL endpoints, a public library interface, or any surface consumed by other systems.
 ---
 
-## Public vs private dependencies
-
-A dependency is **public** if any of its types appear in your module's parameter signatures or return types — to call your function, the consumer must import that other module's types. It is **private** if you only use it internally; the consumer never knows it exists.
-
-```typescript
-// Public dependency on `zod` — every caller now needs zod in scope
-export function validate(schema: z.ZodSchema, input: unknown) { ... }
-
-// Private dependency on `zod` — caller sees only `Result`
-export function validate(input: unknown): Result<User, ValidationError> {
-  const parsed = userSchema.safeParse(input);  // zod used internally
-  // ...
-}
-```
-
-Audit every export: "to call this, what types from other modules must the user import?" Each one is a transitively-imposed cost on every consumer, every dependency-graph traversal, every future migration. Private dependencies are cheap (swap them out anytime); public dependencies are forever (Hyrum's Law). Reviews: function exposing a third-party type when a domain wrapper would do -> flag "wrap at the boundary, keep the dependency private"
-
-## Hyrum's Law
-
-> With a sufficient number of users, all observable behaviors of your system will be depended on by somebody.
-
-Every public behavior — undocumented quirks, error message text, field ordering, timing — becomes a de facto contract. Design implications:
-
-- **Minimize observable surface.** Every field, header, and side effect you expose is a commitment you cannot safely remove. Default to `private`/`pub(crate)`/`internal` — `public` only by deliberate intention.
-- **Three levels of visibility**: public (stable API contract), shared (internal utilities), internal (maintainers only with instability warning). Mark each export explicitly.
-- **Never leak implementation details.** Internal IDs, database column names, stack traces, query plans — if users can see it, they will depend on it.
-- **Plan deprecation at design time.** If you can't remove it later, don't expose it now.
-- **Tests are insufficient.** Contract tests verify intent, but real users depend on undocumented behavior. Treat every observable behavior as permanent.
+Generic boundary rules (contract-first, Hyrum's Law, pit of success, vertical slices, return-type ladder, options object, big-step interfaces) live in `coding-standards:quality-bar` — this skill only adds what is specific to public APIs.
 
 ## One-Version Rule
 
@@ -39,83 +12,6 @@ Avoid forcing consumers to choose between multiple versions of the same dependen
 - Add optional fields instead of creating v2 types
 - Use feature flags over parallel implementations
 - When breaking changes are unavoidable, migrate all consumers in a single coordinated pass
-
-## Contract First
-
-Define the TypeScript interface before writing any implementation. The contract is the spec — implementation follows.
-
-```typescript
-// 1. Define the contract FIRST — this is the design artifact
-interface OrderAPI {
-  // Creates an order, returns it with server-generated fields
-  createOrder(input: CreateOrderInput): Promise<Order>;
-  // Returns paginated orders matching filters
-  listOrders(params: ListOrdersParams): Promise<PaginatedResult<Order>>;
-  // Returns a single order or a NOT_FOUND error
-  getOrder(id: OrderId): Promise<Result<Order, NotFoundError>>;
-  // Partial update — only provided fields change
-  updateOrder(id: OrderId, input: UpdateOrderInput): Promise<Order>;
-  // Idempotent — succeeds even if already cancelled
-  cancelOrder(id: OrderId): Promise<void>;
-}
-
-// 2. Separate input from output — server-generated fields only in output
-interface CreateOrderInput {
-  items: OrderItem[];
-  shippingAddress: Address;
-  note?: string; // Optional from day one
-}
-
-interface Order extends CreateOrderInput {
-  id: OrderId;
-  status: OrderStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  total: Money;
-}
-```
-
-**Every endpoint gets typed input and output schemas before the handler exists.** No handler without a contract.
-
-**Separate public API from implementation** — for libraries/frameworks, the public API (types, interfaces, traits) lives in a dedicated package, the implementation in another. Consumers never import from the implementation package directly.
-
-## Vertical Slice Structure
-
-Each API operation lives in a single file that owns its full vertical: route handler, business logic, DB query, input/output types — everything that changes together.
-
-```
-src/features/orders/
-  createOrder.ts    ← handler + logic + DB + types for this operation
-  updateOrder.ts
-  cancelOrder.ts
-  shared/           ← extracted only when a second operation genuinely needs it
-```
-
-```typescript
-// createOrder.ts — one file owns the full operation
-export async function createOrderHandler(req: Request): Promise<Response> {
-  const input = parseCreateOrderInput(req.body);         // validated at boundary
-  const order = await createOrder(input, { db: req.db }); // business logic below
-  return json(toOrderDTO(order));
-}
-
-async function createOrder(
-  input: CreateOrderInput,
-  deps: { db: Database }
-): Promise<Order> {
-  // call other domain's public API, never its internal DB queries
-  const available = await inventoryPublicApi.checkAvailability(input.items);
-  // ...
-}
-
-function parseCreateOrderInput(body: unknown): CreateOrderInput { /* ... */ }
-function toOrderDTO(order: Order): OrderDTO { /* ... */ }
-```
-
-**Cross-domain rules:**
-- Import only from another domain's public index (`features/inventory/index.ts`), never its internal files or DB tables directly
-- 1-2 external domains touched: direct import of their public use case
-- 3+ domains react to the same operation: emit a domain event (`OrderCreated`), let each domain handle it independently — direct coupling at this scale becomes a coordination nightmare
 
 ## Consistent Error Semantics
 
@@ -143,8 +39,6 @@ interface APIError {
 | 409 | Conflict | Duplicate key, version mismatch, state conflict |
 | 422 | Unprocessable | Syntactically valid but semantically wrong |
 | 500 | Server Error | Never expose internal details to client |
-
-**Never mix patterns.** If some endpoints throw, others return null, others return `{ error }` — the consumer cannot predict behavior. Pick one strategy, enforce it everywhere.
 
 ## API Versioning
 
@@ -232,7 +126,7 @@ GET /api/orders?page=1&pageSize=20&sortBy=createdAt&sortOrder=desc
 }
 ```
 
-**Always paginate list endpoints.** "We don't need pagination yet" is the rationalization. You will the moment someone has 100+ items.
+**Always paginate list endpoints.** "We don't need pagination yet" is the rationalization. You will the moment someone has 100+ items. Clamp client `limit`/`pageSize` to a documented server maximum.
 
 ## Removability over maintainability
 
@@ -250,14 +144,6 @@ Vertical slices align naturally with this goal: each slice is born as a removabl
 
 **Removability check before merging a new module:** "if this turns out to be the wrong design, what does the deletion diff look like?" If the answer is "we'd never delete it, we'd refactor it forever", the module is locking in a bet that hasn't proven itself yet — reduce its coupling before merging, or accept that you're past the experimentation phase. Reviews: new feature module with state schema read by 3+ other modules on day one -> flag "this isn't removable; either it's core or it's premature shared state"
 
-## Open for modification, not extension (for non-boundary code)
-
-The "Open/Closed Principle" tells you to make code open for extension and closed for modification. **This is true at system boundaries only.** For internal code that you fully control, the better goal is **easy modification** — keep the design lean enough that changing it is cheap, instead of pre-building extension hooks that imagine future needs.
-
-Extensibility hooks (strategy patterns, plugin slots, callback registries, configuration parameters with no current second user) are bets on future shape. Most bets are wrong; the cost is paid daily by readers navigating the indirection. Internal code that's easy to modify wins over internal code that's hard to modify but easy to extend in directions nobody asked for.
-
-Reviews: internal abstraction (strategy/plugin/extension point) with zero consumers outside its module -> flag "inline back; extensibility unearned"
-
 ## Avoid "entity services" in distributed architectures
 
 A service whose entire job is CRUD on entity X (`UserService`, `OrderService`, `LoanService` that just stores and returns the entity) is usually a misdesign. It treats the entity as if it has identity that requires a process to keep, when really the entity is **data** that flows between processes whose identity is the **task** they perform.
@@ -266,67 +152,13 @@ Better shape: task-shaped services (`Onboarding`, `Pricing`, `Fulfillment`) that
 
 Reviews: new microservice proposed as "the X service" with CRUD as its primary API -> flag "what task does this perform? if CRUD is the answer, this should be a table, not a service"
 
-## Always pass options explicitly at call sites
-
-Don't rely on a library's default arguments — pass them explicitly at every call site. This pins behavior at the call site rather than at the library boundary, surviving library upgrades that change defaults.
-
-```typescript
-// Bad: behavior depends on what `fetch` decides today
-await fetch(url);
-
-// Good: behavior pinned at this call, library upgrades cannot silently change it
-await fetch(url, {
-  method: 'GET',
-  redirect: 'error',
-  credentials: 'omit',
-  signal: AbortSignal.timeout(5_000),
-});
-```
-
-The cost is verbosity; the benefit is that no library upgrade silently changes your security posture. Especially important for: HTTP clients, crypto APIs, ORM query builders, auth middleware, file system operations. Reviews: hot-path I/O call relying on library defaults for safety-relevant behavior (redirects, credentials, timeouts, retries) -> flag "pass options explicitly"
-
-## Big-step interfaces over small-step
-
-When decomposing an interface into smaller internal handles makes it easier to **test** but harder to **use**, you've designed for the test harness, not the user. Compilers are tested with `compile(source) -> output`, not with separate `tokenize`/`parse`/`type-check`/`codegen` handles — even though the small-step decomposition would unit-test more granularly. The user-facing shape stays big-step; granular testing happens inside, hidden.
-
-Ask of every interface: "is this shape the user wants, or the test wants?" If a small-step decomposition leaks to callers solely to enable isolated testing, fold it back. Test through the big-step interface; the internal seams can still be tested via per-layer integration tests (see `testing` skill). Reviews: public API decomposed into a chain of internal handles the user must wire together for any single use case -> flag "expose the big-step operation; keep the small steps internal"
-
 ## Interface Stability Rules
 
-1. **Add, never remove.** New fields are optional. Removed fields break consumers.
+1. **Add, never remove.** New fields are optional. Removed fields break consumers. A new enum value breaks exhaustive clients: add one only under a documented "enums may grow, handle unknown" contract.
 2. **Never change field types.** `priority: string` becoming `priority: number` is a breaking change even if "nobody uses it" (Hyrum's Law: somebody does).
-3. **Discriminated unions for variants.** Each state carries exactly the fields it needs — no nullable fields that "only exist when status is X".
-
-   **Trigger — if you see a type with a `status`/`kind`/`type` string-union field AND one or more optional fields that "only apply when status is X" → it MUST be a discriminated union.** This is the most-missed rule. One object per variant, each listing only the fields that variant has; the discriminant field is a single literal per variant, not a shared union.
-
-   **Deleting the conditional fields is NOT the fix.** When a flat type has optional per-state fields, the correct refactor is to *redistribute* those fields into their variants — never to drop `trackingNumber`/`cancelledReason` because they were nullable. Dropping them loses real data the API must carry; modeling them as variants is the whole point.
-
-   ```typescript
-   // WRONG — flat type, mutually-exclusive fields all optional.
-   // Nothing stops a "pending" order from carrying a trackingNumber,
-   // or a "shipped" order from missing one. The type lies about reality.
-   interface Order {
-     id: OrderId;
-     status: "pending" | "shipped" | "cancelled";
-     trackingNumber?: string; // only when shipped
-     shippedAt?: Date;        // only when shipped
-     cancelledReason?: string; // only when cancelled
-   }
-
-   // RIGHT — one variant per state, each carrying exactly its own fields.
-   // The compiler now enforces that trackingNumber exists iff shipped.
-   type Order =
-     | { id: OrderId; status: "pending" }
-     | { id: OrderId; status: "shipped"; trackingNumber: string; shippedAt: Date }
-     | { id: OrderId; status: "cancelled"; cancelledReason: string };
-   ```
-
-   Rationale: optional fields make illegal states representable — every consumer must defensively null-check, and nothing prevents the wrong combination. A discriminated union makes illegal states unrepresentable: narrowing on `status` gives the caller exactly the fields that state has, no more. Reviews: type with a discriminant field + optional fields gated on its value -> flag "model as a discriminated union, one variant per state — do not delete the conditional fields".
-4. **Branded types for IDs.** `OrderId` and `UserId` are distinct types — prevents passing one where the other is expected.
-5. **Validate at boundaries only.** Trust internal code. Validate where external input enters: API handlers, form submissions, third-party responses, env vars. Never between internal functions sharing type contracts.
-6. **Sealed traits/interfaces** — prevent external implementation to allow adding methods without breaking changes. Use private module pattern (Rust) or private symbols (TS).
-7. **Mutations return the old value** — setter methods return the previous value: `fn set_name(&mut self, name: String) -> String`. Enables undo without extra reads.
-8. **Backward compat via re-export** — when renaming a type/function, maintain a `@deprecated` re-export from the old name for at least one major version. The re-export is the minimal migration bridge.
+3. **Branded types for IDs.** `OrderId` and `UserId` are distinct types — prevents passing one where the other is expected.
+4. **Sealed traits/interfaces** — prevent external implementation to allow adding methods without breaking changes. Use private module pattern (Rust) or private symbols (TS).
+5. **Mutations return the old value** — setter methods return the previous value: `fn set_name(&mut self, name: String) -> String`. Enables undo without extra reads.
 
 ## Progressive Disclosure
 
@@ -352,24 +184,6 @@ const app = createApp({
 ```
 
 Reviews: getting-started example requiring understanding of 10+ parameters -> flag "add progressive disclosure"
-
-## Pit of Success Design
-
-The correct usage is the easiest path. Incorrect usage requires explicit, visible effort.
-
-- **Secure defaults.** Authentication enabled, validation on, CORS restricted, timeouts set.
-- **Danger behind explicit namespace.** Bypassing safety requires calling `.dangerous()`, prefixing `unsafe_`, or using a dedicated namespace — never a boolean buried in options.
-- **Opaque types with accessors.** Don't expose internal representation. `Url` not `string`, `OrderId` not `number`.
-- **Impossible to misuse.** `fn connect(url: &Url)` not `fn connect(url: &str)` — validation at construction, not at use.
-
-```typescript
-// Pit of success: dangerous operations are explicitly named
-db.query(sql);                       // safe, parameterized
-db.dangerous().rawQuery(unsafeStr);  // explicit, visible in review
-
-// NOT pit of success: danger hidden in boolean
-db.query(sql, { raw: true });        // easy to miss in review
-```
 
 ## Consistent API Families
 
@@ -397,49 +211,6 @@ Practical instances:
 - `Result`-returning functions that lift back into `Result<T, E>` instead of unwrapping at each hop
 
 Reviews: operation that returns a one-off shape callers must convert before passing into the next operation in the family -> flag "close over a shared type so the family composes"
-
-## Single Object Parameter
-
-Public functions with 3+ parameters use a single options object. Enables adding options without breaking changes. Calls become self-documenting.
-
-```typescript
-// WRONG — positional args, easy to swap, hard to extend
-createUser('john', 'admin', true, 30);
-
-// RIGHT — single object, self-documenting, extensible
-createUser({ name: 'john', role: 'admin', verified: true, quotaLimit: 30 });
-```
-
-Also use objects when 2+ consecutive params share the same type — positional same-type args compile even when swapped silently.
-
-## Interface-introduction triage
-
-Before adding any new `interface` / `trait` / `abstract class`, classify it. Only the last category justifies the interface; the first three are workarounds masquerading as abstractions.
-
-| Case | Real intent | Right tool |
-|---|---|---|
-| Single-method "callback" interface | Missing function type | Use a function type: `(event: Event) => void` |
-| Sum of variants disguised as interface | Missing discriminated union | Use a discriminated union: `type Result = Ok \| Err` |
-| Interface with exactly one implementation | Premature abstraction | Inline the concrete type, delete the interface |
-| Interface with N implementations selected at runtime, owned outside this module | Real polymorphism over open variants | Keep the interface |
-
-Reviews: interface with 0 or 1 implementations -> flag "remove or replace with discriminated union"; interface with a single method and all implementations inside the codebase -> flag "use function type"
-
-## Return-type dimensionality ladder
-
-Every step UP this ladder forces a new branch at every call site. Prefer the simplest type that does the job — and when forced higher, do it deliberately.
-
-```
-void  <  bool  <  T  <  Option<T>  <  Result<T, E>
-```
-
-- **`void`**: callers can't branch on the result at all (best for pure side effects with diagnostic-complete errors via Result on the error path).
-- **`bool`**: one bit of state, two branches. Use only when the two states are genuinely symmetric (success/failure of equal interest).
-- **`T`**: a value, no absence to handle. Use when the function never reasonably "doesn't have a value".
-- **`Option<T>`**: value or normal absence. Caller must consider both.
-- **`Result<T, E>`**: value or failure with diagnostic info. Caller must consider success path AND each error variant.
-
-Reviews: function returning `Result<T, E>` where the error variants are never observed and absence would suffice -> flag "downgrade to `Option<T>`"; function returning `Option<T>` where `T | null` could not occur and the function is total -> flag "downgrade to `T`".
 
 ## Interface/Trait Design for Extensibility
 
@@ -475,25 +246,7 @@ Operational patterns as first-class API citizens:
 GET /health → { "db": "ok", "cache": "degraded", "queue": "ok", "status": "degraded" }
 ```
 
-**Idempotency** — POST endpoints accept an `Idempotency-Key` header. Duplicate requests return the cached response. Prevents double-charges, double-creates on network retries.
-
-## Mirroring Pattern (SDK / REST)
-
-When a system exposes both SDK and HTTP API, each HTTP endpoint parses parameters and delegates to the corresponding SDK operation. Zero logic duplication between the two paths.
-
-```typescript
-// HTTP handler — parse + delegate only (max ~50 lines)
-async function createOrderHandler(req: Request) {
-  const input = parseCreateOrderInput(req.body);
-  const order = await createOrder(input, { db: req.db });
-  return json(toOrderDTO(order));
-}
-
-// SDK operation — ALL business logic lives here
-async function createOrder(input: CreateOrderInput, deps: Deps): Promise<Order> { /* ... */ }
-```
-
-Reviews: business logic duplicated in HTTP handler when SDK operation exists -> flag "delegate to SDK operation"
+**Idempotency** — POST endpoints accept a client-generated `Idempotency-Key` (one per intent, reused across retries). Claim it atomically via a unique constraint; duplicate returns the cached response, same key with a different payload hash → 422, still in flight → 409 (or 202). Retain keys longer than the longest client retry path.
 
 ## Red Flags
 
@@ -502,13 +255,9 @@ Reviews: business logic duplicated in HTTP handler when SDK operation exists -> 
 - List endpoints without pagination
 - Verbs in REST URLs (`/api/createOrder` instead of `POST /api/orders`)
 - Breaking changes to existing fields (type changes, removals)
-- Third-party API responses used without validation
-- Boolean params that control branching — split into named endpoints
 - `PUT` where `PATCH` is what clients actually want
 - Public API without documentation on any export
-- Interface with a single implementation (unjustified abstraction)
 - Getting-started example requiring understanding of 10+ parameters (no progressive disclosure)
-- Dangerous operation easier to call than the safe path (inverted pit of success)
 - Function family where members have inconsistent signatures
 - `/health` returning 200 when a critical dependency is down
 - Convenience wrapper that bundles many concepts behind one call but exposes no incremental layer — when the caller's needs diverge, they must learn every hidden concept at once (`create-react-app` → `eject` problem)

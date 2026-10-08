@@ -63,7 +63,10 @@ an HTML artifact.
 - Mechanics: chrome-devtools `resize_page` 1280 wide →
   `navigate_page`, logged in as the role that sees the screen, QA
   data → `take_screenshot` (full page when the change sits below
-  the fold) → `<report-dir>/capture-<screen>-<avant|après>.png`.
+  the fold) to `<main-repo>/.qa-shots/capture-<screen>-<avant|après>.png`
+  (chrome-devtools writes only under the session root, the main
+  checkout: never a worktree nor the
+  report dir), then `mv` it to `<report-dir>/`; never commit it.
   Upload each with `glab api --method POST projects/:id/uploads -F
   file=@<png>` and embed the returned `markdown`. GitHub: paths in the report, no embed.
 - Placement: right under the "what the MR changes" sentence. Pair =

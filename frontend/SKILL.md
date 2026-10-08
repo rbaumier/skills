@@ -30,6 +30,11 @@ Before shipping any UI, run this checklist. If 3+ items are true, the design loo
 - [ ] Pure black (#000) or pure white (#fff) — never tinted
 - [ ] Same spacing everywhere — no visual rhythm
 - [ ] Cards nested inside cards
+- [ ] Cream + terracotta palette
+- [ ] ALL-CAPS eyebrow above every heading
+- [ ] 01/02/03 numbering on things that aren't a sequence
+- [ ] One accent-colored word in the headline
+- [ ] `→` appended to links
 
 **The test**: If someone saw this UI and said "AI made this", would they be right? A distinctive interface makes someone ask "how was this made?" not "which AI made this?"
 

@@ -151,7 +151,7 @@ function CreatePostForm() {
 ## Context
 
 - Network boundary = trust boundary - always validate
-- Use `.validator()` before `.handler()` in the chain
+- Use `.inputValidator()` (`.validator()` is superseded) before `.handler()` in the chain
 - Validation errors return proper HTTP status codes
 - Share schemas between client forms and server functions
 - Strip or ignore fields clients shouldn't control (like `role`, `isAdmin`)

@@ -234,12 +234,11 @@ def from_foyer(foyer, bareme, pfu_data):
     net_pensions = abattement_pensions(pensions, bareme) if pensions else 0
 
     # Autres revenus ajoutés au RNI sans abattement (simplification) :
-    # revenus fonciers (déjà calculés au net), chômage (pas d'abattement)
+    # revenus fonciers (déjà calculés au net)
     fonciers = r.get("revenus_fonciers_reels", 0) + r.get("revenus_fonciers_micro", 0)
-    chomage = r.get("revenus_chomage", 0)
 
     # Revenus imposables au barème (hors revenus du capital si PFU)
-    revenu_global = net_salaires + net_pensions + fonciers + chomage
+    revenu_global = net_salaires + net_pensions + fonciers
 
     # Déductions (PER + pension alimentaire + CSG déductible)
     per = d.get("per_declarant1", 0) + d.get("per_declarant2", 0)
@@ -318,7 +317,7 @@ def main():
         print(f"  Décote .......................... {-result['decote']:>10} €")
         print(f"  Impôt après décote .............. {result['impot_apres_decote']:>10} €")
         if result["prelevements_sociaux"]:
-            print(f"  PS 17,2% sur revenus capital .... {result['prelevements_sociaux']:>10} €")
+            print(f"  PS sur revenus capital .......... {result['prelevements_sociaux']:>10} €")
         if result["cehr"]:
             print(f"  CEHR ............................ {result['cehr']:>10} €")
         print(f"  ─────────────────────────────────────────────────")

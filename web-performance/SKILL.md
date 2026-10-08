@@ -132,7 +132,7 @@ What is slow?
 ## 5-Phase Audit Workflow
 
 ### Phase 1: Performance Trace
-- Capture baseline with Chrome DevTools Performance tab or Lighthouse CLI
+- Capture baseline with Chrome DevTools MCP `performance_start_trace` + `performance_analyze_insight` (not `lighthouse_audit`) or Lighthouse CLI. No runnable page → label findings as hypotheses, each with a verify command
 - `npx lighthouse URL --only-categories=performance --output=json --output-path=./report.json`
 - `npx lighthouse URL --preset=perf --throttling-method=simulate --output=html` for mobile simulation
 - Key trace thresholds: main thread busy < 4s total, largest task < 250ms, script eval < 2s, layout/style recalc < 500ms. If any exceed these, that's your bottleneck

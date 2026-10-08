@@ -13,7 +13,7 @@ bunx react-doctor@latest
 
 Use the project's runtime if Bun isn't installed: `pnpm dlx react-doctor@latest` or `npx react-doctor@latest`. Pick whatever matches the lockfile.
 
-Treat each diagnostic in the output as a finding, with file:line taken from react-doctor's report. Rank them by the priority table below.
+Re-read each diagnostic at its file:line; drop false positives and deliberate disables. Rank the rest by hot-path impact via the priority table below, not by react-doctor's severity.
 
 `react-doctor` runs the mechanical checks this skill encodes by hand (hook deps, SSR-unsafe patterns, bundle hazards, common Next.js misuses). Letting it go first catches those cheaply so your manual review can focus on the judgment calls.
 

@@ -24,9 +24,9 @@ description: Use when writing prose for humans — internal comms, status update
 - Structured data output (JSON, YAML, etc.)
 
 ## Rules
-- Cut filler, hedging, corporate fluff, gratuitous enthusiasm
+- Cut filler, hedging, corporate fluff, gratuitous enthusiasm. When editing, keep load-bearing qualifiers: "may" stays, "suggests" never becomes "shows"
 - Active voice default; passive only when actor irrelevant
-- Concrete over abstract: specific numbers, names, dates
+- Concrete over abstract: specific numbers, names, dates. Never invent them: mark the gap (`[example needed: …]`) or ask
 - Short sentences for impact, longer for nuance
 - Ban: "delve," "leverage," "utilize," "in order to," "worth noting," "multifaceted," "foster," "realm," "tapestry"
 - No AI warmth, no sycophancy

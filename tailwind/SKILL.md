@@ -4,7 +4,7 @@ description: "Use when styling with Tailwind CSS — utility classes, design tok
 ---
 
 ## Gotchas
-- Dynamic `bg-${color}-500` purged in production; use complete strings or safelist
+- Dynamic `bg-${color}-500` purged in production; use complete strings or `@source inline("…")` (v4 has no JS safelist)
 - `@apply` in components defeats utility-first; only for base layer
 - v4 uses CSS-first config (`@theme`), don't mix with tailwind.config.js
 
@@ -125,6 +125,7 @@ description: "Use when styling with Tailwind CSS — utility classes, design tok
 - @theme {} in CSS replaces tailwind.config.ts
 - Auto content detection, no content array; never include node_modules
 - bg-black/50 not bg-opacity-50
+- Scale shifted one step: rename `shadow-sm`→`shadow-xs` and `rounded-sm`→`rounded-xs` first, then bare `shadow`→`shadow-sm`, `rounded`→`rounded-sm`
 - Replace tailwindcss-animate with native CSS animations
 - **`@plugin` directive for third-party plugins**: use `@plugin '@tailwindcss/typography'` in CSS instead of the old `plugins` array in tailwind.config.js. The `@plugin` directive is the v4 way to load plugins
 - @utility for custom utilities; @custom-variant for conditional styles
@@ -132,7 +133,7 @@ description: "Use when styling with Tailwind CSS — utility classes, design tok
 
 ### v4 Custom Utilities & Theme Modifiers
 - `@utility` directive for custom utilities — replaces plugin-based addUtilities. Define once, use with responsive/state variants automatically: `@utility content-grid { display: grid; grid-template-columns: ... }`
-- Theme modifiers: access @theme tokens in arbitrary values via `theme()` function — e.g. `bg-[theme(--color-brand-primary)]`. Useful when you need a token value outside normal utility context (SVG fills, box-shadow custom values)
+- Theme modifiers: access @theme tokens in arbitrary values via `var()` — e.g. `bg-[var(--color-brand-primary)]` (`theme()` is deprecated in v4). Useful when you need a token value outside normal utility context (SVG fills, box-shadow custom values)
 - `@variant` compose existing variants: `@custom-variant hocus (&:hover, &:focus)` — one variant instead of repeating hover: and focus: everywhere
 
 ### Components

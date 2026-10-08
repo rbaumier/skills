@@ -206,13 +206,8 @@ See [references/tagged-errors.md](references/tagged-errors.md) for TaggedError p
 ## Workflow
 
 1. **Check for source reference**: Look for `opensrc/` directory - if present, read the better-result source code for implementation details and patterns
-2. **Audit**: Find try/catch, Promise.catch, thrown errors in target module
-3. **Define errors**: Create TaggedError classes for domain errors
-4. **Wrap boundaries**: Use Result.try/tryPromise at I/O points
-5. **Chain operations**: Convert if/else error checks to .andThen or Result.gen
-6. **Update signatures**: Change return types to Result<T, E>
-7. **Update callers**: Propagate Result handling up call stack
-8. **Test**: Verify error paths with .match or type narrowing
+2. **Audit** (report only, no code change): list try/catch, Promise.catch, thrown errors and propose slices. Complete when the user approves one named slice.
+3. **Migrate that slice only**: TaggedErrors for its domain errors, Result.try/tryPromise at I/O points, .andThen or Result.gen for error checks, Result<T, E> signatures, callers in the slice. Complete when every error path is tested (.match or type narrowing).
 
 ## Rules
 
@@ -226,6 +221,7 @@ See [references/tagged-errors.md](references/tagged-errors.md) for TaggedError p
 - **Losing error info**: Always include cause/context in TaggedError constructors.
 - **Mixing paradigms**: Once a module returns Result, callers should too (or explicitly .unwrap).
 - **Ignoring Panic**: Callbacks that throw become Panic. Fix the bug, don't catch Panic.
+- **Nested Result**: Never wrap a Result-returning call in Result.try/tryPromise (yields Ok(Result)); return it or `yield*` it.
 
 ## References
 

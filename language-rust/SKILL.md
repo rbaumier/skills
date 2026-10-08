@@ -240,4 +240,4 @@ cargo clippy --all --all-features --all-targets -- -D warnings
 comply <changed files>   # ~2000 rules incl. the Rust family above; comply also runs clippy with its own lint set
 ```
 
-Fix every warning and every comply diagnostic (false positive → open an issue on comply, don't suppress). Suppress only with `#[expect(.., reason = "...")]` when the lint is provably wrong there (ci-7).
+Fix every warning and every comply diagnostic (false positive → `comply report-fp <rule_id> <path:line> --reason "<why>" --model <your model>` AND open an issue on comply, don't suppress). Suppress only with `#[expect(.., reason = "...")]` when the lint is provably wrong there (ci-7).

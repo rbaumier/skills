@@ -1,6 +1,6 @@
 ---
 name: coding-standards:quality-bar-review
-description: Use whenever reviewing code, a diff, a PR, or staged changes in any language — always apply when assessing a code change. The synthesized one-page review checklist mirroring coding-standards:quality-bar (author side): flags scope, simplicity, module boundaries, types, error handling, tests, naming — plus the correctness, completeness, and security passes review adds. Invoke as /coding-standards:quality-bar-review.
+description: "Use whenever reviewing code, a diff, a PR, or staged changes in any language — always apply when assessing a code change. The synthesized one-page review checklist mirroring coding-standards:quality-bar (author side): flags scope, simplicity, module boundaries, types, error handling, tests, naming — plus the correctness, completeness, and security passes review adds. Invoke as /coding-standards:quality-bar-review."
 ---
 
 # Quality bar — review checklist
