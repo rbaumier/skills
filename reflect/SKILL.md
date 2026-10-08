@@ -40,7 +40,9 @@ Per candidate, in order — first failure rejects:
 3. **Already covered?** grep `~/.claude/skills` → Rejected with the
    pointer. Covered but didn't fire → the fix is the trigger: an
    Accepted `tune: <catalog line>` on `_shared/SKILLS.md`.
-4. **Structural rework** (new mechanism, new skill, big reshape) →
+4. **Mechanical?** (fixed pattern, banned API) → a check (lint,
+   hook, CI), never a prose rule; Backlog unless trivial.
+5. **Structural rework** (new mechanism, new skill, big reshape) →
    Backlog, never Accepted directly.
 
 Anti-obesity: an Accepted delta is ≤2 lines grafted onto an existing

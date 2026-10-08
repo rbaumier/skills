@@ -27,10 +27,12 @@ An issue states the NEED, never the how. Three qualities gate creation:
 ## Your role
 
 You route, validate with the user and never draft yourself. The
-scoping and the draft run in ONE fable subagent (`issue-scoper`, effort
-pinned); everything mechanical (forge reads, repo check, forge writes)
-runs in subagents pinned `model: "opus"`. You never read the
-repository, never load a skill and never call the forge yourself.
+scoping and the draft run in an opus subagent (`issue-scoper`); a
+opus subagent (`issue-reviewer`) judges the draft, cap 3 rounds;
+both load `ponytail` as their only skill. Everything mechanical
+(forge reads, repo check, forge writes) runs in subagents pinned
+`model: "opus"`. You never read the repository, never load a skill
+and never call the forge yourself.
 
 Report routing: a subagent writes its report to a scratchpad file and
 ends with ONE line — verdict + path. You read the file; never recopy a
@@ -67,10 +69,11 @@ Rule on the verdicts yourself:
 - **contradiction** (feature already there, bug not reproducible, ask
   conflicts with an ADR) → stop and surface it; never write around it.
 
-### 2. Scope & draft — one `issue-scoper` spawn
+### 2. Scope, draft, review — `issue-scoper` ‖ `issue-reviewer`, cap 3
 
 Spawn ONE `issue-scoper` (`subagent_type: "issue-scoper"`, never with
-`model`) handed: `$ARGUMENTS`, the briefing path, a drafts dir, the
+`model`) — it loads `ponytail` and weighs the ask on its ladder —
+handed: `$ARGUMENTS`, the briefing path, a drafts dir, the
 project language from the cache, and `SCOPER.md` (path). It ends
 `DRAFTED <dir>` (one file per draft, `split.md` when it proposes a
 split), `CONTEST <path>` (a config change, an existing feature, a doc
@@ -78,8 +81,16 @@ fix or doing nothing covers the need) or `FAILED <path>`.
 
 - **CONTEST** → print the file, ask the user; on "draft anyway",
   respawn with the ruling.
-- **split** → `AskUserQuestion` with the titles and one-line scopes
-  of `split.md`; a refused split → respawn with the ruling.
+- **split** → `AskUserQuestion` with the titles, scopes and
+  parallelism costs of `split.md`; a refused split → respawn with
+  the ruling.
+- **DRAFTED** → spawn ONE `issue-reviewer` (round `c`, never with
+  `model`) handed: `$ARGUMENTS`, the briefing path, the drafts dir,
+  `REVIEWER.md` (path). `DRAFT-OK` → step 3. `DRAFT-REWORK <path>` →
+  respawn the scoper with that path (it amends the drafts, answers
+  each finding in `<dir>/review-response-<c>.md`), then round `c+1`.
+  `CONTEST` → as above. After review 3 → step 3 whatever the verdict,
+  the open findings printed under the draft.
 
 ### 3. Validate with the user
 
@@ -95,7 +106,7 @@ dependency order from the files, substitutes each `#{<slug>}` with the
 number the forge returned, links dependents (blocked-by), and ends
 `CREATED <url> [<url> …]` or `PUBLISH-FAILED <path>`. Print the URLs
 in dependency order. You never call the forge: the body leaves the
-fable once, as the file.
+reviewer once, as the file.
 
 ## Body template
 

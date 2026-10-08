@@ -43,19 +43,31 @@ Three leading words govern the run:
 4. **Create the run dir.** Pick a run id (timestamp or short slug) and create one
    absolute directory `<project-or-scratchpad>/qa-run-<id>/`, then
    `mkdir -p <run-dir>/evidence/` for artifacts (redirects and `tee` do NOT
-   create parent dirs — the subdir must exist first). Copy `templates/report.md`
-   (relative to this skill's directory) to `<run-dir>/report.md` — all matrix and
+   create parent dirs — the subdir must exist first). Copy `templates/matrix.md`
+   (relative to this skill's directory) to `<run-dir>/matrix.md` — all matrix and
    report writes go to the copy, never the template. Reuse `<id>` verbatim
    wherever a run-scoped literal is needed (tmux session name, etc.).
+   Screenshots: chrome-devtools writes only under its workspace root (the
+   session's repository, the main checkout), so the scratchpad, a worktree and
+   `loop-reports/` are refused.
+   `take_screenshot` saves to `<repo>/.qa-shots/<id>/`, then `mv` the files to
+   `<run-dir>/evidence/`; never commit `.qa-shots/`.
 5. **Smoke the target.** Drive one real end-to-end round trip per surface with
    the actual credentials — log in, hit one authenticated endpoint, run one
    real command — and capture the artifact to `evidence/`. A failed smoke means
    the environment is broken, not the feature: **stop and report ABORTED**
    (Phase 5), naming the broken precondition. Never spawn agents against a
    target you could not drive yourself.
+   **Waiting, never a `sleep` loop** (a hook refuses it). A service that is
+   starting: ONE bounded command, `curl -sf --retry 60 --retry-delay 2
+   --retry-all-errors --retry-connrefused --max-time 2 <url>/health`. A
+   long-lived process (dev server): start it with `run_in_background`, then
+   probe it that way. The assault agents: spawn them with `Agent`, then end
+   your turn; each one's completion wakes you. Never poll for their evidence
+   files.
 
 **Completion:** target reachable, confirmed non-prod, allowlist written, run dir
-created with an `evidence/` subdir and the report copy inside, smoke passed with
+created with an `evidence/` subdir and the matrix copy inside, smoke passed with
 its artifact on disk.
 
 ## Phase 2 — Explore
@@ -93,7 +105,7 @@ harness file path (shipped or ad-hoc) ready to hand to a subagent.
 
 ## Phase 3 — Enumerate
 
-For each entry point, write use-case rows to `<run-dir>/report.md` — happy
+For each entry point, write use-case rows to `<run-dir>/matrix.md` — happy
 paths AND error paths — each with status `UNTESTED`. Cover, at minimum:
 
 - **Happy path** — intended flow, valid input.
@@ -111,7 +123,7 @@ paths AND error paths — each with status `UNTESTED`. Cover, at minimum:
 
 Re-read the inventory once to catch entry points you missed.
 
-**Completion:** matrix written to the report copy, reread once for gaps.
+**Completion:** matrix written to the matrix copy, reread once for gaps.
 
 ## Phase 4 — Assault
 
@@ -120,11 +132,14 @@ starts with a fresh context — it sees only its prompt, so every prompt below i
 a **template you fill** with absolute values before spawning. Leave no `{{slot}}`
 unfilled.
 
-**Order:** sequential by default, **Verifier first, then Breaker** — the
-Breaker's hostile mutations would poison the Verifier's rows and make FAILs
-unattributable. Run them in parallel ONLY when they touch disjoint state AND
-neither drives the shared Chrome instance (the chrome-devtools MCP is a single
-browser).
+**Order:** in parallel when the environment gives each agent its own
+state — two separately seeded tenants/accounts (one per agent) and, for a UI,
+its own isolated browser context (chrome-devtools `new_page` with its own
+`isolatedContext`, that `pageId` on every call). The Breaker then never touches
+global state both share (a billing catalogue, rate limits, feature flags,
+anything not scoped to its tenant): mutating it would poison the Verifier's rows
+and make FAILs unattributable. Without two tenants or two browser contexts:
+sequential, **Verifier first, then Breaker**.
 
 Verifier prompt template:
 
@@ -132,12 +147,13 @@ Verifier prompt template:
 > TARGET: {{target url/command + how to reach/launch it, credentials}}
 > ALLOWLIST: you may touch ONLY these hosts/paths: {{allowlist}}. Never follow a
 > link or request to any other host.
-> MATRIX: read {{run-dir}}/report.md — the coverage matrix. HARNESS: read
+> MATRIX: read {{run-dir}}/matrix.md — the coverage matrix. HARNESS: read
 > {{harness file path(s)}} before testing.
 > EVIDENCE DIR: write every artifact under {{run-dir}}/evidence/ (already exists)
 > with a filename naming the row (e.g. `row-3-login-empty.png`).
 > BUDGET: {{budget or "none"}} — at T-2min, stop and mark remaining rows
 > BLOCKED(budget).
+> TENANT: {{the tenant/account you own; "shared" when run sequentially}}.
 > FUSE: distinguish a row-specific block from an env-block — the environment
 > itself is broken (cannot authenticate, target unreachable, dependency down).
 > On an env-block, stop immediately: mark all remaining rows BLOCKED(env) and
@@ -150,7 +166,9 @@ Verifier prompt template:
 > say why). A row with no artifact on disk is not PASS. Never conclude "works"
 > from a page that merely loaded or a 200 with an unchecked body. Record every
 > write you make (record created, file written, mutating request) in a
-> "Mutations" list. Return: the completed matrix with a verdict + artifact path
+> "Mutations" list. Before returning, close every Chrome tab you opened
+> (chrome-devtools `close_page`) — leave the browser as you found it.
+> Return: the completed matrix with a verdict + artifact path
 > per row, a BLOCKED count, and the Mutations list.
 
 Breaker prompt template:
@@ -162,18 +180,26 @@ Breaker prompt template:
 > HARNESS: read {{harness file path(s)}}. EVIDENCE DIR: {{run-dir}}/evidence/
 > (already exists) — name each artifact `bug-<n>-<slug>` to avoid clashing with
 > the verifier's `row-*` files.
-> BUDGET: {{budget or "none"}}.
+> BUDGET: {{budget or "none"}} — enforced: at T-2min, stop and return what you
+> have.
+> TENANT: {{the tenant/account you own}} — never touch global state
+> ({{shared state to leave alone, e.g. billing catalogue, rate limits}}).
+> TARGETS: {{the boundaries the change opens or modifies — the hostile cases the
+> caller names; "whole surface" only when the caller names none}}. Attack these,
+> not the whole application.
 > FUSE: if the environment itself dies (cannot authenticate, target
 > unreachable), stop and return immediately, naming the broken precondition —
 > never keep rounds running against a dead target.
-> The matrix at {{run-dir}}/report.md is what's already covered — hunt
+> The matrix at {{run-dir}}/matrix.md is what's already covered — hunt
 > OUTSIDE it. Throw hostile input: malformed payloads, injection strings,
 > unicode/emoji, 1–10 MB values, negative and boundary numbers, double-submits,
 > back/refresh mid-flow, expired/forged tokens (note it as an untried lever in your
 > return if you can't obtain one), race conditions, empty states, rapid repeats. Capture evidence to the
 > evidence dir for every bug. Work in rounds; keep hunting until **dry** — two
 > consecutive rounds with zero new bugs. Record every write you make in a
-> "Mutations" list. Return: every bug with repro steps, evidence path, and
+> "Mutations" list. Before returning, close every Chrome tab you opened
+> (chrome-devtools `close_page`) — leave the browser as you found it.
+> Return: every bug with repro steps, evidence path, and
 > severity; a per-round tally ("Round 3: 0 new"); and the Mutations list.
 
 **Fuse (parent):** an agent returning an env-block ends the run — spawn nothing
@@ -188,7 +214,7 @@ first yields status **PARTIAL**, never a false all-green.
 
 ## Phase 5 — Report
 
-Complete `<run-dir>/report.md`:
+Complete `<run-dir>/matrix.md`:
 
 1. **Coverage matrix** — every use case → verdict → evidence path. Each PASS/FAIL
    points to an artifact verified on disk; a BLOCKED row carries a reason instead.
@@ -207,7 +233,9 @@ Complete `<run-dir>/report.md`:
    Medium/Low findings and BLOCKED rows are listed as reservations.
 
 **Completion:** every PASS/FAIL verdict and every finding points to an artifact
-you confirmed on disk; BLOCKED rows carry a stated reason.
+you confirmed on disk; BLOCKED rows carry a stated reason. **Teardown:** before
+writing the verdict, close every Chrome tab the run opened (chrome-devtools
+`list_pages` then `close_page`) — the browser must be back to its pre-QA tab set.
 
 ## Common rationalizations (parent-facing)
 

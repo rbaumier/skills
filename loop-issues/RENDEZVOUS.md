@@ -1,8 +1,8 @@
 # Rendezvous — loop-issues
 
 How the orchestrator waits on a child and how a child reports. Only
-the orchestrator spawns and waits; every other agent is a leaf and
-needs only § Report.
+the orchestrator spawns and waits on phases; every other agent is a
+leaf and reads § Waiting and § Report.
 
 ## Harness facts
 
@@ -28,7 +28,9 @@ Monitor on a `.done`. Two children in flight → the first completion
 resumes you; the other still running → end your turn again.
 
 Work that must finish before you continue (trio, comply, gates, a
-readiness probe) runs in the FOREGROUND: one `curl`, never a loop; a
+readiness probe) runs in the FOREGROUND: one bounded `curl -sf --retry 60
+--retry-delay 2 --retry-all-errors --retry-connrefused --max-time 2
+<url>`, never a loop; a
 command that cannot finish inside the 10-min Bash cap is split
 (check / test / build apart, tests by package), never backgrounded.
 A long-lived process (dev server) is backgrounded and never awaited.
@@ -41,7 +43,15 @@ hour to two such turns, and four phases each fired five to eight
 phantom completions afterwards, one per leftover timer, every one of
 them saying only "no action needed". Never arm a Monitor or a
 background timer to wait on your OWN command: block on it in the
-foreground, and when it exceeds the cap, split it.
+foreground, and when it exceeds the cap, split it. A leaf that ends
+its turn saying it is waiting on a background gate has violated this
+brief: the orchestrator treats it as a brake (SKILL.md § Slowness is
+yours), not as progress.
+
+The orchestrator never ends its turn on a transition: the next spawn
+is in flight before it writes the summary line, at every phase, and
+nothing — no sub-orchestrator, no per-slot orchestrator — sits
+between it and the leaves.
 
 Needing a child again (re-check, QA re-run) = a NEW spawn handed
 the previous report path — never a SendMessage to the old one.

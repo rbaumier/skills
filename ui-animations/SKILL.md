@@ -55,7 +55,7 @@ This is the single source of truth. Verify EVERY numbered item against EVERY ani
 **Feedback, separation, motion safety**
 17. **Button press feedback.** Every button gets `whileTap={{ scale: 0.97 }}` (Framer) or `:active { transform: scale(0.97) }` (CSS).
 18. **Shadows, not borders, on variable backgrounds.** When `background` is a variable/token (e.g. `var(--card-bg)`) or can change, use `box-shadow` for separation, not `border: 1px solid`.
-19. **No vestibular triggers.** No large zoom, spin, or parallax tied to scroll. Cap any scroll/scale to the 0.95–1.05 range. A hero scaling `0.5 → 1.3` is forbidden — clamp to ≤1.05 or remove.
+19. **No vestibular triggers.** No large zoom, spin, or parallax tied to scroll. Cap any scroll/scale to the 0.95–1.05 range. A hero scaling `0.5 → 1.3` is forbidden — clamp to ≤1.05 or remove. Pass `useScroll`/`useTransform` MotionValues straight to `style`; never read them into `useState` or effect deps.
 20. **No continuous purposeless animation.** Remove decorative `repeat: Infinity` rotations/loops, or make them pausable. A purely decorative `animate={{ rotate: 360 }}` infinite spinner must go.
 21. **Keyboard-initiated actions don't animate.** A Cmd+K / keyboard handler that opens UI should NOT trigger an entrance animation (Emil's rule) — open instantly.
 22. **`prefers-reduced-motion`.** Add reduced-motion handling: `useReducedMotion()` (set `duration: 0` when true) and/or a CSS `@media (prefers-reduced-motion: reduce)` kill switch. Always animate to the final state, just skip the motion.
@@ -167,7 +167,7 @@ function PageTransition({ children, pathname }: { children: React.ReactNode; pat
         key={pathname}
         initial="initial" animate="animate" exit="exit"
         variants={pageVariants}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       >
         {children}
       </motion.div>
@@ -183,7 +183,7 @@ Parent controls the stagger delay, children inherit via `variants`. Each child d
 ```tsx
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
 }
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -263,7 +263,7 @@ function AnimatedNumber({ value }: { value: number }) {
     v.toLocaleString(undefined, { maximumFractionDigits: 2 })
   )
   useEffect(() => {
-    const controls = animate(count, value, { duration: 0.5, ease: 'easeOut' })
+    const controls = animate(count, value, { duration: 0.5, ease: [0.16, 1, 0.3, 1] })
     return controls.stop
   }, [value, count])
   return <motion.span>{formatted}</motion.span>

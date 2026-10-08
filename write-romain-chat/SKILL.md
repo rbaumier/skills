@@ -119,7 +119,7 @@ Read CLAUDE.md. <Fichiers/diff à lire>.
 
 **Exemples (réels)**
 - `Enforce language-rust HIGH only. Read /Users/rbaumier/www/comply/CLAUDE.md. Read /tmp/review-diff-afk-157.patch. "No findings." or JSON envelope.`
-- `Code-review for #135. Read CLAUDE.md. Load coding-standards:design. Run rtk proxy git diff main...HEAD. Stay within the diff. Output: a flat list of findings.`
+- `Code-review for #135. Read CLAUDE.md. Load coding-standards:design. Run git diff main...HEAD. Stay within the diff. Output: a flat list of findings.`
 
 ---
 
@@ -179,3 +179,5 @@ Si un test échoue → réécris.
 - **NE fonds pas les deux registres.** Une demande conversationnelle FR avec des
   bouts de template d'agent (« No findings. or JSON envelope ») ne ressemble à rien.
 - **NE rallonge pas.** Densité > exhaustivité.
+- **N'invente rien** : ni fait, nom, chiffre ou décision qu'il n'a pas donné. Une
+  question ouverte reste ouverte ; un fait manquant devient `[à compléter]`.

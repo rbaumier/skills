@@ -26,7 +26,9 @@ Same as ponytail-review:
 
 Deps the stdlib or platform already ships, single-implementation interfaces,
 factories with one product, wrappers that only delegate, files exporting one
-thing, dead flags and config, hand-rolled stdlib.
+thing, dead flags and config, hand-rolled stdlib, helpers duplicating existing
+repo ones. Before any `delete:`, grep the whole tree for the symbol, including
+tests, fixtures, and dynamic or string references.
 
 ## Output
 
@@ -35,6 +37,7 @@ End with `net: -<N> lines, -<M> deps possible.` Nothing to cut: `Lean already. S
 
 ## Boundaries
 
-Complexity only, correctness bugs, security holes, and performance go to a
-normal review pass. Lists findings, applies nothing. One-shot.
+Scope: over-engineering and complexity only. Correctness bugs, security holes,
+and performance are explicitly out of scope. Route them to a normal review
+pass. Lists findings, applies nothing. One-shot.
 "stop ponytail-audit" or "normal mode" to revert.

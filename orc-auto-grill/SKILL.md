@@ -38,7 +38,7 @@ Do not loop forever. When decisions stop adding value, stop.
 
 End with a clean recap so the user can review and override in one pass:
 
-- **Decisions** — a numbered list of `Question → chosen answer (A/B/C)`, each with its one-line reason.
+- **Decisions** — a numbered list of `Question → chosen answer (A/B/C)`, each with its one-line reason. Tag decisions resting on facts only the user holds **Unconfirmed assumption**.
 - **Resolved plan** — the plan rewritten with every decision baked in.
 - **Override?** — invite the user to flip any letter; re-resolve anything downstream that depended on it.
 

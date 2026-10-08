@@ -17,7 +17,7 @@ description: "Use when building mobile apps with React Native or Expo — iOS, A
 - Pure backend/API work
 
 ## Rules
-- Use Expo + EAS Build over bare React Native
+- Use Expo over bare React Native; try Expo Go first, custom builds only for local modules, Apple targets or native modules absent from Expo Go
 - Expo Router for all file-based navigation
 - Auth via context + SecureStore + route protection
 - Offline-first via React Query + AsyncStorage + NetInfo sync
@@ -37,7 +37,7 @@ description: "Use when building mobile apps with React Native or Expo — iOS, A
 - Tab layout: `app/(tabs)/_layout.tsx` with `<Tabs>` component
 - Stack: `app/(stack)/_layout.tsx` with `<Stack>`
 - Modal: `app/modal.tsx` + `presentation: 'modal'` in Stack.Screen options
-- Auth guard: `app/(auth)/_layout.tsx` that redirects to `/login` if not authenticated
+- Auth guard: `app/(auth)/_layout.tsx` renders nothing (or the splash) until persisted auth state has hydrated, then redirects to `/login` if not authenticated
 - Typed routes: `router.push('/profile/[id]')` with `useLocalSearchParams<{ id: string }>()`
 - Prevent back: `router.replace()` after login/logout
 - Tab icons: use `@expo/vector-icons` with `tabBarIcon`

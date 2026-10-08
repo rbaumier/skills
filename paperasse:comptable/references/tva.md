@@ -186,7 +186,7 @@ La TVA est exigible à la livraison/facturation.
 ```
   Débit 411 Client                 1 200,00
   Crédit 706 Prestations           1 000,00
-  Crédit 44587 TVA sur FAE           200,00
+  Crédit 44574 TVA en attente        200,00
 ```
 
 **À l'encaissement:**
@@ -194,9 +194,11 @@ La TVA est exigible à la livraison/facturation.
   Débit 512 Banque                 1 200,00
   Crédit 411 Client                1 200,00
 
-  Débit 44587 TVA sur FAE            200,00
+  Débit 44574 TVA en attente         200,00
   Crédit 44571 TVA collectée         200,00
 ```
+
+Attente en 44574 (ou 44580), jamais 44587 : réservé aux FAE de clôture.
 
 ---
 

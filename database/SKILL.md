@@ -48,7 +48,7 @@ description: Use when writing SQL, designing schemas, optimizing queries, managi
 - Text search: TSVECTOR + GIN. Never `LIKE '%term%'` on large tables.
 - Index based on query patterns (WHERE, JOIN, ORDER BY).
 - **N+1 query detection and prevention**: N+1 = 1 query for a list + N queries for each item's relation. Use eager loading / JOINs instead. Never loop over results and query inside the loop. Detection: enable query logging and count queries per request -- if count scales with result set size, you have N+1. In reviews: if you see `for (const item of items) { await db.query... }`, flag it as N+1.
-- **EXPLAIN ANALYZE before deploying queries on large tables**: Always run `EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)` on new queries against production-sized data. Red flags: Seq Scan on tables >10K rows, Nested Loop with large outer set, Sort with high memory usage. Add missing indexes when you see unexpected Seq Scans. In reviews: if a PR adds a new query on a table with >10K rows without an EXPLAIN plan, request one.
+- **EXPLAIN ANALYZE before deploying queries on large tables**: Run `EXPLAIN (ANALYZE, BUFFERS)` on new queries against production-sized data; writes only inside `BEGIN … ROLLBACK`. Red flags: Seq Scan on tables >10K rows, Nested Loop with large outer set, Sort with high memory usage. Add missing indexes when you see unexpected Seq Scans. In reviews: if a PR adds a new query on a table with >10K rows without an EXPLAIN plan, request one.
 - **Never call a SQL function that contains a sublink from a WHERE predicate.** A `LANGUAGE sql` function whose body has `EXISTS`, `IN (SELECT …)` or a scalar subquery is never inlined by the planner (`hasSubLinks`), whatever its volatility: it runs once per row, the semi-join is lost, and even a leading `p_key IS NULL` short-circuit is paid on every row (measured ×100: 8 ms inline vs 868 ms as a function on 200K rows, no filter). A predicate shared by two RPCs is duplicated inline in each file with a one-line comment saying why — never extracted into a helper. In reviews: a finding that prescribes extracting SQL into a function is `nit` at most until an EXPLAIN on the extracted form is attached; the same rule holds for `plpgsql`, which is never inlined at all.
 - **Nullable boolean flags in a guard get `coalesce(flag, false)`.** `NOT (a OR flag)` with `flag = NULL` yields NULL, and a NULL predicate removes the row: an unset flag silently empties the result instead of disabling the branch.
 - **Materialized views for expensive aggregations**: Create materialized views for dashboard queries, reports, and analytics that aggregate large tables. Refresh strategy: `REFRESH MATERIALIZED VIEW CONCURRENTLY` (requires unique index) for zero-downtime refresh. Schedule via pg_cron or application cron. Never query materialized views expecting real-time data -- always document staleness. In reviews: if a query aggregates >100K rows and runs frequently, suggest a materialized view.
@@ -69,7 +69,8 @@ description: Use when writing SQL, designing schemas, optimizing queries, managi
 - **Every `CREATE INDEX` in a migration is `CREATE INDEX CONCURRENTLY`** — a plain `CREATE INDEX` locks writes for the whole build. Ship the actual statement: `CREATE INDEX CONCURRENTLY idx_t_col ON t (col);` (cannot run inside a transaction block).
 - **Adding a constraint on a populated table is two separate statements, never one inline `ALTER ... SET NOT NULL` / inline `CHECK`.** Step 1 `ALTER TABLE t ADD CONSTRAINT t_col_chk CHECK (...) NOT VALID;` (fast, no full-table scan). Step 2 `ALTER TABLE t VALIDATE CONSTRAINT t_col_chk;` (no write lock). Both steps must appear in the output, not just at-creation inline constraints.
 - Tune autovacuum frequency on high-churn tables. NEVER disable autovacuum.
-- PgBouncer Transaction Mode for serverless; keep < 100 active DB connections.
+- PgBouncer Transaction Mode for serverless; keep < 100 active DB connections. Migrations, `LISTEN/NOTIFY`, session advisory locks and session `SET` use a direct connection; through the pooler, `SET LOCAL` only.
+- Behind PgBouncer transaction mode: postgres.js `prepare: false`, or PgBouncer 1.21+ with `max_prepared_statements` > 0.
 - `SET search_path = pg_catalog` — force explicit schema names in every DDL object. Explicit > implicit.
 - `statement_timeout` per role: `ALTER ROLE app SET statement_timeout TO '250ms'`. Before increasing: check indexes → materialized views → cache settings → disk → CPU/RAM → read replica.
 - **Advisory locks for application-level coordination**: Use `pg_advisory_lock(key)` for leader election, singleton job execution, or preventing concurrent migrations. `pg_try_advisory_lock(key)` returns false instead of blocking. Always use `pg_advisory_xact_lock()` (transaction-scoped) over session-scoped locks to prevent leak. In reviews: if you see application-level mutex/file locks for coordinating DB operations, suggest advisory locks instead.
@@ -88,7 +89,7 @@ description: Use when writing SQL, designing schemas, optimizing queries, managi
   ```sql
   ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
   CREATE POLICY tenant_isolation ON tasks
-    USING (org_id = current_setting('app.current_org_id')::uuid);
+    USING (org_id = (select current_setting('app.current_org_id'))::uuid);
   -- repeat ENABLE + CREATE POLICY for project, "user", every tenant table
   ```
 - bcrypt/argon2 for passwords. Never store API keys/secrets plain text.

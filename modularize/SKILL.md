@@ -24,6 +24,7 @@ Use this when the user wants to refactor, extract, or organize code into reusabl
 - cosmetic changes (naming, formatting) without structural extraction
 - style/lint cleanup without code extraction
 - performance tuning or behavior changes only
+- a file that is a config dictionary, constant list, or one cohesive switch — size alone never justifies a split
 
 ## Load First
 

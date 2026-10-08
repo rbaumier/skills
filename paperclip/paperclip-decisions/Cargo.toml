@@ -1,0 +1,18 @@
+[package]
+name = "paperclip-decisions"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "paperclip-decisions"
+path = "src/main.rs"
+
+[dependencies]
+# Parses the API's JSON and builds every request/response body. preserve_order keeps the output
+# keys in the order they are written, so each list item starts with its `company`.
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[profile.release]
+opt-level = "s"
+strip = true

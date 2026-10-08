@@ -223,7 +223,7 @@ spec:
 
 ### Security Context & RBAC
 - Pod-level: `runAsNonRoot: true`, `runAsUser: 1000`, `seccompProfile: RuntimeDefault`.
-- Container-level: `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `drop: ["ALL"]`.
+- Container-level: `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true` (writable paths like `/tmp` get an `emptyDir`, never drop it), `drop: ["ALL"]`.
 - RBAC: create a `ServiceAccount` per app. Bind a `Role` (namespaced) or `ClusterRole` (cluster-wide) via `RoleBinding`.
 - Least privilege: only grant verbs (`get`, `list`, `watch`, `create`) on resources the app actually needs.
 - Never use `default` ServiceAccount in prod — it may have excessive permissions.
@@ -294,6 +294,19 @@ spec:
               app: postgres
       ports:
         - port: 5432
+    # Default-deny egress blocks DNS too: always allow kube-dns
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
 ```
 
 ### Debugging with kubectl

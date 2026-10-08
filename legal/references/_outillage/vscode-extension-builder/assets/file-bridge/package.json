@@ -1,0 +1,44 @@
+{
+  "name": "my-file-bridge-extension",
+  "displayName": "My File Bridge Extension",
+  "description": "A VS Code extension with AI agent integration via file-bridge IPC",
+  "version": "0.0.1",
+  "publisher": "your-publisher-id",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:.vscode/ai-bridge"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "myExtension.initBridge",
+        "title": "Initialize AI Bridge",
+        "category": "My Extension"
+      },
+      {
+        "command": "myExtension.showBridgeStatus",
+        "title": "Show Bridge Status",
+        "category": "My Extension"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}

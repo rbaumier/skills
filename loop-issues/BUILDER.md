@@ -98,7 +98,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   git worktree add ../<repo>-worktrees/issue-<n> -b agent/issue-<n> origin/<default>
   ```
   Stacked → `origin/<base>`; split → suffix `-t<k>`. Wire it, with
-  the `CARGO_TARGET_DIR` of your prompt and no other. Later
+  `CARGO_TARGET_DIR` unset (mbx manages the target). Later
   slices read `<report-dir>/slice-<k-1>.md` first. Edit ONLY
   worktree paths. A `contract-review-<c>.md` in your prompt: its
   `minor` lines amend the contract as you read it, no rewrite.
@@ -178,7 +178,9 @@ Round 3 (the cap) ships anyway: what stays open goes under
 <reason>`. Else the plan from the contract: rows, error paths,
 captures to take (screen, state, avant/après) with their placement
 in the description, and the seed each row needs (an org without
-the data makes the row unobservable). The environment is the
+the data makes the row unobservable). The seed is the repo's
+versioned seed recipe (launch pack) first: the plan names only the
+rows it adds on top of it, never a seed beside it. The environment is the
 launch pack's, never rewritten here. The plan goes to `deliver`,
 never to the reviewer.
 

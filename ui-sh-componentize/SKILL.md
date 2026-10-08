@@ -48,7 +48,7 @@ Keep the user informed so longer runs do not look stuck.
 
 - Break designs into small, focused components instead of rendering everything in a single large component — extract repeated patterns, logical sections, and self-contained UI blocks into their own components
 - Never bake margins into components — apply margins at the call site instead; every component must accept a `class` attribute and merge it with the classes on the component's top-level element
-- Use `clsx` or similar to merge classes together in client-side components
+- Merge classes with the project's helper (`cn` = clsx + tailwind-merge in shadcn/Tailwind projects), never plain `clsx`
 - Always extract form controls into reusable components organized by HTML element — one `Input` component for all `<input>` types (text, email, password, etc.), one `Select` for `<select>`, one `Textarea` for `<textarea>`; never create type-specific components like `EmailInput` or `PasswordInput`; check the project for existing ones before creating new ones
 - When two or more elements share the same structure and styling but differ only in props like labels, placeholders, or types — extract them into a single reusable component parameterized by those differences
 - After extracting components, scan them for duplicated patterns and extract shared elements into reusable components — e.g. repeated section container/max-width/padding wrappers, repeated heading group structures (eyebrow + heading + subheading), repeated card shells, repeated button styles

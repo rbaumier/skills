@@ -14,7 +14,8 @@ Drive the running web app through `mcp__chrome-devtools__*`. The matrix rows say
 4. **Observe** after every interaction:
    - `list_console_messages()` — silent JS errors are the highest-value finding.
    - `list_network_requests()` then `get_network_request(url=...)` for failures.
-   - `take_screenshot()` — save the returned path into the evidence dir.
+   - `take_screenshot(filePath="<repo>/.qa-shots/<run-id>/<row>.png")` — the
+     MCP writes only under the repository; `mv` it into the evidence dir after.
    - `wait_for(text=...)` to sync on async UI before asserting.
 
 ## Surface-specific levers

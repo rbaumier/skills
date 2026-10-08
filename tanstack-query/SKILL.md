@@ -95,7 +95,7 @@ When your backend supports realtime (Supabase Realtime, SSE, WebSocket), prefer 
 ### SSR with Dehydrate/Hydrate
 **Prefetching on the server is only HALF the pattern. `ensureQueryData`/`prefetchQuery` in a loader alone does NOT make SSR work** — without dehydrate + HydrationBoundary the server-fetched cache is discarded and the client refetches everything, defeating the point. Both halves are mandatory:
 
-1. **Server**: `const queryClient = new QueryClient()` → `await queryClient.prefetchQuery(...)` → pass `dehydrate(queryClient)` to the client.
+1. **Server**: `const queryClient = new QueryClient()` per request (a module-scope client shares one cache across users) → `await queryClient.prefetchQuery(...)` → pass `dehydrate(queryClient)` to the client.
 2. **Client**: wrap the tree in `<HydrationBoundary state={dehydratedState}>`.
 
 Review check: if you see a server prefetch with no matching `dehydrate(...)` call AND no `<HydrationBoundary>` wrapping the consuming component, the SSR is broken — the data is fetched twice. A loader that only calls `ensureQueryData` is incomplete SSR, not complete SSR.
