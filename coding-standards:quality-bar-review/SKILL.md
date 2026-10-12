@@ -25,6 +25,9 @@ machine-enforced style. `⟦repo⟧` = only if the repo uses it.
 - Flag a compat path with no caller — mode flag / prop / wrapper / route alias / fallback kept "just in case" → delete, not polish (grep callers first).
 
 ### Simplicity & structure
+- Flag an added hop between entry point and the working line (wrapper/delegate/re-export/base class/registry) that hides no complexity → collapse.
+- Flag added state to hold: long-lived mutable var, flag read far from its set, stored-and-synced value that could be derived, shared field where an argument would do, unenforced call order.
+- These two decide when the flags below are silent or conflict.
 - Flag complexity rearranged where it could be deleted.
 - Flag ten scattered 5-line helpers where one linear fn reads better.
 - Flag shallow module (interface ≈ implementation); pass-through wrapper; deletion-test failure (delete it, complexity vanishes not scatters); hard decision exposed as a config knob instead of absorbed.
