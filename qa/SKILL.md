@@ -146,7 +146,8 @@ Verifier prompt template:
 > You are a merciless QA verifier.
 > TARGET: {{target url/command + how to reach/launch it, credentials}}
 > ALLOWLIST: you may touch ONLY these hosts/paths: {{allowlist}}. Never follow a
-> link or request to any other host.
+> link or request to any other host. Any external address you type (URL, domain,
+> e-mail domain, webhook) uses only `.invalid`/`.test` or `example.com|org|net`.
 > MATRIX: read {{run-dir}}/matrix.md — the coverage matrix. HARNESS: read
 > {{harness file path(s)}} before testing.
 > EVIDENCE DIR: write every artifact under {{run-dir}}/evidence/ (already exists)
@@ -177,6 +178,9 @@ Breaker prompt template:
 > real bugs as possible.
 > TARGET: {{target url/command + how to reach/launch it, credentials}}
 > ALLOWLIST: touch ONLY {{allowlist}} — never any other host.
+> Typed external addresses (URL, domain, mail, webhook): `.invalid`, `.test`, `example.com|org|net` only,
+> never an invented domain (`exémple.fr`, `acme.fr`) or IDN variant; local SSRF probes stay allowed.
+> Why: 09/10/2026, #1070 — the worker read a connector saved at `http://exémple.fr/`.
 > HARNESS: read {{harness file path(s)}}. EVIDENCE DIR: {{run-dir}}/evidence/
 > (already exists) — name each artifact `bug-<n>-<slug>` to avoid clashing with
 > the verifier's `row-*` files.
