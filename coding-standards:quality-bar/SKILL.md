@@ -25,6 +25,9 @@ established patterns, follow the repo. `⟦repo⟧` = apply only if the repo alr
 - Remove orphans your change creates (unused import/param/helper). Don't touch pre-existing dead code.
 
 ### Simplicity & structure
+- Fewer layers to trace: each hop from entry point to the working line (wrapper/delegate/re-export/base class/registry) hides real complexity, else collapse.
+- Less state to hold: narrow scope, derive > store-and-sync, argument > shared field, call order enforced by types.
+- These two decide when the rules below are silent or conflict.
 - Simplest structure that works. Delete complexity > rearrange it.
 - 50-line linear fn > ten scattered 5-line helpers.
 - Deep modules: simple interface hiding real complexity — absorb hard decisions internally, don't expose them as config knobs. No pass-through wrapper.

@@ -40,6 +40,7 @@ Apply the baseline prompt above, plus these explicit review rules:
    - Be highly suspicious of new ad-hoc conditionals, scattered special cases, or one-off branches inserted into unrelated flows.
    - If a change adds "weird if statements in random places", treat that as a design problem, not a stylistic nit.
    - Prefer pushing the logic into a dedicated abstraction, helper, state machine, policy object, or separate module instead of tangling an existing path.
+   - Only when the extraction leaves fewer layers to trace or less state to hold; otherwise it just spreads the complexity.
    - Call out changes that make the surrounding code harder to reason about, even if they technically work.
 
 3. **Bias toward cleaning the design, not just accepting working code.**
