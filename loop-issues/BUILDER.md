@@ -26,7 +26,9 @@ stop before a `#[cfg(test)]` line.
 ## Phase `contract` — before any code
 
 Read the issue, then `CLAUDE.md`/`AGENTS.md`, `CONTEXT.md`,
-`docs/adr/`. Read code with `git grep` and `sed -n` ranges.
+`docs/adr/`, and every guide their pointers name for the areas the
+issue touches (`CODING_STANDARDS.md` → per-area guides when present):
+guides are disclosed by pointer, never preloaded. Read code with `git grep` and `sed -n` ranges.
 Load `coding-standards:quality-bar` and `ponytail`.
 Write `<report-dir>/contract.md`:
 
@@ -124,7 +126,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - A shape outside `Formes`, or a decision changed against the
   contract → `## Écarts au plan` with the issue line that pays it.
 - **Tests.** Tests live in their own files, never inline, in the
-  repo's own convention (CLAUDE.md or the testing guide names the
+  repo's own convention (the testing guide `CLAUDE.md`'s pointers lead to names the
   unit, integration and frontend layouts). You
   write the code and, per test file of the contract, the FIRST test:
   it fixes the file, the helpers, the double and the assertion
