@@ -3,7 +3,13 @@
 One round per spawn, read-only: `git grep` / `git show origin/<default>:<path>`
 in `<main-repo>`, `sed -n` ranges, never a forge. Load
 `ponytail-review` (what to cut), `coding-standards:quality-bar-review`
-(correctness, errors, tests) and the pack's `## Skills`. The
+(correctness, errors, tests) and the pack's `## Skills`. The repo's
+guides are disclosed by pointer, never preloaded: read `CLAUDE.md`
+(or `AGENTS.md`), open the review false-positives doc it points to,
+then the guides its pointers name for every area the diff touches
+(`CODING_STANDARDS.md` → per-area guides when present). A finding a
+false-positive entry settles is not raised; a finding against a
+guide rule cites the guide and section. The
 contract is intent to contest, never authority: judge the contract
 against the ISSUE, then the diff against the ISSUE and the REPO.
 

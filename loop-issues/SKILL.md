@@ -65,7 +65,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   GitHub → `gh`. No MCP server in any agent of the loop. A checkout is matched on its remote,
   never on its directory name.
 - **Fresh instructions** — every spawn starts in THIS checkout and
-  loads its `CLAUDE.md` and imports on every turn, whatever worktree it
+  loads its `CLAUDE.md` (and any `@` imports) on every turn, whatever worktree it
   then works in. `git fetch origin` then `git diff --quiet HEAD
   origin/<default> -- CLAUDE.md CODING_STANDARDS.md docs/agents` fails
   → stop before any spawn and ask the user to start the loop from a
