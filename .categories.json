@@ -15,7 +15,10 @@
     "matt-to-prd",
     "matt-triage",
     "matt-writing-great-skills",
-    "matt-zoom-out"
+    "matt-zoom-out",
+    "matt-codebase-design",
+    "matt-wayfinder",
+    "matt-writing-for-agents"
   ],
   "Architecture & DDD": [
     "api-design",
@@ -23,7 +26,8 @@
     "domain-model",
     "ubiquitous-language",
     "modularize",
-    "request-refactor-plan"
+    "request-refactor-plan",
+    "massive-simplification"
   ],
   "Backend - TypeScript": [
     "database",
@@ -48,6 +52,13 @@
     "ponytail-review",
     "thermo-nuclear-code-quality-review"
   ],
+  "code-audit": [
+    "audit-codebase",
+    "ponytail-audit",
+    "matt-improve-codebase-architecture",
+    "matt-codebase-design",
+    "uncomplect"
+  ],
   "Coding Standards": [
     "coding-standards",
     "coding-standards:design",
@@ -70,11 +81,11 @@
     "kirby",
     "loop-issues",
     "vs",
-    "wf"
+    "wf",
+    "issue"
   ],
   "DevOps": [
     "ci-cd",
-    "deploy-natalia",
     "docker",
     "kubernetes"
   ],
@@ -96,7 +107,8 @@
     "coding-standards",
     "web-interface-guidelines",
     "modern-web-guidance",
-    "zod"
+    "zod",
+    "fluid-functionalism"
   ],
   "Frontend - Vue": [
     "frontend",
@@ -122,7 +134,8 @@
     "paperasse:notaire",
     "paperasse:syndic",
     "paperasse:commissaire-aux-comptes",
-    "paperasse:controleur-fiscal"
+    "paperasse:controleur-fiscal",
+    "legal"
   ],
   "Meta": [
     "skill-creator",
@@ -134,12 +147,20 @@
     "tldr",
     "update-codemaps",
     "claude-hud:setup",
-    "claude-hud:configure"
+    "claude-hud:configure",
+    "reflect",
+    "retro-repo",
+    "veille-agentic"
   ],
   "Mobile": [
     "react-native",
     "language-swift",
     "coding-standards"
+  ],
+  "Natalia": [
+    "chatwoot-updated",
+    "paperclip",
+    "recap-chatwoot-from-transcript"
   ],
   "Planning": [
     "brainstorming",
@@ -149,7 +170,8 @@
     "generate-visual-plan",
     "plan-review",
     "request-refactor-plan",
-    "domain-model"
+    "domain-model",
+    "matt-wayfinder"
   ],
   "Plannotator": [
     "plannotator-annotate",
@@ -168,7 +190,9 @@
     "daily-recap",
     "builder-visual-recap",
     "git-activity-report",
-    "project-recap"
+    "project-recap",
+    "recap-chatwoot-from-transcript",
+    "transcript"
   ],
   "Review & Docs": [
     "vscode-diff-review",
@@ -190,7 +214,10 @@
     "skill-creator",
     "enforcing-skill-rules",
     "matt-writing-great-skills",
-    "steipete-skill-cleaner"
+    "steipete-skill-cleaner",
+    "matt-writing-for-agents",
+    "create-verification-skill",
+    "reflect"
   ],
   "Swyx - Hardening": [
     "swyxio-antislop-codebase",
@@ -208,7 +235,9 @@
     "expect",
     "dogfood",
     "e2e",
-    "test-coverage"
+    "test-coverage",
+    "qa",
+    "create-verification-skill"
   ],
   "UI Design": [
     "ui",
@@ -220,7 +249,8 @@
     "ui-sh-markup-from-image",
     "ui-sh-dark-mode-image",
     "ui-sh-make-responsive",
-    "ui-sh-canonicalize-tailwind"
+    "ui-sh-canonicalize-tailwind",
+    "fluid-functionalism"
   ],
   "Writing": [
     "writing",
@@ -235,6 +265,9 @@
     "write-romain-chat",
     "write-romain-mail",
     "humanizer",
-    "show-me"
+    "show-me",
+    "adhd",
+    "illustrations",
+    "linkedin-post-coach"
   ]
 }
