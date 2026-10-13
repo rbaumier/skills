@@ -195,7 +195,9 @@ the test and fixing the code, never by widening `Tests modifiés`. A wrong sente
 ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
 loop files nothing on the forge. Small and inside a file the lot
 already touches → pay it here; otherwise ONE line under
-`## Constats non payés` in the report, and nothing else. A drop carries evidence: false
+`## Constats non payés` in the report, `- <path:line> — <constat> —
+<raison>`, and nothing else; every `non payé` disposition gets its
+line there, the merge feeds them to the registry. A drop carries evidence: false
 positive (the line), repo convention (the file), or remedy dearer
 than the defect (the grep or measure). Re-run the gate of each
 crate or package you touched, never the whole trio: the shipper
