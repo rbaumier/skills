@@ -49,9 +49,10 @@ cap 3; QA runs once, a NO-GO gets one answer and one re-verify, a
 
 There is NO path that spawns an implementer without a contract:
 "spawn des agents opus", "vague de corrections", "rattrapage" mean
-run THIS loop on those issues. A bypass exists only when the user
-writes "hors loop" — say back what it costs (no contract, no review,
-no cap) and wait for the confirmation.
+run THIS loop on those issues. Two bypasses: a fix under 15 lines
+with no product choice — one agent commits, pushes and merges it, no
+issue; or the user writes "hors loop" — say back what it costs (no
+contract, no review, no cap) and wait for the confirmation.
 
 Invoking this skill authorizes commits, pushes and draft MRs;
 merging needs autonomous mode.
@@ -104,8 +105,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   every spawn of the issue. Disk: before any gate, `df` the volume; under
   20 GB free it is a brake cleared first (test clones — § Slowness
   is yours), never a gate launched to discover an
-  E0463. Worktrees and caches the loop did not create are the user's:
-  reported in one 🐢 line with their size, never deleted. A slot
+  E0463. Under 20 GB, worktrees idle over 20 h with no live process are
+  pruned (uncommitted work saved first; branches and lots in flight kept). A slot
   owns its database and its QA ports. **Its OWN model
   database**, one per slot, never the shared one: a harness that
   clones `CREATE DATABASE … TEMPLATE` refuses the clone while any
@@ -141,7 +142,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 
 ## The loop
 
-1. **Select** — an issue named in the invocation arguments is
+1. **Select** — first replay Step 0's fresh-instructions test; behind
+   on a clean checkout → `git pull --ff-only`. An issue named in the invocation arguments is
    selected as is, whatever its labels, and the loop stops after its
    summary line. Else a split issue with unchecked tasks → next task,
    step 3. Else the pipeline of `origin/<default>` is red → its
@@ -153,7 +155,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    candidates with an open MR from an `agent/issue-<n>` branch or on
    the skip list. None → end your turn; the watchdog re-polls.
 
-2. **Lock** (autonomous only) — `ready-for-agent` → `picked-by-agent`.
+2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
+   phase reads it, never the forge. Autonomous: `ready-for-agent` → `picked-by-agent`.
 
 3. **Build** — one spawn per phase (background), each with: the
    phase name, issue number (+ task `<k>`), `<main-repo>`, Step 0
@@ -171,7 +174,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      ```
      now come up with a much simpler solution that provides 80% of the benefits we are talking about here
 
-     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and which criterion (or none) loses it. End with the same `CONTRACTED <contract.md>` line.
+     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion or constraint of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
      ```
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
      `Tranches`.
@@ -270,15 +273,15 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    No target to prune: mbx prunes the managed targets itself. Every
    drop is a plain `DROP DATABASE`, never `WITH (FORCE)`: a refusal
    means another session still uses that database — leave it, one
-   `🐢` line naming it. A worktree or a database the issue did not
-   create stays the user's (Step 0). Close with
+   `🐢` line naming it. A database the issue did not create stays the
+   user's, a worktree too outside Step 0's prune. Close with
    `git worktree list` and the `pg_database` listing showing nothing
    of issue `<n>` left; what remains is named in the summary line.
 
    **Merge queue** (autonomous) — you hold it, FIFO, in `state.md`. A
    lot enters only once step 4 is verified: verification happens
-   before the merge task, never inside it. A head does NOT rebase
-   because `<default>` moved: its branch head was certified as is, and
+   before the merge task, never inside it. No lot, in flight or at the head,
+   rebases because `<default>` moved (a gate that needs it merges `<default>` in): a head's branch head was certified as is, and
    it merges pinned on that sha with a merge commit, so a gate is
    never replayed for a sha that changed nothing (natalia-v3: ADR 0036,
    amendement du 30/09/2026 — the replay cost 45 to 50 min, and MR !811
@@ -318,7 +321,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    lines:
    `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
-   needs clarification` | `❌ #<n> failed → re-queued`.
+   needs clarification` | `❌ #<n> failed → re-queued`. Each reply ends
+   `Compteur : X / N lots (+k ajoutés)`, N fixed at launch. Nothing else
+   reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
 
 ## Slowness is yours
 
@@ -333,16 +338,18 @@ a **brake**: before the next phase spawn, remove it — a
 `loop-mechanic` with the exact command (kill, free the port, migrate
 the slot's database, restore the env, drop the flag) when it is
 environmental, an issue selected at slot 0 like a red `<default>`
-when it is code — and write `state.md` § Freins: cause, action,
+when it is code — and write `freins.md`: cause, action,
 hours lost. A flaky test seen red in two reports is such a brake
 whatever each report concluded: its repair jumps to slot 0, ahead of
 the queue, never re-run until it passes. An agent that ends its turn
 "waiting" on its own background gate is a brake too (RENDEZVOUS.md
-§ Waiting). A brake you cannot remove (usage limit, a decision only
-the user owns) is reported at once in one line `🐢 <cause> —
+§ Waiting). A brake you cannot remove (usage limit, a decision the
+user owns: only money, a dropped criterion, an unspecified visible
+behaviour, a production action — anything else is done, then
+announced) is reported at once in one line `🐢 <cause> —
 <what it costs per hour> — <the one action needed>`, never buried
-in a relay line. The next relay line carries every brake handled
-since the last: `🔧 <cause> → <action>`.
+in a relay line. Every brake handled is one line `🔧 <cause> →
+<action>` in `a-savoir-<loop>.md`.
 
 ## Rules
 
@@ -384,7 +391,8 @@ since the last: `🔧 <cause> → <action>`.
   gate (or the trio) red, on a sha it did not certify, with comply
   beyond listed FPs, an unpaid shape, a review not converged, or
   without QA GO. A pipeline pending or red does NOT hold a merge
-  whose local gate is green.
+  whose local gate is green. "Merge the drafts" covers only this session's MRs;
+  a `[… not converged]` one, or another session's, is named back and needs its own yes.
 - A fix to the repo's environment docs (the verify skill, a launch
   pack line) found during the loop never opens its own MR: agents
   read the main checkout's copy, so it travels in the next lot of

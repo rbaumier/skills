@@ -27,6 +27,8 @@ surface for UI/API, the wording for text a user reads.
 | `frontend` | `components/`, `pages/`, `.css` — UI components, pages, layouts, forms, dashboards |
 | `ui-ux` | `.tsx` / `.jsx` / `.vue` / `.css` / `.scss`, `tokens.*`, `theme.*` — hierarchy, spacing, typography, accessibility |
 | `make-interfaces-feel-better` | `components/`, `pages/` — interaction polish, loading / empty / error states, feedback |
+| `fluid-functionalism` | a `.tsx` under an app whose `components.json` declares `@fluid` or whose CLAUDE.md names it — then the app's design doc (natalia: `apps/webapp/DESIGN.md`) |
+| `humanizer` | a French string a user reads in a `.tsx` — with the copy guide the repo's CLAUDE.md names (natalia: `docs/ux-writing/`) |
 | `ui` | exploring UI options, mockups, variants (v0.dev references) |
 | `shadcn` | `components/ui/**`, `components.json`, `@/components/ui/` imports |
 | `tailwind` | `.css`, `tailwind.config.*`, `@theme`, `@apply` |

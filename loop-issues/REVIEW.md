@@ -57,7 +57,8 @@ with the issue line or repo symbol it rests on, tagged
 - **Unpaid shape** — see above; remedy: delete or inline.
 - **Contract creep** — a contract line prescribing a protocol, table,
   API change or layer the criteria do not need.
-- **Missing or partial** — a criterion the diff doesn't close.
+- **Missing or partial** — a criterion the diff doesn't close: each
+  `Besoin` is traced through the diff to one reader (screen, route, job).
 - **Wrong** — looks done, does the wrong thing.
 - **Reinvented** — a mechanism or type the repo already has (grep
   proves it; generated types included), or a copy left standing next
