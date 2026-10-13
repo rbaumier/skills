@@ -45,7 +45,7 @@ case ${1:-} in
       grep -qx "$id" <<<"$tested" || refuse "Besoin $id has no test"
     done
     [ -n "$(files "$2")" ] || refuse "Formes has no '- Fichiers :' line"
-    unread=$(section "$2" Formes | grep '^- modifié' | sed -E 's/(lu par[^:]{0,2}:)[[:blank:]]*([Aa]ucun|[Nn]one|[Pp]ersonne)([^[:alnum:]].*)?$/\1/' | grep -vE 'lu par[^:]{0,2}:[[:blank:]]*[[:alnum:]`#]' | head -1)
+    unread=$(section "$2" Formes | grep '^- modifié' | sed -E 's/(lu par[^:]{0,2}:)[[:blank:]]*([Aa]ucune?|[Nn]one|[Pp]ersonne)[[:blank:].]*([[:blank:]]—.*)?$/\1/' | grep -vE 'lu par[^:]{0,2}:[[:blank:]]*[[:alnum:]`#]' | head -1)
     [ -z "$unread" ] || refuse "no readers for: $(sed -E 's/^- modifié //; s/ — .*//' <<<"$unread")"
     ;;
   overlap)

@@ -152,14 +152,14 @@ group=contract_missing_readers
 printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — x' >"$tmp/c.md"
 expect deny "$check" '' contract "$tmp/c.md"
 grep -q 'foo' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
-for readers in 'lu par : ' "lu par :$(printf '\t')" 'lu par personne, cf. a:b' 'lu par : aucun' 'lu par : none — x'; do
+for readers in 'lu par : ' "lu par :$(printf '\t')" 'lu par personne, cf. a:b' 'lu par : aucun' 'lu par : aucune.' 'lu par : none — x'; do
   printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' "- modifié \`foo\` — $readers" >"$tmp/c.md"
   expect deny "$check" '' contract "$tmp/c.md"
   grep -q 'foo' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
 done
 
 group=contract_complete_passes
-printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — lu par : bar' "- modifié \`baz\` — lu par$(printf '\302\240'): qux" >"$tmp/c.md"
+printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — lu par : bar' "- modifié \`baz\` — lu par$(printf '\302\240'): qux" '- modifié `quux` — lu par : Personne::new' >"$tmp/c.md"
 expect pass "$check" '' contract "$tmp/c.md"
 
 group=overlap_shared_file_holds

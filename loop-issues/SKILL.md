@@ -185,7 +185,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    stderr>` (`blocked by #N`, `outside template`) in the skip list of
    `state.md`, next candidate; exit 1 (forge unreadable) → stop the
    selection and report its stderr, nobody skipped. These lines are rewritten at every
-   selection: a closed blocker frees its issue. None → end your turn;
+   selection, except a step-3 `blocked by #<m>` line: it survives and
+   skips its issue in both modes while #m is open (#m's state read as
+   `check.sh issue` reads a blocker). A closed blocker frees its issue. None → end your turn;
    the watchdog re-polls.
 
 2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
@@ -201,7 +203,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      → select that dependency next; on an undeclared dependency with
      an open MR (`Stack`) → draft mode stacks on it, autonomous puts the lot
      back to `ready-for-agent`, frees the slot and adds `#<n> —
-     blocked by #<m>` to the skip list, re-checked each selection). The FIRST `CONTRACTED` is never
+     blocked by #<m>` to the skip list, kept until #m closes, step 1). The FIRST `CONTRACTED` is never
      the contract: `SendMessage` the SAME builder (still live, its
      context intact — never a new spawn) this message, always the
      same, exactly once per issue, and nothing about it earlier (the
@@ -449,10 +451,13 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
 - Forge list calls narrowed on the first attempt (`per_page`,
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.
-- An open dependency MR never stops the loop. Draft mode: stack on
-  it (step 3 for an overlap hold). Autonomous: never stacks; the
-  dependency is waited for at selection (`blocked by #<m>`, step 1)
-  until it merges, then the lot builds on `<default>`.
+- An open dependency MR never stops the loop. A declared one
+  (`blocked by #<m>` in the body) is skipped at selection in both
+  modes (step 1) until #m closes. Draft mode: an undeclared one
+  found at contract stacks on it (step 3, and for an overlap hold).
+  Autonomous: never stacks; an undeclared one is waited for at
+  selection too (`blocked by #<m>`, step 1) until it merges, then
+  the lot builds on `<default>`.
 - Never push to the default branch. Never merge with the certifying
   gate (or the trio) red, on a sha it did not certify, with comply
   beyond listed FPs, an unpaid shape, a review not converged, or
