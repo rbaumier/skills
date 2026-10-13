@@ -198,7 +198,10 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    spawn.
    - `loop-builder` `contract` → `CONTRACTED <contract.md>` (or
      `NEEDS-CLARIFICATION <path>`; on an open dependency without MR
-     → select that dependency next). The FIRST `CONTRACTED` is never
+     → select that dependency next; on an undeclared dependency with
+     an open MR (`Stack`) → draft mode stacks on it, autonomous puts the lot
+     back to `ready-for-agent`, frees the slot and adds `#<n> —
+     blocked by #<m>` to the skip list, re-checked each selection). The FIRST `CONTRACTED` is never
      the contract: `SendMessage` the SAME builder (still live, its
      context intact — never a new spawn) this message, always the
      same, exactly once per issue, and nothing about it earlier (the
@@ -220,7 +223,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      → phase `held by #<m>` in `state.md`, no `build 1`. The hold lifts
      when #m leaves `state.md` (step 6), whatever its outcome. Draft
      mode: after a `📝 drafted` the lot stacks on `agent/issue-<m>`
-     (§ Rules). Autonomous: the lot always builds on `<default>`,
+     (§ Rules), any other outcome → `<default>`. Autonomous: the lot always builds on `<default>`,
      since a stacked MR would merge into #m's branch.
      On every lift `overlap` runs again, one held lot at a time,
      against the lots still in flight: pass → `build 1`, exit 2 → held by the lot it names.
@@ -447,8 +450,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.
 - An open dependency MR never stops the loop. Draft mode: stack on
-  it. Autonomous: the lot waits for its merge, `held by #<m>` (step 3),
-  then builds on `<default>`.
+  it (step 3 for an overlap hold). Autonomous: never stacks; the
+  dependency is waited for at selection (`blocked by #<m>`, step 1)
+  until it merges, then the lot builds on `<default>`.
 - Never push to the default branch. Never merge with the certifying
   gate (or the trio) red, on a sha it did not certify, with comply
   beyond listed FPs, an unpaid shape, a review not converged, or
