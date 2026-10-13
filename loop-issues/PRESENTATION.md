@@ -67,8 +67,9 @@ an HTML artifact.
   (chrome-devtools writes only under the session root, the main
   checkout: never a worktree nor the
   report dir), then `mv` it to `<report-dir>/`; never commit it.
-  Upload each with `glab api --method POST projects/:id/uploads -F
-  file=@<png>` and embed the returned `markdown`. GitHub: paths in the report, no embed.
+  Upload each with `curl -s -H "Authorization: Bearer $(glab config get token
+  --host <host>)" -F file=@<png> https://<host>/api/v4/projects/<id>/uploads`
+  (`glab api -F` answers 400) and embed the returned `markdown`. GitHub: paths in the report, no embed.
 - Placement: right under the "what the MR changes" sentence. Pair =
   one two-column `| avant | après |` table; single = the image alone.
   ONE caption line under each (≤8 words), not counted as prose.

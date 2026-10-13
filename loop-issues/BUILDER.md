@@ -10,8 +10,8 @@ after you. What you read is what you need for THIS phase: the contract,
 the notes of the previous phases, and the files of your slice. Read
 `RENDEZVOUS.md` § Report before writing.
 
-The forge is `glab api` in Bash (issues, MR, uploads: `glab api
---method POST projects/:id/uploads -F file=@<png>`); list calls are
+The forge is `glab api` in Bash (issues, MR; uploads per
+`PRESENTATION.md` § Captures); list calls are
 filtered (`state=opened&labels=…&per_page=20`), never a full list.
 Code is written with `Edit`/`Write`, never a heredoc. A grep names a
 path and ends in `| head -40`; a file is never re-read after your
@@ -53,14 +53,19 @@ Write `<report-dir>/contract.md`:
   the expected value. A shape absent from this list may not appear
   in the diff without a line under `## Écarts au plan`.
 - `Réutilise` — one line per transverse mechanism, `<symbol>
-  (<file>)`, proven by your grep.
+  (<file>)`, proven by your grep. A changed rule (format, time zone, population,
+  bound) lists every site that rebuilds it by hand (grep), each in `Formes` or refuted.
 - `Tests` — the CLOSED list of tests, one per acceptance criterion
-  and per named risk, none for an implementation choice. Every
+  and per named risk, at the layer where the criterion is observed (a
+  screen → a screen test), none for an implementation choice. Every
   boundary the diff opens or changes (a body, a query parameter, a
   webhook, a claim) carries the hostile cases QA otherwise finds
   after `deliver`, one test each where it applies: invisible or NUL
   characters in a text field, two concurrent requests on the same
-  id, another tenant's id, a deleted tenant. Most QA NO-GO are
+  id, another tenant's id, a deleted tenant, the screen's own read or
+  write failing (the skeleton ends, the retry works), a PATCH omitting
+  a field (kept), 10 kB in an indexed text column, inverted or extreme
+  date bounds. Most QA NO-GO are
   these, each paid 35 min to 2 h after delivery. Each line:
   `<file>::<test_name> — <layer> — <the bug that slips if it
   breaks> — arrange / act / assert in one sentence — doubles:
@@ -87,7 +92,8 @@ Write `<report-dir>/contract.md`:
 - `Stack` (`<base>` when a dependency has an open MR), `Mesure` (hot
   path + bar, or `none`), `QA` (deliverables + error paths),
   `Risques` (convention deleted, ADR bent, issue line lifted with the
-  refuting grep).
+  refuting grep; a change of who holds or reads a right or scope names
+  every consumer of it, by grep, each with a test or a QA row).
 
 Write nothing you would not defend against "delete it and nothing is
 lost". Write `contract.md`, end `CONTRACTED <contract.md>`. A
@@ -109,8 +115,9 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   slices read `<report-dir>/slice-<k-1>.md` first. Edit ONLY
   worktree paths. A `contract-review-<c>.md` in your prompt: its
   `minor` lines amend the contract as you read it, no rewrite.
-- Load `coding-standards:quality-bar`, `ponytail` and the language
-  skill of the slice's files, nothing else by default. Another skill of
+- Load `coding-standards:quality-bar`, `ponytail`, the language skill
+  of the slice's files and every skill or doc the repo's CLAUDE.md
+  routes the slice's area to; nothing else by default. Another skill of
   `~/.claude/skills/_shared/SKILLS.md` is loaded only when the
   contract's `Tranches` line names it with its trigger (`testing` —
   a harness or double changes; `api-design` — a new route or a
@@ -127,7 +134,8 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
     sibling" is not a reason;
   - a comment says a why the code cannot; one that restates the code
     is deleted; one doc sentence per `pub` item. Comment lines ÷
-    added lines (hors générés) ≤ 1/10 before the pack.
+    added lines (hors générés) ≤ 1/10 before the pack; a comment
+    sentence ≤ 10 words, a block ≤ 30, never wrapped mid-sentence.
 - A shape outside `Formes`, or a decision changed against the
   contract → `## Écarts au plan` with the issue line that pays it.
 - **Tests.** Tests live in their own files, never inline, in the
@@ -145,7 +153,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   batch too long for the phase → one more `## Mechanic` line.
 - Then the slice's tests only (`cargo nextest run -p <crate>`,
   `pnpm test -- <file>`); `cargo clean`, mass `touch`,
-  `CARGO_INCREMENTAL=0` banned; no comply here, the pack runs it.
+  `CARGO_INCREMENTAL=0` banned; `comply --staged` before each commit, the pack runs the rest.
   The repo's formatters on the touched packages before every
   commit, `ship` included: a formatting red found at `deliver` costs
   an amend and a re-run. A slice that
@@ -164,9 +172,9 @@ your prompt. Fix every finding that removes or corrects code, `nit`
 included, every occurrence; a red gate of the pack is fixed here; a
 comply group `fix` is paid — a comment finding by deleting the
 comment, never by chopping its sentences — `FP` groups are listed
-for the shipper with the reason each. A remedy is re-read against
-the shape rules before the commit: a fix that breeds the next
-finding costs a round. A test guard `BLOCKED` is paid by restoring
+for the shipper with the reason each. Before the commit,
+`coding-standards:quality-bar-review` on the fix diff alone, each finding paid
+in that commit: a fix that breeds the next finding costs a round. A test guard `BLOCKED` is paid by restoring
 the test and fixing the code, never by widening `Tests modifiés`. A wrong sentence in a loop report (pack,
 ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
 loop files nothing on the forge. Small and inside a file the lot

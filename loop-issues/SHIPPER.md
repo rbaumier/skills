@@ -88,7 +88,8 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
 ## Phase `deliver` — after the last `ship` phase
 
 Your prompt hands `<report-dir>/ship-<r>.md` (disposition table, comply
-decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
+decisions, QA plan, `mr-description.md`, `→ issue` list). Every `deliver.md`
+below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
 
 1. Comply decisions: FP groups not yet filed → `comply report-fp
    <rule_id> <path:line> --reason "<why>" --model claude-opus-5-5`
@@ -131,7 +132,8 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
    boundaries the diff opens or changes, i.e. the contract's hostile
    cases in `Tests`, not the whole app — and the budget in minutes,
    ~15, enforced: past it the run ends `ABORTED — budget`. Plan rows
-   first, the exploratory hunt capped at a third, an unfinished
+   first — a lot that adds or reshapes a screen plays the UI quality
+   sweep as its first row, never cut by the budget — the exploratory hunt capped at a third, an unfinished
    hunt reported `hunt: partial` and downgrading nothing — run dir
    outside the worktree, verdict path `qa/verdict-<k>.md`. A
    `re-verify` list in your prompt (second round) → the handoff
@@ -155,8 +157,8 @@ dead → kill its PIDs and relaunch from the file, never assume.
    the running stack (paths named in ship.md), signed in with the
    local dev account the QA launch pack names — a local dev
    credential typed into the login form is the procedure, not a
-   leak; skipping the captures for it is not. Upload with `glab
-   api`, embed the returned markdown at the placement ship.md marks.
+   leak; skipping the captures for it is not. Upload per
+   `PRESENTATION.md`, embed the returned markdown at the placement ship.md marks.
    THEN kill every PID of `qa-stack.md` and check its ports are free.
 6. Push `agent/issue-<n>` (already there when the certifying gate
    ran at step 2: push nothing new, its sha is the certified one), open the MR on `<default>` (`<base>` if

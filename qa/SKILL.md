@@ -237,7 +237,8 @@ Complete `<run-dir>/matrix.md`:
    - **ABORTED** if the run stopped on a broken environment (failed smoke,
      tripped fuse) — name the broken precondition and the untested rows; no GO
      of any kind until the environment is fixed and the run redone.
-   - **NO-GO** if any open Critical or High finding.
+   - **NO-GO** if any open Critical or High finding the change introduced; each High is
+     replayed on the base sha, and one reproduced there is `inherited`, a reservation.
    - **GO** only when status is COMPLETE with zero BLOCKED rows and no open
      Critical/High.
    - **GO-PROVISIONAL** otherwise (status PARTIAL / any BLOCKED row) — must name
