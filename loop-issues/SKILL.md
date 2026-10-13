@@ -113,11 +113,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   error names; `cargo clean` of a whole target stays forbidden. A
   slot `s` = 1 by default (§ Rules: sequential); with parallel loops
   asked, the lowest slot no issue in flight holds. Handed in
-  every spawn of the issue. Disk: before any gate, `df` the volume; under
-  20 GB free it is a brake cleared first (test clones — § Slowness
-  is yours), never a gate launched to discover an
-  E0463. Under 20 GB, worktrees idle over 20 h with no live process are
-  pruned (uncommitted work saved first; branches and lots in flight kept). A slot
+  every spawn of the issue. Disk is checked before a spawn, never
+  before a gate (§ The loop). A slot
   owns its database and its QA ports. **Its OWN model
   database**, one per slot, never the shared one: a harness that
   clones `CREATE DATABASE … TEMPLATE` refuses the clone while any
@@ -153,7 +150,26 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   every QA plan composes on), the dependency probes of the login path
   (IdP, CORS preflight from a slot's console origin);
   `<main-repo>/.claude/skills/verify/` is authoritative when present. One stack per slot — its own ports
-  and database — so two QAs never queue on each other.
+  and database — so two QAs never queue on each other. The values
+  `hooks/slot.sh` takes, each read off the launch pack: the disk
+  threshold in GB (none named → 20, the one place this default
+  lives), the test clone sweep command (none → `-`), the slot's env
+  block (`KEY=value` lines, slot substituted), the schema-mismatch
+  signal (an ERE on the gate's output) and its database recreation
+  command, the stack's launch command and its ports per slot, the
+  dependency probes as `<dependency>=<command>` (IdP, CORS, port,
+  seed). A value the launch pack lacks is a launch pack line to add
+  in the next lot (§ Rules); meanwhile its step runs without it.
+- **Slot env hook** — `hooks/slot.sh env` is registered as a
+  PreToolUse Bash hook in `~/.claude/settings.json`: a command that
+  names `…-worktrees/issue-<n>[-t<k>]`, or runs from it, gets
+  `<worktrees dir>/issue-<n>.env` sourced first (path written
+  literally, `~/` or `$HOME/` admitted). The hook makes no permission
+  decision: the rewritten command meets the session's own policy. No
+  agent re-sources the slot's env; a slot command no path ties to its
+  worktree is written `cd <worktree> && …`. `grep -q 'slot.sh env'
+  ~/.claude/settings.json` fails → stop before any spawn, one line
+  `🐢 slot env hook not registered in ~/.claude/settings.json`.
 - `git fetch origin <default>`; arm the watchdog (`RENDEZVOUS.md`)
   and run `~/.claude/skills/loop-issues/hooks/loop-running.sh start`:
   from then on AskUserQuestion is refused in this session (nobody
@@ -162,6 +178,20 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   at their phase before selecting anything.
 
 ## The loop
+
+**Before every spawn** that opens a new lot (the `contract` phase of
+a selected issue), run `~/.claude/skills/loop-issues/hooks/slot.sh
+disk <threshold> <worktrees dir> <sweep command|-> <n of
+every lot in state.md>…`. It sweeps the test clones, then removes
+the loop's worktrees idle 20 h (never a lot in flight, never one
+holding uncommitted work, branches kept), and exits 2 only when
+still under the threshold. Exit 2 → no spawn, `held: contract #<n> —
+<its stderr>` in `state.md`. A held spawn is retried first, before
+any other, at the notification of the next lot that finishes (step
+6). Exit 2 with no lot in flight → the loop stops: `stopped: disk —
+<stderr>` in `state.md`, `loop-running.sh stop`, CronDelete the
+watchdog, one line `🐢 disk — <stderr> — free disk space, then
+/loop-issues`. Phases of lots already in flight are never held.
 
 1. **Select** — first replay Step 0's fresh-instructions test; behind
    on a clean checkout → `git pull --ff-only`. An issue named in the invocation arguments is
@@ -192,6 +222,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 
 2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
    phase reads it, never the forge. Autonomous: `ready-for-agent` → `picked-by-agent`.
+   Write the launch pack's env block, slot substituted, to
+   `<worktrees dir>/issue-<n>.env` (beside the worktree, never in
+   it): the slot env hook sources it.
 
 3. **Build** — one spawn per phase (background), each with: the
    phase name, issue number (+ task `<k>`), `<main-repo>`, Step 0
@@ -314,9 +347,10 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    created, nothing else.
    ```bash
    # QA stack first: a live session would refuse the drops below.
-   kill <every PID of <report-dir>/qa-stack.md still alive> 2>/dev/null
+   ~/.claude/skills/loop-issues/hooks/slot.sh qa-down <report-dir>/qa-stack.md
    wt=$(git -C ../<repo>-worktrees/issue-<n> rev-parse --show-toplevel)   # before the removal
    git worktree remove ../<repo>-worktrees/issue-<n> --force && git worktree prune
+   rm -f ../<repo>-worktrees/issue-<n>.env   # split: after its last task only
    git branch -D agent/issue-<n> 2>/dev/null
    # The checkout's gates model, named as ci/check derives it (repo with GATES_DATABASE_URL only),
    # and its `_p…` clones: nothing reclaims them once the model is gone.
@@ -334,7 +368,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    drop is a plain `DROP DATABASE`, never `WITH (FORCE)`: a refusal
    means another session still uses that database — leave it, one
    `🐢` line naming it. A database the issue did not create stays the
-   user's, a worktree too outside Step 0's prune. Close with
+   user's, a worktree too outside `slot.sh disk`'s prune. Close with
    `git worktree list` and the `pg_database` listing showing nothing
    of issue `<n>` left; what remains is named in the summary line.
 
@@ -362,7 +396,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    that sha, nothing rerun. Conflicted → `git fetch`, rebase on
    `<default>` (unresolvable → `BLOCKED` naming the files), push
    `--force-with-lease`, run the certifying gate (the trio without
-   one) in the foreground; green → merge PINNED on the certified sha
+   one) in the foreground, through `slot.sh gate <signal> <recreate>
+   '<gate>'` when the launch pack names a schema signal; green → merge PINNED on the certified sha
    with the project's merge method (`glab api -X PUT
    projects/<id>/merge_requests/<iid>/merge -f sha=<sha>`; GitHub
    `gh pr merge --match-head-commit <sha>`) → `DONE <merged sha>`;
@@ -387,7 +422,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
    needs clarification` | `❌ #<n> failed → re-queued`. Writing #n's
-   summary line lifts every lot `held by #<n>` (step 3). Each reply ends
+   summary line lifts every lot `held by #<n>` (step 3), then retries
+   a `held: contract` spawn before any other (§ The loop). Each reply ends
    `Compteur : X / N lots (+k ajoutés)`, N fixed at launch. Nothing else
    reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
 
@@ -493,8 +529,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   file, and three of the five invisible debts were duplications the
   MR itself had just posted. An issue is for work a successor must
   scope, not for a remedy already under the author's hand.
-- Only user interruption ends the loop, or the summary line of an
-  issue named in the invocation; either way run
+- Only user interruption ends the loop, the summary line of an
+  issue named in the invocation, or the disk stop (§ The loop);
+  every way run
   `~/.claude/skills/loop-issues/hooks/loop-running.sh stop` first. The
   acknowledging reply ends with `💡 /reflect — miner ce run pour des
   deltas de skills`.
