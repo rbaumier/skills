@@ -31,8 +31,9 @@ reviews). A spawn prompt hands facts and the
 brief's absolute path, never a paraphrase of it — and never rewrites a
 phase's gate scope: the brief decides it (`pack` runs no test,
 `deliver` the touched crates and their reverse dependents, the full
-suite only at the release and on `<default>` every ~10 merges, which
-you launch — a `loop-mechanic`, df > 40 GB; a prompt that asked for the full trio at pack cost
+suite only at the release and on `<default>` when `state.sh merged`
+prints `audit due` (10 merges since the last audit), which you launch with the audit
+pass (§ Merge queue) — a `loop-mechanic`, df > 40 GB; a prompt that asked for the full trio at pack cost
 ~15 min on one lot, 2026-09).
 
 ## Agents
@@ -352,7 +353,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    - contract findings `applied` or `refuted — <evidence>`, ONE
      contract review; last
      review `MERGEABLE` with every finding `fixed`, `non payé —
-     <raison>` or `dropped — <evidence>`, or `[review not converged]` at round 3
+     <raison>` (its line under `## Constats non payés` of the last
+     `ship-<r>.md`) or `dropped — <evidence>`, or `[review not converged]` at round 3
      with the open findings as an MR comment;
    - QA GO/GO-PROVISIONAL with no `BLOCKED(budget)` row, or `QA:
      not run — <reason>` — never on a front lot (Step 0);
@@ -427,6 +429,29 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `deliver` `BLOCKED`; an inherited red → the repair of `<default>`
    first (step 1). The next head's task is in flight before the relay
    line.
+
+   **Registry and audit.** On `DONE`, run `~/.claude/skills/loop-issues/hooks/state.sh merged
+   <report-root>/constats.md <n> <report-dir>`: each line of the lot's
+   `## Constats non payés` becomes `- [ ] #<n> <path:line> — <constat>
+   — <raison>`, once, then `merged #<n>`. The registry sits beside
+   `state.md`; `merged` only appends, the audit only ticks boxes and
+   appends `audited`, which resets the merge count to zero.
+   `audit due` → ONE `loop-mechanic`: the full suite on `<default>`,
+   then the audit of the `[ ]` entries only. An entry whose finding is
+   gone from `origin/<default>` (judged on its content, the line
+   drifts) → `[x] … — absent @<sha>`, never filed. An entry whose
+   `<path:line> — <constat>` matches one already closed `— #<m>` →
+   `[x] … — déjà #<m>`, never filed. The rest, grouped by related
+   findings, become drafts per § Body template of
+   `~/.claude/skills/issue/SKILL.md` in
+   `<report-root>/audit-<UTC date>/`; the mechanic ends `DONE
+   <report-root>/audit-<UTC date>/`. Then you append `audited` to the
+   registry and, per draft, spawn the `issue-publisher`
+   (`~/.claude/skills/issue/SKILL.md` step 4) with the label
+   `needs-triage`, never `ready-for-agent`. Only its `CREATED` (the
+   forge returned the issue) marks the draft's entries
+   `[x] … — #<m>`; a failed creation leaves them `[ ]` for the next
+   audit.
 
 5. **Failure** — never merge, close the MR if opened, comment the
    issue with the summary, run step 4's cleanup block (worktree,
@@ -536,8 +561,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   command and proceeds as draft. It still forbids the merge: the
   repair of `<default>` is selected first (step 1).
 - **No phase of this loop ever opens an issue on the forge** (the
-  red-pipeline issue of step 1 goes through the /issue publisher,
-  labelled `needs-triage`). The
+  red-pipeline issue of step 1 and the periodic audit's grouped drafts,
+  § Merge queue, go through the /issue publisher, labelled
+  `needs-triage`). The
   queue grew by 101 issues in three days because every phase filed
   its leftovers (user, 2026-09-24: "je croyais que tu arrêtais d'en
   créer et que tu les intégrais dans les mrs en cours"). A finding
