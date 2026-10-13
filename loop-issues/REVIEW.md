@@ -76,6 +76,11 @@ with the issue line or repo symbol it rests on, tagged
 - **Test of a choice** — a test outside the contract's `Tests` list,
   one that locks an implementation choice, or a test written inline
   instead of its own file; remedy: delete or move.
+- **Weakened check** — always `blocker`: an assertion loosened, a
+  test deleted or ignored, an expected value changed to the new
+  output, a threshold relaxed, a gate, lint or comply config relaxed,
+  without a `Tests modifiés` line whose issue line pays it; remedy:
+  restore the check, fix the code.
 - **Comment noise** — comments restating the code; remedy: delete.
 - **Scope creep** — behaviour the issue didn't ask; remedy: remove.
 - **Debt** — the next MR cannot build on this cleanly.

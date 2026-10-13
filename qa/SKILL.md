@@ -3,7 +3,7 @@ name: qa
 description: "Adversarial manual acceptance testing of any user surface (UI, API, CLI, TUI, and more): exhaustive use-case matrix, two merciless agents, proven verdict."
 disable-model-invocation: true
 argument-hint: "[target url|command] [time budget]"
-version: 1.3.0
+version: 1.4.0
 ---
 
 # QA: Adversarial Manual Acceptance Testing
@@ -23,7 +23,10 @@ Three leading words govern the run:
   a cell with no verdict is unfinished work, never a pass.
 - **evidence** — every verdict traces to an artifact captured on disk (a
   screenshot, a console read, an HTTP response, an exit code + output). "It
-  works" with no captured artifact is a guess.
+  works" with no captured artifact is a guess. A write is proven only by an
+  independent read: a reload showing the persisted state, an API `GET`, or a
+  read-only DB query. A UI signal alone (toast, success banner, optimistic list
+  update, button state, closed dialog) proves nothing.
 - **merciless** — the posture of the two assault agents: assume the feature is
   broken and hunt for the proof.
 
@@ -165,7 +168,11 @@ Verifier prompt template:
 > artifact to the evidence dir and return a verdict: PASS (observed the promised
 > behavior), FAIL (observed a deviation — describe it), BLOCKED (could not test —
 > say why). A row with no artifact on disk is not PASS. Never conclude "works"
-> from a page that merely loaded or a 200 with an unchecked body. Record every
+> from a page that merely loaded or a 200 with an unchecked body. Every write
+> step is confirmed by an independent read (reload and see the persisted state,
+> an API `GET`, or a read-only DB query), captured as its own artifact; a write
+> proven only by a toast, banner, optimistic update, button state or closed
+> dialog is FAIL. Record every
 > write you make (record created, file written, mutating request) in a
 > "Mutations" list. Before returning, close every Chrome tab you opened
 > (chrome-devtools `close_page`) — leave the browser as you found it.
@@ -213,7 +220,8 @@ wall of BLOCKED rows.
 **Completion:** the Verifier returned zero `UNTESTED` rows (BLOCKED rows force
 report status **PARTIAL** and become reservations), the Breaker's round tally
 shows two dry rounds, and **you have `ls`'d every reported evidence path** —
-any missing artifact downgrades its row to BLOCKED. A time budget that expires
+any missing artifact downgrades its row to BLOCKED, and a write row whose
+only artifact is a UI signal is downgraded to FAIL. A time budget that expires
 first yields status **PARTIAL**, never a false all-green.
 
 ## Phase 5 — Report
@@ -247,6 +255,7 @@ writing the verdict, close every Chrome tab the run opened (chrome-devtools
 |-----------------|---------|
 | "Most cells pass, close enough" | An `UNTESTED` cell is unfinished work, not a pass. Done means every cell has a proven verdict. |
 | "The subagent said it passed" | A verdict with no artifact on disk is a guess. `ls` the path before you trust it. |
+| "The toast said saved" | A toast is the client's claim, not the server's state. Reload or `GET`; no independent read → FAIL. |
 | "The Breaker found nothing, so it's clean" | Only if its tally shows two dry rounds. One quiet round is not dry. |
 | "GO — nothing looked catastrophic" | The verdict is mechanical and coverage-aware: any open Critical/High → NO-GO; any BLOCKED row → at best GO-PROVISIONAL, never clean GO. Don't eyeball it. |
 | "Mostly BLOCKED, but the run finished" | A wall of BLOCKED(env) rows is a dead environment, not coverage. The fuse should have tripped — report ABORTED, fix the env, rerun. |
