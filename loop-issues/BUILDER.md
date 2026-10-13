@@ -171,8 +171,10 @@ Read `pack-<r>.md` (§ Gates, § Comply) and `review-<r>.md` handed in
 your prompt. Fix every finding that removes or corrects code, `nit`
 included, every occurrence; a red gate of the pack is fixed here; a
 comply group `fix` is paid — a comment finding by deleting the
-comment, never by chopping its sentences — `FP` groups are listed
-for the shipper with the reason each. Before the commit,
+comment, never by chopping its sentences — `FP` groups, only on
+lines the lot added (any other is `fix`, generated paths
+excepted), are listed for the
+shipper with the reason each. Before the commit,
 `coding-standards:quality-bar-review` on the fix diff alone, each finding paid
 in that commit: a fix that breeds the next finding costs a round. A test guard `BLOCKED` is paid by restoring
 the test and fixing the code, never by widening `Tests modifiés`. A wrong sentence in a loop report (pack,
@@ -191,7 +193,8 @@ Round 3 (the cap) ships anyway: what stays open goes under
 `## Not converged`, posted as the MR comment.
 
 **QA plan.** No user-reachable surface changed → `QA: not run —
-<reason>`. Else the plan from the contract: rows, error paths,
+<reason>`, never on a lot touching Step 0's Frontend app dirs. Else
+the plan from the contract: rows, each naming its Besoin, error paths,
 captures to take (screen, state, avant/après) with their placement
 in the description, and the seed each row needs (an org without
 the data makes the row unobservable). The seed is the repo's

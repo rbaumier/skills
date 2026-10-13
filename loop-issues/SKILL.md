@@ -55,7 +55,8 @@ fresh context. Only YOU spawn: builder and shipper have no `Agent`
 tool — a child's notification never resumes a subagent, it froze a
 thread 30-60 min each time. Review rounds (pack, review, ship) run until `MERGEABLE`,
 cap 3; QA runs once, a NO-GO gets one answer and one re-verify, a
-`GO-PROVISIONAL` goes straight to `publish`.
+`GO-PROVISIONAL` goes straight to `publish` unless a row ended
+`BLOCKED(budget)` (step 3).
 
 There is NO path that spawns an implementer without a contract:
 "spawn des agents opus", "vague de corrections", "rattrapage" mean
@@ -134,7 +135,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   back to a throwaway database for it). Slot 0 is kept for the repair of `<default>`,
   which never waits for a slot.
 - **Frontend app dirs** — where a user-visible file lives (`UI
-  touched` at step 4).
+  touched` at step 4); a lot touching one is a front lot.
+- **Lint scope** — whether the pre-commit hook judges whole staged
+  files or only added lines (`whole-file` | `added-lines`).
 - **Generated paths** — generated types, lockfiles, `.sqlx/`,
   `openapi.json`: excluded from the line count; a type the diff
   declares that one of them holds is `Reinvented`.
@@ -233,7 +236,14 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      converged]`); else `pack <r+1>`.
    - `loop-shipper` `deliver` → `QA-READY <qa-handoff.md>` → spawn
      one `loop-qa` with it (in parallel with other slots' QAs only when parallel loops were asked) → verdict path → `loop-shipper` `publish`
-     with it — `GO-PROVISIONAL` included, never a `ship`. `deliver`
+     with it — `GO-PROVISIONAL` included, never a `ship`. A NO-GO
+     verdict goes to `publish` as today, `BLOCKED` → `ship` first.
+     Otherwise a verdict
+     with a row `BLOCKED(budget)` never goes to `publish`: `deliver`
+     again, its `re-verify` list = the plan rows of those rows'
+     Besoins only; that targeted verdict GO, or GO-PROVISIONAL with
+     no `BLOCKED(budget)` row → `publish`, anything else → step 4 as
+     draft flagged `[qa not converged]`. `deliver`
      (no QA) or `publish` → `DELIVERED <report>` → step 4 in the SAME
      turn: a `QA: not run` lot goes deliver → verify → queue with no
      spawn in between and no turn ended on it; `BLOCKED
@@ -259,12 +269,13 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      review `MERGEABLE` with every finding `fixed`, `non payé —
      <raison>` or `dropped — <evidence>`, or `[review not converged]` at round 3
      with the open findings as an MR comment;
-   - QA GO/GO-PROVISIONAL or `QA: not run — <reason>`;
+   - QA GO/GO-PROVISIONAL with no `BLOCKED(budget)` row, or `QA:
+     not run — <reason>` — never on a front lot (Step 0);
    - description per `PRESENTATION.md` (read once); a user-visible
      changed file → ≥1 `![…](/uploads/…)` capture.
    Non-conforming → SendMessage the shipper ONCE with the missing
-   items; still non-conforming → step 5. Cap-hit review or ABORTED
-   QA → confirm draft + findings comment, never merge, cleanup.
+   items; still non-conforming → step 5. Cap-hit review, ABORTED
+   QA or `[qa not converged]` → confirm draft + findings comment, never merge, cleanup.
    Autonomous → the lot is `READY` and enters the merge queue below;
    once merged, confirm the source branch removed and the issue
    closed (split → tick the task). Both modes, after the merge or the
@@ -309,7 +320,12 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    mints a new sha. `<default>`'s tip is therefore not certified
    between two releases; the release's own gate finds a semantic
    conflict, and that repair goes first (step 1).
-   The head is ONE `loop-mechanic` with this closed task: read the MR
+   The head is ONE `loop-mechanic` with this closed task: first
+   `~/.claude/skills/loop-issues/hooks/merge-gate.sh <report-dir>
+   origin/<base> <head sha> <Frontend app dirs>` from the worktree;
+   non-zero → its `BLOCKED — missing QA GO: <verdict path>` line, no
+   merge. It refuses a front lot whose last verdict is missing, not
+   GO, or holds a `BLOCKED(budget)` row. Then read the MR
    (`glab api projects/<id>/merge_requests/<iid>`); `has_conflicts`
    false and the certifying status green on its head → merge PINNED on
    that sha, nothing rerun. Conflicted → `git fetch`, rebase on

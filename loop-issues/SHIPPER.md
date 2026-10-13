@@ -23,7 +23,7 @@ Comply runs at `pack 1` on the branch, at `pack <r ≥ 2>` on the
 files of `fix-<r>.patch` only, and once at `deliver`; never at a
 slice or a `ship`. A group decided once is never re-triaged: copy
 its line. Comply passes when no finding sits on a line this branch
-adds; a group filed as FP, a generated path or a rule the run
+adds (`whole-file`: on any line of a file it touches); a group filed as FP, a generated path or a rule the run
 reports as skipped (type-aware timeout) is listed and blocks nothing.
 
 Run `comply --working-tree <worktree>` (post-commit: `--range
@@ -32,11 +32,14 @@ write `<report-dir>/comply-triage.md`, ≤ 40 lines, grouped by rule
 then file, one line per group: `<rule> — <file> — <n> findings —
 <generated | pre-existing | added by this branch> — <proposal>`.
 Generated paths (Step 0 list, `.complyignore`) → proposal
-`FP: generated`. A comment rule on a line this branch did not add →
-`pre-existing, delete or FP`. A finding on an added line →
-`fix`, with the line. Group with `jq`/`sort | uniq -c` on the file;
+`FP: generated`. A finding on an added line → `fix`, with the line.
+A finding on a line this branch did not add depends on Step 0's
+Lint scope: `added-lines` → dropped before the triage, never
+listed; `whole-file` → `fix` in a touched file (the hook blocks the
+commit on it), never FP; an untouched file → dropped. Group with `jq`/`sort | uniq -c` on the file;
 the raw output never enters your context. `comply report-fp` only
-on the FP groups the builder decided, at `deliver`.
+on the FP groups the builder decided, at `deliver`, and only on
+added lines.
 
 ## Phase `pack <r>` — after the last slice (`r` = 1) or `ship <r-1>`
 
@@ -67,8 +70,8 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    `-A`: `type(scope): summary (closes #<n>)` (`refs #<n>` for a
    non-final split task). A hook failure is this MR's to pay — fix
    the offending lines and commit again. Whether the hook judges
-   whole staged files or only added lines is the repo's (Step 0
-   records it); a whole-file hook makes pre-existing drift in a
+   whole staged files or only added lines is the repo's (Step 0's
+   Lint scope); a whole-file hook makes pre-existing drift in a
    touched file this MR's too.
    `--no-verify` is forbidden without exception, and so is every
    equivalent: `core.hooksPath=/dev/null`, a per-file `comply.toml`
@@ -91,9 +94,13 @@ Your prompt hands `<report-dir>/ship-<r>.md` (disposition table, comply
 decisions, QA plan, `mr-description.md`, `→ issue` list). Every `deliver.md`
 below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
 
-1. Comply decisions: FP groups not yet filed → `comply report-fp
+1. Comply decisions: `FP: generated` groups are never filed (they
+   block nothing). Other FP groups not yet filed → `comply report-fp
    <rule_id> <path:line> --reason "<why>" --model claude-opus-5-5`
-   for each. Re-run comply; a finding on an added line → `BLOCKED`.
+   for each. A `path:line` absent from the `+` lines of `git diff -U0
+   origin/<base>...HEAD -- <path>` is refused: not filed, the group
+   goes back to `fix`, `BLOCKED` naming it. Re-run comply; a finding
+   on an added line → `BLOCKED`.
 2. `git log origin/<base>..HEAD` = this task's commits only; more
    than one → squash as in `pack`. Then the gates: the forge pipeline
    gates NOTHING. Step 0 names a certifying gate script → push
@@ -111,8 +118,10 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    run is red. A red gate reproduced
    on the branch's base (detached worktree, same command) is
    inherited: recorded with that command, it blocks nothing.
-3. **QA.** `QA: not run — <reason>` in ship.md → skip; neither that
-   line nor a plan → `BLOCKED` naming it, never QA-less. Else kill
+3. **QA.** `QA: not run — <reason>` in ship.md → skip, unless `git
+   diff --name-only origin/<base>...HEAD -- <Frontend app dirs>` is
+   non-empty: a front lot is never QA-less → `BLOCKED` naming the
+   files. Neither that line nor a plan → `BLOCKED` naming it. Else kill
    whatever listens on the slot's ports (an orphan dev server gives
    a false capture), launch the slot's stack per the QA launch pack (binary built in the
    worktree's target), one `curl --retry` probe. Seed: the repo's versioned seed
@@ -131,7 +140,8 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    organizations and their credentials, the Breaker's targets — the
    boundaries the diff opens or changes, i.e. the contract's hostile
    cases in `Tests`, not the whole app — and the budget in minutes,
-   ~15, enforced: past it the run ends `ABORTED — budget`. Plan rows
+   ~15, enforced: past it the remaining rows end `BLOCKED(budget)`,
+   each still naming its Besoin, so the next run targets it. Plan rows
    first — a lot that adds or reshapes a screen plays the UI quality
    sweep as its first row, never cut by the budget — the exploratory hunt capped at a third, an unfinished
    hunt reported `hunt: partial` and downgrading nothing — run dir
@@ -149,7 +159,8 @@ dead → kill its PIDs and relaunch from the file, never assume.
 
 4. NO-GO → kill the QA processes, write `<report-dir>/deliver.md`
    with the verdict path, end `BLOCKED <deliver.md>`: the `ship`
-   phase answers it, once. `GO-PROVISIONAL` is a GO: its
+   phase answers it, once. A row `BLOCKED(budget)` reaches `publish`
+   only inside a NO-GO (SKILL.md step 3). `GO-PROVISIONAL` is a GO: its
    reservations go to the MR comment, never to a `BLOCKED`, never to
    a `ship` — answering them cost ~45 min of ship + deliver + QA
    re-verify each, for reservations the verdict called non-blocking.
