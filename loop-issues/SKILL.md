@@ -1,6 +1,16 @@
 ---
 name: loop-issues
 description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (gates, comply triage, QA, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, verify, repeat.
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "$HOME/.claude/skills/loop-issues/hooks/refuse-hook-bypass.sh"
+    - matcher: AskUserQuestion
+      hooks:
+        - type: command
+          command: "$HOME/.claude/skills/loop-issues/hooks/loop-running.sh"
 ---
 
 # Loop orchestrator
@@ -136,7 +146,10 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   (IdP, CORS preflight from a slot's console origin);
   `<main-repo>/.claude/skills/verify/` is authoritative when present. One stack per slot — its own ports
   and database — so two QAs never queue on each other.
-- `git fetch origin <default>`; arm the watchdog (`RENDEZVOUS.md`).
+- `git fetch origin <default>`; arm the watchdog (`RENDEZVOUS.md`)
+  and run `~/.claude/skills/loop-issues/hooks/loop-running.sh start`:
+  from then on AskUserQuestion is refused in this session (nobody
+  answers an autonomous loop) until `loop-running.sh stop`.
   A `state.md` of a previous session → resume its issues in flight
   at their phase before selecting anything.
 
@@ -148,7 +161,12 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    summary line. Else a split issue with unchecked tasks → next task,
    step 3. Else the pipeline of `origin/<default>` is red → its
    repair comes first: the open issue that names the failing job,
-   else create it (job, first error lines) and select it. Else the
+   else write its draft (job, first error lines) at
+   `~/.claude/skills/issue/SKILL.md` § Body template, spawn ONE
+   `issue-publisher` with the draft path, the label `needs-triage`
+   (never `ready-for-agent`), the Step 0 forge facts and
+   `~/.claude/skills/issue/RECON.md` (§ Forge commands) → `CREATED
+   <url>`, and select it; you never call the forge to create it. Else the
    open `ready-for-agent` issue of the label the invocation names
    (a lot, a `theme::`), lowest IID first (list only); the rest of
    the queue only once that label is drained. Draft mode: skip
@@ -401,7 +419,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   is not this issue's: `deliver` records it with the reproducing
   command and proceeds as draft. It still forbids the merge: the
   repair of `<default>` is selected first (step 1).
-- **No phase of this loop ever opens an issue on the forge.** The
+- **No phase of this loop ever opens an issue on the forge** (the
+  red-pipeline issue of step 1 goes through the /issue publisher,
+  labelled `needs-triage`). The
   queue grew by 101 issues in three days because every phase filed
   its leftovers (user, 2026-09-24: "je croyais que tu arrêtais d'en
   créer et que tu les intégrais dans les mrs en cours"). A finding
@@ -420,5 +440,8 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   file, and three of the five invisible debts were duplications the
   MR itself had just posted. An issue is for work a successor must
   scope, not for a remedy already under the author's hand.
-- Only user interruption ends the loop; the acknowledging reply ends
-  with `💡 /reflect — miner ce run pour des deltas de skills`.
+- Only user interruption ends the loop, or the summary line of an
+  issue named in the invocation; either way run
+  `~/.claude/skills/loop-issues/hooks/loop-running.sh stop` first. The
+  acknowledging reply ends with `💡 /reflect — miner ce run pour des
+  deltas de skills`.
