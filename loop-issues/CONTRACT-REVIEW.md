@@ -26,6 +26,8 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
   not need (a protocol, a table, a layer, a test of a choice).
 - **Missing** — a criterion or named risk without a `Besoin` or
   `Tests` line.
+- **Weakened check** — a `Tests modifiés` line no issue line pays
+  (the behaviour the test pins is not one the issue changes): `blocker`.
 - **Over-engineered** — a reframing that removes a shape while
   closing the same criteria; name the move and the shape.
 

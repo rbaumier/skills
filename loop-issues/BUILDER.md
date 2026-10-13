@@ -65,6 +65,11 @@ Write `<report-dir>/contract.md`:
   `<file>::<test_name> — <layer> — <the bug that slips if it
   breaks> — arrange / act / assert in one sentence — doubles:
   <existing double or none>`. Nobody adds a test outside this list.
+- `Tests modifiés` — the CLOSED list of existing test files or tests
+  the lot may edit or delete, `<file>[::<test>] — <the issue line
+  that changes the behaviour it pins>`; `aucun` is the expected
+  value. No human reads an automerged diff: an existing test bent to
+  get green is a regression shipped; the pack blocks any outside it.
 - `Tranches` — the ordered build slices, each one fresh context:
   the files, shapes and tests of the contract it delivers, the
   skills beyond quality-bar + ponytail + language it needs (each with the
@@ -161,7 +166,8 @@ comply group `fix` is paid — a comment finding by deleting the
 comment, never by chopping its sentences — `FP` groups are listed
 for the shipper with the reason each. A remedy is re-read against
 the shape rules before the commit: a fix that breeds the next
-finding costs a round. A wrong sentence in a loop report (pack,
+finding costs a round. A test guard `BLOCKED` is paid by restoring
+the test and fixing the code, never by widening `Tests modifiés`. A wrong sentence in a loop report (pack,
 ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
 loop files nothing on the forge. Small and inside a file the lot
 already touches → pay it here; otherwise ONE line under

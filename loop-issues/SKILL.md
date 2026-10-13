@@ -19,8 +19,10 @@ pinned agent already names its brief: a spawn prompt never renames
 one (a `REVIEWER.md` that does not exist cost a `find` in 41
 reviews). A spawn prompt hands facts and the
 brief's absolute path, never a paraphrase of it — and never rewrites a
-phase's gate scope: the brief decides it (`pack r ≥ 2` runs the
-touched crates only; a prompt that asked for the full trio there cost
+phase's gate scope: the brief decides it (`pack` runs no test,
+`deliver` the touched crates and their reverse dependents, the full
+suite only at the release and on `<default>` every ~10 merges, which
+you launch — a `loop-mechanic`, df > 40 GB; a prompt that asked for the full trio at pack cost
 ~15 min on one lot, 2026-09).
 
 ## Agents
@@ -196,6 +198,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      section in the note → spawn ONE `loop-mechanic` with it
      verbatim → `DONE <path>`. Then `build <k+1>` while slices
      remain, else `loop-shipper` `pack`.
+   - `loop-shipper` `pack <r>` → `BLOCKED` on the test guard →
+     `ship <r>` with that report, then `pack` again; a second →
+     step 4 as flagged draft, never merged, even in automerge.
    - `loop-shipper` `pack <r>` → `PACKED <pack-<r>.md>`. Spawn ONE
      `loop-reviewer` with `r`, the pack path, its findings path
      `review-<r>.md`, `REVIEW.md` path, `<main-repo>`.
@@ -242,8 +247,11 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    Autonomous → the lot is `READY` and enters the merge queue below;
    once merged, confirm the source branch removed and the issue
    closed (split → tick the task). Both modes, after the merge or the
-   draft:
+   draft, and at step 5: clean up behind the issue — everything it
+   created, nothing else.
    ```bash
+   # QA stack first: a live session would refuse the drops below.
+   kill <every PID of <report-dir>/qa-stack.md still alive> 2>/dev/null
    wt=$(git -C ../<repo>-worktrees/issue-<n> rev-parse --show-toplevel)   # before the removal
    git worktree remove ../<repo>-worktrees/issue-<n> --force && git worktree prune
    git branch -D agent/issue-<n> 2>/dev/null
@@ -253,8 +261,19 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      psql "${GATES_DATABASE_URL%/*}/postgres" -Atc "select format('DROP DATABASE IF EXISTS %I;', datname) from pg_database
        where datname = '$m' or datname ~ '^${m}_p[0-9]{10}_[0-9a-f]{12}\$'" | psql "${GATES_DATABASE_URL%/*}/postgres" -q
    git -C <main-repo> pull --ff-only origin <default>
+   # Slot databases (launch pack: slot model URL, QA database named in qa-stack.md), AFTER step 1
+   # ran for this slot: an issue selected → it reuses them, keep both; none → drop both, clones included.
+   admin="${<slot-model-url>%/*}/postgres"; model="${<slot-model-url>##*/}"
+   psql "$admin" -Atc "select format('DROP DATABASE IF EXISTS %I;', datname) from pg_database
+     where datname in ('$model', '<qa-database>') or datname ~ '^${model}_p[0-9]{10}_[0-9a-f]{12}\$'" | psql "$admin" -q
    ```
-   No target to prune: mbx prunes the managed targets itself.
+   No target to prune: mbx prunes the managed targets itself. Every
+   drop is a plain `DROP DATABASE`, never `WITH (FORCE)`: a refusal
+   means another session still uses that database — leave it, one
+   `🐢` line naming it. A worktree or a database the issue did not
+   create stays the user's (Step 0). Close with
+   `git worktree list` and the `pg_database` listing showing nothing
+   of issue `<n>` left; what remains is named in the summary line.
 
    **Merge queue** (autonomous) — you hold it, FIFO, in `state.md`. A
    lot enters only once step 4 is verified: verification happens
@@ -286,7 +305,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    line.
 
 5. **Failure** — never merge, close the MR if opened, comment the
-   issue with the summary, clean the worktree. NEEDS-CLARIFICATION:
+   issue with the summary, run step 4's cleanup block (worktree,
+   branch, QA stack, databases). NEEDS-CLARIFICATION:
    autonomous → both labels off + `agent-failed`; draft → skip list.
    Other: autonomous → `ready-for-agent` + `agent-failed`; draft →
    skip list.

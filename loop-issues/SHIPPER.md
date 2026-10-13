@@ -48,28 +48,20 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    before anything else, a conflict → `BLOCKED` naming the files. A
    pack built on a stale base shows a merged neighbour's lines as
    this branch's reversal.
-1. Gates run on a tree that changed. `pack 1` runs the FULL trio on
-   the workspace (`cargo nextest run --workspace`, clippy
-   `--workspace --all-targets`, every frontend lane the diff
-   reaches): on a warm mbx target it costs minutes, and a
-   surface-only pack lets through the red of a crate the diff does
-   not name, found at `deliver` and paid by a second ship + deliver
-   (three times in one run, 2026-09). A rebase since the last full
-   trio → the full trio again, whatever the round or the phase: a
-   new base changes what compiles, and a merge without textual
-   conflict can be wrong. `r ≥ 2`: only the crates or
-   packages `fix-<r>.patch` touches,
-   plus the workspace check and
-   the repo's global guards; an empty patch → copy `## Gates`,
-   `## Comply` and `## Mesure` of `pack-<r-1>.md` with its sha, run
-   nothing. Else the comply triage (above), then the trio in the
-   worktree, foreground, split per command (Rust: `cargo nextest run` when
-   installed; a suite over the 10-min cap → `--partition
-   count:<k>/<n>`, EVERY `k` run and summed), each through
-   `tail -40`. A gate that
-   exits 0 on zero tests run is red. Every generated
-   client of Step 0 regenerated and `git status` clean of it, or the
-   regeneration listed as a failure.
+1. No compile, no test at `pack` (user, 2026-10-12): the builder's
+   tests on its touched crates stand; `deliver` gates. Run only the
+   formatter check, the comply triage (above), and every generated
+   client of Step 0 the diff reaches (regenerated, `git status` clean
+   of it, or listed as a failure). `## Gates` says `pack: none`.
+   **Test guard**, every round: `git diff -M --numstat
+   origin/<base>...HEAD` and `git diff --name-only --diff-filter=D
+   origin/<base>...HEAD`, kept to test paths (`tests/`, `*_unit.rs`,
+   `*_it.rs`, `*/tests.rs`, `*.test.ts(x)`, `*.spec.ts`, `e2e/`) and to
+   `.rs` files whose diff touches a `#[cfg(test)]` module. A file that
+   exists on `<base>`, modified or deleted, and absent from the
+   contract's `Tests modifiés` → `BLOCKED` naming it; a pure rename
+   (`=>`, 0 0) passes. Added lines matching `#[ignore]`, `.skip(`,
+   `.only(`, `test.fixme` (`git diff -U0 … | grep '^+'`) → `BLOCKED`.
 2. `Mesure` of the contract (unless `none`): run, output captured.
 3. Squash the `wip` commits into ONE commit of explicit files, never
    `-A`: `type(scope): summary (closes #<n>)` (`refs #<n>` for a
@@ -107,10 +99,15 @@ decisions, QA plan, `mr-description.md`, `→ issue` list). Then:
    `agent/issue-<n>` (the squashed head) and run THAT script on it,
    foreground, INSTEAD of the trio: it is a superset and posts the
    status the merge needs, so the trio then the script on one sha
-   runs the same suite twice. No script → the FULL trio on the
-   workspace when HEAD moved since `pack 1`'s full run; HEAD = the
-   last pack's sha AND a full workspace trio already ran on this
-   exact base → its gates stand, run nothing. A red gate reproduced
+   runs the same suite twice. No script → rebase on `<default>`, then
+   the workspace check + lint (Rust: `cargo check` and `clippy
+   --workspace --all-targets`) and the tests of the touched crates
+   AND their direct reverse dependents (`cargo tree -i <crate>
+   --workspace --depth 1`), plus every frontend lane the diff
+   reaches — never the full workspace suite (user, 2026-10-12): it
+   runs at the release, and on `<default>` every ~10 merges. Foreground,
+   one command per gate, `tail -40`; a gate that exits 0 on zero tests
+   run is red. A red gate reproduced
    on the branch's base (detached worktree, same command) is
    inherited: recorded with that command, it blocks nothing.
 3. **QA.** `QA: not run — <reason>` in ship.md → skip; neither that
@@ -188,4 +185,10 @@ free, stopping every agent on the machine. Run as is the clone
 sweep command of the repo's launch pack (natalia-v3:
 `.claude/skills/verify/SKILL.md` § Test clone pattern); never
 compose the SQL yourself from the pattern. No command named → sweep
-nothing and say so in the report.
+nothing and say so in the report. Same for what else your phase
+created outside the issue's worktree: a detached worktree for a base
+reproduction is removed (`git worktree remove`) before your last
+line, a throwaway database you fell back to is dropped. The issue's
+worktree, the slot's model and its QA database are the
+orchestrator's to clean (SKILL.md step 4): `deliver.md` names the QA
+database so it can.

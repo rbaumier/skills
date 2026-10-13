@@ -51,4 +51,7 @@ Beyond the matrix rows, sweep every changed screen once; each hit is a finding:
 
 Never conclude "works" from a page that merely rendered. The console must be
 clean AND the promised behavior (row appears, inline error shows, toast fires,
-button disables) observed and screenshotted.
+button disables) observed and screenshotted. A write is then confirmed after
+`navigate_page(type="reload")` (or an API `GET` / read-only DB query): the
+persisted state captured is the proof; the toast, banner, optimistic row,
+button state or closed dialog alone is FAIL.
