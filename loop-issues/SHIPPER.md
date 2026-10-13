@@ -114,7 +114,7 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    AND their direct reverse dependents (`cargo tree -i <crate>
    --workspace --depth 1`), plus every frontend lane the diff
    reaches — never the full workspace suite (user, 2026-10-12): it
-   runs at the release, and on `<default>` every ~10 merges. Foreground,
+   runs at the release, and on `<default>` 10 merges after the last audit. Foreground,
    one command per gate, `tail -40`; a gate that exits 0 on zero tests
    run is red. With a schema signal in the launch pack, each gate runs
    as `~/.claude/skills/loop-issues/hooks/slot.sh gate '<signal>'

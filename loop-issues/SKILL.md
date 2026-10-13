@@ -32,7 +32,7 @@ brief's absolute path, never a paraphrase of it — and never rewrites a
 phase's gate scope: the brief decides it (`pack` runs no test,
 `deliver` the touched crates and their reverse dependents, the full
 suite only at the release and on `<default>` when `state.sh merged`
-prints `audit due` (every 10 merges), which you launch with the audit
+prints `audit due` (10 merges since the last audit), which you launch with the audit
 pass (§ Merge queue) — a `loop-mechanic`, df > 40 GB; a prompt that asked for the full trio at pack cost
 ~15 min on one lot, 2026-09).
 
@@ -434,7 +434,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    <report-root>/constats.md <n> <report-dir>`: each line of the lot's
    `## Constats non payés` becomes `- [ ] #<n> <path:line> — <constat>
    — <raison>`, once, then `merged #<n>`. The registry sits beside
-   `state.md`; `merged` only appends, the audit only ticks boxes.
+   `state.md`; `merged` only appends, the audit only ticks boxes and
+   appends `audited`, which resets the merge count to zero.
    `audit due` → ONE `loop-mechanic`: the full suite on `<default>`,
    then the audit of the `[ ]` entries only. An entry whose finding is
    gone from `origin/<default>` (judged on its content, the line
@@ -444,13 +445,13 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    findings, become drafts per § Body template of
    `~/.claude/skills/issue/SKILL.md` in
    `<report-root>/audit-<UTC date>/`; the mechanic ends `DONE
-   <report-root>/audit-<UTC date>/`. Then you, per draft, mark its
-   entries `[x] … — dépôt <draft>` BEFORE spawning the
-   `issue-publisher` (`~/.claude/skills/issue/SKILL.md` step 4) with
-   the label `needs-triage`, never `ready-for-agent`, then
-   `[x] … — #<m>` at `CREATED`: a rerun reads only `[ ]`, so nothing
-   is filed twice. A crash between both marks leaves the draft for a
-   manual filing.
+   <report-root>/audit-<UTC date>/`. Then you append `audited` to the
+   registry and, per draft, spawn the `issue-publisher`
+   (`~/.claude/skills/issue/SKILL.md` step 4) with the label
+   `needs-triage`, never `ready-for-agent`. Only its `CREATED` (the
+   forge returned the issue) marks the draft's entries
+   `[x] … — #<m>`; a failed creation leaves them `[ ]` for the next
+   audit.
 
 5. **Failure** — never merge, close the MR if opened, comment the
    issue with the summary, run step 4's cleanup block (worktree,
