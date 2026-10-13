@@ -85,4 +85,10 @@ group=front_lot_passes_on_go
 verdict 3 GO
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 
+group=latest_round_wins_numerically
+verdict 9 GO
+verdict 10 NO-GO
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+grep -q 'verdict-10.md (NO-GO)' "$tmp/reason" || { echo "FAIL $group: verdict-9 beat verdict-10" >&2; exit 1; }
+
 echo "hooks: all checks pass"
