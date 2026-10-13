@@ -32,8 +32,8 @@ guides are disclosed by pointer, never preloaded. Read code with `git grep` and 
 Load `coding-standards:quality-bar` and `ponytail`.
 Write `<report-dir>/contract.md`:
 
-- `Besoin` — one line per acceptance criterion, as what a user or
-  operator observes. A criterion that names a code shape ("one
+- `Besoin` — one line per acceptance criterion, `- B<k> — <what a
+  user or operator observes>`. A criterion that names a code shape ("one
   composition root", "tested without a socket") is read as its
   observable effect; write the reduction. NEEDS-CLARIFICATION only
   for a product decision the issue leaves open or a dependency
@@ -51,7 +51,11 @@ Write `<report-dir>/contract.md`:
   route or dependency, each paying with a second caller on `<base>`
   today or the issue line that needs it. `Formes: aucune neuve` is
   the expected value. A shape absent from this list may not appear
-  in the diff without a line under `## Écarts au plan`.
+  in the diff without a line under `## Écarts au plan`. First line
+  ``- Fichiers : `<path>`, …`` (the overlap check between lots reads
+  it); each existing symbol, field or route the diff changes is one
+  line ``- modifié `<item>` — lu par : <its readers, by grep, or
+  aucun (the grep)>``.
 - `Réutilise` — one line per transverse mechanism, `<symbol>
   (<file>)`, proven by your grep. A changed rule (format, time zone, population,
   bound) lists every site that rebuilds it by hand (grep), each in `Formes` or refuted.
@@ -69,7 +73,10 @@ Write `<report-dir>/contract.md`:
   these, each paid 35 min to 2 h after delivery. Each line:
   `<file>::<test_name> — <layer> — <the bug that slips if it
   breaks> — arrange / act / assert in one sentence — doubles:
-  <existing double or none>`. Nobody adds a test outside this list.
+  <existing double or none> — (B<k>, …)`. Nobody adds a test outside
+  this list. `hooks/check.sh contract` refuses a `Besoin` line without
+  its `B<k>` id, a `B<k>` no `Tests` bullet names, a `Formes` without
+  its `- Fichiers :` line and a `modifié` line without a filled `lu par :`.
 - `Tests modifiés` — the CLOSED list of existing test files or tests
   the lot may edit or delete, `<file>[::<test>] — <the issue line
   that changes the behaviour it pins>`; `aucun` is the expected
@@ -89,7 +96,9 @@ Write `<report-dir>/contract.md`:
   A criterion deferred ("reporté", "suite") is a split decided here,
   named in the contract, never a remainder found after delivery,
   which comes back 11 to 22 h later.
-- `Stack` (`<base>` when a dependency has an open MR), `Mesure` (hot
+- `Stack` (`<base>` when a dependency has an open MR, draft mode
+  only; autonomous never stacks: `blocked by #<m>`, and the
+  orchestrator re-queues the lot), `Mesure` (hot
   path + bar, or `none`), `QA` (deliverables + error paths),
   `Risques` (convention deleted, ADR bent, issue line lifted with the
   refuting grep; a change of who holds or reads a right or scope names
