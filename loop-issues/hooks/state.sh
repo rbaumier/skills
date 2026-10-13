@@ -7,7 +7,8 @@
 #   state.sh count <state.md>           progress counter and rework rate
 #   state.sh merged <constats.md> <n> <report-dir>
 #                                       registers the lot's unpaid findings;
-#                                       prints "audit due" every 10 merges
+#                                       prints "audit due" from 10 merges
+#                                       since the last "audited" line
 set -uo pipefail
 refuse() { echo "$1" >&2; exit 2; }
 usage() { echo "usage: state.sh tick|model|fresh|count|merged …" >&2; exit 1; }
@@ -89,13 +90,15 @@ case ${1:-} in
         while IFS= read -r finding; do
           # A closed entry: its key, then the audit's closing mark.
           awk -v k="#$n $finding" '
-            /^- \[x\] / { sub(/ — (absent @[^ ]+|dépôt [^ ]+|déjà #[0-9]+|#[0-9]+)$/, "") }
+            /^- \[x\] / { sub(/ — (absent @[^ ]+|déjà #[0-9]+|#[0-9]+)$/, "") }
             { sub(/^- \[[ x]\] /, "") } $0 == k { f = 1 } END { exit !f }' "$reg" ||
             echo "- [ ] #$n $finding" >>"$reg"
         done
     done
     echo "merged #$n" >>"$reg"
-    [ $(($(grep -c '^merged ' "$reg") % 10)) -eq 0 ] && echo 'audit due'
+    # Merges since the last audit; an `audited` line resets the count.
+    since=$(awk '/^audited/ { c = 0 } /^merged / { c++ } END { print c + 0 }' "$reg")
+    [ "$since" -ge 10 ] && echo 'audit due'
     ;;
   *) usage ;;
 esac

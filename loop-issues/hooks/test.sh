@@ -361,6 +361,11 @@ mkdir -p "$tmp/empty"
 for i in $(seq 11); do
   [ -n "$("$state" merged "$tmp/cadence.md" "$i" "$tmp/empty")" ] && echo "$i"
 done >"$tmp/due"
-[ "$(cat "$tmp/due")" = 10 ] || fail "audit due after merges: $(cat "$tmp/due")"
+[ "$(cat "$tmp/due")" = "$(printf '%s\n' 10 11)" ] || fail "audit due after merges: $(cat "$tmp/due")"
+echo audited >>"$tmp/cadence.md"
+for i in $(seq 12 21); do
+  [ -n "$("$state" merged "$tmp/cadence.md" "$i" "$tmp/empty")" ] && echo "$i"
+done >"$tmp/due"
+[ "$(cat "$tmp/due")" = 21 ] || fail "audit due after reset: $(cat "$tmp/due")"
 
 echo "hooks: all checks pass"
