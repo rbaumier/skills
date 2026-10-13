@@ -279,4 +279,61 @@ grep -q "port $a" "$tmp/reason" && up "$a" || fail "$(cat "$tmp/reason")"
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
 expect pass "$slot" '' qa-down "$tmp/qa2.md"
 
+state="$hooks/state.sh"
+at() { jq -nr --argjson s "$1" '(now + $s) | todate'; }
+
+group=tick_pause_and_drain
+printf '%s\n' "mode: pause-until $(at 3600)" 'slot 1: free' >"$tmp/state.md"
+expect deny "$state" '' tick "$tmp/state.md"
+grep -q '^paused until ' "$tmp/reason" || fail "$(cat "$tmp/reason")"
+printf '%s\n' "mode: pause-until $(at -3600)" 'slot 1: free' >"$tmp/state.md"
+expect pass "$state" '' tick "$tmp/state.md"
+printf '%s\n' 'mode: drain' "slot 1: #4 build 1 loop-builder since $(at -60) — $tmp/r4" 'slot 2: free' >"$tmp/state.md"
+expect deny "$state" '' tick "$tmp/state.md"
+[ "$(cat "$tmp/reason")" = draining ] || fail "$(cat "$tmp/reason")"
+printf '%s\n' 'mode: drain' 'slot 1: free' 'slot 2: free' >"$tmp/state.md"
+expect deny "$state" '' tick "$tmp/state.md"
+[ "$(cat "$tmp/reason")" = drained ] || fail "$(cat "$tmp/reason")"
+printf '%s\n' 'slot 1: free' >"$tmp/state.md"
+expect pass "$state" '' tick "$tmp/state.md"
+
+group=tick_marks_overdue_phase
+mkdir -p "$tmp/r1" "$tmp/r2"
+printf '%s\n' 'mode: run' "slot 1: #1 ship 2 loop-reviewer since $(at -1200) — $tmp/r1" \
+  "slot 2: #2 build 1 loop-builder since $(at -300) — $tmp/r2" \
+  "slot 3: #3 build 1 loop-builder done — $tmp/r3" >"$tmp/state.md"
+expect pass "$state" '' tick "$tmp/state.md"
+expect pass "$state" '' tick "$tmp/state.md"
+[ "$(grep -n '🐢' "$tmp/state.md" | cut -d: -f1)" = 2 ] || fail "$(cat "$tmp/state.md")"
+grep -q ' 🐢 20/15 min$' "$tmp/state.md" || fail "$(cat "$tmp/state.md")"
+[ "$(wc -l <"$tmp/r1/lenteurs.md")" -eq 1 ] || fail "$(cat "$tmp/r1/lenteurs.md")"
+[ ! -e "$tmp/r2/lenteurs.md" ] || fail "r2/lenteurs.md"
+
+group=model_mismatch_stops
+mkdir -p "$tmp/.claude/agents"
+printf '%s\n' --- 'name: loop-orchestrator' 'model: claude-opus-5-5' --- >"$tmp/.claude/agents/loop-orchestrator.md"
+printf '%s\n' 'mode: run' >"$tmp/state.md"
+expect deny "$state" '' model "$tmp/state.md" claude-sonnet-5-5
+[ "$(tail -1 "$tmp/state.md")" = 'stopped: model — serving claude-sonnet-5-5, pinned claude-opus-5-5' ] || fail "$(cat "$tmp/state.md")"
+printf '%s\n' 'mode: run' >"$tmp/state.md"
+expect pass "$state" '' model "$tmp/state.md" claude-opus-5-5
+[ "$(cat "$tmp/state.md")" = 'mode: run' ] || fail "state.md changed on a match"
+
+group=fresh_rereads_changed_only
+cp -R "$hooks/.." "$tmp/skill"
+export CLAUDE_CODE_SESSION_ID=f1
+expect pass "$tmp/skill/hooks/state.sh" '' fresh
+expect pass "$tmp/skill/hooks/state.sh" '' fresh
+# The copy is as new as the mark: age both, the mark last.
+find "$tmp/skill" -type f -exec touch -t 202001010000 {} +
+touch -t 202001010100 "$tmp/.claude/run/loop-issues/f1.read"
+touch "$tmp/skill/RENDEZVOUS.md"
+expect deny "$tmp/skill/hooks/state.sh" '' fresh
+[ "$(cat "$tmp/reason")" = "$tmp/skill/RENDEZVOUS.md" ] || fail "$(cat "$tmp/reason")"
+expect pass "$tmp/skill/hooks/state.sh" '' fresh
+
+group=count_shows_counter_and_rework
+printf '%s\n' 'mode: run' 'planned: 3 (+1)' 'done: #1 ✅ merged rework' 'done: #2 📝 drafted' >"$tmp/state.md"
+[ "$("$state" count "$tmp/state.md")" = 'Compteur : 2 / 3 lots (+1 ajoutés) · reprises : 1 / 2' ] || fail "$("$state" count "$tmp/state.md")"
+
 echo "hooks: all checks pass"

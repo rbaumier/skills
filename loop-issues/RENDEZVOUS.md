@@ -98,27 +98,39 @@ recurring `9,29,49 * * * *`, session-only, auto-expires after 7 days —
 with this prompt:
 
 > loop-issues watchdog. A user message since the loop's last spawn
-> that does not ask to continue (an interruption, a stop) → CronDelete
+> that does not ask to continue (an interruption, a stop; a message
+> that set `mode:`, SKILL.md § Rules, is none) → CronDelete
 > this job, run `~/.claude/skills/loop-issues/hooks/loop-running.sh
-> stop`, reply ⏹ + `💡 /reflect — miner ce run`. Else ListAgents:
+> stop`, reply ⏹ + `💡 /reflect — miner ce run`. Else run
+> `~/.claude/skills/loop-issues/hooks/state.sh tick <state.md>`:
+> `paused until …` → reply ⏸ alone; `drained` → the drained stop
+> (SKILL.md § The loop); `draining` → all below but step 1. Else ListAgents:
 > a builder or reviewer of this loop running → reply ⏳ — but a
 > second consecutive ⏳ with no new side effect from it (commit, push,
 > report file, forge note) → it stalled: § Fall-through. Else a
 > builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else run the
-> loop from step 1 — step 4 first when a report awaits verification,
+> loop from step 1 — past a pause, the lots of `state.md` at their
+> phase first; step 4 first when a report awaits verification,
 > a `held: contract` spawn of `state.md` first of all (SKILL.md § The loop).
 > Before any of it: a phase over its budget or a report naming an
 > obstacle → SKILL.md § Slowness is yours, first. No recap.
 
 It fires only while you are idle — exactly the dead state it exists
 for — and it IS the empty-queue re-poll: an empty queue never
-deletes it, only a user stop or the disk stop does.
+deletes it, only a user stop or the disk, model or drained stop
+does.
 
-After every spawn, rewrite `<report-root>/state.md` (≤ 20 lines):
-per issue in flight its phase, slot, last report path; the skip
-list; a `held: contract #<n> — <reason>` or `stopped: disk —
-<reason>` line (SKILL.md § The loop); the Step 0 facts path — nothing else: brakes and history go to
-`freins.md`. A compaction, or a fire answered
+After every spawn, rewrite `<report-root>/state.md`: `mode: run`,
+`drain` or `pause-until <UTC ISO-8601>`; one line per slot, `slot
+<s>: free` or `slot <s>: #<n> <phase> <subagent_type> since <spawn
+time, UTC ISO-8601> — <report dir>`, its 🐢 kept while the phase is
+unchanged; at its notification, `since <time>` becomes `done` until
+the next spawn of the slot, so a finished phase never ages; `planned: <N>
+(+<k>)`; one `done: #<n> <summary line>[ rework]` per finished lot
+(SKILL.md step 6); the skip list; a `held: contract #<n> — <reason>`
+or `stopped: <disk|model|drained> — <reason>` line (SKILL.md § The
+loop, Step 0); the Step 0 facts path — nothing else: brakes and
+history go to `freins.md`. A compaction, or a fire answered
 `Prompt is too long`, means the session is spent: the user's next
 `/loop-issues` in a fresh session resumes from `state.md`, so it is
 always current; a session that goes on anyway re-reads it before any
