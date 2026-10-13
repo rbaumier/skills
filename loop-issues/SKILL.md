@@ -138,6 +138,11 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   touched` at step 4); a lot touching one is a front lot.
 - **Lint scope** — whether the pre-commit hook judges whole staged
   files or only added lines (`whole-file` | `added-lines`).
+- **Template sections** — the five mandatory sections of
+  `~/.claude/skills/issue/SKILL.md` § Body template (`Category`,
+  `Summary`, `Current behavior`, `Desired behavior`, `Acceptance
+  criteria`), named in the project's language as /issue writes them
+  (read off one recent issue body); English by default.
 - **Generated paths** — generated types, lockfiles, `.sqlx/`,
   `openapi.json`: excluded from the line count; a type the diff
   declares that one of them holds is `Reinvented`.
@@ -174,7 +179,14 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    (a lot, a `theme::`), lowest IID first (list only); the rest of
    the queue only once that label is drained. Draft mode: skip
    candidates with an open MR from an `agent/issue-<n>` branch or on
-   the skip list. None → end your turn; the watchdog re-polls.
+   the skip list. Each queue candidate then runs
+   `~/.claude/skills/loop-issues/hooks/check.sh issue <gh|glab>
+   <project> <n> <Template sections…>`; exit 2 → `#<n> — <its
+   stderr>` (`blocked by #N`, `outside template`) in the skip list of
+   `state.md`, next candidate; exit 1 (forge unreadable) → stop the
+   selection and report its stderr, nobody skipped. These lines are rewritten at every
+   selection: a closed blocker frees its issue. None → end your turn;
+   the watchdog re-polls.
 
 2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
    phase reads it, never the forge. Autonomous: `ready-for-agent` → `picked-by-agent`.
@@ -198,7 +210,20 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
      Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion or constraint of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
      ```
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
-     `Tranches`.
+     `Tranches`, and run `~/.claude/skills/loop-issues/hooks/check.sh
+     contract <contract.md>` before either path below: exit 2 →
+     `contract` once more, handed its stderr (the uncovered Besoin, the
+     changed item without readers); a second exit 2 → step 5. No
+     contract review, no `build 1` until it passes. Then `check.sh
+     overlap <contract.md> <contract.md of every other lot in
+     state.md>`: exit 2 (stderr = `<contract of #m>: <shared files>`)
+     → phase `held by #<m>` in `state.md`, no `build 1`. The hold lifts
+     when #m leaves `state.md` (step 6), whatever its outcome. Draft
+     mode: after a `📝 drafted` the lot stacks on `agent/issue-<m>`
+     (§ Rules). Autonomous: the lot always builds on `<default>`,
+     since a stacked MR would merge into #m's branch.
+     On every lift `overlap` runs again, one held lot at a time,
+     against the lots still in flight: pass → `build 1`, exit 2 → held by the lot it names.
      One slice under ~150 changed lines and no new table, route or
      dependency in `Formes` → `build 1`, no contract review: small
      issues ship in 30-60 min that way, where a contract review
@@ -208,8 +233,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    - contract reviewer, **one round, never two** → `CONTRACT-OK` →
      `build 1`, handed the review path (its `minor` lines amend the
      contract); `CONTRACT-REWORK <path>` → `contract` once more with
-     that path (amends, answers each finding) → `build 1` whatever
-     that amendment says. The shipper copies the open findings into
+     that path (amends, answers each finding) → `check.sh contract`
+     and `overlap` again, as above → `build 1` whatever else that
+     amendment says. The shipper copies the open findings into
      `pack-1.md` and the code review judges them on the diff.
      The first pass catches what a contract review is for — a defect
      already paid, a shape reinvented, a scope that fabricates work.
@@ -355,7 +381,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
    lines:
    `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
-   needs clarification` | `❌ #<n> failed → re-queued`. Each reply ends
+   needs clarification` | `❌ #<n> failed → re-queued`. Writing #n's
+   summary line lifts every lot `held by #<n>` (step 3). Each reply ends
    `Compteur : X / N lots (+k ajoutés)`, N fixed at launch. Nothing else
    reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
 
@@ -413,10 +440,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   rebases on three issues of one feature. Issues on one surface go
   to ONE slot, in sequence. When the queue
   offers nothing disjoint, run fewer slots than asked — a slot left
-  idle costs less than a rebase chain. Name the touched surface of
-  each issue in flight and check the next candidate against it
-  before selecting, rather than trusting a shared label to separate
-  them.
+  idle costs less than a rebase chain. `check.sh overlap` (step 3)
+  compares the `Formes` files of each new contract with the lots in
+  flight, never a shared label.
 - Forge list calls narrowed on the first attempt (`per_page`,
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.

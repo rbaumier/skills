@@ -91,4 +91,85 @@ verdict 10 NO-GO
 expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
 grep -q 'verdict-10.md (NO-GO)' "$tmp/reason" || { echo "FAIL $group: verdict-9 beat verdict-10" >&2; exit 1; }
 
+# Forge doubles: issue <n> is $tmp/forge/<n>.body with state $tmp/forge/<n>.state (opened|closed).
+check="$hooks/check.sh"
+mkdir -p "$tmp/bin" "$tmp/forge"
+printf '%s\n' '#!/bin/bash' 'f='"$tmp"'/forge/$3' \
+  'jq -n --rawfile b $f.body --arg s "$(cat $f.state)" '\''{body: $b, state: (if $s == "opened" then "OPEN" else "CLOSED" end)}'\''' >"$tmp/bin/gh"
+printf '%s\n' '#!/bin/bash' 'f='"$tmp"'/forge/${2##*/}' \
+  'jq -n --rawfile b $f.body --arg s "$(cat $f.state)" '\''{description: $b, state: $s}'\''' >"$tmp/bin/glab"
+chmod +x "$tmp/bin/gh" "$tmp/bin/glab"
+export PATH="$tmp/bin:$PATH"
+sections=(Category Summary 'Current behavior' 'Desired behavior' 'Acceptance criteria')
+# forge_issue <n> <state> [body line…]: a body with every English template section.
+forge_issue() {
+  local n=$1
+  echo "$2" >"$tmp/forge/$n.state"
+  shift 2
+  printf '%s\n' "$@" '**Category:** bug' '**Summary:** x' '**Current behavior:**' x \
+    '**Desired behavior:**' x '**Acceptance criteria:**' '- [ ] x' >"$tmp/forge/$n.body"
+}
+
+group=issue_blocked_skipped
+forge_issue 1 opened '> **Blocked by #7** — needs the table'
+forge_issue 7 opened
+for forge in gh glab; do
+  expect deny "$check" '' issue "$forge" g/p 1 "${sections[@]}"
+  [ "$(cat "$tmp/reason")" = 'blocked by #7' ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+done
+
+group=issue_closed_blocker_passes
+forge_issue 7 opened 'Blocked by #70'
+forge_issue 70 closed
+expect pass "$check" '' issue gh g/p 7 "${sections[@]}"
+[ ! -s "$tmp/reason" ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+
+group=issue_forge_error
+forge_issue 4 opened 'Blocked by #98'
+for forge in gh glab; do
+  expect error "$check" '' issue "$forge" g/p 99 "${sections[@]}"
+  expect error "$check" '' issue "$forge" g/p 4 "${sections[@]}"
+done
+
+group=issue_outside_template
+echo opened >"$tmp/forge/2.state"
+printf '%s\n' '**Category:** bug' '**Summary:** x' '**Current behavior:**' x '**Desired behavior:**' x >"$tmp/forge/2.body"
+expect deny "$check" '' issue gh g/p 2 "${sections[@]}"
+[ "$(cat "$tmp/reason")" = 'outside template' ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+
+group=issue_translated_template_passes
+echo opened >"$tmp/forge/3.state"
+printf '%s\n' '**Catégorie :** bug' '**Résumé :** x' '**Comportement actuel :**' x \
+  '**Comportement attendu :**' x '**Critères d'\''acceptation :**' '- [ ] x' >"$tmp/forge/3.body"
+expect pass "$check" '' issue gh g/p 3 'Catégorie' 'Résumé' 'Comportement actuel' 'Comportement attendu' "Critères d'acceptation"
+
+group=contract_uncovered_besoin
+printf '%s\n' '## Besoin' '- B1 — x' '- B10 — y' '' '## Tests' '- B10 — t' 'B1 has no test, prose only.' '' '## Formes' '- Fichiers : `a/x.md`' >"$tmp/c.md"
+expect deny "$check" '' contract "$tmp/c.md"
+grep -q 'B1 ' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+
+group=contract_missing_readers
+printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — x' >"$tmp/c.md"
+expect deny "$check" '' contract "$tmp/c.md"
+grep -q 'foo' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+for readers in 'lu par : ' "lu par :$(printf '\t')" 'lu par personne, cf. a:b'; do
+  printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' "- modifié \`foo\` — $readers" >"$tmp/c.md"
+  expect deny "$check" '' contract "$tmp/c.md"
+  grep -q 'foo' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+done
+
+group=contract_complete_passes
+printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — lu par : bar' "- modifié \`baz\` — lu par$(printf '\302\240'): qux" >"$tmp/c.md"
+expect pass "$check" '' contract "$tmp/c.md"
+
+group=overlap_shared_file_holds
+printf '%s\n' '## Formes' '- Fichiers : `a/x.md`, `a/y.md`' >"$tmp/new.md"
+printf '%s\n' '## Formes' '- Fichiers : `a/x.md`, `a/z.md`' >"$tmp/other.md"
+expect deny "$check" '' overlap "$tmp/new.md" "$tmp/other.md"
+[ "$(cat "$tmp/reason")" = "$tmp/other.md: a/x.md" ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+
+group=overlap_disjoint_passes
+printf '%s\n' '## Formes' '- Fichiers : `b/x.md`, `b/z.md`' >"$tmp/other.md"
+expect pass "$check" '' overlap "$tmp/new.md" "$tmp/other.md"
+
 echo "hooks: all checks pass"
