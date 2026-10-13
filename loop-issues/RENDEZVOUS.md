@@ -105,17 +105,19 @@ with this prompt:
 > second consecutive ⏳ with no new side effect from it (commit, push,
 > report file, forge note) → it stalled: § Fall-through. Else a
 > builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else run the
-> loop from step 1 — step 4 first when a report awaits verification.
+> loop from step 1 — step 4 first when a report awaits verification,
+> a `held: contract` spawn of `state.md` first of all (SKILL.md § The loop).
 > Before any of it: a phase over its budget or a report naming an
 > obstacle → SKILL.md § Slowness is yours, first. No recap.
 
 It fires only while you are idle — exactly the dead state it exists
 for — and it IS the empty-queue re-poll: an empty queue never
-deletes it, only a user stop does.
+deletes it, only a user stop or the disk stop does.
 
 After every spawn, rewrite `<report-root>/state.md` (≤ 20 lines):
 per issue in flight its phase, slot, last report path; the skip
-list; the Step 0 facts path — nothing else: brakes and history go to
+list; a `held: contract #<n> — <reason>` or `stopped: disk —
+<reason>` line (SKILL.md § The loop); the Step 0 facts path — nothing else: brakes and history go to
 `freins.md`. A compaction, or a fire answered
 `Prompt is too long`, means the session is spent: the user's next
 `/loop-issues` in a fresh session resumes from `state.md`, so it is

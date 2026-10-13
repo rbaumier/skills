@@ -172,4 +172,111 @@ group=overlap_disjoint_passes
 printf '%s\n' '## Formes' '- Fichiers : `b/x.md`, `b/z.md`' >"$tmp/other.md"
 expect pass "$check" '' overlap "$tmp/new.md" "$tmp/other.md"
 
+# df double: 50 GB free if $tmp/roomy-if holds, else 1.
+slot="$hooks/slot.sh"
+printf '%s\n' '#!/bin/bash' 'echo "Filesystem 1024-blocks Used Available Capacity Mounted"' \
+  'bash -c "$(cat '"$tmp"'/roomy-if)" && gb=50 || gb=1' 'echo "disk 0 0 $((gb * 1048576)) 0% /"' >"$tmp/bin/df"
+chmod +x "$tmp/bin/df"
+fail() { echo "FAIL $group: $1" >&2; exit 1; }
+g() { git -C "$tmp/repo" -c user.name=t -c user.email=t@t "$@"; }
+git init -q "$tmp/repo" && echo a >"$tmp/repo/f" && g add f && g commit -qm a
+mkdir -p "$tmp/wts"
+for n in 1 2 3 4-t2; do
+  g worktree add -q "$tmp/wts/issue-$n" -b "agent/issue-$n"
+  touch -t 202001010000 "$tmp/repo/.git/worktrees/issue-$n/index"
+done
+echo b >"$tmp/wts/issue-3/f"
+
+group=disk_below_threshold_held
+echo false >"$tmp/roomy-if"
+expect deny "$slot" '' disk 20 "$tmp/empty-wts" -
+grep -q '^disk: 1 GB free < 20 GB$' "$tmp/reason" || fail "$(cat "$tmp/reason")"
+
+group=disk_sweeps_clones_first
+echo "[ -e $tmp/swept ]" >"$tmp/roomy-if"
+expect pass "$slot" '' disk 20 "$tmp/wts" "echo x >>$tmp/sweeps; touch $tmp/swept" 2
+[ "$(wc -l <"$tmp/sweeps")" -eq 1 ] && [ -d "$tmp/wts/issue-1" ] || fail "sweep not first"
+
+group=disk_reclaims_then_passes
+echo "[ ! -d $tmp/wts/issue-1 ]" >"$tmp/roomy-if"
+touch "$tmp/wts/issue-1.env" "$tmp/wts/issue-4.env"
+expect pass "$slot" '' disk 20 "$tmp/wts" true 2
+[ ! -d "$tmp/wts/issue-1" ] && [ ! -e "$tmp/wts/issue-1.env" ] || fail "issue-1 or its env kept"
+[ ! -d "$tmp/wts/issue-4-t2" ] && [ -e "$tmp/wts/issue-4.env" ] || fail "split task kept, or its issue env lost"
+g rev-parse -q --verify agent/issue-1 >/dev/null || fail "branch of issue-1 lost"
+[ -d "$tmp/wts/issue-2" ] && [ "$(cat "$tmp/wts/issue-3/f")" = b ] || fail "in-flight or dirty worktree touched"
+
+group=env_hook_injects_slot_env
+mkdir -p "$tmp/x-worktrees/issue-1-t2/sub" && echo FOO=bar >"$tmp/x-worktrees/issue-1.env"
+# run_hook <mode> <command> [cwd]: any permission decision, then the command output.
+run_hook() {
+  local out
+  out=$(command_input "$2" "${3:-$tmp}" | jq -c --arg m "$1" '.permission_mode = $m' | "$slot" env)
+  [ -n "$out" ] || return 0
+  jq -r '.hookSpecificOutput.permissionDecision // empty' <<<"$out"
+  bash -c "$(jq -r .hookSpecificOutput.updatedInput.command <<<"$out")"
+}
+mkdir -p "$tmp/x-worktrees/issue-1"
+for mode in auto default bypassPermissions; do
+  [ "$(run_hook "$mode" "cd $tmp/x-worktrees/issue-1 && echo \"\$FOO\"")" = bar ] || fail "path or decision under $mode"
+done
+[ "$(run_hook auto 'echo "$FOO"' "$tmp/x-worktrees/issue-1-t2/sub")" = bar ] || fail "cwd of a split lot"
+[ "$(HOME=$tmp run_hook auto 'cd $HOME/x-worktrees/issue-1 && echo "$FOO"')" = bar ] || fail "\$HOME path"
+[ -z "$(run_hook auto "ls $tmp/x-worktrees/issue-10/x")" ] || fail "issue-10 took issue-1's env"
+
+group=gate_recreates_once
+expect pass "$slot" '' gate 'schema mismatch' "echo r >>$tmp/recreates; touch $tmp/migrated" \
+  "[ -e $tmp/migrated ] || { echo schema mismatch; exit 1; }" >/dev/null
+[ "$(wc -l <"$tmp/recreates")" -eq 1 ] || fail "recreated more than once"
+expect deny "$slot" '' gate 'schema mismatch' "echo r >>$tmp/recreates2" 'echo schema mismatch; exit 1' >/dev/null
+grep -q '^BLOCKED' "$tmp/reason" && [ "$(wc -l <"$tmp/recreates2")" -eq 1 ] || fail "second mismatch not BLOCKED"
+"$slot" gate 'schema mismatch' "touch $tmp/recreates3" 'exit 3' >/dev/null
+[ $? -eq 3 ] && [ ! -e "$tmp/recreates3" ] || fail "red without signal recreated or masked"
+"$slot" gate 'schema mismatch' true 'exit 2' >/dev/null
+[ $? -eq 1 ] || fail "a gate's own exit 2 read as a refusal"
+
+# qa-up refuses a port held on any address, [::1] included.
+port() {
+  python3 -c '
+import socket, sys
+held = []
+for _ in range(100):
+    v4 = socket.socket(); v4.bind(("0.0.0.0", 0)); p = v4.getsockname()[1]
+    try:
+        v6 = socket.socket(socket.AF_INET6); v6.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        v6.bind(("::", p))
+    except OSError: continue
+    held += [v4, v6]
+    if len(held) == 2 * int(sys.argv[1]): print(*(s.getsockname()[1] for s in held[::2])); break
+else: sys.exit("no free port")' "${1:-1}"
+}
+serve() { echo "python3 -m http.server $1 --bind 127.0.0.1"; }
+up() { curl -sf -o /dev/null --retry 30 --retry-delay 1 --retry-connrefused --max-time 2 "http://127.0.0.1:$1/"; }
+cleanup() {
+  for s in "$tmp"/qa*.md; do "$slot" qa-down "$s"; done
+  rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+group=qa_probe_then_down_frees_slot
+a=$(port)
+timeout 10 "$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" || fail "qa-up did not return"
+up "$a" && grep -q 'GET /' "$tmp/qa1.log" || fail "stack down or log empty"
+expect deny "$slot" '' qa-probe idp=true cors=false port=false
+grep -q cors "$tmp/reason" && ! grep -q port "$tmp/reason" || fail "$(cat "$tmp/reason")"
+pgid=$(awk '$1 == "pgid:" { print $2 }' "$tmp/qa1.md")
+expect pass "$slot" '' qa-down "$tmp/qa1.md"
+! lsof -nP -iTCP:"$a" -sTCP:LISTEN -t >/dev/null && ! kill -0 -- "-$pgid" 2>/dev/null || fail "slot still held"
+expect pass "$slot" '' qa-down "$tmp/qa1.md"
+expect pass "$slot" '' qa-down "$tmp/absent.md"
+
+group=qa_two_slots_no_conflict
+read -r a b <<<"$(port 2)"
+"$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" && "$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b"
+up "$a" && up "$b" || fail "two stacks"
+expect deny "$slot" '' qa-up "$tmp/qa3.md" "$tmp/qa3.log" "$(serve "$a")" "$a"
+grep -q "port $a" "$tmp/reason" && up "$a" || fail "$(cat "$tmp/reason")"
+expect pass "$slot" '' qa-down "$tmp/qa1.md"
+expect pass "$slot" '' qa-down "$tmp/qa2.md"
+
 echo "hooks: all checks pass"
