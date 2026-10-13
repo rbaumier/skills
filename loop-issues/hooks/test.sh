@@ -62,4 +62,33 @@ expect pass "$issue" "$(command_input 'glab api projects/g%2Fp/issues/12/notes -
 expect pass "$issue" "$(command_input 'gh issue create -R g/p -t x')"
 expect pass "$issue" "$(command_input "rg -n 'gh issue create' docs" "$tmp/guarded")" g/p
 
+gate="$hooks/merge-gate.sh"
+git init -q "$tmp/repo" && cd "$tmp/repo" || exit 1
+mkdir -p web api "$tmp/report/qa" && touch web/a api/a
+commit() { [ $# -eq 0 ] || git add "$@"; git -c user.name=t -c user.email=t@t commit -qm x --allow-empty; }
+commit && commit api/a && commit web/a
+verdict() { printf '## Verdict\n\n**%s** — x\n%s\n' "$2" "${3:-}" >"$tmp/report/qa/verdict-$1.md"; }
+
+group=back_lot_passes_without_verdict
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD~1 web
+
+group=front_lot_refused_without_go
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+grep -q 'missing QA GO: .*/qa/verdict-1.md' "$tmp/reason" || { echo "FAIL $group: reason does not name the verdict" >&2; exit 1; }
+verdict 1 NO-GO
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+grep -q 'verdict-1.md (NO-GO)' "$tmp/reason" || { echo "FAIL $group: reason does not name the NO-GO" >&2; exit 1; }
+verdict 2 GO-PROVISIONAL '| 3 | UI | / | x | BLOCKED(budget) | - |'
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+
+group=front_lot_passes_on_go
+verdict 3 GO
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
+
+group=latest_round_wins_numerically
+verdict 9 GO
+verdict 10 NO-GO
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+grep -q 'verdict-10.md (NO-GO)' "$tmp/reason" || { echo "FAIL $group: verdict-9 beat verdict-10" >&2; exit 1; }
+
 echo "hooks: all checks pass"
