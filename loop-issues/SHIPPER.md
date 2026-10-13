@@ -7,10 +7,11 @@ with the exact lines, and you end. Read `RENDEZVOUS.md`
 § Report before writing. Forge = `glab api`; Rust gates with
 `CARGO_TARGET_DIR` unset (`cargo` goes through mbx, which manages
 the worktree's target), whatever the prompt says; `cargo clean`, mass
-`touch`, `CARGO_INCREMENTAL=0`, `rm -rf target/*` banned. Before any
-gate, `df -h` the volume: under 20 GB free → `BLOCKED` with the `df`
-line, a brake the orchestrator clears before you run anything; never
-a gate launched to discover an E0463. A gate that fails on the
+`touch`, `CARGO_INCREMENTAL=0`, `rm -rf target/*` banned. The
+orchestrator checks the disk before a lot opens (SKILL.md § The
+loop); the slot's env reaches every command that names or runs from
+the worktree (SKILL.md Step 0, slot env hook), never re-sourced:
+write slot commands `cd <worktree> && …`. A gate that fails on the
 target's own artefacts (E0463, E0460, a `.rlib` or `.rmeta` not
 found) means damaged artefacts, not a red: replaying it stays red.
 `mbx doctor`, then `cargo clean -p <crate>` of the crates the error
@@ -115,25 +116,33 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    reaches — never the full workspace suite (user, 2026-10-12): it
    runs at the release, and on `<default>` every ~10 merges. Foreground,
    one command per gate, `tail -40`; a gate that exits 0 on zero tests
-   run is red. A red gate reproduced
+   run is red. With a schema signal in the launch pack, each gate runs
+   as `~/.claude/skills/loop-issues/hooks/slot.sh gate '<signal>'
+   '<recreate>' '<gate>'`: one recreation and one rerun on that
+   signal, exit 2 `BLOCKED: schema mismatch after recreate` → `BLOCKED`. A red gate reproduced
    on the branch's base (detached worktree, same command) is
    inherited: recorded with that command, it blocks nothing.
 3. **QA.** `QA: not run — <reason>` in ship.md → skip, unless `git
    diff --name-only origin/<base>...HEAD -- <Frontend app dirs>` is
    non-empty: a front lot is never QA-less → `BLOCKED` naming the
-   files. Neither that line nor a plan → `BLOCKED` naming it. Else kill
-   whatever listens on the slot's ports (an orphan dev server gives
-   a false capture), launch the slot's stack per the QA launch pack (binary built in the
-   worktree's target), one `curl --retry` probe. Seed: the repo's versioned seed
+   files. Neither that line nor a plan → `BLOCKED` naming it. Else,
+   with `slot=~/.claude/skills/loop-issues/hooks/slot.sh`, each from
+   `cd <worktree> && …`: `$slot qa-down <report-dir>/qa-stack.md`
+   (your own previous stack), then `$slot qa-up
+   <report-dir>/qa-stack.md <log> '<launch command>' <ports>…` per
+   the QA launch pack (binary built in the worktree's target). Exit
+   2 names a port another process holds: `BLOCKED` naming it, never
+   killed. Then one `curl --retry` probe. Seed: the repo's versioned seed
    recipe (launch pack) first, applied to TWO organizations — one
    for the Verifier, one for the Breaker; the plan's seed rows
-   compose on top of it, never beside it. Then probe, FROM the
+   compose on top of it, never beside it. Then `$slot qa-probe
+   <dependency>=<command>…` with the launch pack's probes, FROM the
    slot's console origin, every dependency the plan's login path
-   crosses, with the launch pack's commands: identity provider
-   alive, CORS preflight accepted for the slot's origin, every port,
-   the recipe's rows present. A probe that fails is a brake removed
-   now (relaunch, reseed) or a `BLOCKED` naming it — never handed to
-   QA to come back `ABORTED`. Then write
+   crosses: identity provider alive, CORS preflight accepted for the
+   slot's origin, every port, the recipe's rows present. Exit 2 names
+   the first failing one: a brake removed now (relaunch, reseed) or
+   `$slot qa-down` then a `BLOCKED` naming it — never handed to QA to
+   come back `ABORTED`. Then write
    `<report-dir>/qa-handoff.md` for the `loop-qa` the orchestrator
    spawns (it reads `~/.claude/skills/qa/SKILL.md`): the QA plan, URL/port,
    host allowlist (the login console included), the two
@@ -148,16 +157,19 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    outside the worktree, verdict path `qa/verdict-<k>.md`. A
    `re-verify` list in your prompt (second round) → the handoff
    carries ONLY those rows, never the full plan. Write
-   `<report-dir>/qa-stack.md` (PIDs, ports, database, log paths),
-   leave the stack up, end `QA-READY <qa-handoff.md>`.
+   `database: <name>` into `<report-dir>/qa-stack.md` (`qa-up`
+   wrote its process group, ports and log), leave the stack up, end
+   `QA-READY <qa-handoff.md>`.
    QA skipped → steps 5 to 7 in this same phase.
 
 ## Phase `publish` — after the QA verdict handed in your prompt
 
 The stack is the one of `qa-stack.md`: one `curl` probe proves it;
-dead → kill its PIDs and relaunch from the file, never assume.
+dead → `slot.sh qa-down` then `qa-up` again from the launch pack,
+never assume. `qa-down` runs on every exit of this phase, ABORTED
+verdict included.
 
-4. NO-GO → kill the QA processes, write `<report-dir>/deliver.md`
+4. NO-GO → `slot.sh qa-down <report-dir>/qa-stack.md`, write `<report-dir>/deliver.md`
    with the verdict path, end `BLOCKED <deliver.md>`: the `ship`
    phase answers it, once. A row `BLOCKED(budget)` reaches `publish`
    only inside a NO-GO (SKILL.md step 3). `GO-PROVISIONAL` is a GO: its
@@ -170,7 +182,8 @@ dead → kill its PIDs and relaunch from the file, never assume.
    credential typed into the login form is the procedure, not a
    leak; skipping the captures for it is not. Upload per
    `PRESENTATION.md`, embed the returned markdown at the placement ship.md marks.
-   THEN kill every PID of `qa-stack.md` and check its ports are free.
+   THEN `slot.sh qa-down <report-dir>/qa-stack.md`: exit 2 names a
+   port still held, written in `deliver.md`.
 6. Push `agent/issue-<n>` (already there when the certifying gate
    ran at step 2: push nothing new, its sha is the certified one), open the MR on `<default>` (`<base>` if
    stacked), title `(closes #<n>)`, body = `mr-description.md`,

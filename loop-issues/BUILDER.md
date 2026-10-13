@@ -120,7 +120,10 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   git worktree add ../<repo>-worktrees/issue-<n> -b agent/issue-<n> origin/<default>
   ```
   Stacked → `origin/<base>`; split → suffix `-t<k>`. Wire it, with
-  `CARGO_TARGET_DIR` unset (mbx manages the target). Later
+  `CARGO_TARGET_DIR` unset (mbx manages the target). The slot's env
+  is injected into every command that names or runs from the
+  worktree (SKILL.md Step 0, slot env hook): never re-source it, write
+  slot commands `cd <worktree> && …`. Later
   slices read `<report-dir>/slice-<k-1>.md` first. Edit ONLY
   worktree paths. A `contract-review-<c>.md` in your prompt: its
   `minor` lines amend the contract as you read it, no rewrite.
@@ -161,7 +164,9 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
   batch too long for the phase → one more `## Mechanic` line.
 - Then the slice's tests only (`cargo nextest run -p <crate>`,
-  `pnpm test -- <file>`); `cargo clean`, mass `touch`,
+  `pnpm test -- <file>`), through `~/.claude/skills/loop-issues/hooks/slot.sh
+  gate '<signal>' '<recreate>' '<tests>'` when the launch pack names a
+  schema signal (exit 2 → `FAILED`, the stderr in the note); `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned; `comply --staged` before each commit, the pack runs the rest.
   The repo's formatters on the touched packages before every
   commit, `ship` included: a formatting red found at `deliver` costs
