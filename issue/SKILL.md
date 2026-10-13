@@ -29,9 +29,9 @@ An issue states the NEED, never the how. Three qualities gate creation:
 You route, validate with the user and never draft yourself. The
 scoping and the draft run in an opus subagent (`issue-scoper`); a
 opus subagent (`issue-reviewer`) judges the draft, cap 3 rounds;
-both load `ponytail` as their only skill. Everything mechanical
-(forge reads, repo check, forge writes) runs in subagents pinned
-`model: "opus"`. You never read the repository, never load a skill
+both load `ponytail` as their only skill. Forge reads and the repo
+check run in subagents pinned `model: "opus"`, forge writes in the
+`issue-publisher` agent. You never read the repository, never load a skill
 and never call the forge yourself.
 
 Report routing: a subagent writes its report to a scratchpad file and
@@ -100,7 +100,9 @@ re-scoping what was accepted. Nothing is created before this go.
 
 ### 4. Publish — opus, one agent
 
-Spawn ONE publisher (`model: "opus"`) with the draft paths, the cache
+Spawn ONE publisher (`subagent_type: "issue-publisher"`, never with
+`model`: the issue-creation hook lets only that type create on guarded
+repositories) with the draft paths, the cache
 path, and `RECON.md` (path — its § Forge commands). It creates in
 dependency order from the files, substitutes each `#{<slug>}` with the
 number the forge returned, links dependents (blocked-by), and ends

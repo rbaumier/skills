@@ -83,6 +83,10 @@ The notification wakes the parent; the `.done` carries the verdict.
 - A grandchild's notification (a child of the QA executor) lands on
   you ⇒ it finished without its verdict. SendMessage it that
   notification's one line + `resume`, once per notification.
+- A notification that reports the agent's turn limit (`maxTurns`:
+  250, 300 for `loop-builder`) ⇒ `BLOCKED` with the reason « turn
+  ceiling », handled as that phase's `BLOCKED` (SKILL.md step 3; a
+  phase without one → step 5), never resumed.
 - A builder's or shipper's notification without its `.done` ⇒ stalled.
   SendMessage `resume: finish #<n> — <what its last line promised>`.
   Third stall on one issue ⇒ step 5.
@@ -95,11 +99,12 @@ with this prompt:
 
 > loop-issues watchdog. A user message since the loop's last spawn
 > that does not ask to continue (an interruption, a stop) → CronDelete
-> this job, reply ⏹ + `💡 /reflect — miner ce run`. Else ListAgents:
+> this job, run `~/.claude/skills/loop-issues/hooks/loop-running.sh
+> stop`, reply ⏹ + `💡 /reflect — miner ce run`. Else ListAgents:
 > a builder or reviewer of this loop running → reply ⏳ — but a
 > second consecutive ⏳ with no new side effect from it (commit, push,
 > report file, forge note) → it stalled: § Fall-through. Else a
-> builder finished without its `.done` → resume it (RENDEZVOUS.md § Fall-through). Else run the
+> builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else run the
 > loop from step 1 — step 4 first when a report awaits verification.
 > Before any of it: a phase over its budget or a report naming an
 > obstacle → SKILL.md § Slowness is yours, first. No recap.
