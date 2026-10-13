@@ -446,7 +446,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
 - Forge list calls narrowed on the first attempt (`per_page`,
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.
-- An open dependency MR never stops the loop: stack on it.
+- An open dependency MR never stops the loop. Draft mode: stack on
+  it. Autonomous: the lot waits for its merge, `held by #<m>` (step 3),
+  then builds on `<default>`.
 - Never push to the default branch. Never merge with the certifying
   gate (or the trio) red, on a sha it did not certify, with comply
   beyond listed FPs, an unpaid shape, a review not converged, or
