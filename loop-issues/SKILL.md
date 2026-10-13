@@ -40,14 +40,16 @@ you launch — a `loop-mechanic`, df > 40 GB; a prompt that asked for the full t
 Every spawn names a pinned agent type and NEVER passes `model` (an
 explicit `model` overrides the pin):
 
-| Role | `subagent_type` | Model · effort | Spawned by |
-|---|---|---|---|
-| builder (`contract`, `build <k>`, `ship`) | `loop-builder` | opus 5.5 · medium | you, once per phase |
-| contract reviewer | `loop-contract-reviewer` | opus 5.5 · medium | you, ONCE per issue |
-| shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | sonnet 5.5 · medium | you, once per phase |
-| code reviewer | `loop-reviewer` | opus 5.5 · medium | you, once per round |
-| mechanic (tests of the closed list, codegen, brakes, the queue head's merge) | `loop-mechanic` | sonnet 5.5 · medium | you, after a `build <k>` that lists tasks, on a brake, at the queue head |
-| QA executor | `loop-qa` | opus 5.5 · medium | you, on `QA-READY` |
+| Role | `subagent_type` | Model · effort | Spawned by | Budget (min) |
+|---|---|---|---|---|
+| builder (`contract`, `build <k>`, `ship`) | `loop-builder` | opus 5.5 · medium | you, once per phase | 40 |
+| contract reviewer | `loop-contract-reviewer` | opus 5.5 · medium | you, ONCE per issue | — |
+| shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | sonnet 5.5 · medium | you, once per phase | 60 |
+| code reviewer | `loop-reviewer` | opus 5.5 · medium | you, once per round | 15 |
+| mechanic (tests of the closed list, codegen, brakes, the queue head's merge) | `loop-mechanic` | sonnet 5.5 · medium | you, after a `build <k>` that lists tasks, on a brake, at the queue head | 15 |
+| QA executor | `loop-qa` | opus 5.5 · medium | you, on `QA-READY` | 25 |
+
+Budget = spawn → notification; `hooks/state.sh tick` reads this column.
 
 Builder phases: `contract`, one `build <k>` per slice, `ship`.
 Shipper phases: `pack`, `deliver`, `publish`. The contract reviewer reviews it ONCE: the fond is decided there and costs no rework. Every phase is a
@@ -84,7 +86,13 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   origin/<default> -- CLAUDE.md CODING_STANDARDS.md docs/agents` fails
   → stop before any spawn and ask the user to start the loop from a
   checkout of the default branch (a stale one cost ~45k tokens per turn
-  of every agent, 06-08/10/2026).
+  of every agent, 06-08/10/2026). Then `hooks/state.sh model
+  <state.md> <the exact model ID of your system prompt>`: exit 2 →
+  it wrote `stopped: model — …` in `state.md`; stop before any
+  selection, one line `🐢 <its stderr>`; exit 1 (no pin) → the same
+  line, stop. Then `hooks/state.sh
+  fresh`: exit 2 → re-read the skill files its stderr names before
+  selecting; exit 0 → read nothing again.
 - **Verification trio** — check + test + build commands and pinned
   tooling; a documented merge gate is law. The commands as the repo
   documents them: a workaround flag (`--test-threads 1`, a skip)
@@ -174,13 +182,25 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   and run `~/.claude/skills/loop-issues/hooks/loop-running.sh start`:
   from then on AskUserQuestion is refused in this session (nobody
   answers an autonomous loop) until `loop-running.sh stop`.
-  A `state.md` of a previous session → resume its issues in flight
-  at their phase before selecting anything.
+  A `state.md` with lots in flight → resume them at their phase
+  before selecting anything, its `mode:`, `planned:` and `done:`
+  kept, its `stopped:` line dropped; none, or no lot in flight → a
+  new run: `mode: run`, `planned: <N> (+0)`, N = the lots this run
+  plans, no `done:` or `stopped:` line.
 
 ## The loop
 
+**Before every spawn**, run `~/.claude/skills/loop-issues/hooks/state.sh
+tick <state.md>`: it marks 🐢 every phase over its budget, then
+reads the mode. Exit 2 `paused until <time>` → no spawn at all;
+`draining` → phases of lots in flight only, no new lot; `drained` →
+the loop stops like the disk stop below, `stopped: drained`. Exit 1
+(an unreadable time) → one line `🐢 <its stderr>`, stop. The
+pause ends by itself: past its time, the next tick passes and the
+lots resume at their phase.
+
 **Before every spawn** that opens a new lot (the `contract` phase of
-a selected issue), run `~/.claude/skills/loop-issues/hooks/slot.sh
+a selected issue), also run `~/.claude/skills/loop-issues/hooks/slot.sh
 disk <threshold> <worktrees dir> <sweep command|-> <n of
 every lot in state.md>…`. It sweeps the test clones, then removes
 the loop's worktrees idle 20 h (never a lot in flight, never one
@@ -193,7 +213,8 @@ any other, at the notification of the next lot that finishes (step
 watchdog, one line `🐢 disk — <stderr> — free disk space, then
 /loop-issues`. Phases of lots already in flight are never held.
 
-1. **Select** — first replay Step 0's fresh-instructions test; behind
+1. **Select** — first replay Step 0's fresh-instructions test and
+   `state.sh fresh` (not `model`: the session's model is set); behind
    on a clean checkout → `git pull --ff-only`. An issue named in the invocation arguments is
    selected as is, whatever its labels, and the loop stops after its
    summary line. Else a split issue with unchecked tasks → next task,
@@ -423,15 +444,21 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
    needs clarification` | `❌ #<n> failed → re-queued`. Writing #n's
    summary line lifts every lot `held by #<n>` (step 3), then retries
-   a `held: contract` spawn before any other (§ The loop). Each reply ends
-   `Compteur : X / N lots (+k ajoutés)`, N fixed at launch. Nothing else
+   a `held: contract` spawn before any other (§ The loop). The lot
+   leaves its slot for a `done: #<n> <summary line>` line of
+   `state.md`, suffixed ` rework` when a review of it returned
+   `REWORK`; an issue added to the run raises the `(+k)` of
+   `planned:`. Each summary line ends with the output of
+   `hooks/state.sh count <state.md>` (counter and rework rate), then
+   the lines of the lot's `lenteurs.md`; every reply ends with that
+   counter. Nothing else
    reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
 
 ## Slowness is yours
 
 Every stall of the loop is your defect to remove, never a fact to
-report and wait out. Budgets, spawn → notification: builder 40 min,
-shipper 60, reviewer 15, mechanic 15, QA 25. A phase over budget, a
+report and wait out. A phase over its budget (§ Agents; `state.sh
+tick` marks it 🐢 in `state.md` and the lot's `lenteurs.md`), a
 report naming an obstacle outside the diff (stuck process, taken
 port, stale or locked database, cold or purged target, missing env
 var, workaround flag, tool missing from PATH, red inherited from
@@ -529,9 +556,13 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   file, and three of the five invisible debts were duplications the
   MR itself had just posted. An issue is for work a successor must
   scope, not for a remedy already under the author's hand.
+- The user's words set `mode:` in `state.md`: « drain », « finis les
+  lots en cours » → `drain`; « pause jusqu'à <time> » → `pause-until
+  <time as UTC ISO-8601, date -u +%FT%TZ>`; « reprends » → `run`.
+  `state.sh tick` alone reads it.
 - Only user interruption ends the loop, the summary line of an
-  issue named in the invocation, or the disk stop (§ The loop);
-  every way run
+  issue named in the invocation, or the disk, model and drained
+  stops (§ The loop, Step 0); every way run
   `~/.claude/skills/loop-issues/hooks/loop-running.sh stop` first. The
   acknowledging reply ends with `💡 /reflect — miner ce run pour des
   deltas de skills`.
