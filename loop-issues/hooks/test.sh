@@ -336,4 +336,31 @@ group=count_shows_counter_and_rework
 printf '%s\n' 'mode: run' 'planned: 3 (+1)' 'done: #1 ✅ merged rework' 'done: #2 📝 drafted' >"$tmp/state.md"
 [ "$("$state" count "$tmp/state.md")" = 'Compteur : 2 / 3 lots (+1 ajoutés) · reprises : 1 / 2' ] || fail "$("$state" count "$tmp/state.md")"
 
+group=registry_records_and_keeps_entries
+mkdir -p "$tmp/lot7" "$tmp/lot8"
+printf '%s\n' '## Constats non payés' '- a.sh:3 — x — y' '' '## Autre' '- b.sh:1 — z — w' >"$tmp/lot7/ship-1.md"
+printf '%s\n' '## Constats non payés' '- c.sh:5 — u — v' >"$tmp/lot8/ship-2.md"
+"$state" merged "$tmp/constats.md" 7 "$tmp/lot7" || fail "merged exit"
+"$state" merged "$tmp/constats.md" 8 "$tmp/lot8" || fail "merged exit"
+[ "$(cat "$tmp/constats.md")" = "$(printf '%s\n' '- [ ] #7 a.sh:3 — x — y' 'merged #7' '- [ ] #8 c.sh:5 — u — v' 'merged #8')" ] ||
+  fail "$(cat "$tmp/constats.md")"
+
+group=registry_never_duplicates
+printf '%s\n' '- [x] #7 a.sh:3 — x — y — absent @abc' >"$tmp/closed.md"
+for _ in 1 2; do "$state" merged "$tmp/closed.md" 7 "$tmp/lot7" || fail "merged exit"; done
+[ "$(grep -c '^- ' "$tmp/closed.md")" -eq 1 ] || fail "$(cat "$tmp/closed.md")"
+grep -qF '[ ]' "$tmp/closed.md" && fail "reopened: $(cat "$tmp/closed.md")"
+for _ in 1 2; do "$state" merged "$tmp/open.md" 7 "$tmp/lot7" || fail "merged exit"; done
+[ "$(grep -c '^- ' "$tmp/open.md")" -eq 1 ] || fail "$(cat "$tmp/open.md")"
+printf '%s\n' '- [x] #7 a.sh:3 — x — y — z — absent @abc' >"$tmp/longer.md"
+"$state" merged "$tmp/longer.md" 7 "$tmp/lot7" || fail "merged exit"
+grep -qFx -- '- [ ] #7 a.sh:3 — x — y' "$tmp/longer.md" || fail "hidden: $(cat "$tmp/longer.md")"
+
+group=registry_audit_due_every_ten
+mkdir -p "$tmp/empty"
+for i in $(seq 11); do
+  [ -n "$("$state" merged "$tmp/cadence.md" "$i" "$tmp/empty")" ] && echo "$i"
+done >"$tmp/due"
+[ "$(cat "$tmp/due")" = 10 ] || fail "audit due after merges: $(cat "$tmp/due")"
+
 echo "hooks: all checks pass"
