@@ -97,7 +97,8 @@ Write `<report-dir>/contract.md`:
   named in the contract, never a remainder found after delivery,
   which comes back 11 to 22 h later.
 - `Stack` (`<base>` when a dependency has an open MR, draft mode
-  only; autonomous never stacks), `Mesure` (hot
+  only; autonomous never stacks: `blocked by #<m>`, and the
+  orchestrator re-queues the lot), `Mesure` (hot
   path + bar, or `none`), `QA` (deliverables + error paths),
   `Risques` (convention deleted, ADR bent, issue line lifted with the
   refuting grep; a change of who holds or reads a right or scope names
