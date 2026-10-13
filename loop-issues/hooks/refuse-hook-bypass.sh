@@ -12,10 +12,12 @@ cmd=$(jq -r '.tool_input.command // empty' | awk '
   }
   # A body never closed was no heredoc: checked.
   END { printf "%s", body }' | tr '\n' ';' \
-  | sed -E "s/\\\\;/ /g; s/'[^']*'/Q/g; s/\"[^\"]*\"/Q/g")
-git='(^|[^[:alnum:]_.-])git([[:space:]]+(-c[[:space:]]*[^[:space:]]+|--[^[:space:]]+))*[[:space:]]+'
-if printf '%s\n' "$cmd" | grep -qiE \
-  -e "${git}commit([[:space:]][^;&|]*)?[[:space:]](--no-verify|-[[:alpha:]]*n)" \
+  | sed -E "s/\\\\;/ /g; s/'[^']*'|\"[^\"]*\"/Q/g")
+git='(^|[^[:alnum:]_.-])git([[:space:]]+(-[cC][[:space:]]*[^[:space:]]+|--[^[:space:]]+))*[[:space:]]+'
+# -n counts only after commit's argument-less short flags: -uno, -amn pass.
+if printf '%s\n' "$cmd" | grep -qE \
+  "${git}commit([[:space:]][^;&|]*)?[[:space:]](--no-verify|-[apseiovqz]*n)" \
+  || printf '%s\n' "$cmd" | grep -qiE \
   -e "${git}-c[[:space:]]*core\.hookspath=" \
   -e "${git}config([[:space:]]+(--global|--local|--system|--worktree|set))*[[:space:]]+core\.hookspath[[:space:]]+[^[:space:]-]"; then
   echo "Refused: the pre-commit hook is never skipped (no --no-verify, no -n, no core.hooksPath rewrite). Pay its findings in the commit." >&2

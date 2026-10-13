@@ -22,6 +22,7 @@ command_input() { jq -nc --arg c "$1" --arg cwd "${2:-$tmp}" '{tool_input: {comm
 
 group=bypass_refused
 for c in 'git commit --no-verify -m x' 'git commit -n' 'cd x && git -C y commit -nm x' \
+  'git commit -an -m x' 'git commit -m "it'\''s" -n' \
   'git config core.hooksPath /dev/null' 'git -c core.hooksPath=/dev/null commit -m x' \
   "$(printf 'git commit \\\n  --no-verify -m x')" \
   "$(printf 'cat > f <<EOF\nx\nEOF\njq . <<<y\ngit commit --no-verify -F f')" \
@@ -32,6 +33,8 @@ done
 group=plain_git_passes
 for c in 'git commit -m x' 'git commit -am "doc: forbid --no-verify"' \
   'git config --get core.hooksPath' 'git log -n 3' 'git log --grep=commit -n 3' \
+  'git status -uno' 'git log -n 5' 'git diff --name-only' 'git commit -uno -m x' \
+  'git commit -amn' 'git commit -m "it'\''s x" && git log --format='\''%h'\'' -n 5' \
   "$(printf 'git commit -F- <<'\''EOF'\''\nRefuses git commit --no-verify.\nEOF')"; do
   expect pass "$bypass" "$(command_input "$c")"
 done
