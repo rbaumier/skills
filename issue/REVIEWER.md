@@ -22,6 +22,10 @@ the briefing's evidence like any draft line.
   draft already covers, and the body asks for machinery instead.
 - **Speculative** — a kept line paying for a "might need later", the
   ask's own "later" included.
+- **Over-split** — several small, mechanical, independent needs
+  drafted one issue each with no ruling asking for it (each pays a
+  full implementation cycle); or a grouped issue swallowing a need
+  that carries a design choice or must be revertable on its own.
 - **Contest** — rung 1 holds (config, existing feature, doc fix or
   nothing covers the need): write `<dir>/contest.md`, end
   `CONTEST <path>`.

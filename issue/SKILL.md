@@ -76,14 +76,21 @@ Spawn ONE `issue-scoper` (`subagent_type: "issue-scoper"`, never with
 handed: `$ARGUMENTS`, the briefing path, a drafts dir, the
 project language from the cache, and `SCOPER.md` (path). It ends
 `DRAFTED <dir>` (one file per draft, `split.md` when it proposes a
-split), `CONTEST <path>` (a config change, an existing feature, a doc
-fix or doing nothing covers the need) or `FAILED <path>`.
+split, `group.md` when it gathers several needs of the ask into one
+issue, `variantes.html` to print by its `file://` link when a need changes the UI notably),
+`CONTEST <path>` (a config change, an existing feature, a doc
+fix, doing nothing or a direct fix under 15 lines covers the need) or `FAILED <path>`.
 
 - **CONTEST** → print the file, ask the user; on "draft anyway",
   respawn with the ruling.
 - **split** → `AskUserQuestion` with the titles, scopes and
   parallelism costs of `split.md`; a refused split → respawn with
   the ruling.
+- **group** → an ask carrying several needs is never handed to the
+  scoper as "one issue each": the count is the scoper's to weigh.
+  Print `group.md` (which needs share an issue, which stay alone,
+  why, the implementation cycles saved) and ask the user; a refused
+  grouping → respawn with the ruling.
 - **DRAFTED** → spawn ONE `issue-reviewer` (round `c`, never with
   `model`) handed: `$ARGUMENTS`, the briefing path, the drafts dir,
   `REVIEWER.md` (path). `DRAFT-OK` → step 3. `DRAFT-REWORK <path>` →
@@ -112,7 +119,8 @@ reviewer once, as the file.
 
 ## Body template
 
-≤ 40 lines. No file path, no line number, no pattern to mirror, no
+≤ 40 lines (a grouped issue: ≤ 60, one `Current` / `Desired` line and
+its own criteria per need). No file path, no line number, no pattern to mirror, no
 ordered steps. A line that doesn't apply is omitted, never filled.
 Never quote secrets or env values. A count is never a contract. A flow
 the issue changes may carry ONE mermaid diagram of the touched sub-flow
