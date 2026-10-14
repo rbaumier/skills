@@ -244,6 +244,8 @@ Complete `<run-dir>/matrix.md`:
    - **GO-PROVISIONAL** otherwise (status PARTIAL / any BLOCKED row) — must name
      exactly what went unverified. An all-BLOCKED run is never a clean GO.
    Medium/Low findings and BLOCKED rows are listed as reservations.
+   The verdict file opens on `## Verdict` then `**<WORD>.**`:
+   `merge-gate.sh` reads only that.
 
 **Completion:** every PASS/FAIL verdict and every finding points to an artifact
 you confirmed on disk; BLOCKED rows carry a stated reason. **Teardown:** before
