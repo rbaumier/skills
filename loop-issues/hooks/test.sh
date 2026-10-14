@@ -85,6 +85,14 @@ group=front_lot_passes_on_go
 verdict 3 GO
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 
+group=verdict_word_read_in_qa_skill_format
+verdict 4 GO-PROVISIONAL.
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
+printf '# QA run 5 — GO\n' >"$tmp/report/qa/verdict-5.md"
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
+printf '# QA run 6\n\n**ABORTED.** x\n' >"$tmp/report/qa/verdict-6.md"
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+
 group=latest_round_wins_numerically
 verdict 9 GO
 verdict 10 NO-GO
