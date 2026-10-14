@@ -523,11 +523,8 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   opens its own `new_page` with an `isolatedContext` named after its
   slot, passing that `pageId` to every chrome-devtools call — never
   `select_page`, never a page it did not open. Never queue a QA
-  behind another slot's. A lot waiting on another (hold, refused
-  hook) still runs every phase that does not need it; only the step
-  that does waits. At every relay, an idle slot is filled (another
-  phase, the next queue issue) before the summary line: the user
-  never has to ask why a slot sits idle (user, 14/10/2026).
+  behind another slot's. A blocked lot runs every phase that does
+  not need its blocker; every relay fills an idle slot.
 - Disjoint means disjoint at the FILE level, not the theme level.
   Three issues that all touch one screen are serial work wearing a
   parallel costume: the same files conflict, which is now the one thing
