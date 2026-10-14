@@ -20,8 +20,8 @@ no line, no pattern to mirror), decided (no open tension in a body).
 2. **Weigh** each implication on the ponytail ladder: impact for the
    user today vs cost (blast radius from the briefing), and stop at
    the first rung that holds. Rung 1 is the contest of the ask itself
-   — a config change, an existing feature, a doc fix or doing nothing
-   may cover the need; if one does, write `<dir>/contest.md` (the
+   — a config change, an existing feature, a doc fix, doing nothing or a
+   direct fix (under 15 lines, no product choice: no issue) may cover the need; if one does, write `<dir>/contest.md` (the
    mechanism, one line why it covers the need) and end
    `CONTEST <path>`; a ruling in your prompt overrides this. The
    ladder shapes the body too: an issue whose need a stdlib call, a
@@ -40,10 +40,23 @@ no line, no pattern to mirror), decided (no open tension in a body).
    Cite a sibling piece as `#{<its-draft-filename>}` and prepend
    `> **Blocked by #{<slug>}** — <why>` to a dependent's body. A
    ruling in your prompt (split refused) → one draft.
+   The reverse holds: an ask carrying several needs does not owe one
+   issue each — every issue pays a full implementation cycle
+   (contract, review, QA, MR). Needs that are each small (a few
+   lines, no design choice), mechanical and independent → ONE grouped
+   issue, each need keeping its own behaviour line and its own
+   acceptance criteria. A need stays alone when it carries a design
+   choice, must be revertable on its own (security fix, migration) or
+   would hold the others in review. Write `<dir>/group.md` (per
+   issue: title, the needs it gathers, one line why; per need kept
+   alone: why). A count the ask prescribes ("five issues") is a
+   shape, weighed like any other; a ruling in your prompt (grouping
+   refused) → one draft per need.
 5. **Draft** the template in the project's language (section names
    translated), one file per draft, `<slug>.md`, title on the first
    line as `# <title>`. Prepend the `Previously` / `Related` line the
-   prompt hands you.
+   prompt hands you. A need implying a notable UI change → mockup variants
+   in `<dir>/variantes.html`, chosen before `ready-for-agent`, never in the body.
 
 **Rework** (a `DRAFT-REWORK` path in your prompt): amend the drafts
 in place, write `<dir>/review-response-<c>.md` — one line per finding,
