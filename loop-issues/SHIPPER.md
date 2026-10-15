@@ -1,7 +1,7 @@
 # Shipper brief — loop-issues
 
-You run ONE mechanical phase per spawn, `pack`, `deliver` or
-`publish`, in a fresh context, and you spawn nothing, on the worktree named in your prompt. You judge
+You run ONE mechanical phase per spawn, `pack`, `deliver`, `close`
+or `publish`, in a fresh context, and you spawn nothing, on the worktree named in your prompt. You judge
 nothing about code: what fails is written down for the builder,
 with the exact lines, and you end. Read `RENDEZVOUS.md`
 § Report before writing. Forge = `glab api`; Rust gates with
@@ -47,13 +47,14 @@ added lines.
 Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
 <report-dir>/fix-<r>.patch`.
 
-0. `r = 1`: `git fetch origin <default>`, then (separate command)
-   compare; `<default>` moved past the branch's base → rebase onto it
+0. `r = 1`: `git fetch origin <base>`, then (separate command)
+   compare; `<base>` moved past the branch's base → rebase onto it
    before anything else, a conflict → `BLOCKED` naming the files. A
    pack built on a stale base shows a merged neighbour's lines as
    this branch's reversal.
 1. No compile, no test at `pack` (user, 2026-10-12): the builder's
-   tests on its touched crates stand; `deliver` gates. Run only the
+   contract tests stand; the merge queue checks the workspace and the
+   closing runs the rest (SKILL.md). Run only the
    formatter check, the comply triage (above), and every generated
    client of Step 0 the diff reaches (regenerated, `git status` clean
    of it, or listed as a failure). `## Gates` says `pack: none`.
@@ -103,34 +104,57 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    goes back to `fix`, `BLOCKED` naming it. Re-run comply; a finding
    on an added line → `BLOCKED`.
 2. `git log origin/<base>..HEAD` = this task's commits only; more
-   than one → squash as in `pack`. Then the gates: the forge pipeline
-   gates NOTHING. Step 0 names a certifying gate script → push
-   `agent/issue-<n>` (the squashed head) and run THAT script on it,
-   foreground, INSTEAD of the trio: it is a superset and posts the
-   status the merge needs, so the trio then the script on one sha
-   runs the same suite twice. No script → rebase on `<default>`, then
-   the workspace check + lint (Rust: `cargo check` and `clippy
-   --workspace --all-targets`) and the tests of the touched crates
-   AND their direct reverse dependents (`cargo tree -i <crate>
-   --workspace --depth 1`), plus every frontend lane the diff
-   reaches — never the full workspace suite (user, 2026-10-12): it
-   runs at the release, and on `<default>` 10 merges after the last audit. Foreground,
-   one command per gate, `tail -40`; a gate that exits 0 on zero tests
-   run is red. With a schema signal in the launch pack, each gate runs
-   as `~/.claude/skills/loop-issues/hooks/slot.sh gate '<signal>'
+   than one → squash as in `pack`. No gate, no QA here (user,
+   2026-10-15): the merge queue checks the workspace on the merge
+   result, the closing runs the full gates and one QA for every lot.
+3. Push `agent/issue-<n>`, open the MR on `<base>`, title `(closes
+   #<n>)`, body = `mr-description.md`, DRAFT in draft mode; `## Not
+   converged` present → title prefix `[review not converged]`, its
+   lines posted as ONE MR comment. Read the pipeline once; red →
+   `deliver.md` names the job and its first error lines.
+4. Report `<report-dir>/deliver.md`: MR URL, comply verdict + FPs,
+   pipeline state. End: `DELIVERED <deliver.md>`.
+
+## Phase `close` — the closing, on `<integration>`
+
+Your prompt hands the closing report dir, the integration worktree
+and the `integrated:` lines (issue, MR, report dir of each lot).
+
+1. `git fetch origin`, then (separate command) `git checkout
+   --detach origin/<integration>`.
+2. Gates: Step 0 names a certifying gate script → run THAT script on
+   this sha (it posts the status the closing merge needs); none → the
+   workspace check + lint (Rust: `cargo check` and `clippy
+   --workspace --all-targets`), the full test suite, every frontend
+   lane. Then `comply --range origin/<default> HEAD`, triaged as
+   above against the lots' FP decisions; a finding on an added line is
+   a red. Foreground, one command per gate, `tail -40`; a gate that
+   exits 0 on zero tests run is red. With a schema signal in the
+   launch pack, each gate runs as
+   `~/.claude/skills/loop-issues/hooks/slot.sh gate '<signal>'
    '<recreate>' '<gate>'`: one recreation and one rerun on that
-   signal, exit 2 `BLOCKED: schema mismatch after recreate` → `BLOCKED`. A red gate reproduced
-   on the branch's base (detached worktree, same command) is
-   inherited: recorded with that command, it blocks nothing.
-3. **QA.** `QA: not run — <reason>` in ship.md → skip, unless `git
-   diff --name-only origin/<base>...HEAD -- <Frontend app dirs>` is
-   non-empty: a front lot is never QA-less → `BLOCKED` naming the
-   files. Neither that line nor a plan → `BLOCKED` naming it. Else,
+   signal, exit 2 → `BLOCKED: schema mismatch after recreate`. A red reproduced on
+   `origin/<default>` (detached worktree, same command) is inherited:
+   recorded with that command. Any other red → `<report-dir>/close.md`
+   lists each failure with its file and the lot that last touched it
+   (`git log --first-parent --format=%s origin/<integration> --
+   <file>` names the merge of `agent/issue-<n>`), end `BLOCKED
+   <close.md>`.
+3. Test files of `origin/<default>` modified or deleted over
+   `origin/<default>...HEAD` (the `pack` test guard's paths, plus any
+   allowlist or baseline file a gate reads) → `## Tests modifiés` of
+   `close.md`, each with the lot that changed it: the closing MR
+   lists them for the human who merges it.
+4. **QA.** The plan = the QA plans of every lot's last `ship-<r>.md`
+   (`QA: not run` lots add nothing), front lots first, one section per
+   lot naming its issue. No row at all → skip to the report. Else,
    with `slot=~/.claude/skills/loop-issues/hooks/slot.sh`, each from
    `cd <worktree> && …`: `$slot qa-down <report-dir>/qa-stack.md`
    (your own previous stack), then `$slot qa-up
    <report-dir>/qa-stack.md <log> '<launch command>' <ports>…` per
-   the QA launch pack (binary built in the worktree's target). Exit
+   the QA launch pack (binary built in the integration worktree's target). A row
+   that needs the model to call a tool → the fake model starts with a
+   script covering it, its trigger phrase in the handoff. Exit
    2 names a port another process holds: `BLOCKED` naming it, never
    killed. Then one `curl --retry` probe. Seed: the repo's versioned seed
    recipe (launch pack) first, applied to TWO organizations — one
@@ -148,8 +172,8 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    host allowlist (the login console included), the two
    organizations and their credentials, the Breaker's targets — the
    boundaries the diff opens or changes, i.e. the contract's hostile
-   cases in `Tests`, not the whole app — and the budget in minutes,
-   ~15, enforced: past it the remaining rows end `BLOCKED(budget)`,
+   cases in `Tests` of every lot, not the whole app — and the budget
+   in minutes, ~15 per lot, enforced: past it the remaining rows end `BLOCKED(budget)`,
    each still naming its Besoin, so the next run targets it. Plan rows
    first — a lot that adds or reshapes a screen plays the UI quality
    sweep as its first row, never cut by the budget — the exploratory hunt capped at a third, an unfinished
@@ -160,41 +184,40 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    `database: <name>` into `<report-dir>/qa-stack.md` (`qa-up`
    wrote its process group, ports and log), leave the stack up, end
    `QA-READY <qa-handoff.md>`.
-   QA skipped → steps 5 to 7 in this same phase.
+   QA skipped → `publish` steps 6 and 7 in this same phase.
 
-## Phase `publish` — after the QA verdict handed in your prompt
+## Phase `publish` — the closing, after the QA verdict handed in your prompt
 
 The stack is the one of `qa-stack.md`: one `curl` probe proves it;
 dead → `slot.sh qa-down` then `qa-up` again from the launch pack,
 never assume. `qa-down` runs on every exit of this phase, ABORTED
 verdict included.
 
-4. NO-GO → `slot.sh qa-down <report-dir>/qa-stack.md`, write `<report-dir>/deliver.md`
-   with the verdict path, end `BLOCKED <deliver.md>`: the `ship`
-   phase answers it, once. A row `BLOCKED(budget)` reaches `publish`
-   only inside a NO-GO (SKILL.md step 3). `GO-PROVISIONAL` is a GO: its
+5. NO-GO → `slot.sh qa-down <report-dir>/qa-stack.md`, write `<report-dir>/deliver.md`
+   with the verdict path and, per failing row, the lot its plan
+   section names, end `BLOCKED <deliver.md>`: those lots' `ship`
+   answers it (SKILL.md § Closing). `GO-PROVISIONAL` is a GO: its
    reservations go to the MR comment, never to a `BLOCKED`, never to
    a `ship` — answering them cost ~45 min of ship + deliver + QA
    re-verify each, for reservations the verdict called non-blocking.
-5. GO → UI touched → captures per `PRESENTATION.md` § Captures on
-   the running stack (paths named in ship.md), signed in with the
+6. GO → UI touched → captures per `PRESENTATION.md` § Captures on
+   the running stack (paths named in each lot's ship.md), signed in with the
    local dev account the QA launch pack names — a local dev
    credential typed into the login form is the procedure, not a
    leak; skipping the captures for it is not. Upload per
    `PRESENTATION.md`, embed the returned markdown at the placement ship.md marks.
    THEN `slot.sh qa-down <report-dir>/qa-stack.md`: exit 2 names a
    port still held, written in `deliver.md`.
-6. Push `agent/issue-<n>` (already there when the certifying gate
-   ran at step 2: push nothing new, its sha is the certified one), open the MR on `<default>` (`<base>` if
-   stacked), title `(closes #<n>)`, body = `mr-description.md`,
-   DRAFT in draft mode; `## Not converged` present → title prefix
-   `[review not converged]`, its lines posted as ONE MR comment.
+7. Open the MR `<integration>` → `<default>` (push nothing: its head
+   is the sha `close` certified), title `loop <date>: <k> lots`, body
+   per `PRESENTATION.md`: one section per lot (its MR, its
+   `mr-description.md` summary, `closes #<n>`), the `## Tests
+   modifiés` of close.md, the inherited reds; DRAFT in draft mode.
    Read the pipeline once; red → `deliver.md` names the job and its
    first error lines, and `inherited` when the same job is red on
    `<default>`.
-7. Report `<report-dir>/deliver.md`: MR URL, gates, comply verdict +
-   FPs, QA verdict, captures, pipeline state. End: `DELIVERED
-   <deliver.md>`.
+8. Report `<report-dir>/deliver.md`: MR URL, gates, QA verdict,
+   captures, pipeline state. End: `DELIVERED <deliver.md>`.
 
 `git fetch origin <default>` and the `git rev-parse origin/<default>`
 that reads its result NEVER share one compound command: the parse

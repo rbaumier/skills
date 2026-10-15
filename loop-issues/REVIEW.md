@@ -1,6 +1,6 @@
 # Review brief — loop-issues
 
-One round per spawn, read-only: `git grep` / `git show origin/<default>:<path>`
+One round per spawn, read-only: `git grep` / `git show origin/<integration>:<path>`
 in `<main-repo>`, `sed -n` ranges, never a forge. Load
 `ponytail-review` (what to cut), `coding-standards:quality-bar-review`
 (correctness, errors, tests) and the pack's `## Skills`. The repo's

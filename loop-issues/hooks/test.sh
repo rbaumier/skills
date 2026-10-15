@@ -126,6 +126,10 @@ for forge in gh glab; do
   [ "$(cat "$tmp/reason")" = 'blocked by #7' ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
 done
 
+group=issue_integrated_blocker_passes
+LOOP_INTEGRATED='3 7' expect pass "$check" '' issue gh g/p 1 "${sections[@]}"
+LOOP_INTEGRATED='17' expect deny "$check" '' issue gh g/p 1 "${sections[@]}"
+
 group=issue_closed_blocker_passes
 forge_issue 7 opened 'Blocked by #70'
 forge_issue 70 closed
