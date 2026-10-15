@@ -30,8 +30,8 @@ one (a `REVIEWER.md` that does not exist cost a `find` in 41
 reviews). A spawn prompt hands facts and the
 brief's absolute path, never a paraphrase of it — and never rewrites a
 phase's gate scope: the brief decides it (the builder checks its
-crates and runs its contract's tests, `pack` and `deliver` compile
-nothing, a lot's merge into `<integration>` runs the workspace check,
+crates and runs its contract's tests, `pack` and `deliver` run comply
+only, a lot's merge into `<integration>` runs the workspace check,
 and the full gates and QA run once, at the closing (§ Closing); a
 prompt that asked for the full trio at pack cost ~15 min on one lot,
 2026-09; four slots compiling the full gates per lot froze the
@@ -49,7 +49,7 @@ explicit `model` overrides the pin):
 | shipper (`pack`, `deliver`, `publish`) | `loop-shipper` | sonnet 5.5 · medium | you, once per phase | 60 |
 | code reviewer | `loop-reviewer` | opus 5.5 · medium | you, once per round | 15 |
 | mechanic (tests of the closed list, codegen, brakes, the queue head's merge) | `loop-mechanic` | sonnet 5.5 · medium | you, after a `build <k>` that lists tasks, on a brake, at the queue head | 15 |
-| QA executor | `loop-qa` | opus 5.5 · medium | you, on `QA-READY` | 25 |
+| QA executor | `loop-qa` | opus 5.5 · medium | you, on `QA-READY` | 15 × lots |
 
 Budget = spawn → notification; `hooks/state.sh tick` reads this column.
 
@@ -109,13 +109,13 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   MR merged once green); else **draft**: never write queue labels,
   never merge, every MR opens as a draft.
 - **Integration branch** — `<integration>` = the `integration:` line
-  of `state.md`; none (a new run) → `loop/<UTC date>`, created from
+  of `state.md`; none → `loop/<UTC date>`, created from
   `origin/<default>` (`git push origin
   origin/<default>:refs/heads/loop/<date>`) and written there. Every
   lot builds on it and its MR targets it (`<base>` below means
   `<integration>`, or the stacked MR's branch); nothing reaches
   `<default>` but the closing MR. It lives in its own worktree
-  `<worktrees dir>/loop-<date>`, created at the first merge and kept
+  `<worktrees dir>/loop-<date>` (env `loop-<date>.env` = slot 1's), created at the first merge and kept
   until the closing merges: its warm target makes each merge's check
   incremental.
 - **Worktree wiring** — deps, `.env`, codegen a fresh worktree needs.
@@ -180,8 +180,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   in the next lot (§ Rules); meanwhile its step runs without it.
 - **Slot env hook** — `hooks/slot.sh env` is registered as a
   PreToolUse Bash hook in `~/.claude/settings.json`: a command that
-  names `…-worktrees/slot-<s>`, or runs from it, gets
-  `<worktrees dir>/slot-<s>.env` sourced first (path written
+  names `…-worktrees/slot-<s>` (or `loop-<date>`), or runs from it, gets
+  `<worktrees dir>/slot-<s>.env` (`loop-<date>.env`) sourced first (path written
   literally, `~/` or `$HOME/` admitted). The hook makes no permission
   decision: the rewritten command meets the session's own policy. No
   agent re-sources the slot's env; a slot command no path ties to its
@@ -193,9 +193,9 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   from then on AskUserQuestion is refused in this session (nobody
   answers an autonomous loop) until `loop-running.sh stop`.
   A `state.md` with lots in flight → resume them at their phase
-  before selecting anything, its `mode:`, `planned:`, `integration:`,
-  `integrated:` and `done:` kept, its `stopped:` line dropped; none, or no lot in flight → a
-  new run: `mode: run`, `planned: <N> (+0)`, N = the lots this run
+  before selecting anything, its `mode:`, `planned:` and `done:`
+  kept, its `stopped:` line dropped; none, or no lot in flight → a
+  new run (`integration:`/`integrated:` survive until the closing merges): `mode: run`, `planned: <N> (+0)`, N = the lots this run
   plans, no `done:` or `stopped:` line.
 
 ## The loop
@@ -240,8 +240,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    open `ready-for-agent` issue of the label the invocation names
    (a lot, a `theme::`), lowest IID first (list only); the rest of
    the queue only once that label is drained. Draft mode: skip
-   candidates with an open MR from an `agent/issue-<n>` branch or on
-   the skip list. Each queue candidate then runs, with
+   candidates with an MR from an `agent/issue-<n>` branch open or merged
+   into `<integration>`, or on the skip list. Each queue candidate then runs, with
    `LOOP_INTEGRATED` = the issue numbers of the `integrated:` lines,
    `~/.claude/skills/loop-issues/hooks/check.sh issue <gh|glab>
    <project> <n> <Template sections…>`; exit 2 → `#<n> — <its
@@ -483,9 +483,12 @@ closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
    `<worktrees dir>/loop-<date>`, handed the `integrated:` lines →
    `QA-READY <qa-handoff.md>` (gates green, QA stack up), `DELIVERED`
    (no QA row: straight to 4) or `BLOCKED <close.md>` (each red with
-   the lot that last touched its file).
+   the lot whose merge first reddens it; a conflict with `<default>`
+   → lot `#closing`, branch `agent/closing`, at step 3).
 2. `QA-READY` → ONE `loop-qa` with the handoff → verdict path →
-   `loop-shipper` `publish` with it.
+   `loop-shipper` `publish` with it. A GO with `BLOCKED(budget)` rows
+   → ONE more `loop-qa`, same handoff, `re-verify` = those rows,
+   verdict `qa/verdict-<k+1>.md`; still there → step 3's stop.
 3. A red gate or a NO-GO → each failing row's lot reopens at `ship`
    in a free slot (step 2's env file, BUILDER.md slice 1's worktree),
    branch `agent/issue-<n>` from `origin/<integration>`,
@@ -502,7 +505,8 @@ closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
    then the certifying status green on that sha (`close` ran the
    script), then merge PINNED → issues closed by the forge; confirm
    each `integrated:` issue closed, then delete `<integration>`
-   (remote branch, worktree) and the `integration:`/`integrated:`/
+   (remote branch, worktree, its gates model: step 4's drop with `wt` =
+   that worktree) and the `integration:`/`integrated:`/
    `closing:` lines. Draft → the MR stays draft, the user merges.
    Summary line `🏁 <integration> → <default> (!<mr>), <k> lots`.
 
