@@ -1,6 +1,6 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (gates, comply triage, QA, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, verify, repeat.
+description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (comply triage, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, merge into the run's integration branch after a workspace check, repeat; on « clos la loop », full gates and one QA on that branch, then one MR to the default branch.
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -29,12 +29,13 @@ pinned agent already names its brief: a spawn prompt never renames
 one (a `REVIEWER.md` that does not exist cost a `find` in 41
 reviews). A spawn prompt hands facts and the
 brief's absolute path, never a paraphrase of it — and never rewrites a
-phase's gate scope: the brief decides it (`pack` runs no test,
-`deliver` the touched crates and their reverse dependents, the full
-suite only at the release and on `<default>` when `state.sh merged`
-prints `audit due` (10 merges since the last audit), which you launch with the audit
-pass (§ Merge queue) — a `loop-mechanic`, df > 40 GB; a prompt that asked for the full trio at pack cost
-~15 min on one lot, 2026-09).
+phase's gate scope: the brief decides it (the builder checks its
+crates and runs its contract's tests, `pack` and `deliver` compile
+nothing, a lot's merge into `<integration>` runs the workspace check,
+and the full gates and QA run once, at the closing (§ Closing); a
+prompt that asked for the full trio at pack cost ~15 min on one lot,
+2026-09; four slots compiling the full gates per lot froze the
+machine, 2026-10-15).
 
 ## Agents
 
@@ -57,9 +58,7 @@ Shipper phases: `pack`, `deliver`, `publish`. The contract reviewer reviews it O
 fresh context. Only YOU spawn: builder and shipper have no `Agent`
 tool — a child's notification never resumes a subagent, it froze a
 thread 30-60 min each time. Review rounds (pack, review, ship) run until `MERGEABLE`,
-cap 3; QA runs once, a NO-GO gets one answer and one re-verify, a
-`GO-PROVISIONAL` goes straight to `publish` unless a row ended
-`BLOCKED(budget)` (step 3).
+cap 3; QA runs once per closing, on every lot together (§ Closing).
 
 There is NO path that spawns an implementer without a contract:
 "spawn des agents opus", "vague de corrections", "rattrapage" mean
@@ -103,12 +102,22 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 - **Certifying gate** — a repo script that runs the gates on a pushed
   sha and posts a status on it (a `local-gates`-style status the
   forge or the release checks): record its path and its status name.
-  It is a superset of the trio, so it REPLACES the trio at `deliver`
-  and is the gate of the merge queue (step 4); none → the trio stays
-  the gate everywhere.
+  It is a superset of the trio, so it REPLACES the trio at the
+  closing (§ Closing); none → the trio is the closing's gate.
 - **Mode** — `loop-issues: automerge` documented in the repo →
-  **autonomous** (labels, merge, re-queue); else **draft**: never
-  write queue labels, never merge, every MR opens as a draft.
+  **autonomous** (labels, merges into `<integration>`, the closing
+  MR merged once green); else **draft**: never write queue labels,
+  never merge, every MR opens as a draft.
+- **Integration branch** — `<integration>` = the `integration:` line
+  of `state.md`; none (a new run) → `loop/<UTC date>`, created from
+  `origin/<default>` (`git push origin
+  origin/<default>:refs/heads/loop/<date>`) and written there. Every
+  lot builds on it and its MR targets it (`<base>` below means
+  `<integration>`, or the stacked MR's branch); nothing reaches
+  `<default>` but the closing MR. It lives in its own worktree
+  `<worktrees dir>/loop-<date>`, created at the first merge and kept
+  until the closing merges: its warm target makes each merge's check
+  incremental.
 - **Worktree wiring** — deps, `.env`, codegen a fresh worktree needs.
   Rust: `CARGO_TARGET_DIR` stays unset, in every spawn and every
   gate: `cargo` goes through the `mbx` shim, which gives each
@@ -184,8 +193,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   from then on AskUserQuestion is refused in this session (nobody
   answers an autonomous loop) until `loop-running.sh stop`.
   A `state.md` with lots in flight → resume them at their phase
-  before selecting anything, its `mode:`, `planned:` and `done:`
-  kept, its `stopped:` line dropped; none, or no lot in flight → a
+  before selecting anything, its `mode:`, `planned:`, `integration:`,
+  `integrated:` and `done:` kept, its `stopped:` line dropped; none, or no lot in flight → a
   new run: `mode: run`, `planned: <N> (+0)`, N = the lots this run
   plans, no `done:` or `stopped:` line.
 
@@ -195,6 +204,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 tick <state.md>`: it marks 🐢 every phase over its budget, then
 reads the mode. Exit 2 `paused until <time>` → no spawn at all;
 `draining` → phases of lots in flight only, no new lot; `drained` →
+the closing when `state.md` holds `closing: asked` (§ Closing), else
 the loop stops like the disk stop below, `stopped: drained`. Exit 1
 (an unreadable time) → one line `🐢 <its stderr>`, stop. The
 pause ends by itself: past its time, the next tick passes and the
@@ -231,7 +241,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    (a lot, a `theme::`), lowest IID first (list only); the rest of
    the queue only once that label is drained. Draft mode: skip
    candidates with an open MR from an `agent/issue-<n>` branch or on
-   the skip list. Each queue candidate then runs
+   the skip list. Each queue candidate then runs, with
+   `LOOP_INTEGRATED` = the issue numbers of the `integrated:` lines,
    `~/.claude/skills/loop-issues/hooks/check.sh issue <gh|glab>
    <project> <n> <Template sections…>`; exit 2 → `#<n> — <its
    stderr>` (`blocked by #N`, `outside template`) in the skip list of
@@ -239,7 +250,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    selection and report its stderr, nobody skipped. These lines are rewritten at every
    selection, except a step-3 `blocked by #<m>` line: it survives and
    skips its issue in both modes while #m is open (#m's state read as
-   `check.sh issue` reads a blocker). A closed blocker frees its issue. None → end your turn;
+   `check.sh issue` reads a blocker). A closed or `integrated:` blocker frees its issue. None → end your turn;
    the watchdog re-polls.
 
 2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
@@ -280,7 +291,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      → phase `held by #<m>` in `state.md`, no `build 1`. The hold lifts
      when #m leaves `state.md` (step 6), whatever its outcome. Draft
      mode: after a `📝 drafted` the lot stacks on `agent/issue-<m>`
-     (§ Rules), any other outcome → `<default>`. Autonomous: the lot always builds on `<default>`,
+     (§ Rules), any other outcome → `<integration>`. Autonomous: the lot always builds on `<integration>`,
      since a stacked MR would merge into #m's branch.
      On every lift `overlap` runs again, one held lot at a time,
      against the lots still in flight: pass → `build 1`, exit 2 → held by the lot it names.
@@ -320,54 +331,43 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      `r = 3` or a `ship` that committed no code → `loop-shipper`
      `deliver` with it (open findings ship flagged `[review not
      converged]`); else `pack <r+1>`.
-   - `loop-shipper` `deliver` → `QA-READY <qa-handoff.md>` → spawn
-     one `loop-qa` with it (in parallel with other slots' QAs only when parallel loops were asked) → verdict path → `loop-shipper` `publish`
-     with it — `GO-PROVISIONAL` included, never a `ship`. A NO-GO
-     verdict goes to `publish` as today, `BLOCKED` → `ship` first.
-     Otherwise a verdict
-     with a row `BLOCKED(budget)` never goes to `publish`: `deliver`
-     again, its `re-verify` list = the plan rows of those rows'
-     Besoins only; that targeted verdict GO, or GO-PROVISIONAL with
-     no `BLOCKED(budget)` row → `publish`, anything else → step 4 as
-     draft flagged `[qa not converged]`. `deliver`
-     (no QA) or `publish` → `DELIVERED <report>` → step 4 in the SAME
-     turn: a `QA: not run` lot goes deliver → verify → queue with no
-     spawn in between and no turn ended on it; `BLOCKED
-     <deliver.md>` (QA NO-GO, comply residue, red gate) → spawn
-     `loop-builder` `ship` once more with deliver.md, then `deliver`
-     again with its `re-verify` list; a second `BLOCKED` → step 4 as
-     flagged draft. `FAILED <path>` → step 5.
+   - `loop-shipper` `deliver` → `DELIVERED <report>` → step 4 in the
+     SAME turn, no spawn in between and no turn ended on it. Its QA
+     plan waits in `ship-<r>.md` for the closing (§ Closing).
+     `BLOCKED <deliver.md>` (comply residue) → spawn `loop-builder`
+     `ship` once more with deliver.md, then `deliver` again; a second
+     `BLOCKED` → step 4 as flagged draft. `FAILED <path>` → step 5.
 
 4. **Verify** — from the report + forge only:
-   - MR exists, draft in draft mode, title `(closes #<n>)`;
+   - MR exists on `<base>`, draft in draft mode, title `(closes #<n>)`;
    - contract with `Formes`, `Tests` and a `## Simplification`
      section (the 80 % pass ran); reviewer `Nécessaire`
      written, zero `Unpaid shape` left open; ship.md disposition
      table complete;
-   - certifying gate green on the head sha (trio green when Step 0
-     found none), no comply finding on an added line. The forge
-     pipeline does NOT gate the merge (user, 2026-09-22: "tant que
-     ça passe en local c'est bon") — it runs the same trio, minutes
-     to hours later, and waiting on it stalled finished work. Record
-     its id, never block on it;
+   - no comply finding on an added line. The forge pipeline does NOT
+     gate the merge (user, 2026-09-22: "tant que ça passe en local
+     c'est bon") — it runs the same trio, minutes to hours later, and
+     waiting on it stalled finished work. Record its id, never block
+     on it;
    - contract findings `applied` or `refuted — <evidence>`, ONE
      contract review; last
      review `MERGEABLE` with every finding `fixed`, `non payé —
      <raison>` (its line under `## Constats non payés` of the last
      `ship-<r>.md`) or `dropped — <evidence>`, or `[review not converged]` at round 3
      with the open findings as an MR comment;
-   - QA GO/GO-PROVISIONAL with no `BLOCKED(budget)` row, or `QA:
-     not run — <reason>` — never on a front lot (Step 0);
-   - description per `PRESENTATION.md` (read once); a user-visible
-     changed file → ≥1 `![…](/uploads/…)` capture.
+   - `ship-<r>.md` holds a QA plan, or `QA: not run — <reason>` —
+     never on a front lot (Step 0);
+   - description per `PRESENTATION.md` (read once).
    Non-conforming → SendMessage the shipper ONCE with the missing
-   items; still non-conforming → step 5. Cap-hit review, ABORTED
-   QA or `[qa not converged]` → confirm draft + findings comment, never merge, cleanup.
+   items; still non-conforming → step 5. Cap-hit review →
+   confirm draft + findings comment, never merge, cleanup.
    Autonomous → the lot is `READY` and enters the merge queue below;
-   once merged, confirm the source branch removed and the issue
-   closed (split → tick the task). Both modes, after the merge or the
-   draft, and at step 5: clean up behind the issue — everything it
-   created, nothing else.
+   once merged into `<integration>`, confirm the source branch
+   removed and append `integrated: #<n> !<mr> <report-dir>` to
+   `state.md`. The issue stays open, `picked-by-agent`, until the
+   closing MR merges (only a merge into `<default>` closes it).
+   Both modes, after the merge or the draft, and at step 5: clean up
+   behind the issue — everything it created, nothing else.
    ```bash
    # QA stack first: a live session would refuse the drops below.
    ~/.claude/skills/loop-issues/hooks/slot.sh qa-down <report-dir>/qa-stack.md
@@ -395,40 +395,32 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `git worktree list` and the `pg_database` listing showing nothing
    of issue `<n>` left; what remains is named in the summary line.
 
-   **Merge queue** (autonomous) — you hold it, FIFO, in `state.md`. A
-   lot enters only once step 4 is verified: verification happens
-   before the merge task, never inside it. No lot, in flight or at the head,
-   rebases because `<default>` moved (a gate that needs it merges `<default>` in): a head's branch head was certified as is, and
-   it merges pinned on that sha with a merge commit, so a gate is
-   never replayed for a sha that changed nothing (natalia-v3: ADR 0036,
-   amendement du 30/09/2026 — the replay cost 45 to 50 min, and MR !811
-   paid it four times in one night, twice with no conflict). A rebase
-   happens only when the forge reports a real conflict
-   (`has_conflicts`), and then the gate runs again, since the rebase
-   mints a new sha. `<default>`'s tip is therefore not certified
-   between two releases; the release's own gate finds a semantic
-   conflict, and that repair goes first (step 1).
-   The head is ONE `loop-mechanic` with this closed task: first
-   `~/.claude/skills/loop-issues/hooks/merge-gate.sh <report-dir>
-   origin/<base> <head sha> <Frontend app dirs>` from the worktree;
-   non-zero → its `BLOCKED — missing QA GO: <verdict path>` line, no
-   merge. It refuses a front lot whose last verdict is missing, not
-   GO, or holds a `BLOCKED(budget)` row. Then read the MR
-   (`glab api projects/<id>/merge_requests/<iid>`); `has_conflicts`
-   false and the certifying status green on its head → merge PINNED on
-   that sha, nothing rerun. Conflicted → `git fetch`, rebase on
-   `<default>` (unresolvable → `BLOCKED` naming the files), push
-   `--force-with-lease`, run the certifying gate (the trio without
-   one) in the foreground, through `slot.sh gate <signal> <recreate>
-   '<gate>'` when the launch pack names a schema signal; green → merge PINNED on the certified sha
-   with the project's merge method (`glab api -X PUT
+   **Merge queue** (autonomous; draft mode only on "merge les drafts")
+   — you hold it, FIFO, in `state.md`. A lot enters only once step 4
+   is verified: verification happens before the merge task, never
+   inside it. The head is ONE `loop-mechanic` with this closed task,
+   in `<worktrees dir>/loop-<date>` (created on first use: `git
+   worktree add <it> origin/<integration>`, detached): `git fetch
+   origin`, then (separate command) `git checkout --detach
+   origin/<integration> && git merge --no-ff --no-edit <head sha>`.
+   A conflict → `git merge --abort`, `BLOCKED` naming the files. Else
+   Step 0's workspace check on the merge result (Rust: `cargo check
+   --workspace --all-targets`; plus the `check` of every frontend
+   lane the lot touched), foreground, `tail -40`, through `slot.sh
+   gate <signal> <recreate> '<check>'` when the launch pack names a
+   schema signal. Red → `BLOCKED <path>` with the output, no merge.
+   Green → merge the MR PINNED on its head sha with the project's
+   merge method (`glab api -X PUT
    projects/<id>/merge_requests/<iid>/merge -f sha=<sha>`; GitHub
-   `gh pr merge --match-head-commit <sha>`) → `DONE <merged sha>`;
-   red → `BLOCKED <path>`, no merge. A `BLOCKED` head leaves the
-   queue and goes back to `ship` with the gate output, like a
-   `deliver` `BLOCKED`; an inherited red → the repair of `<default>`
-   first (step 1). The next head's task is in flight before the relay
-   line.
+   `gh pr merge --match-head-commit <sha>`): the forge mints the same
+   tree the check passed, since only the head merges into
+   `<integration>` → `DONE <merged sha>`. No lot rebases because
+   `<integration>` moved; a conflicted or red head leaves the queue
+   and goes back to `ship` with the output (rebase on `<integration>`
+   there), like a `deliver` `BLOCKED`. The 2026-10-15 trial merged
+   without it (a conflict resolution left "Not verified"): the next
+   builder starts from a base nobody can attribute. The next
+   head's task is in flight before the relay line.
 
    **Registry and audit.** On `DONE`, run `~/.claude/skills/loop-issues/hooks/state.sh merged
    <report-root>/constats.md <n> <report-dir>`: each line of the lot's
@@ -436,9 +428,9 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    — <raison>`, once, then `merged #<n>`. The registry sits beside
    `state.md`; `merged` only appends, the audit only ticks boxes and
    appends `audited`, which resets the merge count to zero.
-   `audit due` → ONE `loop-mechanic`: the full suite on `<default>`,
-   then the audit of the `[ ]` entries only. An entry whose finding is
-   gone from `origin/<default>` (judged on its content, the line
+   `audit due` → ONE `loop-mechanic`: the audit of the `[ ]` entries
+   only (the full suite runs at the closing). An entry whose finding is
+   gone from `origin/<integration>` (judged on its content, the line
    drifts) → `[x] … — absent @<sha>`, never filed. An entry whose
    `<path:line> — <constat>` matches one already closed `— #<m>` →
    `[x] … — déjà #<m>`, never filed. The rest, grouped by related
@@ -478,6 +470,41 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    the lines of the lot's `lenteurs.md`; every reply ends with that
    counter. Nothing else
    reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
+
+## Closing
+
+The user's « clos la loop » / « ferme la loop » sets `mode: drain`
+and `closing: asked` in `state.md`. Once `tick` reads `drained`, the
+closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
+<agent> since <time> — <report-root>/closing`), so `tick` reads
+`draining` and lets its phases and its fix lots run:
+
+1. ONE `loop-shipper` `close` (SHIPPER.md) on
+   `<worktrees dir>/loop-<date>`, handed the `integrated:` lines →
+   `QA-READY <qa-handoff.md>` (gates green, QA stack up), `DELIVERED`
+   (no QA row: straight to 4) or `BLOCKED <close.md>` (each red with
+   the lot that last touched its file).
+2. `QA-READY` → ONE `loop-qa` with the handoff → verdict path →
+   `loop-shipper` `publish` with it.
+3. A red gate or a NO-GO → each failing row's lot reopens at `ship`
+   on a fresh worktree `issue-<n>` and branch `agent/issue-<n>` from
+   `origin/<integration>` (its env file of step 2 written again),
+   handed close.md or the verdict; it runs pack (test guard),
+   review, deliver and the merge queue like any round. Then `close` again. Correctives at the closing
+   are where tests get bent to go green (2026-10-15: one existing
+   test re-seeded, +9 lines in an allowlist, unreviewed): no fix
+   reaches `<integration>` outside that path. A third `close` →
+   stop, one line `🐢 closing not converged — <close.md>`.
+4. `publish` → `DELIVERED` with the MR `<integration>` → `<default>`
+   (a NO-GO → `BLOCKED`, step 3).
+   Autonomous → ONE `loop-mechanic`: `merge-gate.sh <closing
+   report-dir> origin/<default> <head sha> <Frontend app dirs>`,
+   then the certifying status green on that sha (`close` ran the
+   script), then merge PINNED → issues closed by the forge; confirm
+   each `integrated:` issue closed, then delete `<integration>`
+   (remote branch, worktree) and the `integration:`/`integrated:`/
+   `closing:` lines. Draft → the MR stays draft, the user merges.
+   Summary line `🏁 <integration> → <default> (!<mr>), <k> lots`.
 
 ## Slowness is yours
 
@@ -546,21 +573,23 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   found at contract stacks on it (step 3, and for an overlap hold).
   Autonomous: never stacks; an undeclared one is waited for at
   selection too (`blocked by #<m>`, step 1) until it merges, then
-  the lot builds on `<default>`.
-- Never push to the default branch. Never merge with the certifying
-  gate (or the trio) red, on a sha it did not certify, with comply
-  beyond listed FPs, an unpaid shape, a review not converged, or
-  without QA GO. A pipeline pending or red does NOT hold a merge
-  whose local gate is green. "Merge the drafts" covers only this session's MRs;
+  the lot builds on `<integration>`.
+- Never push to the default branch; only the closing MR merges into
+  it, never with the certifying gate (or the trio) red, on a sha it
+  did not certify, or without QA GO. Into `<integration>`, only the
+  merge queue head merges, after its check, and never a lot with
+  comply beyond listed FPs, an unpaid shape or a review not
+  converged. A pipeline pending or red does NOT hold a merge whose
+  local gate is green. "Merge the drafts" covers only this session's MRs;
   a `[… not converged]` one, or another session's, is named back and needs its own yes.
 - A fix to the repo's environment docs (the verify skill, a launch
   pack line) found during the loop never opens its own MR: agents
   read the main checkout's copy, so it travels in the next lot of
   that repo, listed under the MR's écarts.
-- An inherited red — a gate red reproduced on the branch's base —
-  is not this issue's: `deliver` records it with the reproducing
-  command and proceeds as draft. It still forbids the merge: the
-  repair of `<default>` is selected first (step 1).
+- An inherited red — a gate red reproduced on `origin/<default>` —
+  is not this loop's: `close` records it with the reproducing
+  command. It still forbids the closing merge: the repair of
+  `<default>` is selected first (step 1).
 - **No phase of this loop ever opens an issue on the forge** (the
   red-pipeline issue of step 1 and the periodic audit's grouped drafts,
   § Merge queue, go through the /issue publisher, labelled
