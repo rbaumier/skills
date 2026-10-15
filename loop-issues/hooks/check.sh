@@ -2,6 +2,8 @@
 # Mechanical checks of the loop; exit 2 = refused, reason on stderr.
 # Exit 1 = forge or usage error, never a refusal.
 #   check.sh issue <gh|glab> <project> <n> <template section>…
+#     LOOP_INTEGRATED="<n>…": blockers merged into the run's integration
+#     branch, still open on the forge until the closing MR, count as done.
 #   check.sh contract <contract.md>
 #   check.sh overlap <new contract.md> <in-flight contract.md>…
 set -uo pipefail
@@ -32,6 +34,7 @@ case ${1:-} in
         refuse "outside template"
     done
     for blocker in $(grep -oiE 'blocked by #[0-9]+' <<<"$body" | grep -oE '[0-9]+$'); do
+      [[ " ${LOOP_INTEGRATED:-} " == *" $blocker "* ]] && continue
       open=$(issue_json "$forge" "$project" "$blocker" | jq -r .open) || exit 1
       [ "$open" = true ] && refuse "blocked by #$blocker"
     done
