@@ -116,8 +116,8 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 
 - Slice 1 creates the worktree:
   ```bash
-  git fetch origin <default>
-  git worktree add ../<repo>-worktrees/issue-<n> -b agent/issue-<n> origin/<default>
+  git fetch origin <integration>
+  git worktree add ../<repo>-worktrees/issue-<n> -b agent/issue-<n> origin/<integration>
   ```
   Stacked → `origin/<base>`; split → suffix `-t<k>`. Wire it, with
   `CARGO_TARGET_DIR` unset (mbx manages the target). The slot's env
@@ -163,11 +163,18 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   tests or fewer: write them yourself, no task.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
   batch too long for the phase → one more `## Mechanic` line.
-- Then the slice's tests only (`cargo nextest run -p <crate>`,
-  `pnpm test -- <file>`), through `~/.claude/skills/loop-issues/hooks/slot.sh
+- While you write, `cargo check -p <crate> --all-targets` (`pnpm
+  check` for a front package) is your compiler loop. Then the
+  contract's tests of this slice only, by test binary or filter
+  (`cargo nextest run -p <crate> --test <bin>`, `-E 'test(<name>)'`,
+  `pnpm test -- <file>`), never a whole crate: `-p api` links a dozen
+  binaries (1.3 to 3.9 GB of RAM per link) for tests the slice never touched, and
+  the full suite runs at the closing. Through `~/.claude/skills/loop-issues/hooks/slot.sh
   gate '<signal>' '<recreate>' '<tests>'` when the launch pack names a
   schema signal (exit 2 → `FAILED`, the stderr in the note); `cargo clean`, mass `touch`,
-  `CARGO_INCREMENTAL=0` banned; `comply --staged` before each commit, the pack runs the rest.
+  `CARGO_INCREMENTAL=0` banned. No `comply` of your own when the
+  repo's pre-commit hook runs it (one more full clippy pass per
+  commit); else `comply --staged` before each commit. The pack runs the rest.
   The repo's formatters on the touched packages before every
   commit, `ship` included: a formatting red found at `deliver` costs
   an amend and a re-run. A slice that
@@ -180,6 +187,13 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   ends the same way; the orchestrator spawns `pack`.
 
 ## Phase `ship <r>` — after review round `r`
+
+A `close.md` or a closing QA verdict in your prompt instead of a
+review: create the worktree as slice 1 does (from
+`origin/<integration>`), fix every row the closing attributes to your
+lot, and nothing else; the contract's `Tests modifiés` still bounds
+the tests you may touch, a test outside it is a `## Écarts au plan`
+line with the issue line that pays it, never a silent edit.
 
 Read `pack-<r>.md` (§ Gates, § Comply) and `review-<r>.md` handed in
 your prompt. Fix every finding that removes or corrects code, `nit`

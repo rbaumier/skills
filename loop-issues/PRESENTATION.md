@@ -87,9 +87,10 @@ scratchpad:
 - écarts not promoted to `à valider :` — one line each;
 - review: `Nécessaire` size, unpaid shapes, verdict, findings fixed / → issue /
   dropped — two lines;
-- QA ONE line: verdict + blocking reservations, or
-  `QA: not run — <reason>`;
-- gates one line each; comply zero on branch files, FPs listed.
+- QA ONE line: verdict + blocking reservations on the closing MR;
+  on a lot's MR, `QA: à la clôture` or `QA: not run — <reason>`;
+- gates one line each on the closing MR (a lot's MR: `gates: à la
+  clôture`); comply zero on branch files, FPs listed.
 
 No `## Plan` — the contract is never restated.
 
