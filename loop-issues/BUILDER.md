@@ -193,7 +193,8 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 A `close.md` or a closing QA verdict in your prompt instead of a
 review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
-lot, and nothing else; the contract's `Tests modifiés` still bounds
+lot (or refute it with the code line and the evidence file; a
+refutation with no line is a fix), and nothing else; the contract's `Tests modifiés` still bounds
 the tests you may touch, a test outside it is a `## Écarts au plan`
 line with the issue line that pays it, never a silent edit.
 
@@ -232,15 +233,8 @@ in the description, and the seed each row needs (an org without
 the data makes the row unobservable). The seed is the repo's
 versioned seed recipe (launch pack) first: the plan names only the
 rows it adds on top of it, never a seed beside it. The environment is the
-launch pack's, never rewritten here. The plan goes to `deliver`,
-never to the reviewer.
-
-**Second round only** (your prompt hands `deliver.md` with a NO-GO
-verdict): each finding is `fixed` with the commit, or `refuted` with
-the code line and the evidence file that proves the API behaves as
-the issue asks; a refutation with no line is a fix. Then a
-`re-verify` list of the failed rows only. Cap: this one round; a
-second NO-GO ships flagged `[qa not converged]`.
+launch pack's, never rewritten here. The plan waits for the closing,
+never goes to the reviewer.
 
 **Write.** `REWORK` before round 3: `<report-dir>/ship-<r>.md` =
 disposition table (`fixed <commit> <file:line>` / `non payé — <raison>` /
