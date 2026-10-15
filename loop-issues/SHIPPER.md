@@ -52,7 +52,7 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    before anything else, a conflict → `BLOCKED` naming the files. A
    pack built on a stale base shows a merged neighbour's lines as
    this branch's reversal.
-1. No compile, no test at `pack` (user, 2026-10-12): the builder's
+1. No gate but comply, no test at `pack` (user, 2026-10-12): the builder's
    contract tests stand; the merge queue checks the workspace and the
    closing runs the rest (SKILL.md). Run only the
    formatter check, the comply triage (above), and every generated
@@ -121,7 +121,10 @@ Your prompt hands the closing report dir, the integration worktree
 and the `integrated:` lines (issue, MR, report dir of each lot).
 
 1. `git fetch origin`, then (separate command) `git checkout
-   --detach origin/<integration>`.
+   --detach origin/<integration> && git merge --no-edit
+   origin/<default>`; a new commit → `git push origin
+   HEAD:refs/heads/<integration>`; a conflict → `git merge --abort`,
+   `BLOCKED <close.md>` naming the files.
 2. Gates: Step 0 names a certifying gate script → run THAT script on
    this sha (it posts the status the closing merge needs); none → the
    workspace check + lint (Rust: `cargo check` and `clippy
@@ -136,10 +139,10 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    signal, exit 2 → `BLOCKED: schema mismatch after recreate`. A red reproduced on
    `origin/<default>` (detached worktree, same command) is inherited:
    recorded with that command. Any other red → `<report-dir>/close.md`
-   lists each failure with its file and the lot that last touched it
-   (`git log --first-parent --format=%s origin/<integration> --
-   <file>` names the merge of `agent/issue-<n>`), end `BLOCKED
-   <close.md>`.
+   lists each failure with the lot whose merge first reddens it
+   (the failing test alone, bisected over `git rev-list
+   --first-parent --reverse origin/<default>..HEAD`; the
+   `origin/<default>` merge → `#closing`), end `BLOCKED <close.md>`.
 3. Test files of `origin/<default>` modified or deleted over
    `origin/<default>...HEAD` (the `pack` test guard's paths, plus any
    allowlist or baseline file a gate reads) → `## Tests modifiés` of
@@ -178,9 +181,7 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    first — a lot that adds or reshapes a screen plays the UI quality
    sweep as its first row, never cut by the budget — the exploratory hunt capped at a third, an unfinished
    hunt reported `hunt: partial` and downgrading nothing — run dir
-   outside the worktree, verdict path `qa/verdict-<k>.md`. A
-   `re-verify` list in your prompt (second round) → the handoff
-   carries ONLY those rows, never the full plan. Write
+   outside the worktree, verdict path `qa/verdict-<k>.md`. Write
    `database: <name>` into `<report-dir>/qa-stack.md` (`qa-up`
    wrote its process group, ports and log), leave the stack up, end
    `QA-READY <qa-handoff.md>`.

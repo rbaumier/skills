@@ -34,7 +34,7 @@ case ${1:-} in
         refuse "outside template"
     done
     for blocker in $(grep -oiE 'blocked by #[0-9]+' <<<"$body" | grep -oE '[0-9]+$'); do
-      [[ " ${LOOP_INTEGRATED:-} " == *" $blocker "* ]] && continue
+      [[ " $(tr -d "#" <<<"${LOOP_INTEGRATED:-}") " == *" $blocker "* ]] && continue
       open=$(issue_json "$forge" "$project" "$blocker" | jq -r .open) || exit 1
       [ "$open" = true ] && refuse "blocked by #$blocker"
     done

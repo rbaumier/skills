@@ -128,6 +128,7 @@ done
 
 group=issue_integrated_blocker_passes
 LOOP_INTEGRATED='3 7' expect pass "$check" '' issue gh g/p 1 "${sections[@]}"
+LOOP_INTEGRATED='#3 #7' expect pass "$check" '' issue gh g/p 1 "${sections[@]}"
 LOOP_INTEGRATED='17' expect deny "$check" '' issue gh g/p 1 "${sections[@]}"
 
 group=issue_closed_blocker_passes
@@ -237,6 +238,8 @@ done
 [ -z "$(run_hook auto "ls $tmp/x-worktrees/issue-10/x")" ] || fail "issue-10 took issue-1's env"
 mkdir -p "$tmp/x-worktrees/slot-2" && echo FOO=baz >"$tmp/x-worktrees/slot-2.env"
 [ "$(run_hook auto 'echo "$FOO"' "$tmp/x-worktrees/slot-2")" = baz ] || fail "slot worktree"
+mkdir -p "$tmp/x-worktrees/loop-2026-10-15" && echo FOO=lp >"$tmp/x-worktrees/loop-2026-10-15.env"
+[ "$(run_hook auto 'echo "$FOO"' "$tmp/x-worktrees/loop-2026-10-15")" = lp ] || fail "integration worktree"
 
 group=gate_recreates_once
 expect pass "$slot" '' gate 'schema mismatch' "echo r >>$tmp/recreates; touch $tmp/migrated" \

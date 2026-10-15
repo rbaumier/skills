@@ -38,7 +38,7 @@ case ${1:-} in
   env)
     input=$(cat)
     slot=$(jq -r '.tool_input.command // empty, .cwd // empty' <<<"$input" |
-      grep -oE "[^[:space:]\"'=;]*-worktrees/(slot|issue)-[0-9]+" | head -1)
+      grep -oE "[^[:space:]\"'=;]*-worktrees/((slot|issue)-[0-9]+|loop-[0-9-]+)" | head -1)
     case $slot in
       '') exit 0 ;;
       \~/*) slot=$HOME/${slot#\~/} ;;
