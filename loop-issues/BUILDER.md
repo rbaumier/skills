@@ -117,9 +117,11 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - Slice 1 creates the worktree:
   ```bash
   git fetch origin <integration>
-  git worktree add ../<repo>-worktrees/issue-<n> -b agent/issue-<n> origin/<integration>
+  wt=../<repo>-worktrees/slot-<s>
+  [ -d "$wt" ] || git worktree add -q --detach "$wt" origin/<integration>
+  git -C "$wt" reset -q --hard && git -C "$wt" clean -fdq && git -C "$wt" switch -q -C agent/issue-<n> origin/<integration>
   ```
-  Stacked → `origin/<base>`; split → suffix `-t<k>`. Wire it, with
+  Stacked → `origin/<base>`; split → branch suffix `-t<k>`. Wire it, with
   `CARGO_TARGET_DIR` unset (mbx manages the target). The slot's env
   is injected into every command that names or runs from the
   worktree (SKILL.md Step 0, slot env hook): never re-source it, write

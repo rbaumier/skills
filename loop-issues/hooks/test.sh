@@ -235,6 +235,8 @@ done
 [ "$(run_hook auto 'echo "$FOO"' "$tmp/x-worktrees/issue-1-t2/sub")" = bar ] || fail "cwd of a split lot"
 [ "$(HOME=$tmp run_hook auto 'cd $HOME/x-worktrees/issue-1 && echo "$FOO"')" = bar ] || fail "\$HOME path"
 [ -z "$(run_hook auto "ls $tmp/x-worktrees/issue-10/x")" ] || fail "issue-10 took issue-1's env"
+mkdir -p "$tmp/x-worktrees/slot-2" && echo FOO=baz >"$tmp/x-worktrees/slot-2.env"
+[ "$(run_hook auto 'echo "$FOO"' "$tmp/x-worktrees/slot-2")" = baz ] || fail "slot worktree"
 
 group=gate_recreates_once
 expect pass "$slot" '' gate 'schema mismatch' "echo r >>$tmp/recreates; touch $tmp/migrated" \
