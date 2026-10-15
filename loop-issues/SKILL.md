@@ -180,8 +180,8 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   in the next lot (§ Rules); meanwhile its step runs without it.
 - **Slot env hook** — `hooks/slot.sh env` is registered as a
   PreToolUse Bash hook in `~/.claude/settings.json`: a command that
-  names `…-worktrees/issue-<n>[-t<k>]`, or runs from it, gets
-  `<worktrees dir>/issue-<n>.env` sourced first (path written
+  names `…-worktrees/slot-<s>`, or runs from it, gets
+  `<worktrees dir>/slot-<s>.env` sourced first (path written
   literally, `~/` or `$HOME/` admitted). The hook makes no permission
   decision: the rewritten command meets the session's own policy. No
   agent re-sources the slot's env; a slot command no path ties to its
@@ -214,7 +214,7 @@ lots resume at their phase.
 a selected issue), also run `~/.claude/skills/loop-issues/hooks/slot.sh
 disk <threshold> <worktrees dir> <sweep command|-> <n of
 every lot in state.md>…`. It sweeps the test clones, then removes
-the loop's worktrees idle 20 h (never a lot in flight, never one
+the `issue-<n>` worktrees idle 20 h (never a lot in flight, never one
 holding uncommitted work, branches kept), and exits 2 only when
 still under the threshold. Exit 2 → no spawn, `held: contract #<n> —
 <its stderr>` in `state.md`. A held spawn is retried first, before
@@ -256,7 +256,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
 2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
    phase reads it, never the forge. Autonomous: `ready-for-agent` → `picked-by-agent`.
    Write the launch pack's env block, slot substituted, to
-   `<worktrees dir>/issue-<n>.env` (beside the worktree, never in
+   `<worktrees dir>/slot-<s>.env` (beside the worktree, never in
    it): the slot env hook sources it.
 
 3. **Build** — one spawn per phase (background), each with: the
@@ -371,9 +371,9 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    ```bash
    # QA stack first: a live session would refuse the drops below.
    ~/.claude/skills/loop-issues/hooks/slot.sh qa-down <report-dir>/qa-stack.md
-   wt=$(git -C ../<repo>-worktrees/issue-<n> rev-parse --show-toplevel)   # before the removal
-   git worktree remove ../<repo>-worktrees/issue-<n> --force && git worktree prune
-   rm -f ../<repo>-worktrees/issue-<n>.env   # split: after its last task only
+   wt=$(git -C ../<repo>-worktrees/slot-<s> rev-parse --show-toplevel)
+   # The slot's worktree stays; only the lot leaves it.
+   git -C "$wt" reset -q --hard && git -C "$wt" clean -fdq && git -C "$wt" switch -q --detach
    git branch -D agent/issue-<n> 2>/dev/null
    # The checkout's gates model, named as ci/check derives it (repo with GATES_DATABASE_URL only),
    # and its `_p…` clones: nothing reclaims them once the model is gone.
@@ -487,8 +487,8 @@ closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
 2. `QA-READY` → ONE `loop-qa` with the handoff → verdict path →
    `loop-shipper` `publish` with it.
 3. A red gate or a NO-GO → each failing row's lot reopens at `ship`
-   on a fresh worktree `issue-<n>` and branch `agent/issue-<n>` from
-   `origin/<integration>` (its env file of step 2 written again),
+   in a free slot (step 2's env file, BUILDER.md slice 1's worktree),
+   branch `agent/issue-<n>` from `origin/<integration>`,
    handed close.md or the verdict; it runs pack (test guard),
    review, deliver and the merge queue like any round. Then `close` again. Correctives at the closing
    are where tests get bent to go green (2026-10-15: one existing
