@@ -2,7 +2,7 @@
 # Per-slot lifecycle of the loop; exit 2 = refused, reason on stderr.
 # Exit 1 = usage error, never a refusal. Every value comes from the launch pack.
 #   slot.sh disk <threshold GB> <worktrees dir> <sweep command|-> [<n in flight>…]
-#   slot.sh env        PreToolUse Bash hook: sources <worktrees dir>/issue-<n>.env
+#   slot.sh env        PreToolUse Bash hook: sources <worktrees dir>/slot-<s>.env
 #   slot.sh gate <schema signal ERE> <recreate command> <gate command>
 #   slot.sh qa-up <qa-stack.md> <log> <launch command> <port>…
 #   slot.sh qa-probe <dependency>=<command>…
@@ -38,7 +38,7 @@ case ${1:-} in
   env)
     input=$(cat)
     slot=$(jq -r '.tool_input.command // empty, .cwd // empty' <<<"$input" |
-      grep -oE "[^[:space:]\"'=;]*-worktrees/issue-[0-9]+" | head -1)
+      grep -oE "[^[:space:]\"'=;]*-worktrees/(slot|issue)-[0-9]+" | head -1)
     case $slot in
       '') exit 0 ;;
       \~/*) slot=$HOME/${slot#\~/} ;;
