@@ -52,10 +52,12 @@ case ${1:-} in
     [ -z "$unread" ] || refuse "no readers for: $(sed -E 's/^- modifié //; s/ — .*//' <<<"$unread")"
     ;;
   overlap)
-    new=$(files "$2" | sort -u)
+    # LOOP_GENERATED (ERE): generated paths, regenerated on rebase, never a hold.
+    authored() { if [ -n "${LOOP_GENERATED:-}" ]; then grep -vE "$LOOP_GENERATED" || true; else cat; fi; }
+    new=$(files "$2" | authored | sort -u)
     shift 2
     for other in "$@"; do
-      shared=$(comm -12 <(echo "$new") <(files "$other" | sort -u))
+      shared=$(comm -12 <(echo "$new") <(files "$other" | authored | sort -u))
       [ -z "$shared" ] || refuse "$other: $(paste -sd' ' - <<<"$shared")"
     done
     ;;

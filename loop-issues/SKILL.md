@@ -1,6 +1,6 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (comply triage, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, merge into the run's integration branch after a workspace check, repeat; on « clos la loop », full gates and one QA on that branch, then one MR to the default branch.
+description: Standing implementation loop — autonomously drain the current repo's `ready-for-agent` issue queue until interrupted. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (comply triage, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, merge into the run's integration branch after a workspace check, repeat; on an empty queue or « clos la loop », full gates and one QA on that branch, then one MR to the default branch.
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -72,7 +72,8 @@ merging needs autonomous mode.
 
 ## Step 0 — Discover the project (once)
 
-From repo docs/config only (CLAUDE.md, `package.json` scripts,
+Rebuilt each run from this skill and the repo, never copied from a
+previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scripts,
 `Makefile`, `justfile`):
 
 - **Forge** — `git rev-parse --show-toplevel` → `<main-repo>`;
@@ -162,7 +163,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
   `openapi.json`: excluded from the line count; a type the diff
   declares that one of them holds is `Reinvented`.
 - **QA launch pack** — per-slot values (model database URL, test
-  clone pattern, report dir, dev sign-in), launch command + port override, readiness
+  clone pattern, merge queue guard tests, report dir, dev sign-in), launch command + port override, readiness
   probe, the COMPLETE env block (every provider variable, every
   prompt id), DB-prepare path, the versioned seed recipe (the base
   every QA plan composes on), the dependency probes of the login path
@@ -204,7 +205,7 @@ From repo docs/config only (CLAUDE.md, `package.json` scripts,
 tick <state.md>`: it marks 🐢 every phase over its budget, then
 reads the mode. Exit 2 `paused until <time>` → no spawn at all;
 `draining` → phases of lots in flight only, no new lot; `drained` →
-the closing when `state.md` holds `closing: asked` (§ Closing), else
+the closing when `state.md` holds `integrated:` lines (§ Closing), else
 the loop stops like the disk stop below, `stopped: drained`. Exit 1
 (an unreadable time) → one line `🐢 <its stderr>`, stop. The
 pause ends by itself: past its time, the next tick passes and the
@@ -238,7 +239,9 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `~/.claude/skills/issue/RECON.md` (§ Forge commands) → `CREATED
    <url>`, and select it; you never call the forge to create it. Else the
    open `ready-for-agent` issue of the label the invocation names
-   (a lot, a `theme::`), lowest IID first (list only); the rest of
+   (a lot, a `theme::`) — one others name as `blocked by` first, then
+   the one naming the most files, then lowest IID; one whose files a
+   lot in flight touches only when nothing else remains (list only); the rest of
    the queue only once that label is drained. Draft mode: skip
    candidates with an MR from an `agent/issue-<n>` branch open or merged
    into `<integration>`, or on the skip list. Each queue candidate then runs, with
@@ -250,8 +253,9 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    selection and report its stderr, nobody skipped. These lines are rewritten at every
    selection, except a step-3 `blocked by #<m>` line: it survives and
    skips its issue in both modes while #m is open (#m's state read as
-   `check.sh issue` reads a blocker). A closed or `integrated:` blocker frees its issue. None → end your turn;
-   the watchdog re-polls.
+   `check.sh issue` reads a blocker). A closed or `integrated:` blocker frees its issue. None, no lot in a
+   slot or `held:`, and `integrated:` lines → the closing (§ Closing);
+   else end your turn, the watchdog re-polls.
 
 2. **Lock** — write `<report-dir>/issue.md` (title, body, labels): every
    phase reads it, never the forge. Autonomous: `ready-for-agent` → `picked-by-agent`.
@@ -286,15 +290,21 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      `contract` once more, handed its stderr (the uncovered Besoin, the
      changed item without readers); a second exit 2 → step 5. No
      contract review, no `build 1` until it passes. Then `check.sh
-     overlap <contract.md> <contract.md of every other lot in
-     state.md>`: exit 2 (stderr = `<contract of #m>: <shared files>`)
-     → phase `held by #<m>` in `state.md`, no `build 1`. The hold lifts
-     when #m leaves `state.md` (step 6), whatever its outcome. Draft
+     overlap <contract.md> <contract.md of every other lot in a
+     slot>` (a `held:` lot is checked at its lift, never blocks one in a slot), with `LOOP_GENERATED` = an ERE of Step 0's generated
+     paths plus the shared prose docs `CONTEXT.md`, `DESIGN.md`, `PRODUCT.md` (a generated file is regenerated on rebase, a doc conflict is resolved at the merge by keeping both sides — never a hold; 2026-10-15: docs alone held 5 lots and idled a slot): exit 2 (stderr = `<contract of #m>: <shared files>`)
+     → no `build 1`: the lot LEAVES its slot for a line `held: #<n>
+     build 1 — held by #<m> — <report dir>` of `state.md`, and the
+     freed slot selects the next issue (step 1) in the same turn — a
+     held lot never idles a slot. The hold lifts when #m leaves
+     `state.md` (step 6), whatever its outcome. Draft
      mode: after a `📝 drafted` the lot stacks on `agent/issue-<m>`
      (§ Rules), any other outcome → `<integration>`. Autonomous: the lot always builds on `<integration>`,
      since a stacked MR would merge into #m's branch.
      On every lift `overlap` runs again, one held lot at a time,
-     against the lots still in flight: pass → `build 1`, exit 2 → held by the lot it names.
+     against the lots still in flight: pass → the lot takes the first
+     slot that frees, before any new selection, at `build 1` (or its
+     contract review); exit 2 → held by the lot it names.
      One slice under ~150 changed lines and no new table, route or
      dependency in `Formes` → `build 1`, no contract review: small
      issues ship in 30-60 min that way, where a contract review
@@ -406,7 +416,10 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    A conflict → `git merge --abort`, `BLOCKED` naming the files. Else
    Step 0's workspace check on the merge result (Rust: `cargo check
    --workspace --all-targets`; plus the `check` of every frontend
-   lane the lot touched), foreground, `tail -40`, through `slot.sh
+   lane the lot touched), then the tests of the packages owning `git
+   diff --name-only HEAD^1 HEAD` (Rust: `cargo nextest run -p <each>`),
+   the launch pack's merge queue guard tests and `comply --range
+   HEAD^1 HEAD`, each foreground, `tail -40`, through `slot.sh
    gate <signal> <recreate> '<check>'` when the launch pack names a
    schema signal. Red → `BLOCKED <path>` with the output, no merge.
    Green → merge the MR PINNED on its head sha with the project's
@@ -460,7 +473,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
    needs clarification` | `❌ #<n> failed → re-queued`. Writing #n's
-   summary line lifts every lot `held by #<n>` (step 3), then retries
+   summary line lifts every lot `held by #<n>` (step 3): a lifted lot
+   takes the freed slot before any new selection; then retries
    a `held: contract` spawn before any other (§ The loop). The lot
    leaves its slot for a `done: #<n> <summary line>` line of
    `state.md`, suffixed ` rework` when a review of it returned
@@ -470,10 +484,17 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    the lines of the lot's `lenteurs.md`; every reply ends with that
    counter. Nothing else
    reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
+   A phase transition that ends no lot writes NOTHING in the chat —
+   no recap of a report, no "slot 2 is building", no decision
+   explained: the turn ends on the spawn. A reply is a summary line
+   (with its counter), a 🐢, a 🔧, or the answer to the user's own
+   question; anything longer goes to `a-savoir`. (User, 2026-10-15:
+   « il ne faut pas distiller ce qui se passe en dehors du compteur ».)
 
 ## Closing
 
-The user's « clos la loop » / « ferme la loop » sets `mode: drain`
+The user's « clos la loop » / « ferme la loop », or step 1 at the
+end of the queue, sets `mode: drain`
 and `closing: asked` in `state.md`. Once `tick` reads `drained`, the
 closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
 <agent> since <time> — <report-root>/closing`), so `tick` reads
@@ -555,7 +576,10 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   slot, passing that `pageId` to every chrome-devtools call — never
   `select_page`, never a page it did not open. Never queue a QA
   behind another slot's. A blocked lot runs every phase that does
-  not need its blocker; every relay fills an idle slot.
+  not need its blocker, then leaves its slot (step 3): the N slots
+  asked are N agents in flight at all times, every relay fills an
+  idle slot (user, 2026-10-15: « il faut toujours 3 agents en même
+  temps » — two slots sat idle behind one held lot).
 - Disjoint means disjoint at the FILE level, not the theme level.
   Three issues that all touch one screen are serial work wearing a
   parallel costume: the same files conflict, which is now the one thing
@@ -563,9 +587,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   Measured 2026-09-21: one issue was rebased three
   times in one evening; another run paid 50 + 21 + 19 min of
   rebases on three issues of one feature. Issues on one surface go
-  to ONE slot, in sequence. When the queue
-  offers nothing disjoint, run fewer slots than asked — a slot left
-  idle costs less than a rebase chain. `check.sh overlap` (step 3)
+  to ONE slot, in sequence: the later ones wait as `held:` lines,
+  never in a slot. Only when the queue offers no disjoint issue at
+  all does a slot stay idle — it costs less than a rebase chain. `check.sh overlap` (step 3)
   compares the `Formes` files of each new contract with the lots in
   flight, never a shared label.
 - Forge list calls narrowed on the first attempt (`per_page`,

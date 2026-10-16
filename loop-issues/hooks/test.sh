@@ -88,6 +88,8 @@ expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 group=verdict_word_read_in_qa_skill_format
 verdict 4 GO-PROVISIONAL.
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
+verdict 4 GO-PROVISIONAL 'Tally: 9 BLOCKED(env), 0 BLOCKED(budget).'
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 printf '# QA run 5 — GO\n' >"$tmp/report/qa/verdict-5.md"
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 printf '# QA run 6\n\n**ABORTED.** x\n' >"$tmp/report/qa/verdict-6.md"
@@ -184,6 +186,11 @@ expect deny "$check" '' overlap "$tmp/new.md" "$tmp/other.md"
 group=overlap_disjoint_passes
 printf '%s\n' '## Formes' '- Fichiers : `b/x.md`, `b/z.md`' >"$tmp/other.md"
 expect pass "$check" '' overlap "$tmp/new.md" "$tmp/other.md"
+
+group=overlap_generated_file_passes
+printf '%s\n' '## Formes' '- Fichiers : `a/x.md`, `a/openapi.json`' >"$tmp/new.md"
+printf '%s\n' '## Formes' '- Fichiers : `a/z.md`, `a/openapi.json`' >"$tmp/other.md"
+LOOP_GENERATED='openapi\.json$' expect pass "$check" '' overlap "$tmp/new.md" "$tmp/other.md"
 
 # df double: 50 GB free if $tmp/roomy-if holds, else 1.
 slot="$hooks/slot.sh"
