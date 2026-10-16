@@ -286,15 +286,21 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      `contract` once more, handed its stderr (the uncovered Besoin, the
      changed item without readers); a second exit 2 → step 5. No
      contract review, no `build 1` until it passes. Then `check.sh
-     overlap <contract.md> <contract.md of every other lot in
-     state.md>`: exit 2 (stderr = `<contract of #m>: <shared files>`)
-     → phase `held by #<m>` in `state.md`, no `build 1`. The hold lifts
-     when #m leaves `state.md` (step 6), whatever its outcome. Draft
+     overlap <contract.md> <contract.md of every other lot in a
+     slot>` (a `held:` lot is checked at its lift, never blocks one in a slot), with `LOOP_GENERATED` = an ERE of Step 0's generated
+     paths plus the shared prose docs `CONTEXT.md`, `DESIGN.md`, `PRODUCT.md` (a generated file is regenerated on rebase, a doc conflict is resolved at the merge by keeping both sides — never a hold; 2026-10-15: docs alone held 5 lots and idled a slot): exit 2 (stderr = `<contract of #m>: <shared files>`)
+     → no `build 1`: the lot LEAVES its slot for a line `held: #<n>
+     build 1 — held by #<m> — <report dir>` of `state.md`, and the
+     freed slot selects the next issue (step 1) in the same turn — a
+     held lot never idles a slot. The hold lifts when #m leaves
+     `state.md` (step 6), whatever its outcome. Draft
      mode: after a `📝 drafted` the lot stacks on `agent/issue-<m>`
      (§ Rules), any other outcome → `<integration>`. Autonomous: the lot always builds on `<integration>`,
      since a stacked MR would merge into #m's branch.
      On every lift `overlap` runs again, one held lot at a time,
-     against the lots still in flight: pass → `build 1`, exit 2 → held by the lot it names.
+     against the lots still in flight: pass → the lot takes the first
+     slot that frees, before any new selection, at `build 1` (or its
+     contract review); exit 2 → held by the lot it names.
      One slice under ~150 changed lines and no new table, route or
      dependency in `Formes` → `build 1`, no contract review: small
      issues ship in 30-60 min that way, where a contract review
@@ -460,7 +466,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
    needs clarification` | `❌ #<n> failed → re-queued`. Writing #n's
-   summary line lifts every lot `held by #<n>` (step 3), then retries
+   summary line lifts every lot `held by #<n>` (step 3): a lifted lot
+   takes the freed slot before any new selection; then retries
    a `held: contract` spawn before any other (§ The loop). The lot
    leaves its slot for a `done: #<n> <summary line>` line of
    `state.md`, suffixed ` rework` when a review of it returned
@@ -470,6 +477,12 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    the lines of the lot's `lenteurs.md`; every reply ends with that
    counter. Nothing else
    reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
+   A phase transition that ends no lot writes NOTHING in the chat —
+   no recap of a report, no "slot 2 is building", no decision
+   explained: the turn ends on the spawn. A reply is a summary line
+   (with its counter), a 🐢, a 🔧, or the answer to the user's own
+   question; anything longer goes to `a-savoir`. (User, 2026-10-15:
+   « il ne faut pas distiller ce qui se passe en dehors du compteur ».)
 
 ## Closing
 
@@ -555,7 +568,10 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   slot, passing that `pageId` to every chrome-devtools call — never
   `select_page`, never a page it did not open. Never queue a QA
   behind another slot's. A blocked lot runs every phase that does
-  not need its blocker; every relay fills an idle slot.
+  not need its blocker, then leaves its slot (step 3): the N slots
+  asked are N agents in flight at all times, every relay fills an
+  idle slot (user, 2026-10-15: « il faut toujours 3 agents en même
+  temps » — two slots sat idle behind one held lot).
 - Disjoint means disjoint at the FILE level, not the theme level.
   Three issues that all touch one screen are serial work wearing a
   parallel costume: the same files conflict, which is now the one thing
@@ -563,9 +579,9 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   Measured 2026-09-21: one issue was rebased three
   times in one evening; another run paid 50 + 21 + 19 min of
   rebases on three issues of one feature. Issues on one surface go
-  to ONE slot, in sequence. When the queue
-  offers nothing disjoint, run fewer slots than asked — a slot left
-  idle costs less than a rebase chain. `check.sh overlap` (step 3)
+  to ONE slot, in sequence: the later ones wait as `held:` lines,
+  never in a slot. Only when the queue offers no disjoint issue at
+  all does a slot stay idle — it costs less than a rebase chain. `check.sh overlap` (step 3)
   compares the `Formes` files of each new contract with the lots in
   flight, never a shared label.
 - Forge list calls narrowed on the first attempt (`per_page`,

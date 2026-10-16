@@ -152,6 +152,10 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
     sentence ≤ 10 words, a block ≤ 30, never wrapped mid-sentence.
 - A shape outside `Formes`, or a decision changed against the
   contract → `## Écarts au plan` with the issue line that pays it.
+- An existing test file you touch in a build (a fixture field, a
+  visibility, a `mod` line) gets its `Tests modifiés` line in the
+  same commit: the pack's guard reads only that list (4 lots
+  blocked or relisted for it, 2026-10-15).
 - **Tests.** Tests live in their own files, never inline, in the
   repo's own convention (the testing guide `CLAUDE.md`'s pointers lead to names the
   unit, integration and frontend layouts). You
@@ -196,7 +200,9 @@ review: create the worktree as slice 1 does (from
 lot (or refute it with the code line and the evidence file; a
 refutation with no line is a fix), and nothing else; the contract's `Tests modifiés` still bounds
 the tests you may touch, a test outside it is a `## Écarts au plan`
-line with the issue line that pays it, never a silent edit.
+line with the issue line that pays it, never a silent edit — and, in
+the same commit, its line added to `Tests modifiés` (the pack's guard
+reads only that list: an écart alone blocks the pack, 2026-10-15).
 
 Read `pack-<r>.md` (§ Gates, § Comply) and `review-<r>.md` handed in
 your prompt. Fix every finding that removes or corrects code, `nit`
@@ -207,8 +213,12 @@ lines the lot added (any other is `fix`, generated paths
 excepted), are listed for the
 shipper with the reason each. Before the commit,
 `coding-standards:quality-bar-review` on the fix diff alone, each finding paid
-in that commit: a fix that breeds the next finding costs a round. A test guard `BLOCKED` is paid by restoring
-the test and fixing the code, never by widening `Tests modifiés`. A wrong sentence in a loop report (pack,
+in that commit: a fix that breeds the next finding costs a round. Any existing test you edit (a review fix
+included) gets its `Tests modifiés` line in the same commit, with the
+issue line or review finding that changes the behaviour it pins; no
+such line → restore the test and fix the code. A test guard `BLOCKED`
+is paid the same way: a listed line when the issue or a finding pays
+the edit, else the test restored — never a list widened to get green. A wrong sentence in a loop report (pack,
 ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
 loop files nothing on the forge. Small and inside a file the lot
 already touches → pay it here; otherwise ONE line under
