@@ -40,7 +40,8 @@ machine, 2026-10-15).
 ## Agents
 
 Every spawn names a pinned agent type and NEVER passes `model` (an
-explicit `model` overrides the pin):
+explicit `model` overrides the pin), `name` = `#<n> <phase> · <goal>`
+and `description` = its purpose, never a file:
 
 | Role | `subagent_type` | Model · effort | Spawned by | Budget (min) |
 |---|---|---|---|---|
