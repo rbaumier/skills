@@ -53,7 +53,7 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    pack built on a stale base shows a merged neighbour's lines as
    this branch's reversal.
 1. No gate but comply, no test at `pack` (user, 2026-10-12): the builder's
-   contract tests stand; the merge queue checks the workspace and the
+   contract tests stand; the merge queue checks and tests the merge and the
    closing runs the rest (SKILL.md). Run only the
    formatter check, the comply triage (above), and every generated
    client of Step 0 the diff reaches (regenerated, `git status` clean
@@ -105,7 +105,7 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    on an added line → `BLOCKED`.
 2. `git log origin/<base>..HEAD` = this task's commits only; more
    than one → squash as in `pack`. No gate, no QA here (user,
-   2026-10-15): the merge queue checks the workspace on the merge
+   2026-10-15): the merge queue checks and tests the merge
    result, the closing runs the full gates and one QA for every lot.
 3. Push `agent/issue-<n>`, open the MR on `<base>`, title `(closes
    #<n>)`, body = `mr-description.md`, DRAFT in draft mode; `## Not

@@ -18,6 +18,6 @@ word=$(awk '/^## Verdict/ { v = 1; next } v && /\*\*/ { sub(/^[^*]*\*\*/, ""); s
 [ -n "$word" ] || word=$(grep -m1 -oE '\*\*(GO-PROVISIONAL|NO-GO|GO|BLOCKED|ABORTED)\b' "$verdict" | tr -d '*')
 [ -n "$word" ] || word=$(head -1 "$verdict" | grep -oE '(GO-PROVISIONAL|NO-GO|GO|BLOCKED|ABORTED)$')
 word=${word%.}
-case $word in GO | GO-PROVISIONAL) grep -q 'BLOCKED(budget)' "$verdict" || exit 0 ;; esac
+case $word in GO | GO-PROVISIONAL) grep -vE '(^|[^0-9])0 BLOCKED\(budget\)' "$verdict" | grep -q 'BLOCKED(budget)' || exit 0 ;; esac
 echo "BLOCKED — missing QA GO: $verdict (${word:-no verdict})" >&2
 exit 2
