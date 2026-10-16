@@ -49,7 +49,7 @@ case ${1:-} in
         [ "$paused" = true ] && refuse "paused until $until"
         ;;
       drain)
-        grep -q '^slot [0-9]*: #' "$state" && refuse draining
+        grep -qE '^(slot [0-9]+: |held: )#' "$state" && refuse draining
         refuse drained
         ;;
     esac
