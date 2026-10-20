@@ -11,6 +11,10 @@ hooks:
       hooks:
         - type: command
           command: "$HOME/.claude/skills/loop-issues/hooks/loop-running.sh"
+    - matcher: Agent
+      hooks:
+        - type: command
+          command: "$HOME/.claude/skills/loop-issues/hooks/spawn-guard.sh"
 ---
 
 # Loop orchestrator
@@ -35,7 +39,10 @@ only, a lot's merge into `<integration>` runs the workspace check,
 and the full gates and QA run once, at the closing (§ Closing); a
 prompt that asked for the full trio at pack cost ~15 min on one lot,
 2026-09; four slots compiling the full gates per lot froze the
-machine, 2026-10-15).
+machine, 2026-10-15). `hooks/spawn-guard.sh` refuses a phase prompt
+that names a gate. A merge-queue red sends its lot back to `ship`; it
+never widens the next lots' gates — a lesson that would goes to
+`/reflect` on the brief.
 
 ## Agents
 
@@ -291,21 +298,16 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      `contract` once more, handed its stderr (the uncovered Besoin, the
      changed item without readers); a second exit 2 → step 5. No
      contract review, no `build 1` until it passes. Then `check.sh
-     overlap <contract.md> <contract.md of every other lot in a
-     slot>` (a `held:` lot is checked at its lift, never blocks one in a slot), with `LOOP_GENERATED` = an ERE of Step 0's generated
-     paths plus the shared prose docs `CONTEXT.md`, `DESIGN.md`, `PRODUCT.md` (a generated file is regenerated on rebase, a doc conflict is resolved at the merge by keeping both sides — never a hold; 2026-10-15: docs alone held 5 lots and idled a slot): exit 2 (stderr = `<contract of #m>: <shared files>`)
-     → no `build 1`: the lot LEAVES its slot for a line `held: #<n>
-     build 1 — held by #<m> — <report dir>` of `state.md`, and the
-     freed slot selects the next issue (step 1) in the same turn — a
-     held lot never idles a slot. The hold lifts when #m leaves
-     `state.md` (step 6), whatever its outcome. Draft
-     mode: after a `📝 drafted` the lot stacks on `agent/issue-<m>`
-     (§ Rules), any other outcome → `<integration>`. Autonomous: the lot always builds on `<integration>`,
-     since a stacked MR would merge into #m's branch.
-     On every lift `overlap` runs again, one held lot at a time,
-     against the lots still in flight: pass → the lot takes the first
-     slot that frees, before any new selection, at `build 1` (or its
-     contract review); exit 2 → held by the lot it names.
+     overlap <contract.md> <contract.md of every other lot in a slot>`
+     (`LOOP_GENERATED` = an ERE of Step 0's generated paths): exit 2
+     NEVER holds a lot — `build 1` starts anyway, its prompt naming
+     the lots in flight that share files (stderr) and asking for
+     self-contained changes, no reformatting of existing code; the
+     conflict is resolved at the pack's rebase or at the merge. A
+     shared file costs one rebase, an idle slot costs a lot (user,
+     2026-10-19: « c'est pas grave si il y a des fichiers en commun,
+     il faut toujours 3 agents »). The lot always builds on
+     `<integration>`.
      One slice under ~150 changed lines and no new table, route or
      dependency in `Formes` → `build 1`, no contract review: small
      issues ship in 30-60 min that way, where a contract review
@@ -409,7 +411,9 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    **Merge queue** (autonomous; draft mode only on "merge les drafts")
    — you hold it, FIFO, in `state.md`. A lot enters only once step 4
    is verified: verification happens before the merge task, never
-   inside it. The head is ONE `loop-mechanic` with this closed task,
+   inside it. It leaves its slot for a `queued: #<n> !<mr> <sha> —
+   <report dir>` line, and the slot selects the next issue: the merge
+   runs in the integration worktree, never the slot's. The head is ONE `loop-mechanic` with this closed task,
    in `<worktrees dir>/loop-<date>` (created on first use: `git
    worktree add <it> origin/<integration>`, detached): `git fetch
    origin`, then (separate command) `git checkout --detach
@@ -419,8 +423,9 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    --workspace --all-targets`; plus the `check` of every frontend
    lane the lot touched), then the tests of the packages owning `git
    diff --name-only HEAD^1 HEAD` (Rust: `cargo nextest run -p <each>`),
-   the launch pack's merge queue guard tests and `comply --range
-   HEAD^1 HEAD`, each foreground, `tail -40`, through `slot.sh
+   the launch pack's merge queue guard tests and Step 0's comply on
+   `HEAD^1..HEAD`, red only at Step 0's lint scope (`added-lines`:
+   a finding on an unchanged line is not red), each foreground, `tail -40`, through `slot.sh
    gate <signal> <recreate> '<check>'` when the launch pack names a
    schema signal. Red → `BLOCKED <path>` with the output, no merge.
    Green → merge the MR PINNED on its head sha with the project's
@@ -474,9 +479,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `✅ #<n> merged (!<mr>)` | `📝 #<n> drafted` |
    `⚠️ #<n> drafted flagged — <review|qa> not converged` | `❓ #<n>
    needs clarification` | `❌ #<n> failed → re-queued`. Writing #n's
-   summary line lifts every lot `held by #<n>` (step 3): a lifted lot
-   takes the freed slot before any new selection; then retries
-   a `held: contract` spawn before any other (§ The loop). The lot
+   summary line retries a `held: contract` (disk) spawn before any
+   other (§ The loop). The lot
    leaves its slot for a `done: #<n> <summary line>` line of
    `state.md`, suffixed ` rework` when a review of it returned
    `REWORK`; an issue added to the run raises the `(+k)` of
@@ -511,9 +515,10 @@ closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
    `loop-shipper` `publish` with it. A GO with `BLOCKED(budget)` rows
    → ONE more `loop-qa`, same handoff, `re-verify` = those rows,
    verdict `qa/verdict-<k+1>.md`; still there → step 3's stop.
-3. A red gate or a NO-GO → each failing row's lot reopens at `ship`
-   in a free slot (step 2's env file, BUILDER.md slice 1's worktree),
-   branch `agent/issue-<n>` from `origin/<integration>`,
+3. A red gate or a NO-GO → ONE fix lot `#closing-fix` for every
+   failing row together (never one lot per issue), at `ship` in a
+   free slot (step 2's env file, BUILDER.md slice 1's worktree),
+   branch `agent/closing-fix` from `origin/<integration>`,
    handed close.md or the verdict; it runs pack (test guard),
    review, deliver and the merge queue like any round. Then `close` again. Correctives at the closing
    are where tests get bent to go green (2026-10-15: one existing
@@ -581,25 +586,17 @@ in a relay line. Every brake handled is one line `🔧 <cause> →
   asked are N agents in flight at all times, every relay fills an
   idle slot (user, 2026-10-15: « il faut toujours 3 agents en même
   temps » — two slots sat idle behind one held lot).
-- Disjoint means disjoint at the FILE level, not the theme level.
-  Three issues that all touch one screen are serial work wearing a
-  parallel costume: the same files conflict, which is now the one thing
-  that still forces a rebase, and a rebase replays the full trio.
-  Measured 2026-09-21: one issue was rebased three
-  times in one evening; another run paid 50 + 21 + 19 min of
-  rebases on three issues of one feature. Issues on one surface go
-  to ONE slot, in sequence: the later ones wait as `held:` lines,
-  never in a slot. Only when the queue offers no disjoint issue at
-  all does a slot stay idle — it costs less than a rebase chain. `check.sh overlap` (step 3)
-  compares the `Formes` files of each new contract with the lots in
-  flight, never a shared label.
+- A slot never waits on a file overlap: the N slots asked are N
+  lots in flight while the queue holds a selectable issue. Only a
+  declared `blocked by` (step 1) or the disk (§ The loop) keeps an
+  issue out of a slot.
 - Forge list calls narrowed on the first attempt (`per_page`,
   `labels`, `state`); an overflowing response is parsed from its
   persisted file.
 - An open dependency MR never stops the loop. A declared one
   (`blocked by #<m>` in the body) is skipped at selection in both
   modes (step 1) until #m closes. Draft mode: an undeclared one
-  found at contract stacks on it (step 3, and for an overlap hold).
+  found at contract stacks on it (step 3).
   Autonomous: never stacks; an undeclared one is waited for at
   selection too (`blocked by #<m>`, step 1) until it merges, then
   the lot builds on `<integration>`.

@@ -60,13 +60,14 @@ an HTML artifact.
   the reviewer opens first, the rest named in the prose.
 - Timing: on the QA stack, after the verdict, before killing it.
   One Chrome: never while QA drives it.
-- Mechanics: chrome-devtools `resize_page` 1280 wide →
-  `navigate_page`, logged in as the role that sees the screen, QA
+- Mechanics: chrome-devtools `new_page` (its pageId on every call) →
+  `resize_page` 1280 wide → `navigate_page`, logged in as the role that sees the screen, QA
   data → `take_screenshot` (full page when the change sits below
   the fold) to `<main-repo>/.qa-shots/capture-<screen>-<avant|après>.png`
   (chrome-devtools writes only under the session root, the main
   checkout: never a worktree nor the
   report dir), then `mv` it to `<report-dir>/`; never commit it.
+  After the last capture, `close_page` that page.
   Upload each with `curl -s -H "Authorization: Bearer $(glab config get token
   --host <host>)" -F file=@<png> https://<host>/api/v4/projects/<id>/uploads`
   (`glab api -F` answers 400) and embed the returned `markdown`. GitHub: paths in the report, no embed.
