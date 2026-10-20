@@ -119,8 +119,14 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   git fetch origin <integration>
   wt=../<repo>-worktrees/slot-<s>
   [ -d "$wt" ] || git worktree add -q --detach "$wt" origin/<integration>
+  case "$wt" in */<repo>-worktrees/slot-[0-9]*) ;; *) echo "refused: wt=$wt"; exit 1;; esac
+  [ -d "$wt" ] && [ "$(git -C "$wt" rev-parse --show-toplevel)" != "$(git rev-parse --show-toplevel)" ] || exit 1
   git -C "$wt" reset -q --hard && git -C "$wt" clean -fdq && git -C "$wt" switch -q -C agent/issue-<n> origin/<integration>
   ```
+  Each line runs as its own command; a failed `fetch` stops here (rerun
+  it, sandbox disabled on an ssh refusal), never the next line. `reset
+  --hard` and `clean` run only in a slot worktree: in the main checkout
+  they deleted every untracked file (2026-10-19).
   Stacked → `origin/<base>`; split → branch suffix `-t<k>`. Wire it, with
   `CARGO_TARGET_DIR` unset (mbx manages the target). The slot's env
   is injected into every command that names or runs from the

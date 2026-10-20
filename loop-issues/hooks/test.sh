@@ -392,4 +392,15 @@ for i in $(seq 12 21); do
 done >"$tmp/due"
 [ "$(cat "$tmp/due")" = 21 ] || fail "audit due after reset: $(cat "$tmp/due")"
 
+group=spawn_guard
+guard="$hooks/spawn-guard.sh"
+spawn() { jq -nc --arg t "$1" --arg p "$2" '{tool_input: {subagent_type: $t, prompt: $p}}'; }
+for p in 'run cargo check -p member' 'then `cargo nextest run -p billing`' 'guards: -p api -E x' 'run ci/lib/comply-workspace' 'pnpm -C apps/webapp check'; do
+  expect deny "$guard" "$(spawn loop-builder "$p")"
+done
+for p in 'Report dir: /r/issue-1 — files: comply-triage.md, pack-1.md' 'cargo via mbx, CARGO_TARGET_DIR unset; touched crates: api-key, member'; do
+  expect pass "$guard" "$(spawn loop-builder "$p")"
+done
+expect pass "$guard" "$(spawn loop-mechanic 'cargo check --workspace --all-targets')"
+
 echo "hooks: all checks pass"
