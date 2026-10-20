@@ -55,7 +55,8 @@ Three leading words govern the run:
    `loop-reports/` are refused.
    `take_screenshot` saves to `<repo>/.qa-shots/<id>/`, then `mv` the files to
    `<run-dir>/evidence/`; never commit `.qa-shots/`.
-5. **Smoke the target.** Drive one real end-to-end round trip per surface with
+5. **Smoke the target.** UI surface: first `list_pages` and note the pageIds —
+   the pre-QA tab set the teardown (Phase 5) returns to. Drive one real end-to-end round trip per surface with
    the actual credentials — log in, hit one authenticated endpoint, run one
    real command — and capture the artifact to `evidence/`. A failed smoke means
    the environment is broken, not the feature: **stop and report ABORTED**
@@ -174,8 +175,9 @@ Verifier prompt template:
 > proven only by a toast, banner, optimistic update, button state or closed
 > dialog is FAIL. Record every
 > write you make (record created, file written, mutating request) in a
-> "Mutations" list. Before returning, close every Chrome tab you opened
-> (chrome-devtools `close_page`) — leave the browser as you found it.
+> "Mutations" list. Before returning — early return, fuse and budget
+> included — `close_page` every pageId your `new_page` calls returned: leave
+> the browser as you found it.
 > Return: the completed matrix with a verdict + artifact path
 > per row, a BLOCKED count, and the Mutations list.
 
@@ -208,8 +210,9 @@ Breaker prompt template:
 > return if you can't obtain one), race conditions, empty states, rapid repeats. Capture evidence to the
 > evidence dir for every bug. Work in rounds; keep hunting until **dry** — two
 > consecutive rounds with zero new bugs. Record every write you make in a
-> "Mutations" list. Before returning, close every Chrome tab you opened
-> (chrome-devtools `close_page`) — leave the browser as you found it.
+> "Mutations" list. Before returning — early return, fuse and budget
+> included — `close_page` every pageId your `new_page` calls returned: leave
+> the browser as you found it.
 > Return: every bug with repro steps, evidence path, and
 > severity; a per-round tally ("Round 3: 0 new"); and the Mutations list.
 
@@ -248,9 +251,12 @@ Complete `<run-dir>/matrix.md`:
    `merge-gate.sh` reads only that.
 
 **Completion:** every PASS/FAIL verdict and every finding points to an artifact
-you confirmed on disk; BLOCKED rows carry a stated reason. **Teardown:** before
-writing the verdict, close every Chrome tab the run opened (chrome-devtools
-`list_pages` then `close_page`) — the browser must be back to its pre-QA tab set.
+you confirmed on disk; BLOCKED rows carry a stated reason.
+
+**Teardown — on every exit, ABORTED, fuse and budget included:** before
+writing the verdict, `list_pages`, then `close_page` every page outside the
+pre-QA set noted at the smoke (Phase 1) — the agents' leftovers included. The
+browser is back to its pre-QA tab set; a tab left open is an unfinished run.
 
 ## Common rationalizations (parent-facing)
 
