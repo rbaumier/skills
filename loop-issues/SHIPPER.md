@@ -53,8 +53,8 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    pack built on a stale base shows a merged neighbour's lines as
    this branch's reversal.
 1. No gate but comply, no test at `pack` (user, 2026-10-12): the builder's
-   contract tests stand; the merge queue checks and tests the merge and the
-   closing runs the rest (SKILL.md). Run only the
+   merge queue checks the merge and the closing runs every test
+   (SKILL.md). Run only the
    formatter check, the comply triage (above), and every generated
    client of Step 0 the diff reaches (regenerated, `git status` clean
    of it, or listed as a failure). `## Gates` says `pack: none`.
@@ -93,7 +93,7 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
 ## Phase `deliver` — after the last `ship` phase
 
 Your prompt hands `<report-dir>/ship-<r>.md` (disposition table, comply
-decisions, QA plan, `mr-description.md`, `→ issue` list). Every `deliver.md`
+decisions, Breaker map, `mr-description.md`, `→ issue` list). Every `deliver.md`
 below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
 
 1. Comply decisions: `FP: generated` groups are never filed (they
@@ -105,7 +105,7 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    on an added line → `BLOCKED`.
 2. `git log origin/<base>..HEAD` = this task's commits only; more
    than one → squash as in `pack`. No gate, no QA here (user,
-   2026-10-15): the merge queue checks and tests the merge
+   2026-10-15): the merge queue checks the merge
    result, the closing runs the full gates and one QA for every lot.
 3. Push `agent/issue-<n>`, open the MR on `<base>`, title `(closes
    #<n>)`, body = `mr-description.md`, DRAFT in draft mode; `## Not
@@ -138,7 +138,9 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    '<recreate>' '<gate>'`: one recreation and one rerun on that
    signal, exit 2 → `BLOCKED: schema mismatch after recreate`. A red reproduced on
    `origin/<default>` (detached worktree, same command) is inherited:
-   recorded with that command. Any other red → `<report-dir>/close.md`
+   recorded with that command. Any other red → rerun the failing
+   lane without fail-fast, on the gates model database (never the
+   slot's), so every red lands in one pass; `<report-dir>/close.md`
    lists each failure with the lot whose merge first reddens it
    (the failing test alone, bisected over `git rev-list
    --first-parent --reverse origin/<default>..HEAD`; the
@@ -148,21 +150,21 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    allowlist or baseline file a gate reads) → `## Tests modifiés` of
    `close.md`, each with the lot that changed it: the closing MR
    lists them for the human who merges it.
-4. **QA.** The plan = the QA plans of every lot's last `ship-<r>.md`
+4. **QA.** The plan = the Breaker maps of every lot's last `ship-<r>.md`
    (`QA: not run` lots add nothing), front lots first, one section per
-   lot naming its issue. No row at all → skip to the report. Else,
+   lot naming its issue. No map at all → skip to the report. Else,
    with `slot=~/.claude/skills/loop-issues/hooks/slot.sh`, each from
    `cd <worktree> && …`: `$slot qa-down <report-dir>/qa-stack.md`
    (your own previous stack), then `$slot qa-up
    <report-dir>/qa-stack.md <log> '<launch command>' <ports>…` per
-   the QA launch pack (binary built in the integration worktree's target). A row
+   the QA launch pack (binary built in the integration worktree's target). A surface
    that needs the model to call a tool → the fake model starts with a
    script covering it, its trigger phrase in the handoff. Exit
    2 names a port another process holds: `BLOCKED` naming it, never
    killed. Then one `curl --retry` probe. Seed: the repo's versioned seed
-   recipe (launch pack) first, applied to TWO organizations — one
-   for the Verifier, one for the Breaker; the plan's seed rows
-   compose on top of it, never beside it. Then `$slot qa-probe
+   recipe (launch pack) first, applied to N organizations, one per
+   Breaker (N = the slot count in your prompt, 1 when absent); the
+   maps' seed composes on top of each, never beside it. Then `$slot qa-probe
    <dependency>=<command>…` with the launch pack's probes, FROM the
    slot's console origin, every dependency the plan's login path
    crosses: identity provider alive, CORS preflight accepted for the
@@ -171,17 +173,10 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    `$slot qa-down` then a `BLOCKED` naming it — never handed to QA to
    come back `ABORTED`. Then write
    `<report-dir>/qa-handoff.md` for the `loop-qa` the orchestrator
-   spawns (it reads `~/.claude/skills/qa/SKILL.md`): the QA plan, URL/port,
-   host allowlist (the login console included), the two
-   organizations and their credentials, the Breaker's targets — the
-   boundaries the diff opens or changes, i.e. the contract's hostile
-   cases in `Tests` of every lot, not the whole app — and the budget
-   in minutes, ~15 per lot, enforced: past it the remaining rows end `BLOCKED(budget)`,
-   each still naming its Besoin, so the next run targets it. Plan rows
-   first — a lot that adds or reshapes a screen plays the UI quality
-   sweep as its first row, never cut by the budget — the exploratory hunt capped at a third, an unfinished
-   hunt reported `hunt: partial` and downgrading nothing — run dir
-   outside the worktree, verdict path `qa/verdict-<k>.md`. Write
+   spawns (it reads `~/.claude/skills/qa/SKILL.md`): mode
+   `breakers-only`, the maps, URL/port, host allowlist (the login
+   console included), N, the N organizations and their credentials,
+   the budget in minutes, ~15 per lot ÷ N, run dir outside the worktree, verdict path `qa/verdict-<k>.md`. Write
    `database: <name>` into `<report-dir>/qa-stack.md` (`qa-up`
    wrote its process group, ports and log), leave the stack up, end
    `QA-READY <qa-handoff.md>`.
@@ -195,12 +190,11 @@ never assume. `qa-down` runs on every exit of this phase, ABORTED
 verdict included.
 
 5. NO-GO → `slot.sh qa-down <report-dir>/qa-stack.md`, write `<report-dir>/deliver.md`
-   with the verdict path and, per failing row, the lot its plan
+   with the verdict path and, per `in-lot` finding, the lot its map
    section names, end `BLOCKED <deliver.md>`: those lots' `ship`
    answers it (SKILL.md § Closing). `GO-PROVISIONAL` is a GO: its
    reservations go to the MR comment, never to a `BLOCKED`, never to
-   a `ship` — answering them cost ~45 min of ship + deliver + QA
-   re-verify each, for reservations the verdict called non-blocking.
+   a `ship`.
 6. GO → UI touched → captures per `PRESENTATION.md` § Captures on
    the running stack (paths named in each lot's ship.md), signed in with the
    local dev account the QA launch pack names — a local dev

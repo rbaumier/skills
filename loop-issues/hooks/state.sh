@@ -4,7 +4,7 @@
 #   state.sh tick <state.md>            budget marks, then the loop mode
 #   state.sh model <state.md> <serving model id>
 #   state.sh fresh                      skill files changed since the last read
-#   state.sh count <state.md>           progress counter and rework rate
+#   state.sh count <state.md>           progress counter
 #   state.sh merged <constats.md> <n> <report-dir>
 #                                       registers the lot's unpaid findings;
 #                                       prints "audit due" from 10 merges
@@ -77,8 +77,7 @@ case ${1:-} in
     read -r planned added < <(sed -nE 's/^planned: ([0-9]+) \(\+([0-9]+)\)$/\1 \2/p' "$2")
     [ -n "${planned:-}" ] || { echo "count: no 'planned: N (+k)' line in $2" >&2; exit 1; }
     finished=$(grep -c '^done: ' "$2")
-    rework=$(grep -c '^done: .* rework$' "$2")
-    echo "Compteur : $finished / $planned lots (+$added ajoutés) · reprises : $rework / $finished"
+    echo "Compteur : $finished / $planned lots (+$added ajoutés)"
     ;;
   merged)
     [ $# -eq 4 ] || usage

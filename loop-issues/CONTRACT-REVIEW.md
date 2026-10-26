@@ -25,7 +25,7 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
 - **Creep** — a `Besoin`, `Tests` or `Tranches` line the criteria do
   not need (a protocol, a table, a layer, a test of a choice).
 - **Missing** — a criterion or named risk without a `Besoin` or
-  `Tests` line.
+  `Tests` line, or a user-visible `Besoin` without its e2e line.
 - **Weakened check** — a `Tests modifiés` line no issue line pays
   (the behaviour the test pins is not one the issue changes): `blocker`.
 - **Over-engineered** — a reframing that removes a shape while

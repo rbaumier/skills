@@ -101,7 +101,14 @@ fix, doing nothing or a direct fix under 15 lines covers the need) or `FAILED <p
 
 ### 3. Validate with the user
 
-Print the draft(s) in full — the body IS the deliverable. The user
+Print the draft(s) in full — the body IS the deliverable. Under it,
+list the few decisions the draft carries that the user did not state
+and would plausibly contest — at most 4, the ones that change what
+the user or a customer sees, or what runs automatically. Each in
+plain words a reader understands without the draft: what happens,
+then « sinon : » the alternative. No IDs, no field names, no jargon;
+skip the minor ones. Never ask about `ready-for-agent`: it is always
+set. None → say so. The user
 edits or accepts in chat; apply edits to the draft file without
 re-scoping what was accepted. Nothing is created before this go.
 
@@ -112,7 +119,8 @@ Spawn ONE publisher (`subagent_type: "issue-publisher"`, never with
 repositories) with the draft paths, the cache
 path, and `RECON.md` (path — its § Forge commands). It creates in
 dependency order from the files, substitutes each `#{<slug>}` with the
-number the forge returned, links dependents (blocked-by), and ends
+number the forge returned, links dependents (blocked-by), always adds
+the `ready-for-agent` label when the project has it, and ends
 `CREATED <url> [<url> …]` or `PUBLISH-FAILED <path>`. Print the URLs
 in dependency order. You never call the forge: the body leaves the
 reviewer once, as the file.

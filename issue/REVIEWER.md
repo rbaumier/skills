@@ -16,7 +16,7 @@ the briefing's evidence like any draft line.
 - **Unsourced** — a `Constraints` line without its source.
 - **Missing** — an implication of the ask neither kept nor cut in
   `Out of scope` with a reason; a criterion not independently
-  verifiable.
+  verifiable or not written as who does what and what they observe.
 - **Reinvented** — a need a stdlib call, a platform feature, an
   installed dependency, a mechanism the briefing names or a sibling
   draft already covers, and the body asks for machinery instead.

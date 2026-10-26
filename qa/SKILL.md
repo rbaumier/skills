@@ -136,8 +136,17 @@ starts with a fresh context — it sees only its prompt, so every prompt below i
 a **template you fill** with absolute values before spawning. Leave no `{{slot}}`
 unfilled.
 
+**Sharding:** the caller may ask for N Verifiers and N Breakers: cut the
+matrix into N shards `matrix-<i>.md` balanced on estimated duration, a chain
+sharing state in one shard, and the targets into N balanced shares; one tenant
+per agent, Breaker `<i>` names its artifacts `bug-<i>-<n>-<slug>`. Completion
+and the report merge them. **Breakers-only** (caller's ask): no Verifier; the
+caller's map is matrix and TARGETS; each finding `in-lot` or `pre-existing` (a
+reservation) with its reproducing test (layer + broken gesture); NO-GO only on
+an `in-lot` Critical or High.
+
 **Order:** in parallel when the environment gives each agent its own
-state — two separately seeded tenants/accounts (one per agent) and, for a UI,
+state — separately seeded tenants/accounts (one per agent) and, for a UI,
 its own isolated browser context (chrome-devtools `new_page` with its own
 `isolatedContext`, that `pageId` on every call). The Breaker then never touches
 global state both share (a billing catalogue, rate limits, feature flags,
@@ -152,7 +161,7 @@ Verifier prompt template:
 > ALLOWLIST: you may touch ONLY these hosts/paths: {{allowlist}}. Never follow a
 > link or request to any other host. Any external address you type (URL, domain,
 > e-mail domain, webhook) uses only `.invalid`/`.test` or `example.com|org|net`.
-> MATRIX: read {{run-dir}}/matrix.md — the coverage matrix. HARNESS: read
+> MATRIX: read {{run-dir}}/{{matrix.md, or your shard matrix-<i>.md}} — the rows you own. HARNESS: read
 > {{harness file path(s)}} before testing.
 > EVIDENCE DIR: write every artifact under {{run-dir}}/evidence/ (already exists)
 > with a filename naming the row (e.g. `row-3-login-empty.png`).
@@ -197,8 +206,8 @@ Breaker prompt template:
 > have.
 > TENANT: {{the tenant/account you own}} — never touch global state
 > ({{shared state to leave alone, e.g. billing catalogue, rate limits}}).
-> TARGETS: {{the boundaries the change opens or modifies — the hostile cases the
-> caller names; "whole surface" only when the caller names none}}. Attack these,
+> TARGETS: {{your share of the boundaries the change opens or modifies — the
+> hostile cases the caller names; "whole surface" only when the caller names none}}. Attack these,
 > not the whole application.
 > FUSE: if the environment itself dies (cannot authenticate, target
 > unreachable), stop and return immediately, naming the broken precondition —

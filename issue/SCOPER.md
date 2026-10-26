@@ -16,7 +16,9 @@ no line, no pattern to mirror), decided (no open tension in a body).
    behaviours, data touched, edge cases, adjacent surfaces, follow-on
    needs; a shape the ask prescribes (type, port, parallel path,
    provider "later") is an implication too, never a constraint.
-   Nothing stays implicit.
+   Nothing stays implicit: each action, screen, state, refusal and
+   bound, data in base at deploy, provider down, another channel,
+   the role below, keyboard — each a criterion or `Out of scope`.
 2. **Weigh** each implication on the ponytail ladder: impact for the
    user today vs cost (blast radius from the briefing), and stop at
    the first rung that holds. Rung 1 is the contest of the ask itself
@@ -67,6 +69,7 @@ Done when: every implication is on the page — kept in the body or cut
 in `Out of scope` with a reason — no kept line asks for an abstraction
 the need doesn't have today, every `Constraints` line carries its
 source, `Out of scope` defers only debt that exists today, and every
-acceptance criterion is independently verifiable. The body is written
+acceptance criterion is independently verifiable, as who does what and
+what they observe ("<gesture> no longer exists" for a removal). The body is written
 ONCE: never paste it in your final message. End with ONE line:
 `DRAFTED <dir>` | `CONTEST <path>` | `FAILED <path>`.

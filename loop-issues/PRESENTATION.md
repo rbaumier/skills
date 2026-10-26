@@ -91,7 +91,8 @@ scratchpad:
 - QA ONE line: verdict + blocking reservations on the closing MR;
   on a lot's MR, `QA: à la clôture` or `QA: not run — <reason>`;
 - gates one line each on the closing MR (a lot's MR: `gates: à la
-  clôture`); comply zero on branch files, FPs listed.
+  clôture`); comply zero on branch files, FPs listed; on the closing
+  MR, one line per e2e spec added.
 
 No `## Plan` — the contract is never restated.
 

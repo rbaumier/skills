@@ -76,7 +76,8 @@ with the issue line or repo symbol it rests on, tagged
 - **Shape rule** — a breach of `BUILDER.md` § build.
 - **Test of a choice** — a test outside the contract's `Tests` list,
   one that locks an implementation choice, or a test written inline
-  instead of its own file; remedy: delete or move.
+  instead of its own file, or an e2e spec off `docs/tests-e2e.md` or
+  blind to its `broken gesture`; remedy: delete, move or fix.
 - **Weakened check** — always `blocker`: an assertion loosened, a
   test deleted or ignored, an expected value changed to the new
   output, a threshold relaxed, a gate, lint or comply config relaxed,
@@ -93,7 +94,7 @@ against the issue line it cites.
 
 A finding rests on a line of the diff or of the repo, never on a
 loop report: a wrong sentence in the pack, a ship report, a previous
-review or the QA plan goes under `## Rapports à corriger`, outside
+review or the Breaker map goes under `## Rapports à corriger`, outside
 the verdict. The pack's gates are believed; re-run one only to
 prove a finding.
 

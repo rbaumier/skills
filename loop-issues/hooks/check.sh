@@ -4,7 +4,7 @@
 #   check.sh issue <gh|glab> <project> <n> <template section>…
 #     LOOP_INTEGRATED="<n>…": blockers merged into the run's integration
 #     branch, still open on the forge until the closing MR, count as done.
-#   check.sh contract <contract.md>
+#   check.sh contract <contract.md>   LOOP_FRONTEND (ERE): front lot → each Besoin owes an e2e/ test.
 #   check.sh overlap <new contract.md> <in-flight contract.md>…
 set -uo pipefail
 refuse() { echo "$1" >&2; exit 2; }
@@ -44,8 +44,10 @@ case ${1:-} in
     unnamed=$(grep -vE '^- B[0-9]+ ' <<<"$besoins" | head -1)
     [ -z "$unnamed" ] || refuse "Besoin without a B<k> id: $unnamed"
     tested=$(section "$2" Tests | grep '^- ' | grep -owE 'B[0-9]+' | sort -u)
+    e2e=; [ -n "${LOOP_FRONTEND:-}" ] && files "$2" | grep -qE "$LOOP_FRONTEND" && e2e=$(printf 'front\n'; section "$2" Tests | grep '^- .*e2e/' | grep -owE 'B[0-9]+')
     for id in $(grep -oE '^- B[0-9]+' <<<"$besoins" | cut -c3-); do
       grep -qx "$id" <<<"$tested" || refuse "Besoin $id has no test"
+      [ -z "$e2e" ] || grep -qx "$id" <<<"$e2e" || refuse "Besoin $id has no e2e/ test"
     done
     [ -n "$(files "$2")" ] || refuse "Formes has no '- Fichiers :' line"
     unread=$(section "$2" Formes | grep '^- modifié' | sed -E 's/(lu par[^:]{0,2}:)[[:blank:]]*([Aa]ucune?|[Nn]one|[Pp]ersonne)[[:blank:].]*([[:blank:]]—.*)?$/\1/' | grep -vE 'lu par[^:]{0,2}:[[:blank:]]*[[:alnum:]`#]' | head -1)
