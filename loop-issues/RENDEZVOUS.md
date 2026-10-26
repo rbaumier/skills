@@ -126,7 +126,8 @@ After every spawn, rewrite `<report-root>/state.md`: `mode: run`,
 time, UTC ISO-8601> — <report dir>`, its 🐢 kept while the phase is
 unchanged; at its notification, `since <time>` becomes `done` until
 the next spawn of the slot, so a finished phase never ages; `planned: <N>
-(+<k>)`; one `done: #<n> <summary line>[ rework]` per finished lot
+(+<k>)`; `queue:` — the run's scope (SKILL.md step 1), each issue the
+loop creates appended; one `done: #<n> <summary line>[ rework]` per finished lot
 (SKILL.md step 6); the skip list; a `held: contract #<n> — <disk reason>`
 or `stopped: <disk|model|drained> — <reason>` line (SKILL.md § The
 loop, Step 0); the Step 0 facts path — nothing else: brakes and

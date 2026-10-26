@@ -79,7 +79,7 @@ verdict 1 NO-GO
 expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
 grep -q 'verdict-1.md (NO-GO)' "$tmp/reason" || { echo "FAIL $group: reason does not name the NO-GO" >&2; exit 1; }
 verdict 2 GO-PROVISIONAL '| 3 | UI | / | x | BLOCKED(budget) | - |'
-expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 
 group=front_lot_passes_on_go
 verdict 3 GO
@@ -356,9 +356,9 @@ expect deny "$tmp/skill/hooks/state.sh" '' fresh
 [ "$(cat "$tmp/reason")" = "$tmp/skill/RENDEZVOUS.md" ] || fail "$(cat "$tmp/reason")"
 expect pass "$tmp/skill/hooks/state.sh" '' fresh
 
-group=count_shows_counter_and_rework
+group=count_shows_counter
 printf '%s\n' 'mode: run' 'planned: 3 (+1)' 'done: #1 ✅ merged rework' 'done: #2 📝 drafted' >"$tmp/state.md"
-[ "$("$state" count "$tmp/state.md")" = 'Compteur : 2 / 3 lots (+1 ajoutés) · reprises : 1 / 2' ] || fail "$("$state" count "$tmp/state.md")"
+[ "$("$state" count "$tmp/state.md")" = 'Compteur : 2 / 3 lots (+1 ajoutés)' ] || fail "$("$state" count "$tmp/state.md")"
 
 group=registry_records_and_keeps_entries
 mkdir -p "$tmp/lot7" "$tmp/lot8"

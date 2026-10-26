@@ -73,14 +73,16 @@ Write `<report-dir>/contract.md`:
   these, each paid 35 min to 2 h after delivery. Each line:
   `<file>::<test_name> — <layer> — <the bug that slips if it
   breaks> — arrange / act / assert in one sentence — doubles:
-  <existing double or none> — (B<k>, …)`. Nobody adds a test outside
+  <existing double or none> — (B<k>, …)`; a user-visible `Besoin` has its e2e line per
+  `docs/tests-e2e.md` (`— broken gesture: <line> —`; a missing `e2e/src/vendor-sink.mjs` route is the lot's). Nobody adds a test outside
   this list. `hooks/check.sh contract` refuses a `Besoin` line without
   its `B<k>` id, a `B<k>` no `Tests` bullet names, a `Formes` without
-  its `- Fichiers :` line and a `modifié` line without a filled `lu par :`.
+  its `- Fichiers :` line, a `modifié` line without a filled `lu par :`
+  and a front lot's `B<k>` without its `e2e/` line.
 - `Tests modifiés` — the CLOSED list of existing test files or tests
   the lot may edit or delete, `<file>[::<test>] — <the issue line
   that changes the behaviour it pins>`; `aucun` is the expected
-  value. No human reads an automerged diff: an existing test bent to
+  value; a deleted spec cites its "no longer exists" criterion. No human reads an automerged diff: an existing test bent to
   get green is a regression shipped; the pack blocks any outside it.
 - `Tranches` — the ordered build slices, each one fresh context:
   the files, shapes and tests of the contract it delivers, the
@@ -99,10 +101,10 @@ Write `<report-dir>/contract.md`:
 - `Stack` (`<base>` when a dependency has an open MR, draft mode
   only; autonomous never stacks: `blocked by #<m>`, and the
   orchestrator re-queues the lot), `Mesure` (hot
-  path + bar, or `none`), `QA` (deliverables + error paths),
+  path + bar, or `none`),
   `Risques` (convention deleted, ADR bent, issue line lifted with the
   refuting grep; a change of who holds or reads a right or scope names
-  every consumer of it, by grep, each with a test or a QA row).
+  every consumer of it, by grep, each with a test).
 
 Write nothing you would not defend against "delete it and nothing is
 lost". Write `contract.md`, end `CONTRACTED <contract.md>`. A
@@ -176,17 +178,10 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
   batch too long for the phase → one more `## Mechanic` line.
 - While you write, `cargo check -p <crate> --all-targets` (`pnpm
-  check` for a front package) is your compiler loop. Then the
-  contract's tests of this slice only, by test binary or filter
-  (`cargo nextest run -p <crate> --test <bin>`, `-E 'test(<name>)'`,
-  `pnpm test -- <file>`), never a whole crate: `-p api` links a dozen
-  binaries (1.3 to 3.9 GB of RAM per link) for tests the slice never touched, and
-  the full suite runs at the closing. Through `~/.claude/skills/loop-issues/hooks/slot.sh
-  gate '<signal>' '<recreate>' '<tests>'` when the launch pack names a
-  schema signal (exit 2 → `FAILED`, the stderr in the note); `cargo clean`, mass `touch`,
-  `CARGO_INCREMENTAL=0` banned. No `comply` of your own when the
-  repo's pre-commit hook runs it (one more full clippy pass per
-  commit); else `comply --staged` before each commit. The pack runs the rest.
+  check` for a front package) is your compiler loop, and it compiles
+  the tests too. No test run, `ship` included: every test but e2e (`ci/release`; a shared stack the run names: the tests you wrote or changed, once, `-g`) runs once,
+  on `<integration>`, at the closing (user, 2026-10-20). `cargo clean`, mass `touch`,
+  `CARGO_INCREMENTAL=0` banned. No `comply` of your own: the pack runs it on the range.
   The repo's formatters on the touched packages before every
   commit, `ship` included: a formatting red found at `deliver` costs
   an amend and a re-run. A slice that
@@ -204,7 +199,10 @@ A `close.md` or a closing QA verdict in your prompt instead of a
 review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
 lot (or refute it with the code line and the evidence file; a
-refutation with no line is a fix), and nothing else; the contract's `Tests modifiés` still bounds
+refutation with no line is a fix; a row contradicting a rule the
+user validated is refuted citing that rule, never coded), and nothing else; each fix adds its reproducing test
+with its `broken gesture` as an `## Écarts au plan` line, a
+pre-existing finding is a `## Constats non payés` line. The contract's `Tests modifiés` still bounds
 the tests you may touch, a test outside it is a `## Écarts au plan`
 line with the issue line that pays it, never a silent edit — and, in
 the same commit, its line added to `Tests modifiés` (the pack's guard
@@ -225,7 +223,7 @@ issue line or review finding that changes the behaviour it pins; no
 such line → restore the test and fix the code. A test guard `BLOCKED`
 is paid the same way: a listed line when the issue or a finding pays
 the edit, else the test restored — never a list widened to get green. A wrong sentence in a loop report (pack,
-ship, review, QA plan) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
+ship, review, Breaker map) is corrected in place, without a finding. `→ issue` findings NEVER become issues: the
 loop files nothing on the forge. Small and inside a file the lot
 already touches → pay it here; otherwise ONE line under
 `## Constats non payés` in the report, `- <path:line> — <constat> —
@@ -241,16 +239,13 @@ re-judges each disposition, so a `fixed` names commit and line.
 Round 3 (the cap) ships anyway: what stays open goes under
 `## Not converged`, posted as the MR comment.
 
-**QA plan.** No user-reachable surface changed → `QA: not run —
+**Breaker map.** No user-reachable surface changed → `QA: not run —
 <reason>`, never on a lot touching Step 0's Frontend app dirs. Else
-the plan from the contract: rows, each naming its Besoin, error paths,
-captures to take (screen, state, avant/après) with their placement
-in the description, and the seed each row needs (an org without
-the data makes the row unobservable). The seed is the repo's
-versioned seed recipe (launch pack) first: the plan names only the
-rows it adds on top of it, never a seed beside it. The environment is the
-launch pack's, never rewritten here. The plan waits for the closing,
-never goes to the reviewer.
+the contract's `Besoin`, `Tests` and touched surfaces (screens,
+routes, channels), the seed each needs on top of the launch pack's
+recipe and environment (never beside, never rewritten), the captures
+(screen, state, avant/après) with their placement. It waits for the
+closing, never goes to the reviewer.
 
 **Write.** `REWORK` before round 3: `<report-dir>/ship-<r>.md` =
 disposition table (`fixed <commit> <file:line>` / `non payé — <raison>` /
@@ -259,5 +254,5 @@ read `PRESENTATION.md` NOW and write `<report-dir>/mr-description.md`
 in full (prose, `à valider :`, visual, `Closes #<n>`, the `<details>`
 block, capture placeholders `<!-- capture: <screen> -->`), then
 `ship-<r>.md`: disposition table, comply decisions (fix paid / FP
-groups with reasons), QA plan or skip, captures list, écarts, flags,
+groups with reasons), Breaker map or skip, captures list, écarts, flags,
 `## Not converged`. End `SHIPPED <ship-<r>.md>`.
