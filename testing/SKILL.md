@@ -3,6 +3,8 @@ name: testing
 description: "Use when writing tests, choosing test strategies, or setting up test infrastructure — TDD, unit tests, E2E, Vitest, Playwright, coverage."
 ---
 
+A project's own test docs (e.g. `docs/tests-e2e.md`, `docs/agents/testing.md`) override this skill where they disagree: retries, quarantine, trace, workers, selector order.
+
 ## What to test / what not to test
 
 The gate, before any other rule — for every test, new or existing: **name the real bug this test catches that nothing else catches.** No answer → don't write it; delete it on sight.
