@@ -36,7 +36,7 @@ brief's absolute path, never a paraphrase of it — and never rewrites a
 phase's gate scope: the brief decides it (the builder checks its
 crates and writes its contract's tests without running them, `pack`
 and `deliver` run comply only, a lot's merge into `<integration>`
-runs the workspace check, the launch pack's guard tests and comply, and every other test, the full gates
+runs the launch pack's merge command, and every other test, the full gates
 and QA run once, on `<integration>`, at the closing (§ Closing —
 user, 2026-10-20: no test per lot); a
 prompt that asked for the full trio at pack cost ~15 min on one lot,
@@ -174,7 +174,7 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
   `openapi.json`: excluded from the line count; a type the diff
   declares that one of them holds is `Reinvented`.
 - **QA launch pack** — per-slot values (model database URL, test
-  clone pattern, merge queue guard tests, report dir, dev sign-in), launch command + port override, readiness
+  clone pattern, merge command, report dir, dev sign-in), launch command + port override, readiness
   probe, the COMPLETE env block (every provider variable, every
   prompt id), DB-prepare path, the versioned seed recipe (the base
   every Breaker map composes on), the dependency probes of the login path
@@ -423,22 +423,15 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    runs in the integration worktree, never the slot's. The head is
    ONE `loop-mechanic`, in `<worktrees dir>/loop-<date>` (created on
    first use, detached), with this closed task:
-   1. `git fetch origin`, then `git checkout --detach <head sha> &&
-      git merge --no-edit origin/<integration>`.
-   2. A conflict where both sides only add lines (lists, tests,
-      dashboard panels) → keep both sides, commit. Any other conflict
-      → `git merge --abort`, `BLOCKED` naming the files.
-   3. Step 0's workspace check (Rust: `cargo check --workspace
-      --all-targets`; the `check` of each frontend lane touched),
-      then comply on the lot's range, red only at Step 0's lint
-      scope, then the launch pack's merge queue guard tests (~1 min;
-      user, 2026-10-21). No other test. Foreground,
+   1. The launch pack's merge command on the MR, foreground,
       `tail -40`, through `slot.sh gate` when the launch pack names a
-      schema signal. Red → `BLOCKED <path>`, no merge.
-   4. Green → push `HEAD:agent/issue-<n>` if step 2 committed, then
-      merge the MR pinned on the pushed sha (`glab api -X PUT
-      projects/<id>/merge_requests/<iid>/merge -f sha=<sha>`; GitHub
-      `gh pr merge --match-head-commit <sha>`) → `DONE <merged sha>`.
+      schema signal: it merges `origin/<integration>` into the head,
+      judges it, merges the MR pinned on that sha → `DONE <merged sha>`.
+   2. A conflict where both sides only add lines (lists, tests,
+      dashboard panels) → `git checkout --detach <head sha> && git
+      merge origin/<integration>`, keep both sides, commit, push
+      `HEAD:agent/issue-<n>`, step 1 again. Any other refusal →
+      `BLOCKED` with it, no merge.
    A `BLOCKED` head leaves the queue and goes back to `ship` with
    the output. The next head's task is in flight before the relay
    line.
