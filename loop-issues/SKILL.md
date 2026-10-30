@@ -300,10 +300,10 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion or constraint of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
      ```
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
-     `Tranches`, and run `~/.claude/skills/loop-issues/hooks/check.sh
-     contract <contract.md>` before either path below: exit 2 →
-     `contract` once more, handed its stderr (the uncovered Besoin, the
-     changed item without readers); a second exit 2 → step 5. No
+     `Tranches`, and run, in `<main-repo>`, `LOOP_BASE=origin/<integration>
+     ~/.claude/skills/loop-issues/hooks/check.sh contract <contract.md>`
+     before either path below: exit 2 → `contract` once more, handed
+     its stderr; a second exit 2 → step 5. No
      contract review, no `build 1` until it passes. Then `check.sh
      overlap <contract.md> <contract.md of every other lot in a slot>`
      (`LOOP_GENERATED` = an ERE of Step 0's generated paths): exit 2

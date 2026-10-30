@@ -5,6 +5,7 @@
 #     LOOP_INTEGRATED="<n>…": blockers merged into the run's integration
 #     branch, still open on the forge until the closing MR, count as done.
 #   check.sh contract <contract.md>   LOOP_FRONTEND (ERE): front lot → each Besoin owes an e2e/ test.
+#     Run in the repo; LOOP_BASE (default HEAD): the ref Impact e2e paths must exist on.
 #   check.sh overlap <new contract.md> <in-flight contract.md>…
 set -uo pipefail
 refuse() { echo "$1" >&2; exit 2; }
@@ -52,6 +53,15 @@ case ${1:-} in
     [ -n "$(files "$2")" ] || refuse "Formes has no '- Fichiers :' line"
     unread=$(section "$2" Formes | grep '^- modifié' | sed -E 's/(lu par[^:]{0,2}:)[[:blank:]]*([Aa]ucune?|[Nn]one|[Pp]ersonne)[[:blank:].]*([[:blank:]]—.*)?$/\1/' | grep -vE 'lu par[^:]{0,2}:[[:blank:]]*[[:alnum:]`#]' | head -1)
     [ -z "$unread" ] || refuse "no readers for: $(sed -E 's/^- modifié //; s/ — .*//' <<<"$unread")"
+    impact=$(section "$2" 'Impact e2e' | grep '^- ' | tr -d '`')
+    [ -n "$impact" ] || refuse "Impact e2e is missing or empty"
+    grep -qE '^- [Aa]ucune — .' <<<"$impact" && exit 0
+    while IFS= read -r line; do
+      [[ $line =~ ^-\ ([^ ]+)\ —\ (modifiée|intacte)\ —\ . ]] || refuse "Impact e2e line not '<path> — modifiée|intacte — <reason>': $line"
+      spec=${BASH_REMATCH[1]}
+      git cat-file -e "${LOOP_BASE:-HEAD}:$spec" 2>/dev/null || refuse "Impact e2e: $spec not on ${LOOP_BASE:-HEAD}"
+      [ "${BASH_REMATCH[2]}" = intacte ] || section "$2" 'Tests modifiés' | grep -qF "$spec" || refuse "Impact e2e: $spec modifiée but not in Tests modifiés"
+    done <<<"$impact"
     ;;
   overlap)
     # LOOP_GENERATED (ERE): generated paths, regenerated on rebase, never a hold.

@@ -27,7 +27,9 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
 - **Missing** — a criterion or named risk without a `Besoin` or
   `Tests` line, or a user-visible `Besoin` without its e2e line.
 - **Weakened check** — a `Tests modifiés` line no issue line pays
-  (the behaviour the test pins is not one the issue changes): `blocker`.
+  (the behaviour the test pins is not one the issue changes): `blocker`;
+  an `Impact e2e` whose greps miss a changed route, string, default or
+  helper: `major`.
 - **Over-engineered** — a reframing that removes a shape while
   closing the same criteria; name the move and the shape. An invariant
   held at N sites instead of the one point they all pass through: `major`.

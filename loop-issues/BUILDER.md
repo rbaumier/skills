@@ -84,6 +84,15 @@ Write `<report-dir>/contract.md`:
   that changes the behaviour it pins>`; `aucun` is the expected
   value; a deleted spec cites its "no longer exists" criterion. No human reads an automerged diff: an existing test bent to
   get green is a regression shipped; the pack blocks any outside it.
+- `Impact e2e` — the specs the lot affects, found without running
+  anything: a grep of the repo's e2e dir on every route, API field,
+  visible string, default value and e2e helper the lot changes, plus
+  the spec the e2e doc names for each screen in `Formes` (a changed
+  helper reaches every spec calling it). One line per spec, `- <path>
+  — modifiée | intacte — <why>`; a `modifiée` spec is in `Tests
+  modifiés`; no e2e surface → `- aucune — <why>`. `check.sh contract`
+  refuses it empty, a path absent from the base, a `modifiée` outside
+  `Tests modifiés`.
 - `Tranches` — the ordered build slices, each one fresh context:
   the files, shapes and tests of the contract it delivers, the
   skills beyond quality-bar + ponytail + language it needs (each with the

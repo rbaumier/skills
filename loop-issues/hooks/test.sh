@@ -174,8 +174,17 @@ for readers in 'lu par : ' "lu par :$(printf '\t')" 'lu par personne, cf. a:b' '
 done
 
 group=contract_complete_passes
-printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — lu par : bar' "- modifié \`baz\` — lu par$(printf '\302\240'): qux" '- modifié `quux` — lu par : Personne::new' >"$tmp/c.md"
+printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — lu par : bar' "- modifié \`baz\` — lu par$(printf '\302\240'): qux" '- modifié `quux` — lu par : Personne::new' '' '## Impact e2e' '- aucune — x' >"$tmp/c.md"
 expect pass "$check" '' contract "$tmp/c.md"
+
+group=contract_impact_e2e
+mkdir -p "$tmp/guarded/e2e" && touch "$tmp/guarded/e2e/a.spec.ts" && git -C "$tmp/guarded" add e2e && git -C "$tmp/guarded" -c user.name=t -c user.email=t commit -qm t
+c() { printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '' '## Tests modifiés' "$1" '' '## Impact e2e' "$2" >"$tmp/c.md"; }
+for impact in '' '- e2e/b.spec.ts — intacte — x' '- e2e/a.spec.ts — modifiée'; do
+  c '- `e2e/a.spec.ts` — x' "$impact"; (cd "$tmp/guarded" && expect deny "$check" '' contract "$tmp/c.md") || exit 1
+done
+c 'aucun' '- `e2e/a.spec.ts` — modifiée — x'; (cd "$tmp/guarded" && expect deny "$check" '' contract "$tmp/c.md") || exit 1
+c '- `e2e/a.spec.ts` — x' '- `e2e/a.spec.ts` — modifiée — x'; (cd "$tmp/guarded" && expect pass "$check" '' contract "$tmp/c.md") || exit 1
 
 group=overlap_shared_file_holds
 printf '%s\n' '## Formes' '- Fichiers : `a/x.md`, `a/y.md`' >"$tmp/new.md"
