@@ -102,8 +102,8 @@ fix, doing nothing or a direct fix under 15 lines covers the need) or `FAILED <p
 ### 3. Validate with the user
 
 Print the draft(s) in full — the body IS the deliverable. Under it,
-list the few decisions the draft carries that the user did not state
-and would plausibly contest — at most 4, the ones that change what
+list the decisions the draft carries that the user did not state
+and would plausibly contest — the ones that change what
 the user or a customer sees, or what runs automatically. Each in
 plain words a reader understands without the draft: what happens,
 then « sinon : » the alternative. No IDs, no field names, no jargon;
