@@ -53,7 +53,9 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    compare; `<base>` moved past the branch's base → rebase onto it
    before anything else, a conflict → `BLOCKED` naming the files. A
    pack built on a stale base shows a merged neighbour's lines as
-   this branch's reversal.
+   this branch's reversal. A rebase over files the base changed →
+   the builder's compile check of the touched crates and packages, once
+   (user, 2026-11-01); red → `BLOCKED` with its first errors.
 1. No gate but comply, no test at `pack` (user, 2026-10-12): the builder's
    merge queue checks the merge and the closing runs every test
    (SKILL.md). Run only the
