@@ -154,7 +154,9 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    script (natalia: `ci/e2e <sha> <specs…>`, `E2E_REDIS_URL` set,
    never the shared Redis on 6379): ① once, skipped once a previous
    pass ran it green; ① green → ② `ci/e2e <sha> --repeat-each 3
-   <specs…>` (not a retry: it catches the unstable). `close.md`
+   <specs…>` (not a retry: it catches the unstable), each like a gate,
+   `| tee <report-dir>/e2e-<pass>.log | tail -40`, one spec per
+   command when over the Bash cap (RENDEZVOUS.md § Waiting). `close.md`
    lists each red spec, its test and first error lines. Any red →
    `BLOCKED <close.md>`. No `ci/release --rehearse` here.
 3. Test files of `origin/<default>` modified or deleted over

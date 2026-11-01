@@ -181,8 +181,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   it fixes the file, the helpers, the double and the assertion
   style. The remaining tests of the contract's `Tests` list go
   under `## Mechanic` of the slice note: the list verbatim, the
-  worktree, the reference test path per file, the slice's test
-  command, and the rule "no new helper, double, type or test
+  worktree, the reference test path per file, and the rule "no new helper, double, type or test
   outside the list; commit `wip(<scope>): tests slice <k>`". Three
   tests or fewer: write them yourself, no task.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
@@ -191,7 +190,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   (`--features test-util` when the crate declares it; `pnpm
   check` for a front package) is your compiler loop, and it compiles
   the tests too. No test run, `ship` included: every test but e2e (the closing's ① ②, SKILL.md § Closing, and `ci/release`; never by the lot) runs once,
-  on `<integration>`, at the closing (user, 2026-10-20). `cargo clean`, mass `touch`,
+  on `<integration>`, at the closing (user, 2026-10-20); `/verify` does not apply to a lot; a test the contract requires run once (`hostile_probe` writing `survivors.txt`) is a `## Mechanic` task. `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned. No `comply` of your own (the pack runs it on the range), except
   the final `ship`: comply on its fix's files, each finding on a line its commit adds paid.
   The repo's formatters on the touched packages before every
@@ -243,8 +242,8 @@ already touches → pay it here; otherwise ONE line under
 <raison>`, and nothing else; every `non payé` disposition gets its
 line there, the merge feeds them to the registry. A drop carries evidence: false
 positive (the line), repo convention (the file), or remedy dearer
-than the defect (the grep or measure). Re-run the gate of each
-crate or package you touched, never the whole trio: the shipper
+than the defect (the grep or measure). Re-run the compiler loop of each
+crate or package you touched, never a test: the shipper
 does. Commit on top of the pack commit with explicit files.
 
 `REWORK` → your commit goes to `pack <r+1>` and a new review that
