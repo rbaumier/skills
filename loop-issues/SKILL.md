@@ -503,18 +503,21 @@ closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
 1. ONE `loop-shipper` `close` (SHIPPER.md) on
    `<worktrees dir>/loop-<date>`, handed the `integrated:` lines and
    the slot count N (the `slot k:` lines of `state.md`) →
-   `QA-READY <qa-handoff.md>` (gates green, QA stack up), `DELIVERED`
+   `QA-READY <qa-handoff.md>` (`ci/check` then the touched e2e specs
+   ① ② green, SHIPPER.md § close; QA stack up), `DELIVERED`
    (no Breaker map: straight to 4) or `BLOCKED <close.md>` (each red with
    the lot whose merge first reddens it; a conflict with `<default>`
    → lot `#closing`, branch `agent/closing`, at step 3).
 2. `QA-READY` → ONE `loop-qa` with the handoff → verdict path →
    `loop-shipper` `publish` with it.
-3. A red gate or a NO-GO → ONE fix lot `#closing-fix` for every
-   failing row together (never one lot per issue), at `ship` in a
-   free slot (step 2's env file, BUILDER.md slice 1's worktree),
-   branch `agent/closing-fix` from `origin/<integration>`,
-   handed close.md or the verdict (tests: BUILDER.md § ship); it runs pack (test guard),
-   review, deliver and the merge queue like any round. Then `close` again. Correctives at the closing
+3. Reds or a NO-GO → fix lots IN PARALLEL, one per group of specs
+   (a Rust red: per crate; a NO-GO: per lot section), `#closing-fix-<k>`,
+   each at `ship` in a free slot (as many as free slots, the rest
+   wait; step 2's env file, BUILDER.md slice 1's worktree),
+   branch `agent/closing-fix-<k>` from `origin/<integration>`,
+   handed its rows of close.md or the verdict (tests: BUILDER.md § ship); each runs pack (test guard),
+   review, deliver and the merge queue like any round. All merged → `close` again
+   (a ② red: back to ②). Correctives at the closing
    are where tests get bent to go green (2026-10-15: one existing
    test re-seeded, +9 lines in an allowlist, unreviewed): no fix
    reaches `<integration>` outside that path. No cap on `close`

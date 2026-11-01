@@ -34,7 +34,7 @@ case ${1:-} in
       awk -v s="**$name" 'index($0, s) == 1 { f = 1 } END { exit !f }' <<<"$body" ||
         refuse "outside template"
     done
-    for blocker in $(grep -oiE 'blocked by #[0-9]+' <<<"$body" | grep -oE '[0-9]+$'); do
+    for blocker in $(grep -oiE '(blocked by|bloquée? par) #[0-9]+' <<<"$body" | grep -oE '[0-9]+$'); do
       [[ " $(tr -d "#" <<<"${LOOP_INTEGRATED:-}") " == *" $blocker "* ]] && continue
       open=$(issue_json "$forge" "$project" "$blocker" | jq -r .open) || exit 1
       [ "$open" = true ] && refuse "blocked by #$blocker"
@@ -48,8 +48,9 @@ case ${1:-} in
     e2e=; [ -n "${LOOP_FRONTEND:-}" ] && files "$2" | grep -qE "$LOOP_FRONTEND" && e2e=$(printf 'front\n'; section "$2" Tests | grep '^- .*e2e/' | grep -owE 'B[0-9]+')
     for id in $(grep -oE '^- B[0-9]+' <<<"$besoins" | cut -c3-); do
       grep -qx "$id" <<<"$tested" || refuse "Besoin $id has no test"
-      [ -z "$e2e" ] || grep -qx "$id" <<<"$e2e" || refuse "Besoin $id has no e2e/ test"
+      [ -z "$e2e" ] || grep -qx "$id" <<<"$e2e" || no_e2e+=" $id"
     done
+    [ -z "${no_e2e:-}" ] || refuse "Besoins with no e2e/ test:$no_e2e"
     [ -n "$(files "$2")" ] || refuse "Formes has no '- Fichiers :' line"
     unread=$(section "$2" Formes | grep '^- modifié' | sed -E 's/(lu par[^:]{0,2}:)[[:blank:]]*([Aa]ucune?|[Nn]one|[Pp]ersonne)[[:blank:].]*([[:blank:]]—.*)?$/\1/' | grep -vE 'lu par[^:]{0,2}:[[:blank:]]*[[:alnum:]`#]' | head -1)
     [ -z "$unread" ] || refuse "no readers for: $(sed -E 's/^- modifié //; s/ — .*//' <<<"$unread")"

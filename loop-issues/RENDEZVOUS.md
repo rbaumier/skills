@@ -28,7 +28,8 @@ Monitor on a `.done`. Two children in flight → the first completion
 resumes you; the other still running → end your turn again.
 
 Work that must finish before you continue (trio, comply, gates, a
-readiness probe) runs in the FOREGROUND: one bounded `curl -sf --retry 60
+readiness probe) runs in the FOREGROUND, Bash `timeout: 600000` (the
+default backgrounds it after ~3 min): one bounded `curl -sf --retry 60
 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 2
 <url>`, never a loop; a
 command that cannot finish inside the 10-min Bash cap is split

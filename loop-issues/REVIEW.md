@@ -77,7 +77,9 @@ with the issue line or repo symbol it rests on, tagged
 - **Test of a choice** — a test outside the contract's `Tests` list,
   one that locks an implementation choice, or a test written inline
   instead of its own file, or an e2e spec off `docs/tests-e2e.md` or
-  blind to its `broken gesture`; remedy: delete, move or fix.
+  blind to its `broken gesture`; remedy: delete, move or fix. An
+  `Impact e2e` spec `intacte` whose reason asserts a behaviour the
+  diff changes or no test proves → `major`.
 - **Weakened check** — always `blocker`: an assertion loosened, a
   test deleted or ignored, an expected value changed to the new
   output, a threshold relaxed, a gate, lint or comply config relaxed,

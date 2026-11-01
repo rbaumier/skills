@@ -128,6 +128,10 @@ for forge in gh glab; do
   [ "$(cat "$tmp/reason")" = 'blocked by #7' ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
 done
 
+forge_issue 5 opened 'Bloquée par #7'
+expect deny "$check" '' issue gh g/p 5 "${sections[@]}"
+[ "$(cat "$tmp/reason")" = 'blocked by #7' ] || { echo "FAIL $group (fr): $(cat "$tmp/reason")" >&2; exit 1; }
+
 group=issue_integrated_blocker_passes
 LOOP_INTEGRATED='3 7' expect pass "$check" '' issue gh g/p 1 "${sections[@]}"
 LOOP_INTEGRATED='#3 #7' expect pass "$check" '' issue gh g/p 1 "${sections[@]}"
@@ -162,6 +166,11 @@ group=contract_uncovered_besoin
 printf '%s\n' '## Besoin' '- B1 — x' '- B10 — y' '' '## Tests' '- B10 — t' 'B1 has no test, prose only.' '' '## Formes' '- Fichiers : `a/x.md`' >"$tmp/c.md"
 expect deny "$check" '' contract "$tmp/c.md"
 grep -q 'B1 ' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+
+group=contract_front_lists_every_besoin_without_e2e
+printf '%s\n' '## Besoin' '- B1 — x' '- B2 — y' '- B3 — z' '' '## Tests' '- B1 — e2e/a.spec.ts' '- B2 — t' '- B3 — t' '' '## Formes' '- Fichiers : `apps/web/x.ts`' >"$tmp/c.md"
+LOOP_FRONTEND='^apps/web/' expect deny "$check" '' contract "$tmp/c.md"
+[ "$(cat "$tmp/reason")" = 'Besoins with no e2e/ test: B2 B3' ] || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
 
 group=contract_missing_readers
 printf '%s\n' '## Besoin' '- B1 — x' '' '## Tests' '- B1 — t' '' '## Formes' '- Fichiers : `foo`' '- modifié `foo` — x' >"$tmp/c.md"
@@ -411,5 +420,15 @@ for p in 'Report dir: /r/issue-1 — files: comply-triage.md, pack-1.md' 'cargo 
   expect pass "$guard" "$(spawn loop-builder "$p")"
 done
 expect pass "$guard" "$(spawn loop-mechanic 'cargo check --workspace --all-targets')"
+
+group=builder_no_tests
+notests="$hooks/builder-no-tests.sh"
+for c in 'cargo t' 'cd x && cargo nextest run -p billing' 'bash -c "pnpm -C apps/webapp test"' 'ci/check' \
+  "cargo nextest run -p api -E 'binary(/_unit\$/) | all()'"; do
+  expect deny "$notests" "$(command_input "$c")"
+done
+for c in "cargo nextest run -p api -E 'binary(/_unit\$/)' 2>&1 | tail -40" 'cargo check -p x --all-targets' 'cargo fmt --all'; do
+  expect pass "$notests" "$(command_input "$c")"
+done
 
 echo "hooks: all checks pass"

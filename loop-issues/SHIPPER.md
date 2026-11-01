@@ -22,10 +22,12 @@ names, never the whole target, replay once. Record it under
 
 Comply runs at `pack 1` on the branch, at `pack <r ≥ 2>` on the
 files of `fix-<r>.patch` only, and once at `deliver`; never at a
-slice or a `ship`. A group decided once is never re-triaged: copy
+slice. A group decided once is never re-triaged: copy
 its line. Comply passes when no finding sits on a line this branch
 adds (`whole-file`: on any line of a file it touches); a group filed as FP, a generated path or a rule the run
-reports as skipped (type-aware timeout) is listed and blocks nothing.
+reports as skipped (type-aware timeout) is listed and blocks nothing,
+unless Step 0's merge gate counts added lines (natalia:
+`ci/lib/comply-added`): there an FP is a `fix`, line rewritten.
 
 Run `comply --working-tree <worktree>` (post-commit: `--range
 origin/<base> HEAD`), output to a file, never to the context. Then
@@ -85,7 +87,8 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    line per gate with its result, `## Comply` the triage inline,
    `## Mesure`, hook exceptions, the commit sha, open contract
    findings after 3 rounds; `r ≥ 2`: paths of `review-<r-1>.md`,
-   `ship-<r-1>.md`, `fix-<r>.patch`) and `diff.patch` (full diff).
+   `ship-<r-1>.md`, `fix-<r>.patch`) and `diff.patch` (`git diff
+origin/<base>...HEAD`).
    A red gate or a comply group `fix` does NOT stop the pack: the
    reviewer and the `ship` phase read it there. End: `PACKED
    <pack-<r>.md>`.
@@ -104,7 +107,7 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
    goes back to `fix`, `BLOCKED` naming it. Re-run comply; a finding
    on an added line → `BLOCKED`.
 2. `git log origin/<base>..HEAD` = this task's commits only; more
-   than one → squash as in `pack`. No gate, no QA here (user,
+   than one → `pack` step 0 (fetch, rebase), then squash. No gate, no QA here (user,
    2026-10-15): the merge queue checks the merge
    result, the closing runs the full gates and one QA for every lot.
 3. Push `agent/issue-<n>`, open the MR on `<base>`, title `(closes
@@ -144,7 +147,16 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    lists each failure with the lot whose merge first reddens it
    (the failing test alone, bisected over `git rev-list
    --first-parent --reverse origin/<default>..HEAD`; the
-   `origin/<default>` merge → `#closing`), end `BLOCKED <close.md>`.
+   `origin/<default>` merge → `#closing`).
+   Then, whatever the gates' verdict, the e2e specs the loop touched
+   (`git diff --name-only origin/<default>...origin/<integration> --
+   <e2e dir>`, specs only; none → skip) on this sha, by Step 0's e2e
+   script (natalia: `ci/e2e <sha> <specs…>`, `E2E_REDIS_URL` set,
+   never the shared Redis on 6379): ① once, skipped once a previous
+   pass ran it green; ① green → ② `ci/e2e <sha> --repeat-each 3
+   <specs…>` (not a retry: it catches the unstable). `close.md`
+   lists each red spec, its test and first error lines. Any red →
+   `BLOCKED <close.md>`. No `ci/release --rehearse` here.
 3. Test files of `origin/<default>` modified or deleted over
    `origin/<default>...HEAD` (the `pack` test guard's paths, plus any
    allowlist or baseline file a gate reads) → `## Tests modifiés` of

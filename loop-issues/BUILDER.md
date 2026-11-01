@@ -38,7 +38,8 @@ Write `<report-dir>/contract.md`:
   observable effect; write the reduction. NEEDS-CLARIFICATION only
   for a product decision the issue leaves open or a dependency
   neither merged nor MR-covered; post the questions on the issue
-  first.
+  first. A criterion only a per-lot e2e stack would prove → partial
+  lot `refs #<n>`, the criterion left open on the issue.
   Every acceptance criterion and every constraint the issue states
   (a ceiling, a bound, a per-organization limit) keeps its `Besoin`
   line through any later rewrite of the contract: dropping one, or
@@ -186,16 +187,19 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   tests or fewer: write them yourself, no task.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
   batch too long for the phase → one more `## Mechanic` line.
-- While you write, `cargo check -p <crate> --all-targets` (`pnpm
+- While you write, `cargo check -p <crate> --all-targets`
+  (`--features test-util` when the crate declares it; `pnpm
   check` for a front package) is your compiler loop, and it compiles
-  the tests too. No test run, `ship` included: every test but e2e (`ci/release`; a shared stack the run names: the tests you wrote or changed, once, `-g`) runs once,
+  the tests too. No test run, `ship` included: every test but e2e (the closing's ① ②, SKILL.md § Closing, and `ci/release`; never by the lot) runs once,
   on `<integration>`, at the closing (user, 2026-10-20). `cargo clean`, mass `touch`,
-  `CARGO_INCREMENTAL=0` banned. No `comply` of your own: the pack runs it on the range.
+  `CARGO_INCREMENTAL=0` banned. No `comply` of your own (the pack runs it on the range), except
+  the final `ship`: comply on its fix's files, each finding on a line its commit adds paid.
   The repo's formatters on the touched packages before every
   commit, `ship` included: a formatting red found at `deliver` costs
   an amend and a re-run. A slice that
   touches `openapi.json` regenerates every generated client of
-  Step 0. Commit `wip(<scope>): slice <k>`
+  Step 0 and passes the webapp's `pnpm check` and `pnpm -C e2e
+  typecheck`. Commit `wip(<scope>): slice <k>`
   with explicit files. Write `<report-dir>/slice-<k>.md`: what
   exists now (symbols, files), what the next slice must know, écarts
   so far, `## Skills` (`<skill> — <trigger> — <decision it
@@ -207,7 +211,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 A `close.md` or a closing QA verdict in your prompt instead of a
 review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
-lot (or refute it with the code line and the evidence file; a
+lot (a `#closing-fix-<k>`: its group) (or refute it with the code line and the evidence file; a
 refutation with no line is a fix; a row contradicting a rule the
 user validated is refuted citing that rule, never coded), and nothing else; each fix adds its reproducing test
 with its `broken gesture` as an `## Écarts au plan` line, a
