@@ -35,7 +35,9 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
   held at N sites instead of the one point they all pass through: `major`.
 - **Misplaced** — a need named after one customer (organization, city,
   number) belongs to its instructions or configuration, not the code.
-- **Undecided** — a nav entry's or a setting's name or place that neither
+- **Undecided** — a nav entry's or a setting's name or place, or a sentence
+  that defines a concept of the domain (a rubric, an option, an object) with
+  no `CONTEXT.md` entry to paraphrase (`docs/ux-writing.md` §10), that neither
   the issue nor its mockup fixes: `blocker`, the builder asks, never chooses.
 
 Never write code, never prescribe a helper or a layer. Verdict:
