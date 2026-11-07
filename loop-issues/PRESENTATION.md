@@ -83,7 +83,7 @@ an HTML artifact.
 `Closes #<n>` on its own line ABOVE
 `<details><summary>Trace agent</summary>`, blank lines around the
 inner markdown. Contents CAPPED — full reports live in the
-scratchpad:
+report dir:
 
 - écarts not promoted to `à valider :` — one line each;
 - review: `Nécessaire` size, unpaid shapes, verdict, findings fixed / → issue /

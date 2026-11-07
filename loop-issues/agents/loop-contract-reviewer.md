@@ -1,6 +1,6 @@
 ---
 name: loop-contract-reviewer
-description: Opus reviewer of the loop-issues contract — rounds before any code (cap 3), judges shapes, reuse and scope against the issue and the repo per CONTRACT-REVIEW.md. Read-only, no MCP, never a forge.
+description: Opus reviewer of the loop-issues contract — one round before any code, judges shapes, reuse and scope against the issue and the repo per CONTRACT-REVIEW.md. Read-only, no MCP, never a forge.
 tools: Read, Grep, Glob, Bash, Write, Skill
 model: claude-opus-5-5
 effort: medium

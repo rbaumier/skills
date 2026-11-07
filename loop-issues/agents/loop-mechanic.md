@@ -19,7 +19,7 @@ exactly as stated. Hard limits:
   style; a test the list does not name is never written.
 - Edit only inside the worktree; never commit, never push — except
   the queue head's merge command (`SKILL.md` § Merge queue) and the
-  closing merge (§ Closing), the only ones allowed to merge: merge only on
+  closing's two merges (§ Closing: 1, `<default>` in, no gate; 5, pinned), the only ones allowed to merge: merge only on
   green gates, pinned on the checked sha
   (`sha=` / `--match-head-commit`), with the project's merge method;
   red → `BLOCKED`, no merge. Never `--no-verify`, never a bypass.

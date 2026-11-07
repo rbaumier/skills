@@ -38,8 +38,7 @@ Write `<report-dir>/contract.md`:
   observable effect; write the reduction. NEEDS-CLARIFICATION only
   for a product decision the issue leaves open or a dependency
   neither merged nor MR-covered; post the questions on the issue
-  first. A criterion only a per-lot e2e stack would prove → partial
-  lot `refs #<n>`, the criterion left open on the issue.
+  first.
   Every acceptance criterion and every constraint the issue states
   (a ceiling, a bound, a per-organization limit) keeps its `Besoin`
   line through any later rewrite of the contract: dropping one, or
@@ -60,6 +59,8 @@ Write `<report-dir>/contract.md`:
 - `Réutilise` — one line per transverse mechanism, `<symbol>
   (<file>)`, proven by your grep. A changed rule (format, time zone, population,
   bound) lists every site that rebuilds it by hand (grep), each in `Formes` or refuted.
+  A provider fact (a response's meaning, a request's shape) cites its doc
+  or a response observed, never an invented one.
 - `Tests` — the CLOSED list of tests, one per acceptance criterion
   and per named risk, at the layer where the criterion is observed (a
   screen → a screen test), none for an implementation choice. Every
@@ -121,7 +122,7 @@ lost". Write `contract.md`, end `CONTRACTED <contract.md>`. A
 `CONTRACT-REWORK` path in your prompt → amend `contract.md` in place,
 `## Réponse à la revue <c>` one line per finding (`applied — <what>`
 or `refuted — <grep or issue line>`; no evidence = applied), same
-end line; the reviewer reads it again, cap 3 rounds. From `build 1` on the contract is frozen: a shape it lacks is
+end line. From `build 1` on the contract is frozen: a shape it lacks is
 an `## Écarts au plan` line, never an edit of `contract.md`.
 
 ## Phase `build <k>` — one slice
@@ -189,7 +190,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 - While you write, `cargo check -p <crate> --all-targets`
   (`--features test-util` when the crate declares it; `pnpm
   check` for a front package) is your compiler loop, and it compiles
-  the tests too. No test run, `ship` included: every test but e2e (the closing's ① ②, SKILL.md § Closing, and `ci/release`; never by the lot) runs once,
+  the tests too. No test run, `ship` included: every test, e2e included, runs in `ci/check`,
   on `<integration>`, at the closing (user, 2026-10-20); `/verify` does not apply to a lot; a test the contract requires run once (`hostile_probe` writing `survivors.txt`) is a `## Mechanic` task. `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned. No `comply` of your own (the pack runs it on the range), except
   the final `ship`: comply on its fix's files, each finding on a line its commit adds paid.
@@ -212,7 +213,7 @@ review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
 lot (a `#closing-fix-<k>`: its group) (or refute it with the code line and the evidence file; a
 refutation with no line is a fix; a row contradicting a rule the
-user validated is refuted citing that rule, never coded), and nothing else; each fix adds its reproducing test
+user validated is refuted citing that rule, never coded), and nothing else; each QA row fixed adds its reproducing test
 with its `broken gesture` as an `## Écarts au plan` line, a
 pre-existing finding is a `## Constats non payés` line. The contract's `Tests modifiés` still bounds
 the tests you may touch, a test outside it is a `## Écarts au plan`
@@ -243,8 +244,8 @@ already touches → pay it here; otherwise ONE line under
 line there, the merge feeds them to the registry. A drop carries evidence: false
 positive (the line), repo convention (the file), or remedy dearer
 than the defect (the grep or measure). Re-run the compiler loop of each
-crate or package you touched, never a test: the shipper
-does. Commit on top of the pack commit with explicit files.
+crate or package you touched, never a test: `ci/check`
+at the closing does. Commit on top of the pack commit with explicit files.
 
 `REWORK` → your commit goes to `pack <r+1>` and a new review that
 re-judges each disposition, so a `fixed` names commit and line.

@@ -1,6 +1,6 @@
 ---
 name: loop-shipper
-description: Sonnet shipper for the loop-issues cycle — runs the mechanical `pack`, `deliver`, `close` and `publish` phases (comply triage, squash, push, MR; at the closing: full gates, QA stack, captures, the MR to the default branch) per SHIPPER.md. Decides nothing about code.
+description: Sonnet shipper for the loop-issues cycle — runs the mechanical `pack`, `deliver`, `close` and `publish` phases (comply triage, squash, push, MR; at the closing: QA stack, captures, the MR to the default branch) per SHIPPER.md. Decides nothing about code.
 tools: Read, Write, Bash, Grep, Glob, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_screenshot, mcp__chrome-devtools__resize_page, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__new_page, mcp__chrome-devtools__close_page
 model: claude-sonnet-5-5
 effort: medium
@@ -23,5 +23,5 @@ exactly, for the ONE phase named in your prompt (`pack`,
   -40` or a grep of the error lines; a raw gate output never enters
   your context.
 - Your LAST line is exactly one of `PACKED <pack.md>`, `QA-READY <qa-handoff.md>`,
-  `DELIVERED <report>`, `BLOCKED <path>` (a gate or QA the builder must
+  `CLOSED <close.md>`, `DELIVERED <report>`, `BLOCKED <path>` (a gate or QA the builder must
   judge) or `FAILED <path>`; any other ending is a failed phase.

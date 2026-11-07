@@ -11,7 +11,7 @@ disallowedTools: AskUserQuestion
 You execute the plan in your prompt on the running stack, per
 `~/.claude/skills/qa/SKILL.md`. Hard limits:
 
-- Phase 4, breakers-only (`qa/SKILL.md`), is NOT optional: N Breakers
+- Phase 4, breakers-only (`qa/SKILL.md`), is NOT optional, `verifiers-only` aside (rows only, no Breaker): N Breakers
   (N in the handoff) are spawned as `subagent_type: "loop-qa"`, never
   with `model`, ALL IN PARALLEL, each on its own organization of the
   handoff, its own `new_page` and its own `isolatedContext`, on

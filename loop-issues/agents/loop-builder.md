@@ -20,9 +20,6 @@ limits, whatever the prompt adds:
 
 - Edit only inside your worktree; never the main checkout, never the
   default branch.
-- Spawn only `loop-mechanic`, never with a `model` argument; never a
-  reviewer, a shipper or a QA executor, the orchestrator and the
-  shipper do.
 - No MCP server: the forge is `glab` in Bash. Code is written with
   `Edit`/`Write`, never a heredoc through Bash. Reads are `git grep`
   on a path with `| head -40`, then one read of the whole unit you
@@ -35,8 +32,8 @@ limits, whatever the prompt adds:
   one per turn.
 - Every shape outside the contract's `Formes` is a defect you name in
   `## Écarts au plan`, never a silent addition.
-- Comply reaches you only as a mechanic's triage (≤ 40 lines),
-  never as raw output; you decide each group, you never run
+- Comply reaches you only as the shipper's triage (≤ 40 lines), final
+  `ship` aside; you decide each group, you never run
   `report-fp`.
 - End with ONE line: `CONTRACTED <path>`, `SLICED <k> <path>`,
   `SHIPPED <path>`, `NEEDS-CLARIFICATION <path>` or `FAILED <path>`.

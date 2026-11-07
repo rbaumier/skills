@@ -7,14 +7,25 @@
 #   slot.sh qa-up <qa-stack.md> <log> <launch command> <port>…
 #   slot.sh qa-probe <dependency>=<command>…
 #   slot.sh qa-down <qa-stack.md>
+#   slot.sh stack-guard  PreToolUse Bash hook: denies ci/check or ci/e2e while a stack is up
 set -uo pipefail
 shopt -s nullglob
 refuse() { echo "$1" >&2; exit 2; }
-usage() { echo "usage: slot.sh disk|env|gate|qa-up|qa-probe|qa-down …" >&2; exit 1; }
+usage() { echo "usage: slot.sh disk|env|gate|qa-up|qa-probe|qa-down|stack-guard …" >&2; exit 1; }
 free_gb() { df -Pk "$1" | awk 'NR == 2 { print int($4 / 1048576) }'; }
 roomy() { [ "$(free_gb "$worktrees")" -ge "$threshold" ]; }
 listening() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -t >/dev/null; }
 field() { awk -v k="$1:" '$1 == k { print $2 }' "$2"; }
+# One stack at a time on the machine, hard limit (user, 2026-11-03):
+# a qa-up stack holds the lock while its process group lives; a
+# running ci/check or ci/e2e is a stack too.
+lock=${LOOP_STACK_LOCK:-$HOME/.cache/loop-stack.lock}
+e2e_running() { pgrep -f '(^|[ /])ci/(check|e2e)( |$)' >/dev/null; }
+stack_up() {
+  local held
+  held=$(cat "$lock" 2>/dev/null) || return 1
+  [ -f "$held" ] && kill -0 -- "-$(field pgid "$held")" 2>/dev/null && echo "$held"
+}
 
 case ${1:-} in
   disk)
@@ -70,11 +81,14 @@ case ${1:-} in
     [ $# -ge 5 ] || usage
     stack=$2 log=$3 launch=$4
     shift 4
+    held=$(stack_up) && refuse "qa-up: one stack at a time, $held is up (slot.sh qa-down it first)"
+    e2e_running && refuse "qa-up: one stack at a time, ci/check or ci/e2e holds it"
     for port; do listening "$port" && refuse "qa-up: port $port already held"; done
     # Job control: the stack gets its own process group.
     set -m
     bash -c "$launch" >"$log" 2>&1 </dev/null &
     { echo "pgid: $!"; printf 'port: %s\n' "$@"; echo "log: $log"; } >"$stack"
+    mkdir -p "${lock%/*}" && echo "$stack" >"$lock"
     ;;
   qa-probe)
     shift
@@ -96,6 +110,17 @@ case ${1:-} in
     for port in $(field port "$2"); do
       listening "$port" && refuse "qa-down: port $port still held"
     done
+    [ "$(cat "$lock" 2>/dev/null)" = "$2" ] && rm -f "$lock"
+    ;;
+  stack-guard)
+    cmd=$(jq -r '.tool_input.command // empty')
+    grep -qE '(^|[;&|(])[[:space:]]*(([A-Za-z_]+=[^[:space:]]*|bash|sh|exec|time)[[:space:]]+)*([^[:space:];&|(]*/)?ci/(check|e2e)([[:space:];&|)]|$)' <<<"$cmd" || exit 0
+    if held=$(stack_up); then why="$held is up"
+    elif e2e_running; then why="ci/check or ci/e2e holds it"
+    else exit 0
+    fi
+    jq -cn --arg r "One stack at a time: $why. Wait for it to end, or slot.sh qa-down the QA stack first." \
+      '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'
     ;;
   *) usage ;;
 esac

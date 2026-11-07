@@ -122,53 +122,22 @@ below is `deliver-<k>.md`, k = the attempt, never rewritten. Then:
 
 ## Phase `close` — the closing, on `<integration>`
 
-Your prompt hands the closing report dir, the integration worktree
-and the `integrated:` lines (issue, MR, report dir of each lot).
+Your prompt hands the closing report dir, the integration worktree,
+the `integrated:` lines, the `ci/check` log, the pass. No gate here.
 
-1. `git fetch origin`, then (separate command) `git checkout
-   --detach origin/<integration> && git merge --no-edit
-   origin/<default>`; a new commit → `git push origin
-   HEAD:refs/heads/<integration>`; a conflict → `git merge --abort`,
-   `BLOCKED <close.md>` naming the files.
-2. Gates: Step 0 names a certifying gate script → run THAT script on
-   this sha (it posts the status the closing merge needs); none → the
-   workspace check + lint (Rust: `cargo check` and `clippy
-   --workspace --all-targets`), the full test suite, every frontend
-   lane. Then `comply --range origin/<default> HEAD`, triaged as
-   above against the lots' FP decisions; a finding on an added line is
-   a red. Foreground, one command per gate, `tail -40`; a gate that
-   exits 0 on zero tests run is red. With a schema signal in the
-   launch pack, each gate runs as
-   `~/.claude/skills/loop-issues/hooks/slot.sh gate '<signal>'
-   '<recreate>' '<gate>'`: one recreation and one rerun on that
-   signal, exit 2 → `BLOCKED: schema mismatch after recreate`. A red reproduced on
-   `origin/<default>` (detached worktree, same command) is inherited:
-   recorded with that command. Any other red → rerun the failing
-   lane without fail-fast, on the gates model database (never the
-   slot's), so every red lands in one pass; `<report-dir>/close.md`
-   lists each failure with the lot whose merge first reddens it
-   (the failing test alone, bisected over `git rev-list
-   --first-parent --reverse origin/<default>..HEAD`; the
-   `origin/<default>` merge → `#closing`).
-   Then, whatever the gates' verdict, the e2e specs the loop touched
-   (`git diff --name-only origin/<default>...origin/<integration> --
-   <e2e dir>`, specs only; none → skip) on this sha, by Step 0's e2e
-   script (natalia: `ci/e2e <sha> <specs…>`, `E2E_REDIS_URL` set,
-   never the shared Redis on 6379): ① once, skipped once a previous
-   pass ran it green; ① green → ② `ci/e2e <sha> --repeat-each 3
-   <specs…>` (not a retry: it catches the unstable), each like a gate,
-   `| tee <report-dir>/e2e-<pass>.log | tail -40`, one spec per
-   command when over the Bash cap (RENDEZVOUS.md § Waiting). `close.md`
-   lists each red spec, its test and first error lines. Any red →
-   `BLOCKED <close.md>`. No `ci/release --rehearse` here.
-3. Test files of `origin/<default>` modified or deleted over
+1. `<report-dir>/close.md`: from the log, each red, its test, first
+   error lines, trace path. None → says so.
+2. Test files of `origin/<default>` modified or deleted over
    `origin/<default>...HEAD` (the `pack` test guard's paths, plus any
    allowlist or baseline file a gate reads) → `## Tests modifiés` of
    `close.md`, each with the lot that changed it: the closing MR
    lists them for the human who merges it.
-4. **QA.** The plan = the Breaker maps of every lot's last `ship-<r>.md`
+3. **QA**, whatever the reds. The plan = the Breaker maps of every lot's last `ship-<r>.md`
    (`QA: not run` lots add nothing), front lots first, one section per
-   lot naming its issue. No map at all → skip to the report. Else,
+   lot naming its issue; Breakers explore once, at pass 1; a later pass = Verifiers only (no Breaker), on the rows its fix lots
+   touched; Breakers until a pass ends GO, GO-PROVISIONAL or NO-GO. No map
+   at all, or a later pass whose fixes touched no row → end `CLOSED
+   <close.md>`. Else,
    with `slot=~/.claude/skills/loop-issues/hooks/slot.sh`, each from
    `cd <worktree> && …`: `$slot qa-down <report-dir>/qa-stack.md`
    (your own previous stack), then `$slot qa-up
@@ -190,13 +159,13 @@ and the `integrated:` lines (issue, MR, report dir of each lot).
    come back `ABORTED`. Then write
    `<report-dir>/qa-handoff.md` for the `loop-qa` the orchestrator
    spawns (it reads `~/.claude/skills/qa/SKILL.md`): mode
-   `breakers-only`, the maps, URL/port, host allowlist (the login
+   `breakers-only` (Verifiers pass: `verifiers-only`), the maps, URL/port, host allowlist (the login
    console included), N, the N organizations and their credentials,
-   the budget in minutes, ~15 per lot ÷ N, run dir outside the worktree, verdict path `qa/verdict-<k>.md`. Write
+   the budget in minutes, ~15 per lot ÷ N, 40 at most, run dir outside the worktree, verdict path `qa/verdict-<pass>.md`. Write
    `database: <name>` into `<report-dir>/qa-stack.md` (`qa-up`
    wrote its process group, ports and log), leave the stack up, end
    `QA-READY <qa-handoff.md>`.
-   QA skipped → `publish` steps 6 and 7 in this same phase.
+   Stack cannot start → end `BLOCKED <close.md>`.
 
 ## Phase `publish` — the closing, after the QA verdict handed in your prompt
 
@@ -205,13 +174,8 @@ dead → `slot.sh qa-down` then `qa-up` again from the launch pack,
 never assume. `qa-down` runs on every exit of this phase, ABORTED
 verdict included.
 
-5. NO-GO → `slot.sh qa-down <report-dir>/qa-stack.md`, write `<report-dir>/deliver.md`
-   with the verdict path and, per `in-lot` finding, the lot its map
-   section names, end `BLOCKED <deliver.md>`: those lots' `ship`
-   answers it (SKILL.md § Closing). `GO-PROVISIONAL` is a GO: its
-   reservations go to the MR comment, never to a `BLOCKED`, never to
-   a `ship`.
-6. GO → UI touched → captures per `PRESENTATION.md` § Captures on
+5. `GO-PROVISIONAL` is a GO: reservations → MR comment.
+6. UI touched → captures per `PRESENTATION.md` § Captures on
    the running stack (paths named in each lot's ship.md), signed in with the
    local dev account the QA launch pack names — a local dev
    credential typed into the login form is the procedure, not a
@@ -220,13 +184,12 @@ verdict included.
    THEN `slot.sh qa-down <report-dir>/qa-stack.md`: exit 2 names a
    port still held, written in `deliver.md`.
 7. Open the MR `<integration>` → `<default>` (push nothing: its head
-   is the sha `close` certified), title `loop <date>: <k> lots`, body
+   is the sha `ci/check` certified), title `loop <date>: <k> lots`, body
    per `PRESENTATION.md`: one section per lot (its MR, its
    `mr-description.md` summary, `closes #<n>`), the `## Tests
-   modifiés` of close.md, the inherited reds; DRAFT in draft mode.
+   modifiés` of close.md; DRAFT in draft mode.
    Read the pipeline once; red → `deliver.md` names the job and its
-   first error lines, and `inherited` when the same job is red on
-   `<default>`.
+   first error lines.
 8. Report `<report-dir>/deliver.md`: MR URL, gates, QA verdict,
    captures, pipeline state. End: `DELIVERED <deliver.md>`.
 
@@ -238,17 +201,9 @@ merged feature's deletion as this branch's addition, one step from a
 `BLOCKED` on a regression that did not exist. Fetch, then read, in
 two separate commands.
 
-Before you conclude, sweep the test clones your suite left behind.
-A `TEMPLATE` clone is not garbage-collected: measured 2026-09-22,
-1704 of them appeared in one hour and filled the disk to 131 MiB
-free, stopping every agent on the machine. Run as is the clone
-sweep command of the repo's launch pack (natalia-v3:
-`.claude/skills/verify/SKILL.md` § Test clone pattern); never
-compose the SQL yourself from the pattern. No command named → sweep
-nothing and say so in the report. Same for what else your phase
+Before you conclude, what your phase
 created outside the issue's worktree: a detached worktree for a base
 reproduction is removed (`git worktree remove`) before your last
 line, a throwaway database you fell back to is dropped. The issue's
-worktree, the slot's model and its QA database are the
-orchestrator's to clean (SKILL.md step 4): `deliver.md` names the QA
-database so it can.
+worktree and the slot's model are the orchestrator's to clean
+(SKILL.md step 4).

@@ -312,13 +312,27 @@ expect pass "$slot" '' qa-down "$tmp/qa1.md"
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
 expect pass "$slot" '' qa-down "$tmp/absent.md"
 
-group=qa_two_slots_no_conflict
+group=qa_one_stack_at_a_time
 read -r a b <<<"$(port 2)"
-"$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" && "$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b"
-up "$a" && up "$b" || fail "two stacks"
-expect deny "$slot" '' qa-up "$tmp/qa3.md" "$tmp/qa3.log" "$(serve "$a")" "$a"
-grep -q "port $a" "$tmp/reason" && up "$a" || fail "$(cat "$tmp/reason")"
+"$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" && up "$a" || fail "first stack"
+expect deny "$slot" '' qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b"
+grep -q 'one stack at a time' "$tmp/reason" && ! up "$b" || fail "second stack: $(cat "$tmp/reason")"
+guard() { local d; d=$(jq -cn --arg c "$1" '{tool_input: {command: $c}}' | "$slot" stack-guard | jq -r .hookSpecificOutput.permissionDecision); echo "${d:-allow}"; }
+[ "$(guard 'cd /x && ci/e2e --repeat-each 3')" = deny ] && [ "$(guard './ci/check')" = deny ] || fail "e2e allowed beside a stack"
+[ "$(guard 'bash ci/check')" = deny ] || fail "bash ci/check allowed beside a stack"
+for c in 'cat ci/e2e.md' 'cargo check' 'cat ci/check' 'git add ci/check' 'grep foo ci/e2e'; do [ "$(guard "$c")" = allow ] || fail "guard too wide: $c"; done
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
+(exec -a ci/check sleep 30) & fake=$!
+[ "$(guard 'ci/e2e')" = deny ] || fail "relative ci/check not seen as a stack"
+kill "$fake"; wait "$fake" 2>/dev/null
+[ "$(guard 'ci/e2e')" = allow ] || fail "e2e denied with no stack"
+"$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b" && up "$b" || fail "stack after qa-down"
+expect pass "$slot" '' qa-down "$tmp/qa2.md"
+# A stack whose process group died no longer holds the lock.
+"$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" && up "$a" || fail "stack again"
+kill -9 -- "-$(awk '$1 == "pgid:" { print $2 }' "$tmp/qa1.md")"
+for _ in 1 2 3 4 5; do lsof -nP -iTCP:"$a" -sTCP:LISTEN -t >/dev/null || break; sleep 0.5; done
+"$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b" && up "$b" || fail "dead stack kept the lock"
 expect pass "$slot" '' qa-down "$tmp/qa2.md"
 
 state="$hooks/state.sh"

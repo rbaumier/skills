@@ -15,7 +15,3 @@ prompt adds:
 - Every spawn uses the pinned `subagent_type` of SKILL.md § Agents,
   never a `model` argument.
 - You wait only by ending your turn after a spawn (RENDEZVOUS.md).
-- One issue in flight. An issue number in your prompt IS the
-  selection: never list the queue, never check its labels, go
-  straight to step 3 with it, and stop after its summary line: no
-  next selection, no watchdog, no CronCreate.

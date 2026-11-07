@@ -34,6 +34,11 @@ default backgrounds it after ~3 min): one bounded `curl -sf --retry 60
 <url>`, never a loop; a
 command that cannot finish inside the 10-min Bash cap is split
 (check / test / build apart, tests by package), never backgrounded.
+One that cannot be split (`ci/check`, `ci/e2e`) never
+runs in a leaf: the orchestrator runs it with `run_in_background`,
+and its exit wakes it. Never `tail -f` (a hook refuses it). One stack
+at a time on the machine, QA or e2e (`slot.sh` and its hook refuse a
+second).
 A long-lived process (dev server) is backgrounded and never awaited.
 
 A gate you background does not wake you — it puts you to sleep. A
@@ -74,7 +79,7 @@ hands that absolute path in every spawn.
 
 ## Report — every agent
 
-Write the report in the scratchpad (outside any worktree), then
+Write the report at the path handed in the spawn, then
 `<report>.done` — ONE line, verdict + report path — as your LAST
 write; end your final text with that same line. Never SendMessage.
 The notification wakes the parent; the `.done` carries the verdict.
@@ -104,9 +109,9 @@ with this prompt:
 > this job, run `~/.claude/skills/loop-issues/hooks/loop-running.sh
 > stop`, reply ⏹ + `💡 /reflect — miner ce run`. Else run
 > `~/.claude/skills/loop-issues/hooks/state.sh tick <state.md>`:
-> `paused until …` → reply ⏸ alone; `drained` → the drained stop
-> (SKILL.md § The loop); `draining` → all below but step 1. Else ListAgents:
-> a builder or reviewer of this loop running → reply ⏳ — but a
+> `paused until …` → reply ⏸ alone; `drained` → the closing when
+> `integrated:`, else the stop (SKILL.md § The loop); `draining` → all below but step 1. Else ListAgents:
+> any agent of this loop, or its background `ci/check` (log growing), running → reply ⏳ — but a
 > second consecutive ⏳ with no new side effect from it (commit, push,
 > report file, forge note) → it stalled: § Fall-through. Else a
 > builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else run the
@@ -131,7 +136,7 @@ the next spawn of the slot, so a finished phase never ages; `planned: <N>
 loop creates appended; one `done: #<n> <summary line>[ rework]` per finished lot
 (SKILL.md step 6); the skip list; a `held: contract #<n> — <disk reason>`
 or `stopped: <disk|model|drained> — <reason>` line (SKILL.md § The
-loop, Step 0); the Step 0 facts path — nothing else: brakes and
+loop, Step 0); `integration:`, `integrated:`, `queued:`, `closing:`; the Step 0 facts path — nothing else: brakes and
 history go to `freins.md`. A compaction, or a fire answered
 `Prompt is too long`, means the session is spent: the user's next
 `/loop-issues` in a fresh session resumes from `state.md`, so it is

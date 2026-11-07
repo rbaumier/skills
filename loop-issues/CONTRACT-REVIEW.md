@@ -7,10 +7,6 @@ Read the issue (in `contract.md`), then the contract, then the repo:
 every area the contract touches (`CODING_STANDARDS.md` → per-area
 guides when present) — they are disclosed by pointer, never
 preloaded, and their rules and named exceptions are repo facts.
-Round `c ≥ 2`: re-judge each previous finding from `## Réponse à la
-revue <c-1>` and the amended contract (`applied` seen, or `refuted`
-with evidence that holds → closed, else `still open`); the
-orchestrator caps at 3 rounds.
 
 Judge the contract against the ISSUE and the REPO, shape by shape —
 one line per finding, exhaustive, tagged `blocker` / `major` /
