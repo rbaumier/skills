@@ -29,7 +29,7 @@ Read the issue, then `CLAUDE.md`/`AGENTS.md`, `CONTEXT.md`,
 `docs/adr/`, and every guide their pointers name for the areas the
 issue touches (`CODING_STANDARDS.md` → per-area guides when present):
 guides are disclosed by pointer, never preloaded. Read code with `git grep` and `sed -n` ranges.
-Load `coding-standards:quality-bar` and `ponytail`.
+Load `quality-bar` and `ponytail`.
 Write `<report-dir>/contract.md`:
 
 - `Besoin` — one line per acceptance criterion, `- B<k> — <what a
@@ -148,7 +148,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   slices read `<report-dir>/slice-<k-1>.md` first. Edit ONLY
   worktree paths. A `contract-review-<c>.md` in your prompt: its
   `minor` lines amend the contract as you read it, no rewrite.
-- Load `coding-standards:quality-bar`, `ponytail`, the language skill
+- Load `quality-bar`, `ponytail`, the language skill
   of the slice's files and every skill or doc the repo's CLAUDE.md
   routes the slice's area to; nothing else by default. Another skill of
   `~/.claude/skills/_shared/SKILLS.md` is loaded only when the
@@ -229,7 +229,7 @@ comment, never by chopping its sentences — `FP` groups, only on
 lines the lot added (any other is `fix`, generated paths
 excepted), are listed for the
 shipper with the reason each. Before the commit,
-`coding-standards:quality-bar-review` on the fix diff alone, each finding paid
+`quality-bar-review` on the fix diff alone, each finding paid
 in that commit: a fix that breeds the next finding costs a round. Any existing test you edit (a review fix
 included) gets its `Tests modifiés` line in the same commit, with the
 issue line or review finding that changes the behaviour it pins; no

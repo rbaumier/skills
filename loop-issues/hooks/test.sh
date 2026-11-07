@@ -308,7 +308,7 @@ expect deny "$slot" '' qa-probe idp=true cors=false port=false
 grep -q cors "$tmp/reason" && ! grep -q port "$tmp/reason" || fail "$(cat "$tmp/reason")"
 pgid=$(awk '$1 == "pgid:" { print $2 }' "$tmp/qa1.md")
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
-! lsof -nP -iTCP:"$a" -sTCP:LISTEN -t >/dev/null && ! kill -0 -- "-$pgid" 2>/dev/null || fail "slot still held"
+! (exec 3<>"/dev/tcp/127.0.0.1/$a") 2>/dev/null && ! kill -0 -- "-$pgid" 2>/dev/null || fail "slot still held"
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
 expect pass "$slot" '' qa-down "$tmp/absent.md"
 
@@ -331,7 +331,7 @@ expect pass "$slot" '' qa-down "$tmp/qa2.md"
 # A stack whose process group died no longer holds the lock.
 "$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" && up "$a" || fail "stack again"
 kill -9 -- "-$(awk '$1 == "pgid:" { print $2 }' "$tmp/qa1.md")"
-for _ in 1 2 3 4 5; do lsof -nP -iTCP:"$a" -sTCP:LISTEN -t >/dev/null || break; sleep 0.5; done
+for _ in 1 2 3 4 5; do (exec 3<>"/dev/tcp/127.0.0.1/$a") 2>/dev/null || break; sleep 0.5; done
 "$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b" && up "$b" || fail "dead stack kept the lock"
 expect pass "$slot" '' qa-down "$tmp/qa2.md"
 

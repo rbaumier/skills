@@ -389,6 +389,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    behind the issue — everything it created, nothing else.
    ```bash
    wt=$(git -C ../<repo>-worktrees/slot-<s> rev-parse --show-toplevel)
+   case "$wt" in */<repo>-worktrees/slot-[0-9]*) ;; *) echo "refused: wt=$wt"; exit 1;; esac
    # The slot's worktree stays; only the lot leaves it.
    git -C "$wt" reset -q --hard && git -C "$wt" clean -fdq && git -C "$wt" switch -q --detach
    git branch -D agent/issue-<n> 2>/dev/null

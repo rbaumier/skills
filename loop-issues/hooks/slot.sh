@@ -14,7 +14,7 @@ refuse() { echo "$1" >&2; exit 2; }
 usage() { echo "usage: slot.sh disk|env|gate|qa-up|qa-probe|qa-down|stack-guard …" >&2; exit 1; }
 free_gb() { df -Pk "$1" | awk 'NR == 2 { print int($4 / 1048576) }'; }
 roomy() { [ "$(free_gb "$worktrees")" -ge "$threshold" ]; }
-listening() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -t >/dev/null; }
+listening() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 field() { awk -v k="$1:" '$1 == k { print $2 }' "$2"; }
 # One stack at a time on the machine, hard limit (user, 2026-11-03):
 # a qa-up stack holds the lock while its process group lives; a

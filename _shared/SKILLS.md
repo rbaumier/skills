@@ -1,7 +1,7 @@
 # Skill catalog — loaded by judgment
 
-Domain skills an agent loads on top of `coding-standards:quality-bar`
-(author) or `coding-standards:quality-bar-review` (reviewer). Read the
+Domain skills an agent loads on top of `quality-bar`
+(author) or `quality-bar-review` (reviewer). Read the
 files or the diff, pick every skill whose line matches, and name each
 pick with its trigger (`database — migrations/0042.sql`). A skill
 loaded for nothing costs context; a skill skipped costs findings —

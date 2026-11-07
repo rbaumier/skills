@@ -3,7 +3,7 @@ name: api-design
 description: API design specifics — wire error semantics and status codes, versioning and deprecation, pagination, idempotency, health checks, interface stability, progressive disclosure, API families. Use when designing REST/GraphQL endpoints, a public library interface, or any surface consumed by other systems.
 ---
 
-Generic boundary rules (contract-first, Hyrum's Law, pit of success, vertical slices, return-type ladder, options object, big-step interfaces) live in `coding-standards:quality-bar` — this skill only adds what is specific to public APIs.
+Generic boundary rules (contract-first, Hyrum's Law, pit of success, vertical slices, return-type ladder, options object, big-step interfaces) live in `quality-bar` — this skill only adds what is specific to public APIs.
 
 ## One-Version Rule
 
