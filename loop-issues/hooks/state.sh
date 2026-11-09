@@ -80,7 +80,11 @@ case ${1:-} in
     read -r planned added < <(sed -nE 's/^planned: ([0-9]+) \(\+([0-9]+)\)$/\1 \2/p' "$2")
     [ -n "${planned:-}" ] || { echo "count: no 'planned: N (+k)' line in $2" >&2; exit 1; }
     finished=$(grep -c '^done: ' "$2")
-    echo "Compteur : $finished / $planned lots (+$added ajoutés)"
+    reg=$(dirname "$2")/constats.md
+    since=$(awk '/^audited/ { c = 0 } /^merged / { c++ } END { print c + 0 }' "$reg" 2>/dev/null)
+    open=$(grep -c '^- \[ \]' "$reg" 2>/dev/null)
+    due=; { [ "${since:-0}" -ge 10 ] || { grep -q '^closing: asked' "$2" && [ "${open:-0}" -gt 0 ]; }; } && due=" — audit due ($open [ ])"
+    echo "Compteur : $finished / $((planned + added)) lots$due"
     ;;
   merged)
     [ $# -eq 4 ] || usage

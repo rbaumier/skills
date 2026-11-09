@@ -397,7 +397,7 @@ expect pass "$tmp/skill/hooks/state.sh" '' fresh
 
 group=count_shows_counter
 printf '%s\n' 'mode: run' 'planned: 3 (+1)' 'done: #1 ✅ merged rework' 'done: #2 📝 drafted' >"$tmp/state.md"
-[ "$("$state" count "$tmp/state.md")" = 'Compteur : 2 / 3 lots (+1 ajoutés)' ] || fail "$("$state" count "$tmp/state.md")"
+[ "$("$state" count "$tmp/state.md")" = 'Compteur : 2 / 4 lots' ] || fail "$("$state" count "$tmp/state.md")"
 
 group=registry_records_and_keeps_entries
 mkdir -p "$tmp/lot7" "$tmp/lot8"

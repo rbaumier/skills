@@ -25,9 +25,7 @@ previous `Nécessaire`; re-judge each finding from the code (`fixed`
 proven at the line or `dropped` with evidence → closed, else `still
 open`), then judge the fix patch as new code under Step 2.
 
-A round `r ≥ 2` VERIFIES; it does not re-review. Measured over 27
-lots (2026-09-24): every second round closed the first round's
-findings and opened nothing but `nit`s, for ~25 min a lot. So its
+A round `r ≥ 2` VERIFIES; it does not re-review: its
 scope is the fix patch and the previous findings, nothing else, and
 it may open a NEW finding only at `major` — a defect the fix patch
 introduced or left standing. Anything smaller it notices outside
@@ -50,9 +48,8 @@ pass.
 Every shape of the diff absent from `Nécessaire` is a finding
 `Unpaid shape` unless the diff proves a second caller on `<base>`.
 A finding is a trade: property, remedy, cost. Exhaustive: every
-finding, every occurrence; a top-N is a failed pass. One line each,
-with the issue line or repo symbol it rests on, tagged
-`blocker` / `major` / `minor` / `nit`. Kinds:
+finding, every occurrence; a top-N is a failed pass. One bullet each under `## Findings`:
+`- <blocker|major|minor|nit> — <Kind> — <file:line> — <remedy>`, with the issue line or repo symbol it rests on. Kinds:
 
 - **Unpaid shape** — see above; remedy: delete or inline.
 - **Contract creep** — a contract line prescribing a protocol, table,
@@ -98,7 +95,7 @@ A finding rests on a line of the diff or of the repo, never on a
 loop report: a wrong sentence in the pack, a ship report, a previous
 review or the Breaker map goes under `## Rapports à corriger`, outside
 the verdict. The pack's gates are believed; re-run one only to
-prove a finding.
+prove a finding. A comply finding on an added line is the pack's and the ship's: one line under `## Vu`, never `major`, never a `REWORK` on its own.
 
 ## Verdict
 

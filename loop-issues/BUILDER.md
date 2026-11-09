@@ -54,8 +54,8 @@ Write `<report-dir>/contract.md`:
   in the diff without a line under `## Écarts au plan`. First line
   ``- Fichiers : `<path>`, …`` (the overlap check between lots reads
   it); each existing symbol, field or route the diff changes is one
-  line ``- modifié `<item>` — lu par : <its readers, by grep, or
-  aucun (the grep)>``.
+  line ``- modifié `<item>` — lu par : <its readers, code and docs
+  (docs/, CONTEXT.md, README), by grep, or aucun (the grep)>``; a doc reader is in `Fichiers`.
 - `Réutilise` — one line per transverse mechanism, `<symbol>
   (<file>)`, proven by your grep. A changed rule (format, time zone, population,
   bound) lists every site that rebuilds it by hand (grep), each in `Formes` or refuted.
@@ -138,8 +138,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   ```
   Each line runs as its own command; a failed `fetch` stops here (rerun
   it, sandbox disabled on an ssh refusal), never the next line. `reset
-  --hard` and `clean` run only in a slot worktree: in the main checkout
-  they deleted every untracked file (2026-10-19).
+  --hard` and `clean` run only in a slot worktree: in the main checkout they delete every untracked file.
   Stacked → `origin/<base>`; split → branch suffix `-t<k>`. Wire it, with
   `CARGO_TARGET_DIR` unset (mbx manages the target). The slot's env
   is injected into every command that names or runs from the
@@ -173,8 +172,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   contract → `## Écarts au plan` with the issue line that pays it.
 - An existing test file you touch in a build (a fixture field, a
   visibility, a `mod` line) gets its `Tests modifiés` line in the
-  same commit: the pack's guard reads only that list (4 lots
-  blocked or relisted for it, 2026-10-15).
+  same commit: the pack's guard reads only that list.
 - **Tests.** Tests live in their own files, never inline, in the
   repo's own convention (the testing guide `CLAUDE.md`'s pointers lead to names the
   unit, integration and frontend layouts). You
@@ -182,8 +180,9 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   it fixes the file, the helpers, the double and the assertion
   style. The remaining tests of the contract's `Tests` list go
   under `## Mechanic` of the slice note: the list verbatim, the
-  worktree, the reference test path per file, and the rule "no new helper, double, type or test
-  outside the list; commit `wip(<scope>): tests slice <k>`". Three
+  worktree, the reference test path per file (a spec: `docs/tests-e2e.md` § Ce qu'une spec a le droit d'être too),
+  and the rule "no new double, type or test outside the list; a gesture written twice becomes a local
+  function; an `e2e/src` helper that exists is consumed (grep first); commit `wip(<scope>): tests slice <k>`". Three
   tests or fewer: write them yourself, no task.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
   batch too long for the phase → one more `## Mechanic` line.
@@ -191,9 +190,10 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   (`--features test-util` when the crate declares it; `pnpm
   check` for a front package) is your compiler loop, and it compiles
   the tests too. No test run, `ship` included: every test, e2e included, runs in `ci/check`,
-  on `<integration>`, at the closing (user, 2026-10-20); `/verify` does not apply to a lot; a test the contract requires run once (`hostile_probe` writing `survivors.txt`) is a `## Mechanic` task. `cargo clean`, mass `touch`,
+  on `<integration>`, at the closing; `/verify` does not apply to a lot; a test the contract requires run once (`hostile_probe` writing `survivors.txt`) is a `## Mechanic` task. `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned. No `comply` of your own (the pack runs it on the range), except
-  the final `ship`: comply on its fix's files, each finding on a line its commit adds paid.
+  `comply rules comment-max-words,comment-max-block-words,no-raw-invisible-character <file>` on each
+  file before its commit (your lines paid) and the final `ship`: comply on its fix's files, each finding on a line its commit adds paid.
   The repo's formatters on the touched packages before every
   commit, `ship` included: a formatting red found at `deliver` costs
   an amend and a re-run. A slice that
@@ -219,7 +219,7 @@ pre-existing finding is a `## Constats non payés` line. The contract's `Tests m
 the tests you may touch, a test outside it is a `## Écarts au plan`
 line with the issue line that pays it, never a silent edit — and, in
 the same commit, its line added to `Tests modifiés` (the pack's guard
-reads only that list: an écart alone blocks the pack, 2026-10-15).
+reads only that list: an écart alone blocks the pack).
 
 Read `pack-<r>.md` (§ Gates, § Comply) and `review-<r>.md` handed in
 your prompt. Fix every finding that removes or corrects code, `nit`

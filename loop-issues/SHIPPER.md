@@ -27,7 +27,8 @@ its line. Comply passes when no finding sits on a line this branch
 adds (`whole-file`: on any line of a file it touches); a group filed as FP, a generated path or a rule the run
 reports as skipped (type-aware timeout) is listed and blocks nothing,
 unless Step 0's merge gate counts added lines (natalia:
-`ci/lib/comply-added`): there an FP is a `fix`, line rewritten.
+`ci/lib/comply-added`): there an FP is closed as the repo's comply doc says (natalia: `docs/agents/comply.md`
+§ Faux positifs, `comply-ignore: <rule> — <reason>` on the line), never by rewriting sound code.
 
 Run `comply --working-tree <worktree>` (post-commit: `--range
 origin/<base> HEAD`), output to a file, never to the context. Then
@@ -70,7 +71,8 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    exists on `<base>`, modified or deleted, and absent from the
    contract's `Tests modifiés` → `BLOCKED` naming it; a pure rename
    (`=>`, 0 0) passes. Added lines matching `#[ignore]`, `.skip(`,
-   `.only(`, `test.fixme` (`git diff -U0 … | grep '^+'`) → `BLOCKED`.
+   `.only(`, `test.fixme` (`git diff -U0 … | grep '^+'`) → `BLOCKED`. A `-` line matching `expect(`/`assert`
+   (`grep '^-'`) in a test whose `Tests modifiés` entry has no `::<test>` → `BLOCKED` naming it.
 2. `Mesure` of the contract (unless `none`): run, output captured.
 3. Squash the `wip` commits into ONE commit of explicit files, never
    `-A`: `type(scope): summary (closes #<n>)` (`refs #<n>` for a
@@ -81,7 +83,7 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    touched file this MR's too.
    `--no-verify` is forbidden without exception, and so is every
    equivalent: `core.hooksPath=/dev/null`, a per-file `comply.toml`
-   that silences a rule, a `comply-ignore`. A finding the branch
+   that silences a rule, an unmotivated `comply-ignore`. A finding the branch
    cannot pay is a `BLOCKED`, never a bypass.
 4. Pack = TWO files: `pack-<r>.md` (issue body, contract, slice notes,
    changed-file list, `## Skills` copied from the slice notes
@@ -196,10 +198,7 @@ verdict included.
 `git fetch origin <default>` and the `git rev-parse origin/<default>`
 that reads its result NEVER share one compound command: the parse
 returns the pre-fetch value and every later comparison runs against a
-stale base. Measured 2026-09-22 — the stale base showed a
-merged feature's deletion as this branch's addition, one step from a
-`BLOCKED` on a regression that did not exist. Fetch, then read, in
-two separate commands.
+stale base. Fetch, then read, in two separate commands.
 
 Before you conclude, what your phase
 created outside the issue's worktree: a detached worktree for a base

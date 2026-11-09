@@ -18,6 +18,13 @@ word=$(awk '/^## Verdict/ { v = 1; next } v && /\*\*/ { sub(/^[^*]*\*\*/, ""); s
 [ -n "$word" ] || word=$(grep -m1 -oE '\*\*(GO-PROVISIONAL|NO-GO|GO|BLOCKED|ABORTED)\b' "$verdict" | tr -d '*')
 [ -n "$word" ] || word=$(head -1 "$verdict" | grep -oE '(GO-PROVISIONAL|NO-GO|GO|BLOCKED|ABORTED)$')
 word=${word%.}
+# Every in-lot QA row is paid by a fix lot merged into the head, or waived by the user.
+for row in $(awk -F'|' '$4 ~ /in-lot/ { gsub(/ /, "", $2); print $2 }' "$verdict"); do
+  grep -qx "$row" "$report/qa/waived.md" 2>/dev/null && continue
+  k=$(grep -l -- "$row" "$report"/fix-*/issue.md 2>/dev/null | head -1) k=${k%/issue.md} k=${k##*/fix-}
+  [ -n "$k" ] && git log --format=%s "$base..$head" | grep -q "closing-fix-$k'" ||
+    { echo "BLOCKED — in-lot $row unpaid in $head (fix lot ${k:-none}); the user's own word → $report/qa/waived.md" >&2; exit 2; }
+done
 case $word in GO | GO-PROVISIONAL) exit 0 ;; esac
 echo "BLOCKED — missing QA GO: $verdict (${word:-no verdict})" >&2
 exit 2
