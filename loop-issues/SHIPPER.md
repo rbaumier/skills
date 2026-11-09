@@ -163,7 +163,7 @@ the `integrated:` lines, the `ci/check` log, the pass. No gate here.
    spawns (it reads `~/.claude/skills/qa/SKILL.md`): mode
    `breakers-only` (Verifiers pass: `verifiers-only`), the maps, URL/port, host allowlist (the login
    console included), N, the N organizations and their credentials,
-   the budget in minutes, ~15 per lot ÷ N, 40 at most, run dir outside the worktree, verdict path `qa/verdict-<pass>.md`. Write
+   the budget in minutes, ~15 per lot ÷ N, 40 at most, run dir outside the worktree, verdict path `<closing>/qa/verdict-<pass>.md` (the dir `merge-gate.sh` gets). Write
    `database: <name>` into `<report-dir>/qa-stack.md` (`qa-up`
    wrote its process group, ports and log), leave the stack up, end
    `QA-READY <qa-handoff.md>`.
