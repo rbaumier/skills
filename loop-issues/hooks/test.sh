@@ -361,7 +361,7 @@ printf '%s\n' 'mode: run' "slot 1: #1 ship 2 loop-reviewer since $(at -1200) —
 expect pass "$state" '' tick "$tmp/state.md"
 expect pass "$state" '' tick "$tmp/state.md"
 [ "$(grep -n '🐢' "$tmp/state.md" | cut -d: -f1)" = 2 ] || fail "$(cat "$tmp/state.md")"
-grep -q ' 🐢 20/15 min$' "$tmp/state.md" || fail "$(cat "$tmp/state.md")"
+grep -q ' 🐢 20/10 min$' "$tmp/state.md" || fail "$(cat "$tmp/state.md")"
 [ "$(wc -l <"$tmp/r1/lenteurs.md")" -eq 1 ] || fail "$(cat "$tmp/r1/lenteurs.md")"
 [ ! -e "$tmp/r2/lenteurs.md" ] || fail "r2/lenteurs.md"
 
@@ -445,10 +445,12 @@ expect pass "$guard" "$(spawn loop-mechanic 'cargo check --workspace --all-targe
 group=builder_no_tests
 notests="$hooks/builder-no-tests.sh"
 for c in 'cargo t' 'cd x && cargo nextest run -p billing' 'bash -c "pnpm -C apps/webapp test"' 'ci/check' \
-  "cargo nextest run -p api -E 'binary(/_unit\$/) | all()'"; do
+  "cargo nextest run -p api -E 'binary(/_unit\$/) | all()'" 'bash ci/check' 'ci/check|tee log' 'nohup ci/check &' \
+  'timeout 900 ci/lib/merge' 'TZ=UTC vitest run' 'xargs vitest' 'bash -c "vitest run"'; do
   expect deny "$notests" "$(command_input "$c")"
 done
-for c in "cargo nextest run -p api -E 'binary(/_unit\$/)' 2>&1 | tail -40" 'cargo check -p x --all-targets' 'cargo fmt --all'; do
+for c in "cargo nextest run -p api -E 'binary(/_unit\$/)' 2>&1 | tail -40" 'cargo check -p x --all-targets' 'cargo fmt --all' \
+  'cat vitest.config.ts' 'rg ci/check docs/' 'sed -n 1p ci/check' 'git commit -m "fix vitest flake"'; do
   expect pass "$notests" "$(command_input "$c")"
 done
 

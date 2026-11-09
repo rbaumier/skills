@@ -35,5 +35,5 @@ Round `c ≥ 2`: re-judge each previous finding from
 `refuted` with evidence that holds → closed, else `still open`); the
 router caps at 3 rounds.
 
-Verdict: `DRAFT-OK <path>` (no finding) or `DRAFT-REWORK <path>`.
-Write `<dir>/review-<c>.md`; the final message is that ONE line.
+Write `<dir>/review-<c>.md`, its last line the verdict, `DRAFT-OK <path>` (no
+finding) or `DRAFT-REWORK <path>`; the final message is that line alone.

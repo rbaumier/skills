@@ -30,14 +30,13 @@ Briefs live next to this file: the builder reads
 `~/.claude/skills/loop-issues/REVIEW.md`; every agent reads
 `~/.claude/skills/loop-issues/RENDEZVOUS.md` — the only way anyone waits or reports. Each
 pinned agent already names its brief: a spawn prompt never renames
-one (a `REVIEWER.md` that does not exist cost a `find` in 41
-reviews). A spawn prompt hands facts and the
+one. A spawn prompt hands facts and the
 brief's absolute path, never a paraphrase of it — and never rewrites a
 phase's gate scope: the brief decides it (the builder checks its
 crates and writes its contract's tests without running them, `pack`
 and `deliver` run comply only, a lot's merge into `<integration>`
 runs the launch pack's merge command, and every other test, the full gates
-and QA run on `<integration>`, at the closing, § Closing).
+and QA run on `<integration>`, at the closing (e2e-only REWORK: step 3), § Closing).
 `hooks/spawn-guard.sh` refuses a phase prompt
 that names a gate. A merge-queue red sends its lot back to `ship`; it
 never widens the next lots' gates — a lesson that would goes to
@@ -346,7 +345,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    - `loop-builder` `ship <r>` → `SHIPPED <ship-<r>.md>`. `MERGEABLE`,
      `r = 3` or a `ship` that committed no code → `loop-shipper`
      `deliver` with it (open findings ship flagged `[review not
-     converged]`); else `pack <r+1>`.
+     converged]`); else `pack <r+1>`, preceded, on a lot whose diff touches only e2e specs, by ONE `loop-mechanic` replaying each
+     spec `REWORK` named against the run's shared stack (launch pack command, started at the first replay, stopped at the closing), its own org; red → `ship <r>` once more; a second red → `pack <r+1>` with it.
    - `loop-shipper` `deliver` → `DELIVERED <report>` → step 4 in the
      SAME turn, no spawn in between and no turn ended on it. Its
      Breaker map waits in `ship-<r>.md` for the closing (§ Closing).
@@ -517,8 +517,8 @@ closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
    by spec (Rust: crate; NO-GO: lot section), `#closing-fix-<k>`, `<k>`
    across passes, each at `ship` at once in its own slot (step 2's env
    file, BUILDER.md slice 1's worktree), branch
-   `agent/closing-fix-<k>` from `origin/<integration>`, report dir with
-   `issue.md` = its rows, `contract.md` = `## Tests modifiés`; handed
+   `agent/closing-fix-<k>` from `origin/<integration>`, report dir
+   `<closing>/fix-<k>` with `issue.md` = its rows (`merge-gate.sh` reads them), `contract.md` = `## Tests modifiés`; handed
    paths and row ids, no row text (tests: BUILDER.md § ship). Pack (test
    guard), review, deliver, merge queue like any round; step 4 checks
    MR, reviewer, disposition table only. A fix lot replays once only its
