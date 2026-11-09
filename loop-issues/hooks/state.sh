@@ -1,7 +1,7 @@
 #!/bin/bash
 # Reads and marks the loop's state.md; exit 2 = refused, reason on stderr.
 # Exit 1 = usage or unreadable state, never a refusal.
-#   state.sh tick <state.md>            budget marks, then the loop mode
+#   state.sh tick <state.md>            budget marks, session line, then the loop mode
 #   state.sh model <state.md> <serving model id>
 #   state.sh fresh                      skill files changed since the last read
 #   state.sh count <state.md>           progress counter
@@ -41,6 +41,9 @@ case ${1:-} in
     for ((i = 0; i < ${#marks[@]}; i += 2)); do
       echo "${marks[i + 1]}" >>"${marks[i]}/lenteurs.md"
     done
+    # Every session that drives the run, for /reflect.
+    sid=${CLAUDE_CODE_SESSION_ID:-}
+    [ -z "$sid" ] || grep -qx "session: $sid" "$state" || echo "session: $sid" >>"$state"
     mode=$(sed -n 's/^mode: //p' "$state")
     case $mode in
       pause-until\ *)

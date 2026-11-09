@@ -365,6 +365,13 @@ grep -q ' 🐢 20/15 min$' "$tmp/state.md" || fail "$(cat "$tmp/state.md")"
 [ "$(wc -l <"$tmp/r1/lenteurs.md")" -eq 1 ] || fail "$(cat "$tmp/r1/lenteurs.md")"
 [ ! -e "$tmp/r2/lenteurs.md" ] || fail "r2/lenteurs.md"
 
+group=tick_records_each_session_once
+printf '%s\n' 'slot 1: free' >"$tmp/state.md"
+CLAUDE_CODE_SESSION_ID=s1 expect pass "$state" '' tick "$tmp/state.md"
+CLAUDE_CODE_SESSION_ID=s1 expect pass "$state" '' tick "$tmp/state.md"
+CLAUDE_CODE_SESSION_ID=s2 expect pass "$state" '' tick "$tmp/state.md"
+[ "$(grep -c '^session: ' "$tmp/state.md")" = 2 ] || fail "$(cat "$tmp/state.md")"
+
 group=model_mismatch_stops
 mkdir -p "$tmp/.claude/agents"
 printf '%s\n' --- 'name: loop-orchestrator' 'model: claude-opus-5-5' --- >"$tmp/.claude/agents/loop-orchestrator.md"
