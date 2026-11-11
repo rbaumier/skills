@@ -44,6 +44,11 @@ Beyond the matrix rows, sweep every changed screen once; each hit is a finding:
   CPU); a content flash or layout jump is a finding.
 - **Token drift** — control heights, radii, placeholder styles inconsistent
   with sibling screens.
+- **Mockup** — the screen against the map's mockup; each difference (layout,
+  control, height, shadow, copy) is a finding.
+- **Interaction states** — hover, Tab focus and click on every control; a
+  missing hover, a clipped or hidden focus ring (`DESIGN.md` § Focus) is a
+  finding.
 - **Entry journey** — reach the changed screen from a real login, never only a
   deep link; anything broken on the way is a finding.
 

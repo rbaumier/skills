@@ -26,7 +26,9 @@ Three leading words govern the run:
   works" with no captured artifact is a guess. A write is proven only by an
   independent read: a reload showing the persisted state, an API `GET`, or a
   read-only DB query. A UI signal alone (toast, success banner, optimistic list
-  update, button state, closed dialog) proves nothing.
+  update, button state, closed dialog) proves nothing. On a UI surface a row
+  is played in the browser as the end user plays it; its screenshot is its
+  evidence, an API call or a DB query only its independent read.
 - **merciless** — the posture of the two assault agents: assume the feature is
   broken and hunt for the proof.
 
@@ -143,7 +145,8 @@ per agent, Breaker `<i>` names its artifacts `bug-<i>-<n>-<slug>`. Completion
 and the report merge them. **Breakers-only** (caller's ask): no Verifier; the
 caller's map is matrix and TARGETS; each finding `in-lot` or `pre-existing` (a
 reservation) with its reproducing test (layer + broken gesture); NO-GO only on
-an `in-lot` Critical or High.
+an `in-lot` Critical or High. **Verifiers-only** (caller's ask): no Breaker;
+the caller's rows are the matrix.
 
 **Order:** in parallel when the environment gives each agent its own
 state — separately seeded tenants/accounts (one per agent) and, for a UI,
@@ -233,7 +236,8 @@ wall of BLOCKED rows.
 report status **PARTIAL** and become reservations), the Breaker's round tally
 shows two dry rounds, and **you have `ls`'d every reported evidence path** —
 any missing artifact downgrades its row to BLOCKED, and a write row whose
-only artifact is a UI signal is downgraded to FAIL. A time budget that expires
+only artifact is a UI signal is downgraded to FAIL, a UI row with no `.png`
+among its artifacts is downgraded to BLOCKED(no screen). A time budget that expires
 first yields status **PARTIAL**, never a false all-green.
 
 ## Phase 5 — Report
