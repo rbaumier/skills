@@ -57,8 +57,9 @@ no line, no pattern to mirror), decided (no open tension in a body).
 5. **Draft** the template in the project's language (section names
    translated), one file per draft, `<slug>.md`, title on the first
    line as `# <title>`. Prepend the `Previously` / `Related` line the
-   prompt hands you. A need implying a notable UI change → mockup variants
-   in `<dir>/variantes.html`, chosen before `ready-for-agent`, never in the body.
+   prompt hands you. A need changing any text or screen the user sees → its variants
+   as text in `<dir>/variantes.md` (letter, title, one line each),
+   never in the body; you never draw: the router runs `/mockups`.
 
 **Rework** (a `DRAFT-REWORK` path in your prompt): amend the drafts
 in place, write `<dir>/review-response-<c>.md` — one line per finding,
