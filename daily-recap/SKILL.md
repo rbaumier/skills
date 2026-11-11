@@ -29,13 +29,23 @@ Fait quand : chaque item candidat porte un titre et une URL cliquable.
 
 ## 3. Captures d'UI
 
-Item UI = sa MR touche du front (`list_merge_request_changed_files` : `.vue`/`.tsx`/`.jsx`/`.svelte`/`.css`/`.scss`, templates, dossiers `components`/`pages`/`views`). Pour chacun, joindre une capture de ce qui a été livré — sourcing dans l'ordre, premier qui aboutit :
+Item visible = sa MR change quelque chose qu'on voit : front (`list_merge_request_changed_files` : `.vue`/`.tsx`/`.jsx`/`.svelte`/`.css`/`.scss`, templates, dossiers `components`/`pages`/`views`), mais aussi dashboards Grafana, e-mails, documents livrés.
 
-1. Image déjà uploadée sur la MR (description ou notes) → `download_attachment` vers le scratchpad, nommée `recap-<date>-<projet>-<iid>.png` (suffixe `-2`, `-3` si plusieurs).
-2. Capture live : le changement est visible sur une URL atteignable (review app de la MR, staging, app locale déjà lancée) → chrome-devtools `navigate_page` + `take_screenshot` de l'écran touché, même nommage.
-3. Sinon l'item est marqué « sans capture ». Jamais de mockup ou de wireframe fabriqué à la place d'une capture réelle.
+**Chaque item visible porte ses captures, sans tri** : un libellé, une couleur, un focus ou un fix visible se capture aussi. Une capture par écran touché ; 2-3 pour un parcours ou un lot de dashboards (Grafana : les 2-3 dashboards ou panneaux nouveaux ou changés).
 
-Fait quand : chaque item UI porte un PNG dans le scratchpad ou la mention « sans capture » ; les items sans front ne sont pas concernés.
+**La dernière version** : la capture montre l'écran tel qu'il est sur la branche par défaut au moment du récap. Une image uploadée sur la MR vaut seulement si aucune MR mergée après elle ne touche le même écran. Sourcing dans l'ordre :
+
+1. Image uploadée sur la MR, à jour au sens ci-dessus → `download_attachment` vers le scratchpad.
+2. Sinon, capture live : lancer le serveur de dev sur la branche par défaut à jour (skill projet de lancement, sinon `run`) ; si la pile du checkout principal sert à une autre session, un worktree de la branche par défaut sur des ports libres. Grafana : port-forward vers l'instance de prod. Puis chrome-devtools `navigate_page` + `take_screenshot` de la page entière où vit le changement (navigation comprise, jamais un recadrage sur le composant), avec des données qui la rendent lisible et l'état qui montre le changement (survol, focus, panneau ouvert, erreur provoquée). `take_screenshot` n'écrit que sous les racines du workspace : capturer dans le dépôt puis déplacer vers le scratchpad.
+3. Jamais « sans capture » ni mockup fabriqué. Une capture impossible (écran inatteignable, donnée absente) se dit dans le message final avec sa cause.
+
+Nombreux items : un agent par scope en parallèle, chacun rend ses PNG annotés.
+
+**Annotation obligatoire** : chaque PNG montre ce qu'il faut regarder. Cadre de couleur vive autour de la zone changée et une bulle de légende courte (« Nouveau : note repliée derrière ce bouton »), en français, sans masquer le contenu. En live : overlay injecté par `evaluate_script` (div positionnée sur le `getBoundingClientRect` de la zone) avant `take_screenshot`, retiré après. Image de MR ou Grafana : `magick` (`-stroke … -draw "rectangle …"` + `-annotate`). Vérifier chaque PNG avec `Read` avant de le livrer.
+
+Nommage `recap-<date>-<projet>-<iid>.png` (suffixe `-2`, `-3`).
+
+Fait quand : chaque item visible porte au moins un PNG annoté de la version actuelle, ou une cause d'échec annoncée ; les items invisibles ne sont pas concernés.
 
 ## 4. Classement
 
@@ -62,7 +72,7 @@ Le collage riche dans Slack (gras + liens cliquables **sur les descriptions**) p
    - Jamais le statut d'une MR ou d'une issue (mergée, fermée…).
    - Tout espace adjacent à un `<a>` = `&nbsp;` — Slack avale les espaces normaux autour des liens au collage.
    - Puces courtes, impersonnel actif (jamais « j'ai »/« on »), français, scopes vides omis.
-2. Écrire aussi `recap-<date>.txt` : même contenu en texte brut, chaque numéro suivi de son URL nue, chaque item UI suivi du chemin de son PNG — version de secours affichée dans le terminal.
+2. Écrire aussi `recap-<date>.txt` : même contenu en texte brut, chaque numéro suivi de son URL nue, chaque item visible suivi des chemins de ses PNG — version de secours affichée dans le terminal.
 3. Annoncer : « Ouvrir le fichier, Cmd+A, Cmd+C, puis Cmd+V dans Slack. » S'il y a des captures : le collage navigateur ne les transporte pas de façon fiable — annoncer de les glisser ensuite dans le message Slack depuis le dossier. Le message se termine **toujours** par ces deux lignes, dans cet ordre, rien après :
    - `HTML : /…/recap-<date>.html` (chemin absolu nu, jamais `file://`)
    - `Dossier : /…/` (le scratchpad qui contient le HTML, le `.txt` et les PNG)
