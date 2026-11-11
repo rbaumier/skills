@@ -1,7 +1,7 @@
 ---
 name: loop-shipper
-description: Sonnet shipper for the loop-issues cycle — runs the mechanical `pack`, `deliver`, `close` and `publish` phases (comply triage, squash, push, MR; at the closing: QA stack, captures, the MR to the default branch) per SHIPPER.md. Decides nothing about code.
-tools: Read, Write, Bash, Grep, Glob, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_screenshot, mcp__chrome-devtools__resize_page, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__new_page, mcp__chrome-devtools__close_page
+description: Sonnet shipper for the loop-issues cycle — runs the mechanical `pack`, `deliver`, `close` and `publish` phases (comply triage, squash, push, MR; lane and closing: QA stack, captures, the MR to the default branch) per SHIPPER.md. Decides nothing about code.
+tools: Read, Write, Bash, Grep, Glob, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_screenshot, mcp__chrome-devtools__resize_page, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__new_page, mcp__chrome-devtools__close_page, mcp__chrome-devtools__fill, mcp__chrome-devtools__click, mcp__chrome-devtools__type_text, mcp__chrome-devtools__press_key, mcp__chrome-devtools__wait_for
 model: claude-sonnet-5-5
 effort: medium
 maxTurns: 250

@@ -101,6 +101,54 @@ verdict 10 NO-GO
 expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
 grep -q 'verdict-10.md (NO-GO)' "$tmp/reason" || { echo "FAIL $group: verdict-9 beat verdict-10" >&2; exit 1; }
 
+group=closing_gate_audit_review_captures
+verdict 11 GO
+merge() { git -c user.name=t -c user.email=t@t commit -q --allow-empty -m "Merge branch 'agent/$1' into 'loop'"; }
+printf '%s\n' '- [ ] x' >"$tmp/constats.md"
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD~1
+grep -q 'audit due' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '%s\n' '- [x] x' >"$tmp/constats.md"
+mkdir -p "$tmp/issue-5" "$tmp/issue-7" && touch "$tmp/issue-5/deliver.md" "$tmp/issue-7/deliver.md" && merge issue-5
+expect deny "$gate" '' "$tmp/report" HEAD~1 HEAD
+grep -q 'issue-5 merged without review' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+echo 'MERGEABLE x' >"$tmp/issue-5/review-1.md.done" && echo 'REWORK x' >"$tmp/issue-5/review-2.md.done"
+expect deny "$gate" '' "$tmp/report" HEAD~1 HEAD
+printf 'Verdict : MERGEABLE — x\n' >"$tmp/issue-5/review-3.md" && echo 'review 3 written' >"$tmp/issue-5/review-3.md.done"
+touch "$tmp/issue-5/review-1.md" "$tmp/issue-5/review-2.md" "$tmp/issue-5/review-response-3.md"
+expect pass "$gate" '' "$tmp/report" HEAD~1 HEAD
+printf '## Verdict\nMERGEABLE x\n' >"$tmp/issue-5/review-3.md" && : >"$tmp/issue-5/review-3.md.done"
+mkdir -p "$tmp/issue-12-t2" && touch "$tmp/issue-12-t2/deliver.md" && merge issue-12-t2
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD
+grep -q 'issue-12-t2 merged without review' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+rm -r "$tmp/issue-12-t2" && merge issue-5
+echo '<!-- capture: home -->' >"$tmp/issue-5/mr-description.md"
+printf '%s\n' '- **#5** !1 x' '- **#50** !2 ![a](/uploads/a.png)' >"$tmp/report/mr-body.md"
+expect deny "$gate" '' "$tmp/report" HEAD~1 HEAD
+grep -q '#5 without a capture' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '%s\n' '- **#5** !1 x' '  ![a](/uploads/a.png)' >"$tmp/report/mr-body.md"
+expect pass "$gate" '' "$tmp/report" HEAD~1 HEAD
+rm -r "$tmp/issue-5" "$tmp/issue-7" "$tmp/constats.md" "$tmp/report/mr-body.md"
+
+group=in_lot_rows_of_every_verdict_and_mockup_pass
+verdict 12 NO-GO '| b1 | UI | in-lot | x |'
+verdict 13 GO
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD~1
+grep -q 'in-lot verdict-12:b1 unpaid' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+mkdir -p "$tmp/report/fix-1" "$tmp/issue-6/mockups" && echo 'verdict-12:b1' >"$tmp/report/fix-1/issue.md"
+echo "MERGEABLE x" | tee "$tmp/report/fix-1/review-1.md" >"$tmp/report/fix-1/review-1.md.done" && merge closing-fix-1
+expect pass "$gate" '' "$tmp/report" HEAD~1 HEAD
+rm "$tmp/report/qa/verdict-13.md"
+expect pass "$gate" '' "$tmp/report" HEAD~5 HEAD web
+touch "$tmp/issue-6/mockups/a.png" && echo "MERGEABLE x" | tee "$tmp/issue-6/review-1.md" >"$tmp/issue-6/review-1.md.done" && merge issue-6
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD
+grep -q 'issue-6 without its mockup pass' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+echo '| m1 | home | in-lot | x | a.png | b.png |' >"$tmp/report/qa/mockup-issue-6.md"
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD
+grep -q 'in-lot mockup-issue-6:m1 unpaid' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+echo 'mockup-issue-6:m1' >"$tmp/report/qa/waived.md"
+expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD
+rm -r "$tmp/issue-6" "$tmp/report/fix-1" "$tmp/report/qa/mockup-issue-6.md" "$tmp/report/qa/waived.md"
+
 # Forge doubles: issue <n> is $tmp/forge/<n>.body with state $tmp/forge/<n>.state (opened|closed).
 check="$hooks/check.sh"
 mkdir -p "$tmp/bin" "$tmp/forge"
@@ -194,6 +242,30 @@ for impact in '' '- e2e/b.spec.ts — intacte — x' '- e2e/a.spec.ts — modifi
 done
 c 'aucun' '- `e2e/a.spec.ts` — modifiée — x'; (cd "$tmp/guarded" && expect deny "$check" '' contract "$tmp/c.md") || exit 1
 c '- `e2e/a.spec.ts` — x' '- `e2e/a.spec.ts` — modifiée — x'; (cd "$tmp/guarded" && expect pass "$check" '' contract "$tmp/c.md") || exit 1
+
+group=tests_guard
+r=$tmp/tg && git init -q "$r" && mkdir -p "$r/tests" && cd "$r" || exit 1
+printf 'assert x\n' >tests/a_it.rs && printf 'fn f() {}\n#[cfg(test)]\nmod t {}\n' >b.rs && commit tests/a_it.rs b.rs
+git branch -q base
+printf 'keep\n' >tests/a_it.rs && commit tests/a_it.rs
+printf '%s\n' '## Tests modifiés' '- `tests/a_it.rs` — x' >"$tmp/c.md"
+expect deny "$check" '' tests "$tmp/c.md" base
+grep -q 'drops an assertion' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '%s\n' '## Tests modifiés' '- `tests/a_it.rs::t` — x' >"$tmp/c.md"
+expect pass "$check" '' tests "$tmp/c.md" base
+printf 'fn f() {}\n#[cfg(test)]\nmod t { #[ignore] }\n' >b.rs && commit b.rs
+expect deny "$check" '' tests "$tmp/c.md" base
+grep -q 'outside Tests modifiés: b.rs' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '%s\n' '- `b.rs` — x' >>"$tmp/c.md"
+expect deny "$check" '' tests "$tmp/c.md" base
+grep -q 'adds a skip' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+git rm -q b.rs && commit
+printf '%s\n' '## Tests modifiés' '- `tests/a_it.rs::t` — x' >"$tmp/c.md"
+expect deny "$check" '' tests "$tmp/c.md" base
+grep -q 'outside Tests modifiés: b.rs' "$tmp/reason" || { echo "FAIL $group: deleted test module: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '%s\n' '- `b.rs` — x' >>"$tmp/c.md"
+expect pass "$check" '' tests "$tmp/c.md" base
+cd "$tmp/repo" || exit 1
 
 group=overlap_shared_file_holds
 printf '%s\n' '## Formes' '- Fichiers : `a/x.md`, `a/y.md`' >"$tmp/new.md"
@@ -312,6 +384,13 @@ expect pass "$slot" '' qa-down "$tmp/qa1.md"
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
 expect pass "$slot" '' qa-down "$tmp/absent.md"
 
+group=env_check_names_every_unset
+printf 'echo ${D_REQ:?w}\n' >"$tmp/inner.sh"
+printf '. "%s"\necho ${A_REQ:?x} ${B_REQ?y} ${C_OPT:-z}\n' "$tmp/inner.sh" >"$tmp/outer.sh"
+A_REQ=1 expect deny "$slot" '' env-check "$tmp/outer.sh"
+[ "$(cat "$tmp/reason")" = 'env-check: unset B_REQ D_REQ' ] || fail "$(cat "$tmp/reason")"
+A_REQ=1 B_REQ=1 D_REQ=1 expect pass "$slot" '' env-check "$tmp/outer.sh" /bin/ls
+
 group=qa_one_stack_at_a_time
 read -r a b <<<"$(port 2)"
 "$slot" qa-up "$tmp/qa1.md" "$tmp/qa1.log" "$(serve "$a")" "$a" && up "$a" || fail "first stack"
@@ -364,6 +443,9 @@ expect pass "$state" '' tick "$tmp/state.md"
 grep -q ' 🐢 20/10 min$' "$tmp/state.md" || fail "$(cat "$tmp/state.md")"
 [ "$(wc -l <"$tmp/r1/lenteurs.md")" -eq 1 ] || fail "$(cat "$tmp/r1/lenteurs.md")"
 [ ! -e "$tmp/r2/lenteurs.md" ] || fail "r2/lenteurs.md"
+printf '%s\n' 'mode: drain' "lane: 3 loop-shipper since $(at -1200) — $tmp/r1" >"$tmp/state.md"
+expect deny "$state" '' tick "$tmp/state.md"
+[ "$(cat "$tmp/reason")" = drained ] && grep -q '^lane: .* 🐢 20/15 min$' "$tmp/state.md" || fail "lane: $(cat "$tmp/state.md")"
 
 group=tick_records_each_session_once
 printf '%s\n' 'slot 1: free' >"$tmp/state.md"

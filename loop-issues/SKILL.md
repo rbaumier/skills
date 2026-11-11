@@ -1,20 +1,6 @@
 ---
 name: loop-issues
-description: Standing implementation loop — autonomously implement the issues the invocation names (and those the loop creates), nothing else. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (comply triage, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, merge into the run's integration branch after a workspace check, repeat; once that scope is drained or on « clos la loop », full gates and one QA on that branch, then one MR to the default branch.
-hooks:
-  PreToolUse:
-    - matcher: Bash
-      hooks:
-        - type: command
-          command: "$HOME/.claude/skills/loop-issues/hooks/refuse-hook-bypass.sh"
-    - matcher: AskUserQuestion
-      hooks:
-        - type: command
-          command: "$HOME/.claude/skills/loop-issues/hooks/loop-running.sh"
-    - matcher: Agent
-      hooks:
-        - type: command
-          command: "$HOME/.claude/skills/loop-issues/hooks/spawn-guard.sh"
+description: Standing implementation loop — autonomously implement the issues the invocation names (and those the loop creates), nothing else. Per issue — an opus builder in fresh phases (contract of shapes, build slices, ship), one opus contract review before any code, a sonnet shipper for pack and deliver (comply triage, MR), opus review rounds (ponytail-review + quality-bar-review) judged on unpaid shapes until convergence (cap 3), push as draft, merge into the run's integration branch after a workspace check, repeat; after every merge, a lane runs the full gates, the touched e2e ×3 and a sonnet QA on that branch; once that scope is drained or on « clos la loop », the lane's last pass, then one MR to the default branch.
 ---
 
 # Loop orchestrator
@@ -36,7 +22,7 @@ phase's gate scope: the brief decides it (the builder checks its
 crates and writes its contract's tests without running them, `pack`
 and `deliver` run comply only, a lot's merge into `<integration>`
 runs the launch pack's merge command, and every other test, the full gates
-and QA run on `<integration>`, at the closing (e2e-only REWORK: step 3), § Closing).
+and QA run on `<integration>`, in the lane (e2e-only REWORK: step 3), § Closing).
 `hooks/spawn-guard.sh` refuses a phase prompt
 that names a gate. A merge-queue red sends its lot back to `ship`; it
 never widens the next lots' gates — a lesson that would goes to
@@ -55,7 +41,8 @@ explicit `model` overrides the pin), `name` = `i<n>-<phase>` (the tool takes
 | shipper (`pack`, `deliver`, `close`, `publish`) | `loop-shipper` | sonnet 5.5 · medium | you, once per phase | 15 |
 | code reviewer | `loop-reviewer` | opus 5.5 · medium | you, once per round | 10 |
 | mechanic (tests of the closed list, codegen, brakes, the queue head's merge) | `loop-mechanic` | sonnet 5.5 · medium | you, after a `build <k>` that lists tasks, on a brake, at the queue head | 10 |
-| QA executor (Breakers only) | `loop-qa` | opus 5.5 · medium | you, on `QA-READY` | — |
+| QA executor (lane) | `loop-qa` | sonnet 5.5 · medium | you, on `QA-READY` | — |
+| mockup pass | `loop-mockup` | opus 5.5 · medium | you, once per front lot | 10 |
 
 Budget = spawn → notification; `hooks/state.sh tick` reads this column.
 
@@ -64,7 +51,7 @@ Shipper phases: `pack`, `deliver`, `close`, `publish`. The contract reviewer rev
 fresh context. Only YOU spawn: builder and shipper have no `Agent`
 tool — a child's notification never resumes a subagent, it froze a
 thread 30-60 min each time. Review rounds (pack, review, ship) run until `MERGEABLE`,
-cap 3; QA: closing only, every lot together, Breakers once (§ Closing).
+cap 3; QA: the lane (§ Closing).
 
 There is NO path that spawns an implementer without a contract:
 "spawn des agents opus", "vague de corrections", "rattrapage" mean
@@ -149,11 +136,7 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
   drops nobody else's — the repo's launch pack names its URL —
   migrated from the slot's own worktree before
   the gate: branches carry different migrations, so the model is
-  rebuilt per run, never shared and never inherited. The slot's QA
-  stack runs on a DIFFERENT database from its model: an `api` binary
-  left connected to the model reddens the slot's own gates exactly
-  like a foreign session would (measured 2026-09-22, one `ship` fell
-  back to a throwaway database for it). Slot 0 is kept for the repair of `<default>`,
+  rebuilt per run, never shared and never inherited. Slot 0 is kept for the repair of `<default>`,
   which never waits for a slot.
 - **Frontend app dirs** — where a user-visible file lives (`UI
   touched` at step 4); a lot touching one is a front lot; their ERE
@@ -169,13 +152,12 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
   `openapi.json`: excluded from the line count; a type the diff
   declares that one of them holds is `Reinvented`.
 - **QA launch pack** — per-slot values (model database URL, test
-  clone pattern, merge command, report dir, dev sign-in), launch command + port override, readiness
-  probe, the COMPLETE env block (every provider variable, every
-  prompt id), DB-prepare path, the versioned seed recipe (the base
+  clone pattern, merge command, report dir, dev sign-in), launch command (Redis, guard: run once,
+  before the API) + port override, readiness probe, the COMPLETE env
+  block (`KEY=value` only: every provider variable, prompt id), DB-prepare path, the versioned seed recipe (the base
   every Breaker map composes on), the dependency probes of the login path
   (IdP, CORS preflight from a slot's console origin);
-  `<main-repo>/.claude/skills/verify/` is authoritative when present. One stack per slot — its own ports
-  and database — so two QAs never queue on each other. The values
+  `<main-repo>/.claude/skills/verify/` is authoritative when present. The values
   `hooks/slot.sh` takes, each read off the launch pack: the disk
   threshold in GB (none named → 20, the one place this default
   lives), the test clone sweep command (none → `-`), the slot's env
@@ -202,7 +184,7 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
   A `state.md` with lots in flight → resume them at their phase
   before selecting anything, its `mode:`, `planned:` and `done:`
   kept, its `stopped:` line dropped; none, or no lot in flight → a
-  new run (`integration:`/`integrated:` survive until the closing merges; `closing: asked` kept → `mode: drain`): `mode: run`, `planned: <N> (+0)`, N = the lots this run
+  new run (`integration:`/`integrated:`/`lane-head:` survive until the closing merges; `closing: asked` kept → `mode: drain`): `mode: run`, `planned: <N> (+0)`, N = the lots this run
   plans, `queue:` = the run's scope (step 1), no `done:` or `stopped:` line.
 
 ## The loop
@@ -210,7 +192,7 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
 **Before every spawn**, run `~/.claude/skills/loop-issues/hooks/state.sh
 tick <state.md>`: it marks 🐢 every phase over its budget, then
 reads the mode. Exit 2 `paused until <time>` → no spawn at all;
-`draining` → phases of lots in flight only, no new lot; `drained` →
+`draining` → phases of lots in flight and the lane only, no new lot; `drained` →
 the closing when `state.md` holds `integrated:` lines (§ Closing), else
 the loop stops like the disk stop below, `stopped: drained`. Exit 1
 (an unreadable time) → one line `🐢 <its stderr>`, stop. The
@@ -237,7 +219,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    selected as is, whatever its labels, and the loop stops after its
    summary line. Else a split issue with unchecked tasks → next task,
    step 3. Else the pipeline of `origin/<default>` or the last
-   `ci/check` e2e is red → its
+   `ci/check` e2e of `<default>` is red → its
    repair comes first: the open issue that names the failing job,
    else write its draft (job, first error lines) at
    `~/.claude/skills/issue/SKILL.md` § Body template, spawn ONE
@@ -292,7 +274,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      ```
      now come up with a much simpler solution that provides 80% of the benefits we are talking about here
 
-     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion, constraint or table row (oracle included) of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
+     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion, constraint, table row (oracle included) or element of the validated mockup of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
      ```
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
      `Tranches`, and run, in `<main-repo>`, `LOOP_BASE=origin/<integration>
@@ -345,11 +327,10 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    - `loop-builder` `ship <r>` → `SHIPPED <ship-<r>.md>`. `MERGEABLE`,
      `r = 3` or a `ship` that committed no code → `loop-shipper`
      `deliver` with it (open findings ship flagged `[review not
-     converged]`); else `pack <r+1>`, preceded, on a lot whose diff touches only e2e specs, by ONE `loop-mechanic` replaying each
-     spec `REWORK` named against the run's shared stack (launch pack command, started at the first replay, stopped at the closing), its own org; red → `ship <r>` once more; a second red → `pack <r+1>` with it.
+     converged]`); else `pack <r+1>`.
    - `loop-shipper` `deliver` → `DELIVERED <report>` → step 4 in the
      SAME turn, no spawn in between and no turn ended on it. Its
-     Breaker map waits in `ship-<r>.md` for the closing (§ Closing).
+     Breaker map waits in `ship-<r>.md` for the lane (§ Closing).
      `BLOCKED <deliver.md>` (comply residue) → spawn `loop-builder`
      `ship` once more with deliver.md, then `deliver` again; a second
      `BLOCKED` → step 4 as flagged draft. `FAILED <path>` → step 5.
@@ -390,6 +371,8 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    # The slot's worktree stays; only the lot leaves it.
    git -C "$wt" reset -q --hard && git -C "$wt" clean -fdq && git -C "$wt" switch -q --detach
    git branch -D agent/issue-<n> 2>/dev/null
+   # Slot's mbx target (Rust repo): the next lot restores from the store, never cold.
+   mbx cache remove "$wt/<cargo workspace root>" && mbx gc --max-size 40GiB
    # The checkout's gates model, named as ci/check derives it (repo with GATES_DATABASE_URL only),
    # and its `_p…` clones: nothing reclaims them once the model is gone.
    [ -n "${GATES_DATABASE_URL:-}" ] && m="${GATES_DATABASE_URL##*/}_$(printf %s "$wt" | shasum -a 256 | cut -c1-12)" &&
@@ -402,8 +385,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    psql "$admin" -Atc "select format('DROP DATABASE IF EXISTS %I;', datname) from pg_database
      where datname = '$model' or datname ~ '^${model}_p[0-9]{10}_[0-9a-f]{12}\$'" | psql "$admin" -q
    ```
-   No target to prune: mbx prunes the managed targets itself. Every
-   drop is a plain `DROP DATABASE`, never `WITH (FORCE)`: a refusal
+   Every drop is a plain `DROP DATABASE`, never `WITH (FORCE)`: a refusal
    means another session still uses that database — leave it, one
    `🐢` line naming it. A database the issue did not create stays the
    user's, a worktree too outside `slot.sh disk`'s prune. Close with
@@ -425,8 +407,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
       judges it, merges the MR pinned on that sha → `DONE <merged sha>`.
    2. A conflict where both sides only add lines (lists, tests,
       dashboard panels) → `git checkout --detach <head sha> && git
-      merge origin/<integration>` (QA stack up: in a throwaway detached
-      worktree), keep both sides, commit, push
+      merge origin/<integration>`, keep both sides, commit, push
       `HEAD:agent/issue-<n>`, step 1 again. Any other refusal →
       `BLOCKED` with it, no merge.
    A `BLOCKED` head leaves the queue and goes back to `ship` with
@@ -440,7 +421,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `state.md`; `merged` only appends, the audit only ticks boxes and
    appends `audited`, which resets the merge count to zero.
    `audit due` → ONE `loop-mechanic`: the audit of the `[ ]` entries
-   only (the full suite runs at the closing). An entry whose finding is
+   only (the full suite runs in the lane). An entry whose finding is
    gone from `origin/<integration>` (judged on its content, the line
    drifts) → `[x] … — absent @<sha>`, never filed. An entry whose
    `<path:line> — <constat>` matches one already closed `— #<m>` →
@@ -458,8 +439,11 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
 
 5. **Failure** — never merge, close the MR if opened, comment the
    issue with the summary, run step 4's cleanup block (worktree,
-   branch, databases). NEEDS-CLARIFICATION:
-   autonomous → both labels off + `agent-failed`; draft → skip list.
+   branch, databases). NEEDS-CLARIFICATION, autonomous: a non-obvious
+   question on money, production, a dropped criterion or an unspecified
+   visible behaviour → both labels off + `agent-failed`; any other, or
+   an obvious one, is decided and announced (`decision.md`, a-savoir
+   line), its split published by `/issue` and queued; draft → skip list.
    Other: autonomous → `ready-for-agent` + `agent-failed`; draft →
    skip list.
 
@@ -490,52 +474,73 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
 
 ## Closing
 
+Steps 2-4 are the **lane**: from the first `integrated:` line, passes
+on `<integration>`'s head beside the lots, holding no slot (its fix
+lots take their own), in `<worktrees dir>/loop-<date>-lane` (env:
+slot 1's, written with it), each phase in flight on a `lane:` line of `state.md` (a
+slot line's format). One pass at a time: at a merge's `DONE` or a lane
+notification, once the pass's verdict is in, a merge
+past `lane-head:` → 2 (merges meanwhile join that pass); none → 3
+again with no log (closing: → 5), unless it ended `CLOSED`. The lock held by another
+run's stack → the pass waits for it, never a brake, `lane: waiting` in
+its `state.md`; while a `state.md` beside this one holds that line, no
+`breakers-only` session starts and each verdict ends with `qa-down`.
+
 The user's « clos la loop » / « ferme la loop », or step 1 at the
 end of the queue, sets `mode: drain`
 and `closing: asked` in `state.md`. Once `tick` reads `drained`, the
 closing holds slot 1 as lot `#closing` (`slot 1: #closing <phase>
 <agent> since <time> — <report-root>/closing`), so `tick` reads
-`draining` and lets its phases and its fix lots run:
+`draining` and lets its phases and its fix lots run: 1, then the
+lane's passes until 5:
 
 1. ONE `loop-mechanic`, integration worktree: merge
    `origin/<default>`, push. Conflict → a fix lot of 4, handed the
    conflict list.
-2. You, there: `git fetch origin && git switch -C <integration>
-   origin/<integration>`, then `ci/check`, launch pack's closing env,
-   `run_in_background`, log `<closing>/check-<pass>.log`. Exit wakes
-   you. Lists every red; replays only what changed. Log without `check:
-   green` or `check: red:` = refusal: brake (§ Slowness), replay 2.
-3. Green or red → `loop-shipper` `close`, handed the log, the
-   `integrated:` lines, N = slots the run used (≥ 1), the pass:
-   - `QA-READY <qa-handoff.md>` → `loop-qa` → verdict, reds at 4 at
-     once. `ABORTED` → `slot.sh qa-down`, brake, `close` again, same
+2. You, in the lane worktree: `slot.sh qa-down <closing>/qa-stack.md`,
+   `git fetch origin && git switch --detach origin/<integration>`,
+   `lane-head: <its sha> <the previous one>` (none: `git merge-base
+   origin/<default> HEAD`), then, launch pack's closing env, `hooks/slot.sh
+   env-check ci/check` (exit 2 names the unset: a brake), then ONE
+   `run_in_background` command: `ci/check; ci/e2e HEAD <the e2e
+   specs added or modified over lane-head:'s range> --repeat-each 3`
+   (none: skipped), logs `<closing>/check-<pass>.log` and
+   `<closing>/flaky-<pass>.log`. Exit wakes you. Lists every red; replays only what changed. Either log without
+   its result line (`check: green`/`check: red:`, Playwright's summary) = refusal: brake (§ Slowness), replay 2.
+3. Green or red → `loop-shipper` `close`, handed both logs, the
+   `integrated:` lines, N = slots the run used (≥ 1), the pass,
+   `closing` once asked:
+   - `QA-READY <qa-handoff.md>` → `loop-qa` → verdict; reds, flaky
+     included, at 4 at once. At the verdict, per front lot it verified
+     first whose report dir holds `mockups/`: ONE `loop-mockup` →
+     `<closing>/qa/mockup-<its report dir name>.md`. `ABORTED` → `slot.sh qa-down`, brake, `close` again, same
      pass, a red already in a lot not started again.
-   - `CLOSED <close.md>`: no Breaker map in any lot; else `close` again.
+   - `CLOSED <close.md>`: nothing to verify or break; the lane waits for a merge.
    - `BLOCKED <close.md>`: a stack that cannot start → brake, `close` again, same pass; reds alone never defer the QA (4 runs beside it).
-4. Reds, from `QA-READY` on (`qa/run/evidence/` handed), or NO-GO, at
-   the verdict → fix lots IN PARALLEL, grouped
+4. Reds, from `QA-READY` on (`qa/run/evidence/` handed), NO-GO, or an
+   `in-lot` row of a verdict against its lot's criterion, any severity,
+   or of a `mockup-*.md` → fix lots IN PARALLEL, grouped
    by spec (Rust: crate; NO-GO: lot section), `#closing-fix-<k>`, `<k>`
    across passes, each at `ship` at once in its own slot (step 2's env
    file, BUILDER.md slice 1's worktree), branch
    `agent/closing-fix-<k>` from `origin/<integration>`, report dir
    `<closing>/fix-<k>` with `issue.md` = its rows (`merge-gate.sh` reads them), `contract.md` = `## Tests modifiés`; handed
-   paths and row ids, no row text (tests: BUILDER.md § ship). Pack (test
-   guard), review, deliver, merge queue like any round; step 4 checks
+   paths and row ids (`<file stem>:<row>`), no row text (tests: BUILDER.md § ship). Pack (test
+   guard), review (MERGEABLE: its `ship` fixes nothing more, its minors and nits under `## Constats non payés`, no new round), deliver, merge queue like any round; step 4 checks
    MR, reviewer, disposition table only. A fix lot replays once only its
-   handed red rows before deliver — ONE `loop-mechanic`, the exact command, never the builder (its hook refuses) — never the full gate; no bisect, no repeat: an unstable red is a red, its cause paid. All merged and
-   verdict in → `slot.sh qa-down`, then 2.
+   handed red rows, and its new tests once on `origin/<integration>` before the fix (green there = not a fix), e2e aside (the lane's next pass), before deliver — ONE `loop-mechanic`, the exact command, never the builder (its hook refuses) — never the full gate; no bisect, no repeat: an unstable red is a red, its cause paid.
    No cap on passes. Fix lot failed, not converged, or every row
    refuted (no MR) → 🐢 naming it, closing waits for the user. No fix
    reaches `<integration>` outside this path.
-5. Green + (GO, GO-PROVISIONAL or CLOSED) → `publish` → `DELIVERED` (a front lot in the run: `/uploads/` in the body, else `publish` again, stack relaunched), MR
+5. Green on `origin/<integration>`, no fix lot in flight, + (GO, GO-PROVISIONAL or CLOSED) → `publish` → `DELIVERED`, MR
    `<integration>` → `<default>`. Autonomous → ONE `loop-mechanic`:
    `merge-gate.sh <closing report-dir> origin/<default> <head sha>
    <Frontend app dirs>`, certifying status green on that sha, merge
    PINNED → issues closed by the forge. `BLOCKED`: conflict → 1;
-   status or gate → 2; `in-lot … unpaid` → 4, or the user's own word → `qa/waived.md`, one row id per line.
-   Confirm each `integrated:` issue closed (fix lots aside) and the counter free of `audit due`, then delete `<integration>` (remote branch, worktree,
-   gates model: step 4's drop, `wt` = that worktree; QA database of
-   `qa-stack.md`), the `integration:`/`integrated:`/`closing:` lines,
+   status or gate → 2; `in-lot … unpaid` → 4, or the user's own word → `qa/waived.md`, one row id per line; `audit due` → the audit (§ Registry); `without review` → its review; `without a capture` → `publish` again; `without its mockup pass` → its `loop-mockup`.
+   Confirm each `integrated:` issue closed (fix lots aside), then delete `<integration>` (remote branch, worktree,
+   gates model: step 4's drop, `wt` = that worktree, the lane's too; QA database of
+   `qa-stack.md`), the `integration:`/`integrated:`/`closing:`/`lane-head:` lines,
    free slot 1. Draft → MR stays draft, the user merges. Summary line
    `🏁 <integration> → <default> (!<mr>), <k> lots`, then `À trancher` lines (`#n titre — question — reco`) and `Décidé` lines; a defect named there is already an issue (step 4's audit), classed as the verdict classes it (in-lot / pre-existing), never written as fixed while its fix is off `<default>`. `ci/publish`,
    `ci/deploy`: user's go only.
@@ -546,7 +551,7 @@ Every stall of the loop is your defect to remove, never a fact to
 report and wait out. A phase over its budget (§ Agents; `state.sh
 tick` marks it 🐢 in `state.md` and the lot's `lenteurs.md`), a
 report naming an obstacle outside the diff (stuck process, taken
-port, stale or locked database, cold or purged target, missing env
+port, host network change (`ERR_NETWORK_CHANGED`, `ENOTFOUND`), lost provider event, stale or locked database, cold or purged target, missing env
 var, workaround flag, tool missing from PATH, red inherited from
 `<default>`), or the same cause in two reports of any issue → it is
 a **brake**: before the next phase spawn, remove it — a
@@ -559,18 +564,16 @@ whatever each report concluded: its repair jumps to slot 0, ahead of
 the queue, never re-run until it passes. An agent that ends its turn
 "waiting" on its own background gate is a brake too (RENDEZVOUS.md
 § Waiting). A brake you cannot remove (usage limit, a decision the
-user owns: only money, a dropped criterion, an unspecified visible
-behaviour, a production action — anything else is done, then
-announced) is reported at once in one line `🐢 <cause> —
-<what it costs per hour> — <the one action needed>`, never buried
-in a relay line. Every brake handled is one line `🔧 <cause> →
+user owns: step 5's NEEDS-CLARIFICATION list) is reported at once in
+one line `🐢 <cause> — <what it costs per hour> — <the one action
+needed>`, never buried in a relay line. Every brake handled is one line `🔧 <cause> →
 <action>` in `a-savoir-<loop>.md`.
 
 ## Rules
 
 - **No cap on agents in flight** (user, 2026-11-03: « on n'a pas
   besoin de plafond »): every selectable issue of the queue and every
-  fix lot of the closing holds its own slot at once, slots opened as
+  fix lot of the lane holds its own slot at once, slots opened as
   needed; only the disk (§ The loop) and a declared `blocked by`
   keep one out.
 - Each issue holds its slot; every phase runs in parallel across

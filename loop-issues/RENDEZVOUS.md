@@ -114,7 +114,7 @@ with this prompt:
 > any agent of this loop, or its background `ci/check` (log growing), running → reply ⏳ — but a
 > second consecutive ⏳ with no new side effect from it (commit, push,
 > report file, forge note) → it stalled: § Fall-through. Else a
-> builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else run the
+> builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else the lane at its step (SKILL.md § Closing), then run the
 > loop from step 1 — past a pause, the lots of `state.md` at their
 > phase first; step 4 first when a report awaits verification,
 > a `held: contract` spawn of `state.md` first of all (SKILL.md § The loop).
@@ -136,7 +136,7 @@ the next spawn of the slot, so a finished phase never ages; `planned: <N>
 loop creates appended; one `done: #<n> <summary line>[ rework]` per finished lot
 (SKILL.md step 6); the skip list; a `held: contract #<n> — <disk reason>`
 or `stopped: <disk|model|drained> — <reason>` line (SKILL.md § The
-loop, Step 0); `integration:`, `integrated:`, `queued:`, `closing:`; the Step 0 facts path — nothing else: brakes and
+loop, Step 0); `integration:`, `integrated:`, `queued:`, `closing:`, `lane:`, `lane-head:`; the Step 0 facts path — nothing else: brakes and
 history go to `freins.md`. A compaction, or a fire answered
 `Prompt is too long`, means the session is spent: the user's next
 `/loop-issues` in a fresh session resumes from `state.md`, so it is

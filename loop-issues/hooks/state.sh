@@ -15,7 +15,7 @@ usage() { echo "usage: state.sh tick|model|fresh|count|merged …" >&2; exit 1; 
 skill=$(cd "$(dirname "$0")/.." && pwd)
 # Budget column of the § Agents table, in minutes; 0 when none.
 budget() { awk -F' *[|] *' -v a="\`$1\`" '$3 == a { print $6 + 0 }' "$skill/SKILL.md"; }
-slot_re='^slot [0-9]+: .* (loop-[a-z-]+) since ([^ ]+) — (.+)$'
+slot_re='^(slot [0-9]+|lane): .* (loop-[a-z-]+) since ([^ ]+) — (.+)$'
 
 case ${1:-} in
   tick)
@@ -26,7 +26,7 @@ case ${1:-} in
     marks=()
     while IFS= read -r line; do
       if [[ $line =~ $slot_re && $line != *🐢* ]]; then
-        agent=${BASH_REMATCH[1]} since=${BASH_REMATCH[2]} dir=${BASH_REMATCH[3]}
+        agent=${BASH_REMATCH[2]} since=${BASH_REMATCH[3]} dir=${BASH_REMATCH[4]}
         max=$(budget "$agent")
         spent=$(jq -n --arg t "$since" '(now - ($t | fromdateiso8601)) / 60 | floor') || exit 1
         if [ "${max:-0}" -gt 0 ] && [ "$spent" -gt "$max" ]; then

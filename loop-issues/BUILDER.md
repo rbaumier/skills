@@ -190,7 +190,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   (`--features test-util` when the crate declares it; `pnpm
   check` for a front package) is your compiler loop, and it compiles
   the tests too. No test run, `ship` included: every test, e2e included, runs in `ci/check`,
-  on `<integration>`, at the closing; `/verify` does not apply to a lot; a test the contract requires run once (`hostile_probe` writing `survivors.txt`) is a `## Mechanic` task. `cargo clean`, mass `touch`,
+  on `<integration>`, in the lane; `/verify` does not apply to a lot; a test the contract requires run once (`hostile_probe` writing `survivors.txt`) is a `## Mechanic` task. `cargo clean`, mass `touch`,
   `CARGO_INCREMENTAL=0` banned. No `comply` of your own (the pack runs it on the range), except
   `comply rules comment-max-words,comment-max-block-words,no-raw-invisible-character <file>` on each
   file before its commit (your lines paid) and the final `ship`: comply on its fix's files, each finding on a line its commit adds paid.
@@ -208,7 +208,7 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
 
 ## Phase `ship <r>` — after review round `r`
 
-A `close.md` or a closing QA verdict in your prompt instead of a
+A `close.md`, a QA verdict or a `mockup-*.md` in your prompt instead of a
 review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
 lot (a `#closing-fix-<k>`: its group) (or refute it with the code line and the evidence file; a
@@ -244,8 +244,8 @@ already touches → pay it here; otherwise ONE line under
 line there, the merge feeds them to the registry. A drop carries evidence: false
 positive (the line), repo convention (the file), or remedy dearer
 than the defect (the grep or measure). Re-run the compiler loop of each
-crate or package you touched, never a test: `ci/check`
-at the closing does. Commit on top of the pack commit with explicit files.
+crate or package you touched, never a test: the lane's
+`ci/check` does. Commit on top of the pack commit with explicit files.
 
 `REWORK` → your commit goes to `pack <r+1>` and a new review that
 re-judges each disposition, so a `fixed` names commit and line.
@@ -257,8 +257,9 @@ Round 3 (the cap) ships anyway: what stays open goes under
 the contract's `Besoin`, `Tests` and touched surfaces (screens,
 routes, channels), the seed each needs on top of the launch pack's
 recipe and environment (never beside, never rewritten), the captures
-(screen, state, avant/après) with their placement. It waits for the
-closing, never goes to the reviewer.
+(screen, state, avant/après) with their placement, and the issue's
+mockups downloaded to `<report-dir>/mockups/`. It waits for the
+lane, never goes to the reviewer.
 
 **Write.** `REWORK` before round 3: `<report-dir>/ship-<r>.md` =
 disposition table (`fixed <commit> <file:line>` / `non payé — <raison>` /
@@ -268,4 +269,5 @@ in full (prose, `à valider :`, visual, `Closes #<n>`, the `<details>`
 block, capture placeholders `<!-- capture: <screen> -->`), then
 `ship-<r>.md`: disposition table, comply decisions (fix paid / FP
 groups with reasons), Breaker map or skip, captures list, écarts, flags,
-`## Not converged`. End `SHIPPED <ship-<r>.md>`.
+`## Not converged`. Before `SHIPPED <ship-<r>.md>`,
+`~/.claude/skills/loop-issues/hooks/check.sh tests <contract.md> origin/<base>` exits 0 (the pack runs the same).

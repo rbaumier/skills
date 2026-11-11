@@ -7,6 +7,7 @@
 #   check.sh contract <contract.md>   LOOP_FRONTEND (ERE): front lot → each Besoin owes an e2e/ test.
 #     Run in the repo; LOOP_BASE (default HEAD): the ref Impact e2e paths must exist on.
 #   check.sh overlap <new contract.md> <in-flight contract.md>…
+#   check.sh tests <contract.md> <base ref>   the pack's test guard, in the worktree.
 set -uo pipefail
 refuse() { echo "$1" >&2; exit 2; }
 
@@ -74,6 +75,33 @@ case ${1:-} in
       [ -z "$shared" ] || refuse "$other: $(paste -sd' ' - <<<"$shared")"
     done
     ;;
-  *) echo "usage: check.sh issue|contract|overlap …" >&2; exit 1 ;;
+  tests)
+    listed=$(section "$2" 'Tests modifiés')
+    base=$3
+    # Test paths, plus .rs files whose diff starts under their #[cfg(test)].
+    is_test() {
+      grep -qE '(^|/)(tests|e2e)/|_(unit|it)\.rs$|/tests\.rs$|\.test\.tsx?$|\.spec\.ts$' <<<"$1" && return
+      [[ $1 == *.rs ]] || return
+      local at
+      # Deleted: a test file when its base held a test module.
+      git cat-file -e "HEAD:$1" 2>/dev/null || { git show "$base:$1" 2>/dev/null | grep -q '#\[cfg(test)\]'; return; }
+      at=$(git show "HEAD:$1" 2>/dev/null | grep -n -m1 '#\[cfg(test)\]' | cut -d: -f1)
+      [ -n "$at" ] && git diff -U0 "$base...HEAD" -- "$1" | grep -oE '^@@ [^+]*\+[0-9]+' | grep -oE '[0-9]+$' |
+        awk -v at="$at" '$1 >= at { f = 1 } END { exit !f }'
+    }
+    while IFS=$'\t' read -r status path new; do
+      f=${new:-$path}
+      is_test "$f" || is_test "$path" || continue
+      [ "$status" = R100 ] && continue
+      [[ $status == A ]] || grep -qF "$path" <<<"$listed" || grep -qF "$f" <<<"$listed" ||
+        refuse "test changed outside Tests modifiés: $f"
+      [ "$status" = D ] && continue
+      added=$(git diff -U0 "$base...HEAD" -- "$f" | grep '^+[^+]' | grep -E '#\[ignore\]|\.skip\(|\.only\(|test\.fixme' | head -1)
+      [ -z "$added" ] || refuse "$f adds a skip: $added"
+      git diff -U0 "$base...HEAD" -- "$f" | grep '^-[^-]' | grep -qE '(^|[^.[:alnum:]_])expect\(|assert' &&
+        ! grep -qF "$f::" <<<"$listed" && refuse "$f drops an assertion without its ::<test> line in Tests modifiés"
+    done < <(git diff -M --name-status "$base...HEAD")
+    ;;
+  *) echo "usage: check.sh issue|contract|overlap|tests …" >&2; exit 1 ;;
 esac
 exit 0

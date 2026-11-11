@@ -4,23 +4,51 @@
 #   slot.sh disk <threshold GB> <worktrees dir> <sweep command|-> [<n in flight>…]
 #   slot.sh env        PreToolUse Bash hook: sources <worktrees dir>/slot-<s>.env
 #   slot.sh gate <schema signal ERE> <recreate command> <gate command>
-#   slot.sh qa-up <qa-stack.md> <log> <launch command> <port>…
+#   slot.sh env-check <script>…  every ${NAME:?} of the scripts and what they source, set
+#   slot.sh qa-up <qa-stack.md> <log> <launch command> <port>…  (env-check on its script tokens)
 #   slot.sh qa-probe <dependency>=<command>…
 #   slot.sh qa-down <qa-stack.md>
 #   slot.sh stack-guard  PreToolUse Bash hook: denies ci/check or ci/e2e while a stack is up
 set -uo pipefail
 shopt -s nullglob
 refuse() { echo "$1" >&2; exit 2; }
-usage() { echo "usage: slot.sh disk|env|gate|qa-up|qa-probe|qa-down|stack-guard …" >&2; exit 1; }
+usage() { echo "usage: slot.sh disk|env|env-check|gate|qa-up|qa-probe|qa-down|stack-guard …" >&2; exit 1; }
 free_gb() { df -Pk "$1" | awk 'NR == 2 { print int($4 / 1048576) }'; }
 roomy() { [ "$(free_gb "$worktrees")" -ge "$threshold" ]; }
 listening() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 field() { awk -v k="$1:" '$1 == k { print $2 }' "$2"; }
-# One stack at a time on the machine, hard limit (user, 2026-11-03):
-# a qa-up stack holds the lock while its process group lives; a
-# running ci/check or ci/e2e is a stack too.
-lock=${LOOP_STACK_LOCK:-$HOME/.cache/loop-stack.lock}
-e2e_running() { pgrep -f '(^|[ /])ci/(check|e2e)( |$)' >/dev/null; }
+# Refuses naming every required variable unset, before a stack or a pass starts.
+env_check() {
+  local f v seen=' ' missing=
+  while [ $# -gt 0 ]; do
+    f=$1; shift
+    [ -f "$f" ] && [[ $seen != *" $f "* ]] && { [[ $f == *.sh ]] || head -1 "$f" | grep -q '^#!.*sh'; } || continue
+    seen+="$f "
+    # shellcheck disable=SC2046 # one sourced path per word.
+    set -- "$@" $(sed -nE "s/^[[:space:]]*(source|\.)[[:space:]]+[\"']?([^\"'[:space:];]+).*/\2/p" "$f")
+    for v in $(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*:?\?' "$f" | sed -E 's/^\$\{//; s/:?\?$//' | sort -u); do
+      [ -n "${!v:-}" ] || [[ " $missing " == *" $v "* ]] || missing+=" $v"
+    done
+  done
+  [ -z "$missing" ] || refuse "env-check: unset$missing"
+}
+# One stack at a time per project, hard limit (user, 2026-11-03; scoped
+# per project 2026-11-10: « on est sur 2 projets différents »): a qa-up
+# stack holds the project's lock while its process group lives; a
+# running ci/check or ci/e2e of the same repo (same origin) is a stack
+# too. Outside a git checkout the scope falls back to the whole machine.
+origin_of() { git -C "$1" remote get-url origin 2>/dev/null; }
+here=$(origin_of .)
+lock=${LOOP_STACK_LOCK:-$HOME/.cache/loop-stack${here:+-$(printf %s "$here" | shasum | cut -c1-12)}.lock}
+e2e_running() {
+  local pid cwd
+  for pid in $(pgrep -f '(^|[ /])ci/(check|e2e)( |$)'); do
+    [ -z "$here" ] && return 0
+    cwd=$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')
+    [ -n "$cwd" ] && [ "$(origin_of "$cwd")" = "$here" ] && return 0
+  done
+  return 1
+}
 stack_up() {
   local held
   held=$(cat "$lock" 2>/dev/null) || return 1
@@ -77,10 +105,13 @@ case ${1:-} in
       bash -c "$3" >&2 || refuse "BLOCKED: recreate failed: $3"
     done
     ;;
+  env-check) shift; env_check "$@" ;;
   qa-up)
     [ $# -ge 5 ] || usage
     stack=$2 log=$3 launch=$4
     shift 4
+    # shellcheck disable=SC2086 # the launch command's words, files among them.
+    env_check $launch
     held=$(stack_up) && refuse "qa-up: one stack at a time, $held is up (slot.sh qa-down it first)"
     e2e_running && refuse "qa-up: one stack at a time, ci/check or ci/e2e holds it"
     for port; do listening "$port" && refuse "qa-up: port $port already held"; done
