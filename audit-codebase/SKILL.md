@@ -1,6 +1,6 @@
 ---
 name: audit-codebase
-description: Audit an entire codebase for materially useful simplifications in data structures, state representation, control flow, algorithms, and ownership. Read-only; produces an audit, never edits.
+description: Audit an entire codebase for materially useful simplifications in data structures, state representation, control flow, algorithms, and ownership, plus outbound-call resilience. Read-only; produces an audit, never edits.
 ---
 
 Audit this entire codebase for materially useful simplifications in its data structures, state representation, control flow, algorithms, and ownership.
@@ -52,9 +52,10 @@ Look for:
 - scattered booleans or nullable fields that permit invalid combinations and should become a state machine or discriminated union;
 - repeated assumptions about object shape that need a shared typed model;
 - duplicated branching that a small map, registry, reducer, or command model would remove;
-- unclear state or behavior ownership that a small module boundary would clarify;
+- unclear state or behavior ownership, such as files `git log` shows changing together, that a small module boundary would clarify;
 - repeated scans, transformations, or lookups where a more appropriate collection or index would materially simplify behavior;
-- lifecycle, concurrency, or async states whose representation permits stale or contradictory state.
+- lifecycle, concurrency, or async states whose representation permits stale or contradictory state;
+- special cases (an `if` for one value, a parameter for one caller, a swallowed exception) sharing one unmodelled requirement a single representation would absorb.
 
 Do not force an abstraction. Prefer boring local code when it is already clear.
 
@@ -73,13 +74,15 @@ For every recommendation, provide:
 7. Existing and additional validation required.
 8. Confidence: high, medium, or low.
 
+Run one separate repo-wide worker, outside the two-opportunity cap: find every outbound call (HTTP, DB, queues, LLM APIs) with no timeout, or retries without backoff. Recommend sane timeouts and capped exponential retries with jitter, and check pool sizes match our concurrency.
+
 3. Validate and synthesize
 
 The coordinator must independently verify every finding against the current repository before accepting it.
 
 Reject, narrow, or demote recommendations that are vague, duplicate another finding, misunderstand intentional semantics, or merely relocate complexity.
 
-Record skips as completed coverage. Deduplicate overlapping findings and assign each accepted recommendation to one authoritative subsystem.
+Record skips as completed coverage. Merge findings one fix resolves into one recommendation, their evidence combined, and assign it to one authoritative subsystem.
 
 Continue opening bounded review batches until every inventory row is complete.
 
