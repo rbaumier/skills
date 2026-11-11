@@ -15,7 +15,8 @@ A future does nothing until polled and dies when dropped. Cancelling a task mean
 
 Cancel-safe — usable directly as a `select!` branch:
 
-- `mpsc::Receiver::recv` / `mpsc::Sender::send` — the message stays in (or never left) the queue
+- `mpsc::Receiver::recv` — the message stays in the queue
+- `mpsc::Sender::reserve` — then `permit.send(msg)`; a cancelled `send(msg)` is not sent but drops `msg`
 - `watch::Receiver::changed`, `broadcast::Receiver::recv`
 - `TcpListener::accept`
 - `AsyncReadExt::read` (nothing consumed if cancelled), `Lines::next_line`
