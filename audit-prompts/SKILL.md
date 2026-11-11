@@ -5,7 +5,7 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 
 ## Single source of truth: find
 
-- single source of truth audit
+- Single source of truth audit
 - Find every piece of state or data that has more than one source of truth and could drift out of sync. For each, show where it's written, where it's read, and how they could disagree.
 - Find business rules, validation, and domain concepts implemented in more than one place. Flag where copies have drifted, and name the single source of truth each should come from.
 - Find every place my app can disagree with itself.
