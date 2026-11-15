@@ -84,7 +84,8 @@ def program(cmd):
 
 # --- One pass per transcript: orchestrator sessions and every subagent
 spawns, errors, repeats, reports, sends, prompts, user_rows = [], [], [], [], [], [], []
-noise = ("<task-notification", "<system-reminder", "<local-command", "Base directory for this skill")
+noise = ("<task-notification", "<system-reminder", "<local-command", "Base directory for this skill",
+         "This session is being continued", "Note: the T3 server restarted")
 
 
 def mine(tr, aid, kind, desc, finished, orchestrator):
@@ -131,7 +132,7 @@ def mine(tr, aid, kind, desc, finished, orchestrator):
 
 for s in sessions:
     mine(s, f"orchestrator:{s.stem[:8]}", "orchestrator", s.name, "", True)
-    for meta in sorted((s.with_suffix("") / "subagents").glob("*.meta.json")):
+    for meta in sorted((s.with_suffix("") / "subagents").rglob("*.meta.json")):
         m = json.loads(meta.read_text())
         tr = meta.with_name(meta.name.replace(".meta.json", ".jsonl"))
         if tr.exists():

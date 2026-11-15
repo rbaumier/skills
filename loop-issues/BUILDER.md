@@ -204,11 +204,11 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   exists now (symbols, files), what the next slice must know, écarts
   so far, `## Skills` (`<skill> — <trigger> — <decision it
   changed>`), `## Mechanic` when tasks remain, ≤ 25 lines. End: `SLICED <k> <slice-k.md>`. The last slice
-  ends the same way; the orchestrator spawns `pack`.
+  ends the same way once `check.sh tests <contract.md> origin/<base>` exits 0; the orchestrator spawns `pack`.
 
 ## Phase `ship <r>` — after review round `r`
 
-A `close.md`, a QA verdict or a `mockup-*.md` in your prompt instead of a
+A `close.md`, a red line and its log, a QA verdict or a `mockup-*.md` in your prompt instead of a
 review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
 lot (a `#closing-fix-<k>`: its group) (or refute it with the code line and the evidence file; a

@@ -9,16 +9,17 @@ leaf and reads § Waiting and § Report.
 - A child spawned with `Agent` keeps its parent **resumable**: the
   parent ends its turn, the child's completion notification resumes
   it. Nothing else does. A parent that ends its turn with no live
-  `Agent` child is **finished**: its Monitor events and
-  background-command completions are **parked** — undelivered until a
-  SendMessage resumes it — and its children's later notifications fall
-  through to the root session.
+  `Agent` child is **finished**: its background-command completions
+  are **parked** — undelivered until a SendMessage resumes it — and its
+  children's later notifications fall through to the root session; its
+  Monitor events still wake it.
 - A child resumed by SendMessage is not a live child; only a fresh
   `Agent` spawn is.
 - The root session is the catch-all: it receives whatever no live
   parent can. A subagent receives only what its live children send.
 - Foreground `sleep` is blocked by the harness; Bash wait loops
-  (`until`/`while`/`for` + `sleep`) are BANNED everywhere.
+  (`until`/`while`/`for` + `sleep`) are BANNED everywhere: a leaf
+  waits on a condition another process owns with a Monitor.
 
 ## Waiting — the only way
 
@@ -36,7 +37,8 @@ command that cannot finish inside the 10-min Bash cap is split
 (check / test / build apart, tests by package), never backgrounded.
 One that cannot be split (`ci/check`, `ci/e2e`) never
 runs in a leaf: the orchestrator runs it with `run_in_background`,
-and its exit wakes it. Never `tail -f` (a hook refuses it). One stack
+and its exit wakes it. Never `tail -f` (a hook refuses it), the lane's
+`hooks/reds.sh` Monitor aside (SKILL.md § Closing). One stack
 at a time on the machine, QA or e2e (`slot.sh` and its hook refuse a
 second).
 A long-lived process (dev server) is backgrounded and never awaited.

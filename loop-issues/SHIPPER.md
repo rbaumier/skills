@@ -56,7 +56,7 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
    pack built on a stale base shows a merged neighbour's lines as
    this branch's reversal. A rebase over files the base changed →
    the builder's compile check of the touched crates and packages, once
-   (user, 2026-11-01); red → `BLOCKED` with its first errors.
+   (user, 2026-11-01); red → `BLOCKED` with its full log.
 1. No gate but comply, no test at `pack` (user, 2026-10-12): the builder's
    merge queue checks the merge and the closing runs every test
    (SKILL.md). Run only the
@@ -180,7 +180,7 @@ verdict included.
 7. Open the MR `<integration>` → `<default>` (push nothing: its head
    is the sha `ci/check` certified), title `loop <date>: <k> lots`, body
    per `PRESENTATION.md`, kept in `<report-dir>/mr-body.md`: one section per lot, headed `### #<n>` (its MR, its
-   `mr-description.md` summary and keyword, `Closes #<n>` or `Refs #<n>`), the `## Tests
+   `mr-description.md` summary, its `à valider :` bullets verbatim, keyword, `Closes #<n>` or `Refs #<n>`), the `## Tests
    modifiés` of close.md; DRAFT in draft mode.
    Read the pipeline once; red → `deliver.md` names the job and its
    first error lines.

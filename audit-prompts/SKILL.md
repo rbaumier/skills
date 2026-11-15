@@ -1,6 +1,6 @@
 ---
 name: audit-prompts
-description: Code-quality audit prompts (single source of truth audit, state machines, invariants, over-engineering, review). Use when the user asks for a code audit.
+description: Code-quality audit prompts (single source of truth audit, state machines, invariants, over-engineering, browser QA, review). Use when the user asks for a code audit.
 ---
 
 ## Report only
@@ -34,6 +34,7 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - Find all the implicit transactions in my app.
 - Find every impossible state my data model permits.
 - Find all the implicit protocols between components.
+- Find all of the implicit design system components in my app.
 - Find everything whose correctness depends on timing or execution order.
 - Find every operation that is unsafe to retry.
 - Find every contract my code assumes but never verifies.
@@ -46,6 +47,7 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - Find all the implicit obligations in this contract.
 - Find all tautologies.
 - Find the dumb requirements.
+- Reverse-engineer my codebase: uncover hidden state machines, broken invariants, implicit contracts and bottlenecks. Stress-test failures, retries and concurrency. Prove what's broken, then find the smallest changes that eliminate entire classes of bugs and complexity.
 
 ## Follow-ups
 
@@ -60,18 +62,6 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - List the failure modes of each component.
 - What happens if a response arrives late?
 - Check request IDs and cancellation logic together with the state.
-
-## Whole-codebase sweeps
-
-- Reverse-engineer my codebase: uncover hidden state machines, broken invariants, implicit contracts and bottlenecks. Stress-test failures, retries and concurrency. Prove what's broken, then find the smallest changes that eliminate entire classes of bugs and complexity.
-- Find the recurring problems, duplicated logic and hidden complexity across my codebase. Then identify the smallest, most powerful higher-level abstraction that would make entire classes of these problems disappear by design, not just hide them behind another layer.
-- Map this codebase for the next owner: an architecture doc, an onboarding guide, and a top-10 risk list. Every arrow and every risk cites file:line. Read-only: change nothing.
-- Study commit history and sessions for this repo. Why are there so many regressions?
-- What pattern in the codebase allowed this bug to exist? Bugs are consequences of design decisions that made the mistake easy.
-- Show me (A) if we're doing things wrong, and (B) if we're doing the wrong things.
-- If you were my worst enemy, how would you take me down?
-- Red Team Engineer my code adversarially.
-- Think about future scale: how does this hold up when the system is 10x bigger?
 
 ## State machines
 
@@ -104,6 +94,10 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - Survey this codebase for deepening opportunities and hand me the candidates.
 - What higher-level abstraction would make this entire problem disappear?
 - Design the single test that breaks this design on day one.
+- Find the recurring problems, duplicated logic and hidden complexity across my codebase. Then identify the smallest, most powerful higher-level abstraction that would make entire classes of these problems disappear by design, not just hide them behind another layer.
+- Map this codebase for the next owner: an architecture doc, an onboarding guide, and a top-10 risk list. Every arrow and every risk cites file:line. Read-only: change nothing.
+- Study commit history and sessions for this repo. Why are there so many regressions?
+- What pattern in the codebase allowed this bug to exist? Bugs are consequences of design decisions that made the mistake easy.
 
 ## Security sweep
 
@@ -113,10 +107,13 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - Flag hardcoded secrets and weak crypto.
 - Check dependency vulns and dead code.
 - Verify resource cleanup and timeout handling.
+- If you were my worst enemy, how would you take me down?
+- Red Team Engineer my code adversarially.
 
 ## Performance
 
 - Establish baseline metrics (p50/p95/p99 latency, throughput) and profile before proposing anything.
+- Think about future scale: how does this hold up when the system is 10x bigger?
 
 ## Prove
 
@@ -132,6 +129,15 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - Reproduce an operation that reports success while leaving inconsistent state.
 - Demonstrate the coupling through a concrete, representative change.
 - Prove findings against actual code paths and reject unverified assumptions.
+
+## Product
+
+- Look at my product's features and how they're organized, and report everything that seems out of place, or whose behavior seems odd or hard to follow.
+- Show me (A) if we're doing things wrong, and (B) if we're doing the wrong things.
+
+## Browser QA
+
+- Test this in the browser at different widths, with touch emulation, and on a throttled 3G connection. Fix anything that looks broken or feels off. Save a before and after screenshot for every fix and send me a summary afterwards.
 
 ## Review
 

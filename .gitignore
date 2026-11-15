@@ -34,3 +34,4 @@ orc-auto-grill/
 writing/examples/
 paperasse:*/
 .categories.json
+__pycache__/

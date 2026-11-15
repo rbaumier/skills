@@ -67,7 +67,7 @@ git init -q "$tmp/repo" && cd "$tmp/repo" || exit 1
 mkdir -p web api "$tmp/report/qa" && touch web/a api/a
 commit() { [ $# -eq 0 ] || git add "$@"; git -c user.name=t -c user.email=t@t commit -qm x --allow-empty; }
 commit && commit api/a && commit web/a
-verdict() { printf '## Verdict\n\n**%s** — x\n%s\n' "$2" "${3:-}" >"$tmp/report/qa/verdict-$1.md"; }
+verdict() { printf '## Verdict\n\n**%s** — x\n%s\nhead: %s\n' "$2" "${3:-}" "$(git rev-parse HEAD)" >"$tmp/report/qa/verdict-$1.md"; }
 
 group=back_lot_passes_without_verdict
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD~1 web
@@ -85,12 +85,26 @@ group=front_lot_passes_on_go
 verdict 3 GO
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 
+group=front_change_after_verdict_head_refused
+verdict 3 GO
+commit web/a && echo x >web/a && commit web/a
+expect deny "$gate" '' "$tmp/report" HEAD~4 HEAD web
+grep -q "changed after the QA verdict's head" "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+verdict 3 GO
+expect pass "$gate" '' "$tmp/report" HEAD~4 HEAD web
+
+group=closing_fix_merged_outside_its_dir_refused
+git -c user.name=t -c user.email=t@t commit -qm 'Merge closing-fix-7 into loop/x' --allow-empty
+expect deny "$gate" '' "$tmp/report" HEAD~1 HEAD
+grep -q 'closing fix-7 merged outside' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+git reset -q --hard HEAD~1
+
 group=verdict_word_read_in_qa_skill_format
 verdict 4 GO-PROVISIONAL.
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 verdict 4 GO-PROVISIONAL 'Tally: 9 BLOCKED(env), 0 BLOCKED(budget).'
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
-printf '# QA run 5 — GO\n' >"$tmp/report/qa/verdict-5.md"
+printf '# QA run 5 — GO\nhead: %s\n' "$(git rev-parse HEAD)" >"$tmp/report/qa/verdict-5.md"
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD web
 printf '# QA run 6\n\n**ABORTED.** x\n' >"$tmp/report/qa/verdict-6.md"
 expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD web
@@ -147,15 +161,18 @@ expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD
 grep -q 'in-lot mockup-issue-6:m1 unpaid' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
 echo 'mockup-issue-6:m1' >"$tmp/report/qa/waived.md"
 expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD
-rm -r "$tmp/issue-6" "$tmp/report/fix-1" "$tmp/report/qa/mockup-issue-6.md" "$tmp/report/qa/waived.md"
+echo 'mockup-issue-6:m1 → #42' >"$tmp/report/qa/waived.md"
+expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD
+rm "$tmp/report/qa/waived.md"
 
 # Forge doubles: issue <n> is $tmp/forge/<n>.body with state $tmp/forge/<n>.state (opened|closed).
 check="$hooks/check.sh"
 mkdir -p "$tmp/bin" "$tmp/forge"
-printf '%s\n' '#!/bin/bash' 'f='"$tmp"'/forge/$3' \
-  'jq -n --rawfile b $f.body --arg s "$(cat $f.state)" '\''{body: $b, state: (if $s == "opened" then "OPEN" else "CLOSED" end)}'\''' >"$tmp/bin/gh"
-printf '%s\n' '#!/bin/bash' 'f='"$tmp"'/forge/${2##*/}' \
-  'jq -n --rawfile b $f.body --arg s "$(cat $f.state)" '\''{description: $b, state: $s}'\''' >"$tmp/bin/glab"
+# Labels: one per line of $tmp/forge/<n>.labels.
+printf '%s\n' '#!/bin/bash' 'f='"$tmp"'/forge/${3##*/}' 'l=$(jq -Rn "[inputs]" 2>/dev/null <$f.labels || echo [])' \
+  'jq -n --rawfile b $f.body --arg s "$(cat $f.state)" --argjson l "$l" '\''{body: $b, state: (if $s == "opened" then "OPEN" else "CLOSED" end), labels: [$l[] | {name: .}]}'\''' >"$tmp/bin/gh"
+printf '%s\n' '#!/bin/bash' 'f='"$tmp"'/forge/${2##*/}' 'l=$(jq -Rn "[inputs]" 2>/dev/null <$f.labels || echo [])' \
+  'jq -n --rawfile b $f.body --arg s "$(cat $f.state)" --argjson l "$l" '\''{description: $b, state: $s, labels: $l}'\''' >"$tmp/bin/glab"
 chmod +x "$tmp/bin/gh" "$tmp/bin/glab"
 export PATH="$tmp/bin:$PATH"
 sections=(Category Summary 'Current behavior' 'Desired behavior' 'Acceptance criteria')
@@ -167,6 +184,22 @@ forge_issue() {
   printf '%s\n' "$@" '**Category:** bug' '**Summary:** x' '**Current behavior:**' x \
     '**Desired behavior:**' x '**Acceptance criteria:**' '- [ ] x' >"$tmp/forge/$n.body"
 }
+
+group=merge_gate_deferred_row_on_forge
+forge_issue 42 opened && echo needs-triage >"$tmp/forge/42.labels"
+forge_issue 43 closed && echo needs-triage >"$tmp/forge/43.labels"
+forge_issue 44 opened
+for url in https://github.com/o/r/issues/42 https://gitlab.com/g/p/-/issues/42; do
+  echo "mockup-issue-6:m1 → #42 $url" >"$tmp/report/qa/deferred.md"
+  expect pass "$gate" '' "$tmp/report" HEAD~2 HEAD
+done
+for line in 'mockup-issue-6:m1 → #43 https://gitlab.com/g/p/-/issues/43' 'mockup-issue-6:m1 → #44 https://github.com/o/r/issues/44' \
+  'mockup-issue-6:m1 → #45 https://gitlab.com/g/p/-/issues/45' 'mockup-issue-6:m1 → #42 https://gitlab.com/g/p/-/issues/44' \
+  'mockup-issue-6:m1 → #42'; do
+  echo "$line" >"$tmp/report/qa/deferred.md"
+  expect deny "$gate" '' "$tmp/report" HEAD~2 HEAD
+done
+rm -r "$tmp/issue-6" "$tmp/report/fix-1" "$tmp/report/qa/mockup-issue-6.md" "$tmp/report/qa/deferred.md"
 
 group=issue_blocked_skipped
 forge_issue 1 opened '> **Blocked by #7** — needs the table'
@@ -399,12 +432,31 @@ grep -q 'one stack at a time' "$tmp/reason" && ! up "$b" || fail "second stack: 
 guard() { local d; d=$(jq -cn --arg c "$1" '{tool_input: {command: $c}}' | "$slot" stack-guard | jq -r .hookSpecificOutput.permissionDecision); echo "${d:-allow}"; }
 [ "$(guard 'cd /x && ci/e2e --repeat-each 3')" = deny ] && [ "$(guard './ci/check')" = deny ] || fail "e2e allowed beside a stack"
 [ "$(guard 'bash ci/check')" = deny ] || fail "bash ci/check allowed beside a stack"
-for c in 'cat ci/e2e.md' 'cargo check' 'cat ci/check' 'git add ci/check' 'grep foo ci/e2e'; do [ "$(guard "$c")" = allow ] || fail "guard too wide: $c"; done
+for c in 'cat ci/e2e.md' 'cargo check' 'cat ci/check' 'git add ci/check' 'grep foo ci/e2e' \
+  "ps aux | grep -E 'ci/check|ci/e2e'" 'grep -n "a\|b=" ci/check' 'git commit -m "NOT run (ci/e2e is late)"' \
+  "$(printf 'cat >n.md <<EOF\n(ci/check refuses x\nEOF')" 'grep -c "ci/e2e" f'; do [ "$(guard "$c")" = allow ] || fail "guard too wide: $c"; done
+for c in 'bash -c "ci/check"' 'bash -lc "ci/e2e"' 'eval "ci/e2e"' '"./ci/check"' 'nohup ci/e2e &' 'timeout 900 ci/e2e' 'env X=1 ci/e2e' \
+  "$(printf 'bash <<EOF\nci/e2e\nEOF')" "$(printf 'cat <<EOF | bash\nci/e2e\nEOF')"; do
+  [ "$(guard "$c")" = deny ] || fail "run of ci/check allowed beside a stack: $c"
+done
 expect pass "$slot" '' qa-down "$tmp/qa1.md"
 (exec -a ci/check sleep 30) & fake=$!
 [ "$(guard 'ci/e2e')" = deny ] || fail "relative ci/check not seen as a stack"
+[ "$(guard "cd $tmp/x-worktrees/slot-2 && MBX_DISABLE=1 cargo sqlx prepare --workspace")" = deny ] || fail "sqlx prepare beside a gate"
+in_slot() { jq -cn --arg c "$1" --arg w "$tmp/x-worktrees/slot-3/apps/api" '{tool_input: {command: $c}, cwd: $w}' | "$slot" stack-guard; }
+for c in 'cargo nextest run -p a' 'mbx gc' 'mbx cargo check' 'cargo +nightly check' 'comply --working-tree .' 'ci/lib/comply-workspace' \
+  'env -u A cargo clippy' 'bash -lc "cargo test -p a"'; do
+  [ "$(in_slot "$c" | jq -r .hookSpecificOutput.permissionDecision)" = deny ] || fail "compile beside a gate: $c"
+done
+in_slot 'cargo check' | grep -q 'BLOCKED gate' || fail "compile refusal names no BLOCKED gate"
+for c in 'mbx gc --dry-run' 'cargo fmt --all' "git commit -m 'cargo check ok'" 'comply rules x a.rs'; do
+  [ -z "$(in_slot "$c")" ] || fail "compile guard too wide: $c"
+done
+[ "$(guard 'cargo check')" = allow ] || fail "compile outside a loop worktree denied"
+[ -z "$(jq -cn '{tool_input: {command: "cargo check"}, cwd: "/a/x-worktrees/issue-3"}' | "$slot" stack-guard)" ] || fail "issue- is no loop worktree"
 kill "$fake"; wait "$fake" 2>/dev/null
 [ "$(guard 'ci/e2e')" = allow ] || fail "e2e denied with no stack"
+[ "$(guard "cd $tmp/x-worktrees/slot-2 && cargo check")" = allow ] || fail "compile denied with no gate"
 "$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b" && up "$b" || fail "stack after qa-down"
 expect pass "$slot" '' qa-down "$tmp/qa2.md"
 # A stack whose process group died no longer holds the lock.
@@ -519,21 +571,50 @@ spawn() { jq -nc --arg t "$1" --arg p "$2" '{tool_input: {subagent_type: $t, pro
 for p in 'run cargo check -p member' 'then `cargo nextest run -p billing`' 'guards: -p api -E x' 'run ci/lib/comply-workspace' 'pnpm -C apps/webapp check'; do
   expect deny "$guard" "$(spawn loop-builder "$p")"
 done
-for p in 'Report dir: /r/issue-1 — files: comply-triage.md, pack-1.md' 'cargo via mbx, CARGO_TARGET_DIR unset; touched crates: api-key, member'; do
+for p in 'Report dir: /r/issue-1 — files: comply-triage.md, pack-1.md' 'cargo via mbx, CARGO_TARGET_DIR unset; touched crates: api-key, member' \
+  'openapi.json regenerates with `cargo run -p api --bin dump_openapi`.' 'name Rust tests by their full nextest name' \
+  'red: `voice_runtime::voice_call::tests::nextest_retry`, `e2e/tests/clippy.spec.ts`'; do
   expect pass "$guard" "$(spawn loop-builder "$p")"
 done
 expect pass "$guard" "$(spawn loop-mechanic 'cargo check --workspace --all-targets')"
+expect deny "$guard" "$(spawn loop-builder 'then TZ=UTC vitest run src/x.test.ts')"
+expect pass "$guard" "$(spawn loop-builder 'Fact: the widget vitest suite is red on x.test.tsx')"
+expect pass "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/audit-2026-11-15/01-x.md. Label needs-triage only.')"
+expect deny "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/issue-2604/split/a.md. Labels needs-triage.')"
 
 group=builder_no_tests
 notests="$hooks/builder-no-tests.sh"
 for c in 'cargo t' 'cd x && cargo nextest run -p billing' 'bash -c "pnpm -C apps/webapp test"' 'ci/check' \
   "cargo nextest run -p api -E 'binary(/_unit\$/) | all()'" 'bash ci/check' 'ci/check|tee log' 'nohup ci/check &' \
-  'timeout 900 ci/lib/merge' 'TZ=UTC vitest run' 'xargs vitest' 'bash -c "vitest run"'; do
+  'timeout 900 ci/lib/merge' 'TZ=UTC vitest run' 'xargs vitest' 'bash -c "vitest run"' \
+  'pnpm exec playwright test tests/a.spec.ts' "$(printf 'bash <<EOF\nvitest run\nEOF')" \
+  'bash -lc "vitest run"' 'bash -c -- "vitest run"' 'eval "vitest run"' "eval 'cargo nextest run -p x'" '"./ci/check"' \
+  "$(printf 'cat <<EOF | bash\nvitest run\nEOF')"; do
   expect deny "$notests" "$(command_input "$c")"
 done
-for c in "cargo nextest run -p api -E 'binary(/_unit\$/)' 2>&1 | tail -40" 'cargo check -p x --all-targets' 'cargo fmt --all' \
-  'cat vitest.config.ts' 'rg ci/check docs/' 'sed -n 1p ci/check' 'git commit -m "fix vitest flake"'; do
+expect deny "$hooks/builder-no-tests.sh" "$(command_input "cargo nextest run -p api -E 'binary(/_unit\$/)' 2>&1 | tail -40")"
+for c in 'cargo check -p x --all-targets' 'cargo fmt --all' \
+  'cat vitest.config.ts' 'rg ci/check docs/' 'sed -n 1p ci/check' 'git commit -m "fix vitest flake"' \
+  'ps aux | grep "playwright test"' "grep -vE 'x|npx playwright' f" 'grep "playwright install" ci/e2e' \
+  'cd e2e && pnpm exec playwright test --list tests/a.spec.ts 2>&1 | tail' 'pnpm exec playwright test a.spec.ts --list' \
+  'grep -c "ci/check" x' './x.sh "vitest"'; do
   expect pass "$notests" "$(command_input "$c")"
 done
+
+group=reds_skip_test_fail
+mkdir -p "$tmp/e2e/tests"
+printf '%s\n' 'test("a", async () => {' '  test.fail();' '});' 'test("b", () => {});' >"$tmp/e2e/tests/x.spec.ts"
+printf '%s\n' '  ✘  1 [c] › tests/x.spec.ts:1:1 › a (1s)' '  ✘  2 [c] › tests/x.spec.ts:4:1 › b (1s)' >"$tmp/e2e.log"
+[ "$(timeout 3 "$hooks/reds.sh" "$tmp/reds.seen" "$tmp/e2e" "$tmp/e2e.log" | grep -c '✘')" = 1 ] && grep -q 'x.spec.ts:4:1' "$tmp/reds.seen" ||
+  fail "test.fail red not skipped: $(cat "$tmp/reds.seen")"
+printf '%s\n' 'test("a", async () => {' '});' 'test.describe("g", () => {' '  test.describe.configure({ mode: "serial" });' '  test.fail();' \
+  '  test("b", async () => {});' '  test(' '    "c",' '    async ({' '    }) => {' '      await test.step("s", async () => {});' '    },' '  );' '});' \
+  'test("d", async () => {' '  await test.step("s", async () => {});' '  test.fail();' '});' 'test("e", () => {});' \
+  'test.fail("f", async () => {});' >"$tmp/e2e/tests/y.spec.ts"
+printf '  ✘  1 [c] › tests/y.spec.ts:%s:1 › t (1s)\n' 1 6 7 15 19 20 >"$tmp/e2e-y.log"
+[ "$(timeout 3 "$hooks/reds.sh" "$tmp/reds-y.seen" "$tmp/e2e" "$tmp/e2e-y.log" | grep -oE 'y.spec.ts:[0-9]+' | tr '\n' ' ')" = 'y.spec.ts:1 y.spec.ts:19 ' ] ||
+  fail "test.fail attribution: $(cat "$tmp/reds-y.seen")"
+[ "$(timeout 3 "$hooks/reds.sh" "$tmp/reds-z.seen" "$tmp/none" "$tmp/e2e.log" 2>"$tmp/reason" | grep -c '✘')" = 2 ] && grep -q 'no test.fail masked' "$tmp/reason" ||
+  fail "missing e2e dir: $(cat "$tmp/reason")"
 
 echo "hooks: all checks pass"

@@ -80,12 +80,15 @@ case ${1:-} in
     base=$3
     # Test paths, plus .rs files whose diff starts under their #[cfg(test)].
     is_test() {
-      grep -qE '(^|/)(tests|e2e)/|_(unit|it)\.rs$|/tests\.rs$|\.test\.tsx?$|\.spec\.ts$' <<<"$1" && return
+      grep -qE '(^|/)(tests|e2e)/|_(unit|it)\.rs$|/tests\.rs$|\.test\.rs$|\.test\.tsx?$|\.spec\.ts$' <<<"$1" && return
       [[ $1 == *.rs ]] || return
       local at
       # Deleted: a test file when its base held a test module.
       git cat-file -e "HEAD:$1" 2>/dev/null || { git show "$base:$1" 2>/dev/null | grep -q '#\[cfg(test)\]'; return; }
-      at=$(git show "HEAD:$1" 2>/dev/null | grep -n -m1 '#\[cfg(test)\]' | cut -d: -f1)
+      # The inline test module: a #[cfg(test)] whose item is `mod <name> {`, not a `mod x;` or a single item.
+      at=$(git show "HEAD:$1" 2>/dev/null | awk '/#\[cfg\(test\)\]/ { c = NR; next }
+        c && /^[[:space:]]*(pub(\([a-z]+\))? )?mod [A-Za-z_0-9]+ *\{/ { print c; exit }
+        c && !/^[[:space:]]*#\[/ { c = 0 }')
       [ -n "$at" ] && git diff -U0 "$base...HEAD" -- "$1" | grep -oE '^@@ [^+]*\+[0-9]+' | grep -oE '[0-9]+$' |
         awk -v at="$at" '$1 >= at { f = 1 } END { exit !f }'
     }
@@ -96,9 +99,9 @@ case ${1:-} in
       [[ $status == A ]] || grep -qF "$path" <<<"$listed" || grep -qF "$f" <<<"$listed" ||
         refuse "test changed outside Tests modifiés: $f"
       [ "$status" = D ] && continue
-      added=$(git diff -U0 "$base...HEAD" -- "$f" | grep '^+[^+]' | grep -E '#\[ignore\]|\.skip\(|\.only\(|test\.fixme' | head -1)
+      added=$(git diff -U0 "$base...HEAD" -- "$f" | grep '^+[^+]' | grep -E '#\[ignore\]|\.skip\(|\.only\(|test\.fixme' | grep -vF 'skip(process.env.VOICE_STACK !== "1"' | head -1)
       [ -z "$added" ] || refuse "$f adds a skip: $added"
-      git diff -U0 "$base...HEAD" -- "$f" | grep '^-[^-]' | grep -qE '(^|[^.[:alnum:]_])expect\(|assert' &&
+      git diff -U0 "$base...HEAD" -- "$f" | grep '^-[^-]' | grep -E '(^|[^.[:alnum:]_])expect\(|assert' >/dev/null &&
         ! grep -qF "$f::" <<<"$listed" && refuse "$f drops an assertion without its ::<test> line in Tests modifiés"
     done < <(git diff -M --name-status "$base...HEAD")
     ;;

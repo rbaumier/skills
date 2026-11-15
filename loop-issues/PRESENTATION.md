@@ -74,7 +74,8 @@ an HTML artifact.
 - Placement: right under the "what the MR changes" sentence. Pair =
   one two-column `| avant | après |` table; single = the image alone.
   ONE caption line under each (≤8 words), not counted as prose.
-- A QA-forced fix re-captures every screen it touched.
+- A QA- or mockup-forced fix re-captures every screen it touched; a
+  capture shows its own lot on the published head, never a QA evidence file.
 - Done when every changed screen has its image or its one-line
   reason, and the MR preview renders each one.
 

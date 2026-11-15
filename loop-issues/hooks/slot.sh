@@ -8,7 +8,8 @@
 #   slot.sh qa-up <qa-stack.md> <log> <launch command> <port>…  (env-check on its script tokens)
 #   slot.sh qa-probe <dependency>=<command>…
 #   slot.sh qa-down <qa-stack.md>
-#   slot.sh stack-guard  PreToolUse Bash hook: denies ci/check or ci/e2e while a stack is up
+#   slot.sh stack-guard  PreToolUse Bash hook: denies ci/check or ci/e2e while a stack is up,
+#                        a compile in a loop worktree while ci/check or ci/e2e runs
 set -uo pipefail
 shopt -s nullglob
 refuse() { echo "$1" >&2; exit 2; }
@@ -62,6 +63,12 @@ case ${1:-} in
     shift 4
     roomy && exit 0
     [ "$sweep" = - ] || bash -c "$sweep"
+    roomy && exit 0
+    # Build caches first: a worktree no process runs in loses its target, however recent.
+    command -v mbx >/dev/null && mbx gc >/dev/null 2>&1
+    for wt in "$worktrees"/*/; do
+      [ -d "${wt}apps/api" ] && ! pgrep -f "${wt%/}" >/dev/null && mbx cache remove "${wt}apps/api" >/dev/null 2>&1
+    done
     roomy && exit 0
     for wt in "$worktrees"/issue-*/; do
       n=${wt%/} n=${n##*/issue-} n=${n%%-t*}
@@ -144,13 +151,24 @@ case ${1:-} in
     [ "$(cat "$lock" 2>/dev/null)" = "$2" ] && rm -f "$lock"
     ;;
   stack-guard)
-    cmd=$(jq -r '.tool_input.command // empty')
-    grep -qE '(^|[;&|(])[[:space:]]*(([A-Za-z_]+=[^[:space:]]*|bash|sh|exec|time)[[:space:]]+)*([^[:space:];&|(]*/)?ci/(check|e2e)([[:space:];&|)]|$)' <<<"$cmd" || exit 0
-    if held=$(stack_up); then why="$held is up"
-    elif e2e_running; then why="ci/check or ci/e2e holds it"
+    input=$(cat)
+    cmd=$(jq -r '.tool_input.command // empty' <<<"$input" | "$(dirname "$0")/unquoted.sh")
+    at='(^|[;&|(])[[:space:]]*(([A-Za-z_]+=[^[:space:]]*|bash|sh|exec|time|nohup|timeout[[:space:]]+[0-9.]+[smhd]?|env([[:space:]]+-u[[:space:]]+[^[:space:]]+)*)[[:space:]]+)*'
+    end='([[:space:];&|)]|$)'
+    compile='(mbx[[:space:]]+)?cargo([[:space:]]+\+[^[:space:]]+)?[[:space:]]+(check|build|clippy|nextest|test|sqlx[[:space:]]+prepare)|comply[[:space:]]+--working-tree|([^[:space:];&|(]*/)?ci/lib/comply-workspace|mbx[[:space:]]+gc'
+    if grep -qE "$at([^[:space:];&|(]*/)?ci/(check|e2e)$end" <<<"$cmd"; then
+      if held=$(stack_up); then r="One stack at a time: $held is up"
+      elif e2e_running; then r="One stack at a time: ci/check or ci/e2e holds it"
+      else exit 0
+      fi
+      r+=". Wait for it to end, or slot.sh qa-down the QA stack first."
+    # A closing gate's load would turn it red: no compile beside it in the loop's worktrees.
+    elif sed -E 's/mbx[[:space:]]+gc[[:space:]][^;&|]*--dry-run//g' <<<"$cmd" | grep -qE "$at($compile)$end" &&
+      jq -r '.tool_input.command, .cwd // empty' <<<"$input" | grep -qE -- '-worktrees/(slot|loop)-' && e2e_running; then
+      r="No compile beside a closing gate: ci/check or ci/e2e runs. End the phase \`BLOCKED gate\`: it is re-spawned at the gate's exit."
     else exit 0
     fi
-    jq -cn --arg r "One stack at a time: $why. Wait for it to end, or slot.sh qa-down the QA stack first." \
+    jq -cn --arg r "$r" \
       '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'
     ;;
   *) usage ;;

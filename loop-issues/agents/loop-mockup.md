@@ -15,5 +15,7 @@ sees between a mockup and its screen — layout, control, size, spacing,
 colour, shadow, copy, an element missing or added; seed data aside —
 is one row of the output table
 `| m<k> | <screen> | in-lot | <difference> | <mockup> | <capture> |`;
-a mockup screen without a capture → its row classed `blocked`. Then
+a mockup screen without a capture → its row classed `blocked`; a screen
+whose newer validated mockup sits in another lot of the run
+(`<run dir>/issue-*/mockups/`) → `superseded`, never `in-lot`. Then
 `<output>.done`, and ONE line: `DIFFS <output>` or `MATCH <output>`.

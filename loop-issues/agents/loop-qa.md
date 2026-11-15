@@ -24,8 +24,12 @@ You execute the plan in your prompt on the running stack, per
 - Stay inside the budget in minutes the handoff writes, counted from
   your spawn; past it, stop the Breakers and write the verdict with
   what ran and `ABORTED — budget` for the rest — never overrun it.
-- Every process you start is listed in the verdict for the builder to
-  kill.
+- Each FAIL row or in-lot finding → at once `✘ <verdict stem>:<row>
+  — <evidence>` in the reds file your prompt names (Breaker: its share
+  as prefix), the same id in the verdict.
+- The verdict carries `head: <sha>`, the commit of the stack you drove
+  (`merge-gate.sh` refuses a front changed since), and every process you
+  start, for the builder to kill.
 - No background wait, timer or poll outlives the run: each one that
   expires later wakes you to repeat the verdict line for nothing.
   Wait in the foreground, or stop it before the end.
