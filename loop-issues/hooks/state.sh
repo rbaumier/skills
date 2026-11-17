@@ -1,7 +1,7 @@
 #!/bin/bash
 # Reads and marks the loop's state.md; exit 2 = refused, reason on stderr.
 # Exit 1 = usage or unreadable state, never a refusal.
-#   state.sh tick <state.md>            budget marks, session line, then the loop mode
+#   state.sh tick <state.md>            budget marks, session line, `QA due: pass <k>`, then the loop mode
 #   state.sh model <state.md> <serving model id>
 #   state.sh fresh                      skill files changed since the last read
 #   state.sh count <state.md>           progress counter
@@ -44,6 +44,14 @@ case ${1:-} in
     # Every session that drives the run, for /reflect.
     sid=${CLAUDE_CODE_SESSION_ID:-}
     [ -z "$sid" ] || grep -qx "session: $sid" "$state" || echo "session: $sid" >>"$state"
+    # A lane pass over (its verdict line, no gate left in the lane worktree), no close.md since, none in flight, owes its QA.
+    closing=$(dirname "$state")/closing k=0
+    for f in "$closing"/check-*.log; do
+      [[ $f =~ /check-([0-9]+)\.log$ ]] && n=${BASH_REMATCH[1]} && ((n > k)) && grep -qE '^check: (green|red:)' "$f" && k=$n
+    done
+    lane_busy() { for p in $(pgrep -f '(^|[ /])ci/(check|e2e)( |$)'); do lsof -a -p "$p" -d cwd -Fn 2>/dev/null | grep -q -- '-lane$' && return; done; false; }
+    grep -q '^integration:' "$state" && ((k > 0)) && [ ! "$closing/close.md" -nt "$closing/check-$k.log" ] &&
+      ! grep -qE '^(slot 1|lane):.*\bclose\b.* since ' "$state" && ! lane_busy && echo "QA due: pass $k"
     mode=$(sed -n 's/^mode: //p' "$state")
     case $mode in
       pause-until\ *)

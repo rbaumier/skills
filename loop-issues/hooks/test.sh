@@ -30,6 +30,17 @@ for c in 'git commit --no-verify -m x' 'git commit -n' 'cd x && git -C y commit 
   expect deny "$bypass" "$(command_input "$c")"
 done
 
+group=hookless_repo_or_inert_flag_passes
+git init -q "$tmp/bare-hooks"
+for c in 'git commit --no-verify -m x' 'git commit -n -m x'; do expect pass "$bypass" "$(command_input "$c" "$tmp/bare-hooks")"; done
+expect deny "$bypass" "$(command_input 'git config core.hooksPath /dev/null' "$tmp/bare-hooks")"
+printf '#!/bin/sh\n' >"$tmp/guarded/.git/hooks/pre-commit" && chmod +x "$tmp/guarded/.git/hooks/pre-commit"
+for c in 'git commit --no-verify=false -m x' 'git commit --dry-run --no-verify -m x'; do expect pass "$bypass" "$(command_input "$c" "$tmp/guarded")"; done
+for c in 'git commit --no-verify -m x' 'git commit --no-verify=true -m x' 'git commit --dry-run -m x && git commit -n -m y'; do
+  expect deny "$bypass" "$(command_input "$c" "$tmp/guarded")"
+done
+rm "$tmp/guarded/.git/hooks/pre-commit"
+
 group=plain_git_passes
 for c in 'git commit -m x' 'git commit -am "doc: forbid --no-verify"' \
   'git config --get core.hooksPath' 'git log -n 3' 'git log --grep=commit -n 3' \
@@ -63,7 +74,7 @@ expect pass "$issue" "$(command_input 'gh issue create -R g/p -t x')"
 expect pass "$issue" "$(command_input "rg -n 'gh issue create' docs" "$tmp/guarded")" g/p
 
 gate="$hooks/merge-gate.sh"
-git init -q "$tmp/repo" && cd "$tmp/repo" || exit 1
+git init -q "$tmp/repo" && cd "$tmp/repo" && git remote add origin git@forge:t/repo.git || exit 1
 mkdir -p web api "$tmp/report/qa" && touch web/a api/a
 commit() { [ $# -eq 0 ] || git add "$@"; git -c user.name=t -c user.email=t@t commit -qm x --allow-empty; }
 commit && commit api/a && commit web/a
@@ -142,6 +153,14 @@ grep -q '#5 without a capture' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp
 printf '%s\n' '- **#5** !1 x' '  ![a](/uploads/a.png)' >"$tmp/report/mr-body.md"
 expect pass "$gate" '' "$tmp/report" HEAD~1 HEAD
 rm -r "$tmp/issue-5" "$tmp/issue-7" "$tmp/constats.md" "$tmp/report/mr-body.md"
+
+group=merge_gate_dry_run_lists_every_refusal
+printf '%s\n' '- [ ] x' >"$tmp/constats.md" && mkdir -p "$tmp/issue-5"
+expect deny "$gate" '' --dry-run "$tmp/report" HEAD~1 HEAD
+grep -q 'audit due' "$tmp/reason" && grep -q 'issue-5 merged without review' "$tmp/reason" || { echo "FAIL $group: $(cat "$tmp/reason")" >&2; exit 1; }
+expect deny "$gate" '' "$tmp/report" HEAD~1 HEAD
+[ "$(grep -c BLOCKED "$tmp/reason")" = 1 ] || { echo "FAIL $group: not first-refusal only: $(cat "$tmp/reason")" >&2; exit 1; }
+rm -r "$tmp/issue-5" "$tmp/constats.md"
 
 group=in_lot_rows_of_every_verdict_and_mockup_pass
 verdict 12 NO-GO '| b1 | UI | in-lot | x |'
@@ -298,6 +317,12 @@ expect deny "$check" '' tests "$tmp/c.md" base
 grep -q 'outside Tests modifiés: b.rs' "$tmp/reason" || { echo "FAIL $group: deleted test module: $(cat "$tmp/reason")" >&2; exit 1; }
 printf '%s\n' '- `b.rs` — x' >>"$tmp/c.md"
 expect pass "$check" '' tests "$tmp/c.md" base
+mkdir -p ci/lib && printf '#!/bin/bash\n' >ci/lib/frontend-lanes && printf '#!/bin/bash\necho "a.ts:1:1 no-x"; exit 1\n' >ci/lib/comply-added && chmod +x ci/lib/*
+expect deny "$check" '' tests "$tmp/c.md" base
+grep -q 'comply-added' "$tmp/reason" || { echo "FAIL $group: comply-added red passed: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '#!/bin/bash\n' >ci/lib/comply-added
+expect pass "$check" '' tests "$tmp/c.md" base
+rm -r ci
 cd "$tmp/repo" || exit 1
 
 group=overlap_shared_file_holds
@@ -455,6 +480,9 @@ done
 [ "$(guard 'cargo check')" = allow ] || fail "compile outside a loop worktree denied"
 [ -z "$(jq -cn '{tool_input: {command: "cargo check"}, cwd: "/a/x-worktrees/issue-3"}' | "$slot" stack-guard)" ] || fail "issue- is no loop worktree"
 kill "$fake"; wait "$fake" 2>/dev/null
+bash -c 'sleep 30; :' -n ci/check & fake=$!
+[ "$(guard 'ci/e2e')" = allow ] || fail "bash -n ci/check seen as a stack"
+kill "$fake"; wait "$fake" 2>/dev/null
 [ "$(guard 'ci/e2e')" = allow ] || fail "e2e denied with no stack"
 [ "$(guard "cd $tmp/x-worktrees/slot-2 && cargo check")" = allow ] || fail "compile denied with no gate"
 "$slot" qa-up "$tmp/qa2.md" "$tmp/qa2.log" "$(serve "$b")" "$b" && up "$b" || fail "stack after qa-down"
@@ -498,6 +526,21 @@ grep -q ' 🐢 20/10 min$' "$tmp/state.md" || fail "$(cat "$tmp/state.md")"
 printf '%s\n' 'mode: drain' "lane: 3 loop-shipper since $(at -1200) — $tmp/r1" >"$tmp/state.md"
 expect deny "$state" '' tick "$tmp/state.md"
 [ "$(cat "$tmp/reason")" = drained ] && grep -q '^lane: .* 🐢 20/15 min$' "$tmp/state.md" || fail "lane: $(cat "$tmp/state.md")"
+
+group=tick_qa_due_once_a_pass_is_over
+mkdir -p "$tmp/closing" "$tmp/x-lane" && printf '%s\n' 'mode: run' 'integration: loop/x' >"$tmp/state.md"
+echo 'check: red: contract' >"$tmp/closing/check-3.log" && echo running >"$tmp/closing/check-4.log" && touch -t 202601010000 "$tmp/closing/check-3.log"
+printf '#!/bin/bash\ncat %s 2>/dev/null\n' "$tmp/lane.pid" >"$tmp/bin/pgrep" && chmod +x "$tmp/bin/pgrep"
+[ "$("$state" tick "$tmp/state.md")" = 'QA due: pass 3' ] || fail "no QA due after pass 3"
+(cd "$tmp/x-lane" && exec sleep 30) & echo $! >"$tmp/lane.pid"
+sleep 0.3
+[ -z "$("$state" tick "$tmp/state.md")" ] || fail "QA due while the lane's gate runs"
+kill "$(cat "$tmp/lane.pid")"; wait 2>/dev/null; rm "$tmp/lane.pid"
+echo "slot 1: #closing close loop-shipper since $(at -60) — $tmp/closing" >>"$tmp/state.md"
+[ -z "$("$state" tick "$tmp/state.md")" ] || fail "QA due beside its close"
+printf '%s\n' 'mode: run' 'integration: loop/x' >"$tmp/state.md" && touch "$tmp/closing/close.md"
+[ -z "$("$state" tick "$tmp/state.md")" ] || fail "QA due after its close.md"
+rm -r "$tmp/closing" "$tmp/x-lane" "$tmp/bin/pgrep"
 
 group=tick_records_each_session_once
 printf '%s\n' 'slot 1: free' >"$tmp/state.md"
@@ -579,6 +622,10 @@ done
 expect pass "$guard" "$(spawn loop-mechanic 'cargo check --workspace --all-targets')"
 expect deny "$guard" "$(spawn loop-builder 'then TZ=UTC vitest run src/x.test.ts')"
 expect pass "$guard" "$(spawn loop-builder 'Fact: the widget vitest suite is red on x.test.tsx')"
+for p in 'merge-1.md (merge-queue red: `cargo check --workspace` finds no cache)' 'the queue stopped red at `pnpm -C apps/webapp check`.' \
+  'removing it fails pnpm check with TS2345) — an FP' 'incl. clippy disallowed_methods on Pool::begin: fix each'; do
+  expect pass "$guard" "$(spawn loop-builder "$p")"
+done
 expect pass "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/audit-2026-11-15/01-x.md. Label needs-triage only.')"
 expect deny "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/issue-2604/split/a.md. Labels needs-triage.')"
 

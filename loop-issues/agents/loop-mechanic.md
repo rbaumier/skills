@@ -3,7 +3,7 @@ name: loop-mechanic
 description: Sonnet helper for mechanical work inside a loop-issues worktree — tests from a closed list on a reference model, comply triage (raw output → grouped report), report-fp batches, rebase, codegen, fixture rewrites, the merge queue head's merge-check-merge, the closing merge. Exact task, no design decisions.
 model: claude-sonnet-5-5
 effort: medium
-tools: Read, Edit, Write, Bash, Grep, Glob, Monitor
+tools: Read, Edit, Write, Bash, Grep, Glob
 maxTurns: 250
 disallowedTools: AskUserQuestion
 ---

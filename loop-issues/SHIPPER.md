@@ -30,7 +30,9 @@ unless Step 0's merge gate counts added lines (natalia:
 `ci/lib/comply-added`): there an FP is closed as the repo's comply doc says (natalia: `docs/agents/comply.md`
 § Faux positifs, `comply-ignore: <rule> — <reason>` on the line), never by rewriting sound code.
 
-Run `comply --working-tree <worktree>` (post-commit: `--range
+Run Step 0's merge gate when it counts added lines (natalia:
+`ci/lib/comply-added origin/<base> HEAD`: committed lines only, so the wip is committed first; `pack <r ≥ 2>` keeps the
+files of `fix-<r>.patch`), else `comply --working-tree <worktree>` (post-commit: `--range
 origin/<base> HEAD`), output to a file, never to the context. Then
 write `<report-dir>/comply-triage.md`, ≤ 40 lines, grouped by rule
 then file, one line per group: `<rule> — <file> — <n> findings —
@@ -68,7 +70,8 @@ Round `r ≥ 2`, before step 3: `git diff <pack-<r-1> sha>..HEAD >
 2. `Mesure` of the contract (unless `none`): run, output captured.
 3. Squash the `wip` commits into ONE commit of explicit files, never
    `-A`: `type(scope): summary (closes #<n>)` (`refs #<n>` for a
-   non-final split task). A hook failure is this MR's to pay — fix
+   non-final split task), from `git merge-base HEAD origin/<base>`, never a `reset --soft` onto a
+   refetched `origin/<base>`; the test guard runs again on it. A hook failure is this MR's to pay — fix
    the offending lines and commit again. Whether the hook judges
    whole staged files or only added lines is the repo's (Step 0's
    Lint scope); a whole-file hook makes pre-existing drift in a
@@ -181,7 +184,8 @@ verdict included.
    is the sha `ci/check` certified), title `loop <date>: <k> lots`, body
    per `PRESENTATION.md`, kept in `<report-dir>/mr-body.md`: one section per lot, headed `### #<n>` (its MR, its
    `mr-description.md` summary, its `à valider :` bullets verbatim, keyword, `Closes #<n>` or `Refs #<n>`), the `## Tests
-   modifiés` of close.md; DRAFT in draft mode.
+   modifiés` of close.md; DRAFT in draft mode. Beside it, `<report-dir>/a-trancher.md`, `#n titre — question — reco` in plain words: each
+   `../issue-*/decision.md`, each `à valider` on money, billing or production data, each `hors dépôt … avant la prod/release` line of the lots' `mr-description.md` and `ship-*.md`.
    Read the pipeline once; red → `deliver.md` names the job and its
    first error lines.
 8. Report `<report-dir>/deliver.md`: MR URL, gates, QA verdict,

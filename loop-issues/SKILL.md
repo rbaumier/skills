@@ -190,8 +190,9 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
 ## The loop
 
 **Before every spawn**, run `~/.claude/skills/loop-issues/hooks/state.sh
-tick <state.md>`: it marks 🐢 every phase over its budget, then
-reads the mode. Exit 2 `paused until <time>` → no spawn at all;
+tick <state.md>`: it marks 🐢 every phase over its budget, prints
+`QA due: pass <k>` once that lane pass is over (verdict line, no gate left in the lane worktree) with no `close` run or running
+for it (§ Closing step 3: that spawn first), then reads the mode. Exit 2 `paused until <time>` → no spawn at all;
 `draining` → phases of lots in flight and the lane only, no new lot; `drained` →
 the closing when `state.md` holds `integrated:` lines (§ Closing), else
 the loop stops like the disk stop below, `stopped: drained`. Exit 1
@@ -200,7 +201,7 @@ pause ends by itself: past its time, the next tick passes and the
 lots resume at their phase.
 
 **Before every spawn** that opens a new lot (the `contract` phase of
-a selected issue), also run `~/.claude/skills/loop-issues/hooks/slot.sh
+a selected issue, a closing fix lot) and before each lane pass, also run `~/.claude/skills/loop-issues/hooks/slot.sh
 disk <threshold> <worktrees dir> <sweep command|-> <n of
 every lot in state.md>…`. It sweeps the test clones, drops the build
 cache of every worktree no process runs in, then removes
@@ -480,7 +481,7 @@ on `<integration>`'s head, holding no slot (its fix
 lots take their own), in `<worktrees dir>/loop-<date>-lane` (env:
 slot 1's, written with it), each phase in flight on a `lane:` line of `state.md` (a
 slot line's format). One pass at a time: at a merge's `DONE` or a lane
-notification, once the pass's verdict is in, a merge
+notification, once the pass's verdict is in and `tick` prints no `QA due`, a merge
 past `lane-head:` → 2 (merges meanwhile join that pass); none → 3
 again with no log (closing: → 5), unless it ended `CLOSED`. The lock held by another
 run's stack → the pass waits for it, never a brake, `lane: waiting` in
@@ -515,9 +516,8 @@ lane's passes until 5:
    `integrated:` lines, N = slots the run used (≥ 1), the pass,
    `closing` once asked:
    - `QA-READY <qa-handoff.md>` → `loop-qa` (handed `qa/reds-<pass>.md`) → verdict.
-     At the verdict, per front lot it verified
-     first whose report dir holds `mockups/`: ONE `loop-mockup` →
-     `<closing>/qa/mockup-<its report dir name>.md`. `ABORTED` → `slot.sh qa-down`, brake, `close` again, same
+     At the verdict, `merge-gate.sh --dry-run` (step 5's arguments): per `without its mockup pass` line,
+     ONE `loop-mockup` → `<closing>/qa/mockup-<its report dir name>.md`, that pass, never at publish. `ABORTED` → `slot.sh qa-down`, brake, `close` again, same
      pass.
    - `CLOSED <close.md>`: nothing to verify or break; the lane waits for a merge.
    - `BLOCKED <close.md>`: a stack that cannot start → brake, `close` again, same pass; reds alone never defer the QA (4 runs beside it).
@@ -535,7 +535,7 @@ lane's passes until 5:
    paths and row ids (`<file stem>:<row>`), no row text (tests: BUILDER.md § ship). Pack (test
    guard), review (MERGEABLE: its `ship` fixes nothing more, its minors and nits under `## Constats non payés`, no new round), deliver, merge queue like any round; step 4 checks
    MR, reviewer, disposition table only. A fix lot replays once only its
-   handed red rows, and its new tests once on `origin/<integration>` before the fix (green there = not a fix), e2e aside (the lane's next pass), before deliver — ONE `loop-mechanic`, the exact command, never the builder (its hook refuses) — never the full gate; no bisect, no repeat: an unstable red is a red, its cause paid.
+   handed red rows (e2e: its specs on its branch, `--repeat-each 3` when named unstable), and its new tests once on `origin/<integration>` before the fix (green there = not a fix), before deliver — ONE `loop-mechanic`, the exact command, never the builder (its hook refuses) — never the full gate nor the e2e tier; no bisect, no retry: an unstable red is a red, its cause paid.
    No cap on passes. Fix lot failed, not converged, or every row
    refuted (no MR) → 🐢 naming it, closing waits for the user, except a refuted mockup gap, one without a validated mockup, or an issue rewritten after its lot:
    `/issue` (`needs-triage`), `<row id> → #<m> <its url>` in `qa/deferred.md`, closing goes on. No fix reaches `<integration>` outside this path.
@@ -543,14 +543,14 @@ lane's passes until 5:
    `<integration>` → `<default>`. Autonomous → ONE `loop-mechanic`:
    `merge-gate.sh <closing report-dir> origin/<default> <head sha>
    <Frontend app dirs>`, certifying status green on that sha, merge
-   PINNED → issues closed by the forge. `BLOCKED`: conflict → 1;
-   status or gate → 2; `in-lot … unpaid` → 4, or the user's own word → `qa/waived.md`, one row id per line; `audit due` → the audit (§ Registry); `without review` → its review; `without a capture` → `publish` again; `without its mockup pass` → its `loop-mockup`.
-   Confirm each `integrated:` issue closed (fix lots aside), then delete `<integration>` (remote branch, worktree,
+   PINNED. `BLOCKED`: conflict → 1;
+   status or gate → 2; `in-lot … unpaid` → 4, or the user's own word → `qa/waived.md`, one row id per line (a waived gate red: at once a fix lot of 4 rewrites that test to the waiver's terms, e.g. a provider's documented refusal accepted where the waiver names it, the rest strict; never a skip, never an edited gate); `audit due` → the audit (§ Registry); `without review` → its review; `without a capture` → `publish` again; `without its mockup pass` → its `loop-mockup`.
+   Then the mechanic closes each `Closes #` target still open (`glab`, note « Fusionné dans <default> (!<mr>) ») and drops its `picked-by-agent` / `needs-triage`, never waiting on the forge; then delete `<integration>` (remote branch, worktree,
    gates model: step 4's drop, `wt` = that worktree, the lane's too; QA database of
    `qa-stack.md`), the `integration:`/`integrated:`/`closing:`/`lane-head:` lines,
    free slot 1. Draft → MR stays draft, the user merges. Summary line
-   `🏁 <integration> → <default> (!<mr>), <k> lots`, then `À trancher` lines in plain words (`#n titre — question — reco`: each `decision.md`, each `à valider` on money, billing or production data, each « corriger / accepter » criterion the loop settled) and `Décidé` lines; a defect named there is already an issue (step 4's audit), classed as the verdict classes it (in-lot / pre-existing), never written as fixed while its fix is off `<default>`. `ci/publish`,
-   `ci/deploy`: user's go only.
+   `🏁 <integration> → <default> (!<mr>), <k> lots`, then `<closing>/a-trancher.md` (`publish` writes it) pasted whole, plus each « corriger / accepter » criterion the loop settled, and `Décidé` lines; a defect named there is already an issue (step 4's audit), classed as the verdict classes it (in-lot / pre-existing), never written as fixed while its fix is off `<default>`. `ci/publish`,
+   `ci/deploy`: user's go only, after that 🏁.
 
 ## Slowness is yours
 

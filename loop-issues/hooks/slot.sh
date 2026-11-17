@@ -42,8 +42,12 @@ origin_of() { git -C "$1" remote get-url origin 2>/dev/null; }
 here=$(origin_of .)
 lock=${LOOP_STACK_LOCK:-$HOME/.cache/loop-stack${here:+-$(printf %s "$here" | shasum | cut -c1-12)}.lock}
 e2e_running() {
-  local pid cwd
+  local pid cwd args
   for pid in $(pgrep -f '(^|[ /])ci/(check|e2e)( |$)'); do
+    # A gate runs as ci/* or under bash/sh, never as `bash -n` (a syntax check).
+    args=$(ps -o args= -p "$pid") || continue
+    case " ${args%%ci/*}" in *" -n "*) continue ;; esac
+    case ${args%% *} in bash | */bash | sh | */sh | *ci/check | *ci/e2e) ;; *) continue ;; esac
     [ -z "$here" ] && return 0
     cwd=$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')
     [ -n "$cwd" ] && [ "$(origin_of "$cwd")" = "$here" ] && return 0
@@ -64,8 +68,8 @@ case ${1:-} in
     roomy && exit 0
     [ "$sweep" = - ] || bash -c "$sweep"
     roomy && exit 0
-    # Build caches first: a worktree no process runs in loses its target, however recent.
-    command -v mbx >/dev/null && mbx gc >/dev/null 2>&1
+    # Build caches first, the store down to the free-disk floor: a worktree no process runs in loses its target, however recent.
+    command -v mbx >/dev/null && mbx gc --max-size "${threshold}GiB" >/dev/null 2>&1
     for wt in "$worktrees"/*/; do
       [ -d "${wt}apps/api" ] && ! pgrep -f "${wt%/}" >/dev/null && mbx cache remove "${wt}apps/api" >/dev/null 2>&1
     done

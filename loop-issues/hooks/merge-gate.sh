@@ -1,10 +1,13 @@
 #!/bin/bash
-# merge-gate.sh <report-dir> <base> <head> [frontend dir…], from the repo.
+# merge-gate.sh [--dry-run] <report-dir> <base> <head> [frontend dir…], from the repo; --dry-run: every refusal, not the first.
 # Exit 2: an unpaid in-lot row, an unaudited constat; a lot merged in <base>..<head> without its
 # last review MERGEABLE, its mockup pass or, capture-marked, /uploads/ in <report-dir>/mr-body.md;
 # a front change whose last QA verdict is no GO(-PROVISIONAL), nor a NO-GO with every in-lot row paid,
 # or that changed after the verdict's `head: <sha>`; a merged closing fix without its <report-dir>/fix-<k>/.
 set -u
+dry=; [ "${1:-}" = --dry-run ] && dry=1 && shift
+rc=0
+block() { echo "BLOCKED — $1" >&2; rc=2; [ -n "$dry" ] || exit 2; }
 report=$1 base=$2 head=$3
 shift 3
 verdict='' last=0
@@ -53,43 +56,43 @@ for f in "$report"/qa/verdict-*.md "$report"/qa/mockup-*.md; do
       git log --format=%s "$base..$head" | grep -q "closing-fix-$k'" && paid=1 && break
     done
     [ -n "$paid" ] ||
-      { echo "BLOCKED — in-lot $row unpaid in $head (fix lot ${k:-none}); the user's own word → $report/qa/waived.md; a deferral → $report/qa/deferred.md (\`<row> → #<m> <issue url>\`, open, needs-triage)" >&2; exit 2; }
+      block "in-lot $row unpaid in $head (fix lot ${k:-none}); the user's own word → $report/qa/waived.md; a deferral → $report/qa/deferred.md (\`<row> → #<m> <issue url>\`, open, needs-triage)"
   done
 done
 for d in "$root"/issue-*/mockups/; do
   merged_lot "${d%/mockups/}" && [ -n "$(ls -A "$d")" ] || continue
   m=${d%/mockups/} m=mockup-${m##*/}
-  [ -f "$report/qa/$m.md" ] || { echo "BLOCKED — ${m#mockup-} without its mockup pass: $report/qa/$m.md" >&2; exit 2; }
+  [ -f "$report/qa/$m.md" ] || block "${m#mockup-} without its mockup pass: $report/qa/$m.md"
 done
-grep -qs '^- \[ \]' "$root/constats.md" && { echo "BLOCKED — audit due: $root/constats.md" >&2; exit 2; }
+grep -qs '^- \[ \]' "$root/constats.md" && block "audit due: $root/constats.md"
 for k in $(grep -x 'fix-[0-9]*' <<<"$merged"); do
-  [ -d "$report/$k" ] || { echo "BLOCKED — closing $k merged outside $report/$k/ (no issue.md, no review)" >&2; exit 2; }
+  [ -d "$report/$k" ] || block "closing $k merged outside $report/$k/ (no issue.md, no review)"
 done
 for d in "$root"/*/ "$report"/fix-*/; do
   merged_lot "$d" || continue
   # The newest round's verdict: the last verdict line of its report or its .done.
   r=$(ls "$d"review-[0-9]*.md 2>/dev/null | sort -V | tail -1)
   v=$(grep -hoE '^(\*\*)?(Verdict *: *)?\**(MERGEABLE|REWORK)' "$r" "$r.done" 2>/dev/null | grep -oE 'MERGEABLE|REWORK' | tail -1)
-  [ "$v" = MERGEABLE ] || { echo "BLOCKED — ${d%/} merged without review" >&2; exit 2; }
+  [ "$v" = MERGEABLE ] || block "${d%/} merged without review"
 done
 for m in "$root"/issue-*/mr-description.md; do
   merged_lot "${m%/mr-description.md}" && grep -q '<!-- capture:' "$m" || continue
   n=${m%/mr-description.md} n=${n##*/issue-} n=${n%%-t*}
   awk -v n="#$n" '/^(- \*\*|#)/ { s = $0 ~ (n "([^0-9]|$)") } s && /\/uploads\// { f = 1 } END { exit !f }' "$report/mr-body.md" 2>/dev/null ||
-    { echo "BLOCKED — #$n without a capture in $report/mr-body.md" >&2; exit 2; }
+    block "#$n without a capture in $report/mr-body.md"
 done
-[ $# -gt 0 ] || exit 0
+[ $# -gt 0 ] || exit $rc
 front=$(git diff --name-only "$base...$head" -- "$@") || exit 1
-[ -n "$front" ] || exit 0
-[ -n "$verdict" ] || { echo "BLOCKED — missing QA GO: $report/qa/verdict-1.md" >&2; exit 2; }
+[ -n "$front" ] || exit $rc
+[ -n "$verdict" ] || { block "missing QA GO: $report/qa/verdict-1.md"; exit $rc; }
 # A GO holds for the front it saw; a NO-GO whose in-lot rows are all paid or waived is spent.
 fresh() {
   local vhead
   vhead=$(grep -m1 -oE '^head: [0-9a-f]{7,40}' "$verdict" | cut -d' ' -f2)
-  [ -n "$vhead" ] || { echo "BLOCKED — $verdict names no \`head: <sha>\`" >&2; exit 2; }
+  [ -n "$vhead" ] || { block "$verdict names no \`head: <sha>\`"; return; }
   [ -z "$(git diff --name-only "$vhead" "$head" -- "$@")" ] ||
-    { echo "BLOCKED — front changed after the QA verdict's head $vhead: QA replays the fix lots' rows" >&2; exit 2; }
+    block "front changed after the QA verdict's head $vhead: QA replays the fix lots' rows"
 }
-case $word in GO | GO-PROVISIONAL) fresh "$@"; exit 0 ;; NO-GO) [ "$paid_rows" -gt 0 ] && exit 0 ;; esac
-echo "BLOCKED — missing QA GO: $verdict (${word:-no verdict})" >&2
-exit 2
+case $word in GO | GO-PROVISIONAL) fresh "$@"; exit $rc ;; NO-GO) [ "$paid_rows" -gt 0 ] && exit $rc ;; esac
+block "missing QA GO: $verdict (${word:-no verdict})"
+exit $rc

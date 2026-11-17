@@ -7,7 +7,7 @@
 #   check.sh contract <contract.md>   LOOP_FRONTEND (ERE): front lot → each Besoin owes an e2e/ test.
 #     Run in the repo; LOOP_BASE (default HEAD): the ref Impact e2e paths must exist on.
 #   check.sh overlap <new contract.md> <in-flight contract.md>…
-#   check.sh tests <contract.md> <base ref>   the pack's test guard, in the worktree.
+#   check.sh tests <contract.md> <base ref>   the pack's test guard and the queue's format and comply-added, in the worktree.
 set -uo pipefail
 refuse() { echo "$1" >&2; exit 2; }
 
@@ -104,6 +104,14 @@ case ${1:-} in
       git diff -U0 "$base...HEAD" -- "$f" | grep '^-[^-]' | grep -E '(^|[^.[:alnum:]_])expect\(|assert' >/dev/null &&
         ! grep -qF "$f::" <<<"$listed" && refuse "$f drops an assertion without its ::<test> line in Tests modifiés"
     done < <(git diff -M --name-status "$base...HEAD")
+    # The merge queue's format and added-line comply checks, where the repo has them (natalia: ci/lib/merge).
+    top=$(git rev-parse --show-toplevel)
+    [ -x "$top/ci/lib/comply-added" ] || exit 0
+    for lane in $(git diff --name-only "$base...HEAD" | "$top/ci/lib/frontend-lanes"); do
+      d=apps/$lane; [ "$lane" = e2e ] && d=e2e
+      out=$(pnpm -C "$top/$d" format --check 2>&1) || refuse "red at \`pnpm -C $d format --check\`: $(tail -5 <<<"$out")"
+    done
+    out=$(SQLX_OFFLINE=true "$top/ci/lib/comply-added" "$base" HEAD 2>&1) || refuse "red at \`ci/lib/comply-added $base HEAD\`: $(tail -5 <<<"$out")"
     ;;
   *) echo "usage: check.sh issue|contract|overlap|tests …" >&2; exit 1 ;;
 esac

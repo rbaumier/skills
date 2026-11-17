@@ -18,8 +18,8 @@ leaf and reads § Waiting and § Report.
 - The root session is the catch-all: it receives whatever no live
   parent can. A subagent receives only what its live children send.
 - Foreground `sleep` is blocked by the harness; Bash wait loops
-  (`until`/`while`/`for` + `sleep`) are BANNED everywhere: a leaf
-  waits on a condition another process owns with a Monitor.
+  (`until`/`while`/`for` + `sleep`) are BANNED, a Monitor's too (it reaches the hook as Bash),
+  save ONE orchestrator `run_in_background` until-loop. A leaf never waits on another process: `BLOCKED <the condition>`.
 
 ## Waiting — the only way
 

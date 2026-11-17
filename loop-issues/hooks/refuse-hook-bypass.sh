@@ -1,7 +1,11 @@
 #!/bin/bash
 # PreToolUse hook (Bash): refuse a git call skipping pre-commit.
 # Heredoc bodies and quoted strings may cite the flags: dropped.
-cmd=$(jq -r '.tool_input.command // empty' | awk '
+input=$(cat)
+# No pre-commit hook and no hooksPath in the cwd's repo (a `cd`/`-C` target is not resolved): no commit flag skips one.
+(cd "$(jq -r '.cwd // "."' <<<"$input")" 2>/dev/null && hook=$(git rev-parse --path-format=absolute --git-path hooks/pre-commit 2>/dev/null) &&
+  [ ! -x "$hook" ] && [ -z "$(git config core.hooksPath)" ]) && hookless=1
+cmd=$(jq -r '.tool_input.command // empty' <<<"$input" | awk '
   end != "" {
     if ($0 ~ "^[[:space:]]*" end "[[:space:]]*$") end = body = ""; else body = body $0 "\n"
     next
@@ -15,8 +19,9 @@ cmd=$(jq -r '.tool_input.command // empty' | awk '
   | sed -E "s/\\\\;/ /g; s/'[^']*'|\"[^\"]*\"/Q/g")
 git='(^|[^[:alnum:]_.-])git([[:space:]]+(-[cC][[:space:]]*[^[:space:]]+|--[^[:space:]]+))*[[:space:]]+'
 # -n counts only after commit's argument-less short flags: -uno, -amn pass.
-if printf '%s\n' "$cmd" | grep -qE \
-  "${git}commit([[:space:]][^;&|]*)?[[:space:]](--no-verify|-[apseiovqz]*n)" \
+# A --dry-run commit runs no hook; --no-verify=false skips none.
+if [ -z "${hookless:-}" ] && printf '%s\n' "$cmd" | sed -E 's/commit[^;&|]*[[:space:]]--dry-run([[:space:]][^;&|]*)?//g' | grep -qE \
+  "${git}commit([[:space:]][^;&|]*)?[[:space:]](--no-verify(=true)?([^=[:alnum:]-]|$)|-[apseiovqz]*n)" \
   || printf '%s\n' "$cmd" | grep -qiE \
   -e "${git}-c[[:space:]]*core\.hookspath=" \
   -e "${git}config([[:space:]]+(--global|--local|--system|--worktree|set))*[[:space:]]+core\.hookspath[[:space:]]+[^[:space:]-]"; then

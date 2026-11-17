@@ -17,5 +17,7 @@ is one row of the output table
 `| m<k> | <screen> | in-lot | <difference> | <mockup> | <capture> |`;
 a mockup screen without a capture → its row classed `blocked`; a screen
 whose newer validated mockup sits in another lot of the run
-(`<run dir>/issue-*/mockups/`) → `superseded`, never `in-lot`. Then
+(`<run dir>/issue-*/mockups/`) → `superseded`; one the repo's design doc (natalia:
+`apps/webapp/DESIGN.md`) or the lot's declared gaps (`mr-description.md`,
+`ship-*.md` beside `mockups/`) settle → `declared`; neither is `in-lot`. Then
 `<output>.done`, and ONE line: `DIFFS <output>` or `MATCH <output>`.

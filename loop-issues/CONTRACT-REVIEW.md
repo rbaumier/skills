@@ -21,7 +21,8 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
 - **Creep** — a `Besoin`, `Tests` or `Tranches` line the criteria do
   not need (a protocol, a table, a layer, a test of a choice).
 - **Missing** — a criterion or named risk without a `Besoin` or
-  `Tests` line, or a user-visible `Besoin` without its e2e line.
+  `Tests` line, a user-visible `Besoin` without its e2e line, or an element of
+  the validated mockup (`mockups/` beside `contract.md`, read as images) without a `Besoin`, unless the repo's design doc contradicts it.
 - **Weakened check** — a `Tests modifiés` line no issue line pays
   (the behaviour the test pins is not one the issue changes): `blocker`;
   an `Impact e2e` whose greps miss a changed route, string, default or
