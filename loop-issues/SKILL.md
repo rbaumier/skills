@@ -432,7 +432,12 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `~/.claude/skills/issue/SKILL.md` in
    `<report-root>/audit-<UTC date>/`; the mechanic ends `DONE
    <report-root>/audit-<UTC date>/`. Then you append `audited` to the
-   registry and, per draft, spawn the `issue-publisher`
+   registry and run `/issue` step 2's review on that dir: per round ONE
+   `issue-reviewer` handed `<report-root>/constats.md` as the ask (no
+   briefing), the dir and `REVIEWER.md`; a `DRAFT-REWORK` → a
+   `loop-mechanic` amends the drafts and writes `review-response-<c>.md`;
+   no `DRAFT-OK` after round 3 → its entries stay `[ ]`. On `DRAFT-OK`,
+   per draft the `issue-publisher`
    (`~/.claude/skills/issue/SKILL.md` step 4) with the label
    `needs-triage`, never `ready-for-agent`. Only its `CREATED` (the
    forge returned the issue) marks the draft's entries

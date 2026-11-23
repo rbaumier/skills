@@ -184,8 +184,8 @@ verdict included.
    is the sha `ci/check` certified), title `loop <date>: <k> lots`, body
    per `PRESENTATION.md`, kept in `<report-dir>/mr-body.md`: one section per lot, headed `### #<n>` (its MR, its
    `mr-description.md` summary, its `à valider :` bullets verbatim, keyword, `Closes #<n>` or `Refs #<n>`), the `## Tests
-   modifiés` of close.md; DRAFT in draft mode. Beside it, `<report-dir>/a-trancher.md`, `#n titre — question — reco` in plain words: each
-   `../issue-*/decision.md`, each `à valider` on money, billing or production data, each `hors dépôt … avant la prod/release` line of the lots' `mr-description.md` and `ship-*.md`.
+   modifiés` of close.md; DRAFT in draft mode. Beside it, `<report-dir>/a-trancher.md`, opening with `## Décisions attendues` (each `done: #<n> ❓` or `❌` line of `../state.md` and each `hors dépôt … avant la prod/release` line of the lots' `mr-description.md` and `ship-*.md`, one line with the reco), then `#n titre — question — reco` in plain words: each
+   `../issue-*/decision.md`, each `à valider` on money, billing or production data, when ../engagements.md exists, each à valider that moves or replaces a component the issue names, or that settles a point left open there.
    Read the pipeline once; red → `deliver.md` names the job and its
    first error lines.
 8. Report `<report-dir>/deliver.md`: MR URL, gates, QA verdict,

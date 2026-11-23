@@ -5,7 +5,8 @@ One round per spawn, read-only, before any code: `git grep` /
 Read the issue (in `contract.md`), then the contract, then the repo:
 `CLAUDE.md` (or `AGENTS.md`) and the guides its pointers name for
 every area the contract touches (`CODING_STANDARDS.md` → per-area
-guides when present) — they are disclosed by pointer, never
+guides when present) and the repo's review checklist (natalia:
+`docs/review-checklist.md`), read whole — they are disclosed by pointer, never
 preloaded, and their rules and named exceptions are repo facts.
 
 Judge the contract against the ISSUE and the REPO, shape by shape —

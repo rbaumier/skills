@@ -3,7 +3,7 @@
 # Exit 2: an unpaid in-lot row, an unaudited constat; a lot merged in <base>..<head> without its
 # last review MERGEABLE, its mockup pass or, capture-marked, /uploads/ in <report-dir>/mr-body.md;
 # a front change whose last QA verdict is no GO(-PROVISIONAL), nor a NO-GO with every in-lot row paid,
-# or that changed after the verdict's `head: <sha>`; a merged closing fix without its <report-dir>/fix-<k>/.
+# or that changed after the verdict's `head: <sha>`; a merged closing fix without its <report-dir>/fix-<k>/, its constats registered, or, when its last review's `## Findings` lists a minor or nit, a ship `## Constats non payés` line.
 set -u
 dry=; [ "${1:-}" = --dry-run ] && dry=1 && shift
 rc=0
@@ -64,10 +64,16 @@ for d in "$root"/issue-*/mockups/; do
   m=${d%/mockups/} m=mockup-${m##*/}
   [ -f "$report/qa/$m.md" ] || block "${m#mockup-} without its mockup pass: $report/qa/$m.md"
 done
-grep -qs '^- \[ \]' "$root/constats.md" && block "audit due: $root/constats.md"
 for k in $(grep -x 'fix-[0-9]*' <<<"$merged"); do
   [ -d "$report/$k" ] || block "closing $k merged outside $report/$k/ (no issue.md, no review)"
+  c=; awk 'FNR == 1 { f = 0 } $0 == "## Constats non payés" { f = 1; next } /^## / { f = 0 } f && /^- / && tolower($0) !~ /^- (aucun|none|n(é|É)ant)[[:punct:]]*[[:space:]]*$/ { n = 1 } END { exit !n }' "$report/$k"/ship-*.md 2>/dev/null && c=1
+  r=$(ls "$report/$k"/review-[0-9]*.md 2>/dev/null | sort -V | tail -1)
+  [ -z "$c" ] && [ -n "$r" ] && awk '$0 == "## Findings" { f = 1; next } /^## / { f = 0 } f && /^- (minor|nit)/ { n = 1 } END { exit !n }' "$r" &&
+    block "closing $k: the minors of $(basename "$r") without \`## Constats non payés\` in its ship-*.md"
+  [ -n "$c" ] && ! grep -qx "merged #closing-$k" "$root/constats.md" 2>/dev/null &&
+    block "closing $k's constats unregistered: ~/.claude/skills/loop-issues/hooks/state.sh merged $root/constats.md closing-$k $report/$k"
 done
+grep -qs '^- \[ \]' "$root/constats.md" && block "audit due: $root/constats.md"
 for d in "$root"/*/ "$report"/fix-*/; do
   merged_lot "$d" || continue
   # The newest round's verdict: the last verdict line of its report or its .done.

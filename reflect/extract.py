@@ -164,7 +164,7 @@ verdict_re = re.compile(
 )
 judging = [(f, "review") for g in ("review-*.md", "contract-review*.md") for f in root.rglob(g)]
 judging += [(f, "qa") for f in root.rglob("verdict*.md")]
-findings, verdict_of = [], collections.defaultdict(list)
+findings, rapports, verdict_of = [], [], collections.defaultdict(list)
 for f, family in sorted(judging):
     if f.name.endswith(".done"):
         continue
@@ -172,12 +172,17 @@ for f, family in sorted(judging):
     v = verdict_re.findall(body)
     rel = f.relative_to(root)
     verdict_of[rel.parts[0] if len(rel.parts) > 1 else "(root)"].append(v[-1] if v else "?")
-    for item in item_re.findall(body):
-        if re.search(SEV[family], item, re.I) and not re.fullmatch(r"\|[\s|:-]*", item.strip()):
-            findings.append((str(rel), v[-1] if v else "?", item.strip()))
+    for m in item_re.finditer(body):
+        item = m.group()
+        section = ([""] + re.findall(r"^## +(.*)", body[: m.start()], re.M))[-1].strip()
+        if section == "Rapports à corriger":  # a report re-judged, not a finding
+            rapports.append(f"{rel}: {item.strip()}")
+        elif re.search(SEV[family], item, re.I) and not re.fullmatch(r"\|[\s|:-]*", item.strip()):
+            findings.append((str(rel), v[-1] if v else "?", section, item.strip()))
 with open(out / "findings.md", "w") as fh:
-    for i, (rel, v, item) in enumerate(findings, 1):
-        fh.write(f"### F{i:04d} {rel} ({v})\n{item}\n\n")
+    for i, (rel, v, section, item) in enumerate(findings, 1):
+        fh.write(f"### F{i:04d} {rel} ({v}) [{section}]\n{item}\n\n")
+(out / "rapports.md").write_text("".join(f"- {r}\n" for r in rapports))
 
 # --- comply triage lines; a non-empty file that parses to nothing is named
 comply, unparsed = [], []

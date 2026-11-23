@@ -45,7 +45,7 @@ sessions, CHECKPOINTS.md and its points:
 - **Fuites** (17, 18, 20, 21, and every `REWORK` at `major`/`blocker`):
   each defect traced to where it was born, the first point that should
   have caught it, the one that did, the minutes between.
-- **Revues** (3, 4, 10, 11): every `F` id of `T/findings.md` coded — kind,
+- **Revues** (3, 4, 10, 11): every `F` id of `T/findings.md` (`[section]`-tagged; re-judged reports in `T/rapports.md`) coded — kind,
   severity, fate (fixed, contested, ignored, filed) — one row per id;
   recurring kinds routed to what the builder reads, or to a check.
 - **Mécanique** (5–8, 12–16, 19, 22): hook refusals and what followed,

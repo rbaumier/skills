@@ -182,8 +182,8 @@ an `## Écarts au plan` line, never an edit of `contract.md`.
   under `## Mechanic` of the slice note: the list verbatim, the
   worktree, the reference test path per file (a spec: `docs/tests-e2e.md` § Ce qu'une spec a le droit d'être too),
   and the rule "no new double, type or test outside the list; a gesture written twice becomes a local
-  function; an `e2e/src` helper that exists is consumed (grep first); commit `wip(<scope>): tests slice <k>`". Three
-  tests or fewer: write them yourself, no task.
+  function; a helper of `e2e/src` or `test_support` that exists is consumed (grep first); commit `wip(<scope>): tests slice <k>`". Three
+  tests or fewer: write them yourself, no task. The quoted rule binds the tests you write yourself too.
 - Other mechanical work (codegen, fixture rewrites) is yours; a
   batch too long for the phase → one more `## Mechanic` line.
 - While you write, `cargo check -p <crate> --all-targets`
@@ -213,7 +213,7 @@ review: create the worktree as slice 1 does (from
 `origin/<integration>`), fix every row the closing attributes to your
 lot (a `#closing-fix-<k>`: its group) (or refute it with the code line and the evidence file; a
 refutation with no line is a fix; a row contradicting a rule the
-user validated is refuted citing that rule, never coded), and nothing else; each QA row fixed adds its reproducing test
+user validated is refuted citing that rule, never coded), and nothing else; each QA row fixed adds its reproducing test (§ build's quoted rule)
 with its `broken gesture` as an `## Écarts au plan` line, a
 pre-existing finding is a `## Constats non payés` line. The contract's `Tests modifiés` still bounds
 the tests you may touch, a test outside it is a `## Écarts au plan`
