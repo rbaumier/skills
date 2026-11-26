@@ -8,7 +8,7 @@
 #   state.sh merged <constats.md> <n> <report-dir>
 #                                       registers the lot's unpaid findings;
 #                                       prints "audit due" from 10 merges
-#                                       since the last "audited" line
+#                                       since the last "audited" line, closing fixes aside
 set -uo pipefail
 refuse() { echo "$1" >&2; exit 2; }
 usage() { echo "usage: state.sh tick|model|fresh|count|merged …" >&2; exit 1; }
@@ -89,8 +89,8 @@ case ${1:-} in
     [ -n "${planned:-}" ] || { echo "count: no 'planned: N (+k)' line in $2" >&2; exit 1; }
     finished=$(grep -c '^done: ' "$2")
     reg=$(dirname "$2")/constats.md
-    since=$(awk '/^audited/ { c = 0 } /^merged / { c++ } END { print c + 0 }' "$reg" 2>/dev/null)
-    open=$(grep -c '^- \[ \]' "$reg" 2>/dev/null)
+    since=$(awk '/^audited/ { c = 0 } /^merged / && !/^merged #closing-fix-/ { c++ } END { print c + 0 }' "$reg" 2>/dev/null)
+    open=$(awk '/^- \[ \]/ && !/^- \[ \] #closing-fix-/ { c++ } END { print c + 0 }' "$reg" 2>/dev/null)
     due=; { [ "${since:-0}" -ge 10 ] || { grep -q '^closing: asked' "$2" && [ "${open:-0}" -gt 0 ]; }; } && due=" — audit due ($open [ ])"
     echo "Compteur : $finished / $((planned + added)) lots$due"
     ;;
@@ -100,7 +100,7 @@ case ${1:-} in
     touch "$reg" || exit 1
     for ship in "$4"/ship-*.md; do
       [ -e "$ship" ] || continue
-      awk '$0 == "## Constats non payés" { f = 1; next } /^## / { f = 0 } f && sub(/^- /, "")' "$ship" |
+      awk '$0 == "## Constats non payés" { f = 1; next } /^## / { f = 0 } f && tolower($0) !~ /^- (aucun|none|n(é|É)ant)[[:punct:]]*[[:space:]]*$/ && sub(/^- /, "")' "$ship" |
         while IFS= read -r finding; do
           # A closed entry: its key, then the audit's closing mark.
           awk -v k="#$n $finding" '
@@ -111,7 +111,7 @@ case ${1:-} in
     done
     echo "merged #$n" >>"$reg"
     # Merges since the last audit; an `audited` line resets the count.
-    since=$(awk '/^audited/ { c = 0 } /^merged / { c++ } END { print c + 0 }' "$reg")
+    since=$(awk '/^audited/ { c = 0 } /^merged / && !/^merged #closing-fix-/ { c++ } END { print c + 0 }' "$reg")
     [ "$since" -ge 10 ] && echo 'audit due'
     ;;
   *) usage ;;

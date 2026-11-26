@@ -78,7 +78,7 @@ project language from the cache, and `SCOPER.md` (path). It ends
 `DRAFTED <dir>` (one file per draft, `split.md` when it proposes a
 split, `group.md` when it gathers several needs of the ask into one
 issue, `variantes.md` when a need changes any text or screen the user sees: after
-review, one agent per file runs `/mockups` on it against the running app, and you print its `file://` link),
+review, one agent per file runs `/emil-prototype` on it against the running app, and you print its `file://` link),
 `CONTEST <path>` (a config change, an existing feature, a doc
 fix, doing nothing or a direct fix under 15 lines covers the need) or `FAILED <path>`.
 

@@ -1,2 +1,4 @@
 # /issue forge cache
 - /Users/rbaumier/www/natalia/natalia-v3: GitLab, project_id getnatalia%2Fgetnatalia%2Fnatalia-v2 (origin git@gitlab.com:getnatalia/getnatalia/natalia-v2.git; `github` remote is a mirror, ignore). Language: French. Usual labels: group::dev, type::{bug,feature,maintenance,tech,dette}, theme::couverture-tests, ready-for-agent.
+- natalia-v2: `is_blocked_by` links return 403 (license); use `relates_to` + body mention.
+- /Users/rbaumier/www/accior/accior-private-gpt: GitHub, rbaumier/accior-private-gpt (origin git@github.com:rbaumier/accior-private-gpt.git). Language: French. Labels used: enhancement, bug, documentation, needs-triage (default GitHub set otherwise). Blocked-by: body line `> **Blocked by #N** — …` convention; REST `repos/…/issues/N/dependencies/blocked_by` and `…/sub_issues` readable (empty so far). No milestones; gh lacks `project` scope.

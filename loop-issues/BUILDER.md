@@ -39,6 +39,7 @@ Write `<report-dir>/contract.md`:
   for a product decision the issue leaves open or a dependency
   neither merged nor MR-covered; post the questions on the issue
   first.
+  If `<report-dir>/../engagements.md` exists, read it before writing `Formes`. A contract that replaces, moves or drops a listed commitment, or that settles a point of its « Reste ouvert » column, ends in NEEDS-CLARIFICATION, whatever the technical justification, even as a provisional or « à valider » choice, and even when the issue leaves the choice open. Only Romain settles an open point, and only a decision written in `engagements.md` counts. Write that question only in `<report-dir>/questions.md`, whose first line is exactly `Engagement : E<n>`, and post on the issue only « Décision de Romain attendue ». Never quote `engagements.md` on the forge.
   Every acceptance criterion and every constraint the issue states
   (a ceiling, a bound, a per-organization limit) keeps its `Besoin`
   line through any later rewrite of the contract: dropping one, or
@@ -84,10 +85,10 @@ Write `<report-dir>/contract.md`:
 - `Tests modifiés` — the CLOSED list of existing test files or tests
   the lot may edit or delete, `<file>[::<test>] — <the issue line
   that changes the behaviour it pins>`; `aucun` is the expected
-  value; a deleted spec cites its "no longer exists" criterion. No human reads an automerged diff: an existing test bent to
+  value; found like `Impact e2e`: a grep of the touched crates' and packages' tests on every bound, field, status, string or count the lot changes, each test it breaks listed; a deleted spec cites its "no longer exists" criterion. No human reads an automerged diff: an existing test bent to
   get green is a regression shipped; the pack blocks any outside it.
 - `Impact e2e` — the specs the lot affects, found without running
-  anything: a grep of the repo's e2e dir on every route, API field,
+  anything: a grep of the repo's e2e dir on every route, response status, refusal, API field,
   visible string, default value and e2e helper the lot changes, plus
   the spec the e2e doc names for each screen in `Formes` (a changed
   helper reaches every spec calling it). One line per spec, `- <path>
@@ -232,7 +233,7 @@ shipper with the reason each. Before the commit,
 `quality-bar-review` on the fix diff alone, each finding paid
 in that commit: a fix that breeds the next finding costs a round. Any existing test you edit (a review fix
 included) gets its `Tests modifiés` line in the same commit, with the
-issue line or review finding that changes the behaviour it pins; no
+issue line or review finding that changes the behaviour it pins, and a fix that changes a bound, field, status, string or count redoes the `Tests modifiés` grep; no
 such line → restore the test and fix the code. A test guard `BLOCKED`
 is paid the same way: a listed line when the issue or a finding pays
 the edit, else the test restored — never a list widened to get green. A wrong sentence in a loop report (pack,

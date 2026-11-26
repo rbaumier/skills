@@ -1,6 +1,6 @@
 ---
 name: daily-recap
-description: Récap quotidien cross-projets GitLab, formaté pour Slack — features, correctifs, reviews, en-attente, avec liens MRs/tickets et captures des UIs livrées.
+description: Récap quotidien cross-projets GitLab, formaté pour un fil Slack — diagramme récap et captures des UIs livrées en tête, texte avec liens MRs/tickets en réponse.
 disable-model-invocation: true
 ---
 
@@ -57,9 +57,23 @@ Chaque item porte son type en préfixe, repris du titre de la MR (conventional c
 
 Jamais de Reviews, En attente ni À suivre demain : les reviews données, les MRs encore ouvertes et les conflits sont écartés (raison : hors livré).
 
-## 5. Rendu Slack (copie du rendu navigateur)
+## 5. Diagramme récap
 
-Le collage riche dans Slack (gras + liens cliquables **sur les descriptions**) passe par le rendu navigateur : générer le HTML, donner son chemin absolu (sans préfixe `file://`) — l'utilisateur l'ouvre, Cmd+A, Cmd+C, puis Cmd+V dans Slack.
+Une image qui résume la journée sans lecture, toujours produite, même sans capture. Charger le skill `dataviz` avant de la construire.
+
+- Contenu : le titre du récap en haut, puis un bloc par scope du classement, son nombre d'items par type (feat, fix, autre) et ses 2-3 items marquants (feat, puis fix), libellés de 40 caractères au plus, sans tiret cadratin. Ni lien, ni numéro, ni statut.
+- Construction : HTML statique dans le scratchpad, ouvert par chrome-devtools `navigate_page`, `resize_page` à 1200 px de large, `take_screenshot` page entière écrit dans le dépôt puis déplacé dans le scratchpad sous `recap-<date>-diagramme.png`. Texte de 16 px au moins, lisible en vignette Slack.
+
+Fait quand : le PNG, relu par `Read`, montre chaque scope du classement avec des compteurs justes.
+
+## 6. Rendu Slack (copie du rendu navigateur)
+
+Le récap se poste en **fil Slack** :
+
+- **Message principal** : le diagramme, puis les captures.
+- **Réponse dans le fil** : le texte décrit ci-dessous, avec ses liens.
+
+Le collage riche dans Slack (gras + liens cliquables **sur les descriptions**) passe par le rendu navigateur : générer le HTML et donner son chemin absolu (sans préfixe `file://`).
 
 1. Construire le récap en HTML dans le scratchpad (`recap-<date>.html`) :
    - Chaque ligne dans un `<p>`.
@@ -73,7 +87,7 @@ Le collage riche dans Slack (gras + liens cliquables **sur les descriptions**) p
    - Tout espace adjacent à un `<a>` = `&nbsp;` — Slack avale les espaces normaux autour des liens au collage.
    - Puces courtes, impersonnel actif (jamais « j'ai »/« on »), français, scopes vides omis.
 2. Écrire aussi `recap-<date>.txt` : même contenu en texte brut, chaque numéro suivi de son URL nue, chaque item visible suivi des chemins de ses PNG — version de secours affichée dans le terminal.
-3. Annoncer : « Ouvrir le fichier, Cmd+A, Cmd+C, puis Cmd+V dans Slack. » S'il y a des captures : le collage navigateur ne les transporte pas de façon fiable — annoncer de les glisser ensuite dans le message Slack depuis le dossier. Le message se termine **toujours** par ces deux lignes, dans cet ordre, rien après :
+3. Annoncer l'ordre : « Poster le diagramme puis les captures, glissés depuis le dossier ; ouvrir le fil du message ; ouvrir le fichier, Cmd+A, Cmd+C, puis Cmd+V dans la réponse. » Le message se termine **toujours** par ces deux lignes, dans cet ordre, rien après :
    - `HTML : /…/recap-<date>.html` (chemin absolu nu, jamais `file://`)
    - `Dossier : /…/` (le scratchpad qui contient le HTML, le `.txt` et les PNG)
 

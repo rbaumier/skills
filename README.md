@@ -26,9 +26,9 @@ Hooks: register in `~/.claude/settings.json` as `PreToolUse` hooks:
 Hooks and scripts are bash and need `jq`, `git`, `curl`, `awk`, `python3`;
 `issue` and `loop-issues` also need `gh` or `glab`. The `comply` linter backs
 `language-rust`, `language-typescript`, `quality-bar-review` and `loop-issues`;
-the chrome-devtools MCP server backs `qa`, `qa-audit`, `mockups`, `show-me` and
+the chrome-devtools MCP server backs `qa`, `qa-audit`, `show-me` and
 `daily-recap`. Some skills target the author's projects (`loop-issues`, `qa`,
-`qa-audit`, `daily-recap`, `mockups`, `reflect`) and assume their tooling.
+`qa-audit`, `daily-recap`, `reflect`) and assume their tooling.
 
 ## License
 

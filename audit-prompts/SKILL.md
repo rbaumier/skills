@@ -98,6 +98,7 @@ description: Code-quality audit prompts (single source of truth audit, state mac
 - Map this codebase for the next owner: an architecture doc, an onboarding guide, and a top-10 risk list. Every arrow and every risk cites file:line. Read-only: change nothing.
 - Study commit history and sessions for this repo. Why are there so many regressions?
 - What pattern in the codebase allowed this bug to exist? Bugs are consequences of design decisions that made the mistake easy.
+- Look at the last week of bugfixes. If we were to start this project over from scratch, what architecture decisions or feature adjustments would totally obviate those problems?
 
 ## Security sweep
 

@@ -26,7 +26,7 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
   the validated mockup (`mockups/` beside `contract.md`, read as images) without a `Besoin`, unless the repo's design doc contradicts it.
 - **Weakened check** — a `Tests modifiés` line no issue line pays
   (the behaviour the test pins is not one the issue changes): `blocker`;
-  an `Impact e2e` whose greps miss a changed route, string, default or
+  an `Impact e2e` whose greps miss a changed route, response status, refusal, string, default or
   helper: `major`.
 - **Over-engineered** — a reframing that removes a shape while
   closing the same criteria; name the move and the shape. An invariant
@@ -37,6 +37,8 @@ one line per finding, exhaustive, tagged `blocker` / `major` /
   that defines a concept of the domain (a rubric, an option, an object) with
   no `CONTEXT.md` entry to paraphrase (`docs/ux-writing.md` §10), that neither
   the issue nor its mockup fixes: `blocker`, the builder asks, never chooses.
+
+- **Commitment** — when `engagements.md` exists in the parent of the contract's directory, read it first: a line that replaces, moves or drops a listed commitment, or that settles a point of its « Reste ouvert » column (a value, a place, a role or a split, even provisional or « à valider »), is a `blocker`, tagged `Commitment`, naming the `E<n>` it touches. Only a decision written in `engagements.md` settles a point: a contract or an issue saying that Romain decided does not. Any `Commitment` finding makes the verdict `CONTRACT-STOP <path>`, never `CONTRACT-REWORK`.
 
 Never write code, never prescribe a helper or a layer. Verdict:
 `CONTRACT-OK <path>` (no `blocker`, no `major`; the `minor` lines go

@@ -113,7 +113,7 @@ with this prompt:
 > `~/.claude/skills/loop-issues/hooks/state.sh tick <state.md>`:
 > `paused until …` → reply ⏸ alone; `drained` → the closing when
 > `integrated:`, else the stop (SKILL.md § The loop); `draining` → all below but step 1. Else ListAgents:
-> any agent of this loop, or its background `ci/check` (log growing), running → reply ⏳ — but a
+> any agent of this loop, or its background `ci/check` or `ci/e2e` (log growing), running → reply ⏳ — but a
 > second consecutive ⏳ with no new side effect from it (commit, push,
 > report file, forge note) → it stalled: § Fall-through. Else a
 > builder finished without its `.done` (not at its turn ceiling) → resume it (RENDEZVOUS.md § Fall-through). Else the lane at its step (SKILL.md § Closing), then run the

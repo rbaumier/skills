@@ -76,6 +76,7 @@ case ${1:-} in
     done
     ;;
   tests)
+    [ -z "$(git status --porcelain)" ] || refuse "uncommitted changes: commit first, comply-added judges committed lines only"
     listed=$(section "$2" 'Tests modifiés')
     base=$3
     # Test paths, plus .rs files whose diff starts under their #[cfg(test)].
@@ -99,7 +100,12 @@ case ${1:-} in
       [[ $status == A ]] || grep -qF "$path" <<<"$listed" || grep -qF "$f" <<<"$listed" ||
         refuse "test changed outside Tests modifiés: $f"
       [ "$status" = D ] && continue
-      added=$(git diff -U0 "$base...HEAD" -- "$f" | grep '^+[^+]' | grep -E '#\[ignore\]|\.skip\(|\.only\(|test\.fixme' | grep -vF 'skip(process.env.VOICE_STACK !== "1"' | head -1)
+      added=$(git diff -U0 "$base...HEAD" -- "$f" | grep '^+[^+]' | grep -E '#\[ignore\]|\.skip\(|\.only\(|test\.fixme' | grep -vF 'skip(process.env.VOICE_STACK !== "1"' |
+        while IFS= read -r line; do
+          # A new real-account spec may skip on an E2E_ variable ci/e2e wires (ADR 0038).
+          v=$(grep -oE '^\+test\.skip\(process\.env\.E2E_[A-Z0-9_]+ === undefined, "[^"]*"\);$' <<<"$line" | grep -oE 'E2E_[A-Z0-9_]+')
+          [ "$status" = A ] && [ -n "$v" ] && git show "HEAD:ci/e2e" | grep -qF "\${$v:-}" || printf '%s\n' "$line"
+        done | head -1)
       [ -z "$added" ] || refuse "$f adds a skip: $added"
       git diff -U0 "$base...HEAD" -- "$f" | grep '^-[^-]' | grep -E '(^|[^.[:alnum:]_])expect\(|assert' >/dev/null &&
         ! grep -qF "$f::" <<<"$listed" && refuse "$f drops an assertion without its ::<test> line in Tests modifiés"

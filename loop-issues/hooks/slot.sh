@@ -9,7 +9,7 @@
 #   slot.sh qa-probe <dependency>=<command>…
 #   slot.sh qa-down <qa-stack.md>
 #   slot.sh stack-guard  PreToolUse Bash hook: denies ci/check or ci/e2e while a stack is up,
-#                        a compile in a loop worktree while ci/check or ci/e2e runs
+#                        a compile in a loop worktree while ci/check or ci/e2e runs, elsewhere under 30 GB free
 set -uo pipefail
 shopt -s nullglob
 refuse() { echo "$1" >&2; exit 2; }
@@ -159,17 +159,21 @@ case ${1:-} in
     cmd=$(jq -r '.tool_input.command // empty' <<<"$input" | "$(dirname "$0")/unquoted.sh")
     at='(^|[;&|(])[[:space:]]*(([A-Za-z_]+=[^[:space:]]*|bash|sh|exec|time|nohup|timeout[[:space:]]+[0-9.]+[smhd]?|env([[:space:]]+-u[[:space:]]+[^[:space:]]+)*)[[:space:]]+)*'
     end='([[:space:];&|)]|$)'
-    compile='(mbx[[:space:]]+)?cargo([[:space:]]+\+[^[:space:]]+)?[[:space:]]+(check|build|clippy|nextest|test|sqlx[[:space:]]+prepare)|comply[[:space:]]+--working-tree|([^[:space:];&|(]*/)?ci/lib/comply-workspace|mbx[[:space:]]+gc'
+    compile='(mbx[[:space:]]+)?cargo([[:space:]]+\+[^[:space:]]+)?[[:space:]]+(check|build|clippy|nextest|test|sqlx[[:space:]]+prepare)|comply[[:space:]]+--working-tree|([^[:space:];&|(]*/)?ci/lib/comply-workspace'
     if grep -qE "$at([^[:space:];&|(]*/)?ci/(check|e2e)$end" <<<"$cmd"; then
       if held=$(stack_up); then r="One stack at a time: $held is up"
       elif e2e_running; then r="One stack at a time: ci/check or ci/e2e holds it"
       else exit 0
       fi
       r+=". Wait for it to end, or slot.sh qa-down the QA stack first."
-    # A closing gate's load would turn it red: no compile beside it in the loop's worktrees.
-    elif sed -E 's/mbx[[:space:]]+gc[[:space:]][^;&|]*--dry-run//g' <<<"$cmd" | grep -qE "$at($compile)$end" &&
-      jq -r '.tool_input.command, .cwd // empty' <<<"$input" | grep -qE -- '-worktrees/(slot|loop)-' && e2e_running; then
-      r="No compile beside a closing gate: ci/check or ci/e2e runs. End the phase \`BLOCKED gate\`: it is re-spawned at the gate's exit."
+    # A running gate's load would turn it red: no compile beside it in the loop's worktrees.
+    elif jq -r '.tool_input.command, .cwd // empty' <<<"$input" | grep -qE -- '-worktrees/(slot|loop)-'; then
+      sed -E 's/mbx[[:space:]]+gc[[:space:]][^;&|]*--dry-run//g' <<<"$cmd" | grep -qE "$at($compile|mbx[[:space:]]+gc)$end" && e2e_running || exit 0
+      r="No compile beside a running gate: ci/check or ci/e2e runs. End the phase \`BLOCKED gate\`: it is re-spawned at the gate's exit."
+    # Elsewhere, under 30 GB free, a compile's target starves the gate's disk.
+    elif grep -qE "$at($compile|([^[:space:];&|(]*/)?ci/(rust-tests|lib/comply-added))$end" <<<"$cmd" &&
+      [ "$(free_gb "$HOME")" -lt 30 ] && e2e_running; then
+      r="No compile beside a running gate under 30 GB free: wait for ci/check or ci/e2e to end, then rerun."
     else exit 0
     fi
     jq -cn --arg r "$r" \

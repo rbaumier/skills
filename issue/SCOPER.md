@@ -59,7 +59,7 @@ no line, no pattern to mirror), decided (no open tension in a body).
    line as `# <title>`. Prepend the `Previously` / `Related` line the
    prompt hands you. A need changing any text or screen the user sees → its variants
    as text in `<dir>/variantes.md` (letter, title, one line each),
-   never in the body; you never draw: the router runs `/mockups`.
+   never in the body; you never draw: the router runs `/emil-prototype`.
 
 **Rework** (a `DRAFT-REWORK` path in your prompt): amend the drafts
 in place, write `<dir>/review-response-<c>.md` — one line per finding,

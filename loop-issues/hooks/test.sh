@@ -318,11 +318,13 @@ grep -q 'outside Tests modifiés: b.rs' "$tmp/reason" || { echo "FAIL $group: de
 printf '%s\n' '- `b.rs` — x' >>"$tmp/c.md"
 expect pass "$check" '' tests "$tmp/c.md" base
 mkdir -p ci/lib && printf '#!/bin/bash\n' >ci/lib/frontend-lanes && printf '#!/bin/bash\necho "a.ts:1:1 no-x"; exit 1\n' >ci/lib/comply-added && chmod +x ci/lib/*
+commit ci/lib/frontend-lanes ci/lib/comply-added
 expect deny "$check" '' tests "$tmp/c.md" base
-grep -q 'comply-added' "$tmp/reason" || { echo "FAIL $group: comply-added red passed: $(cat "$tmp/reason")" >&2; exit 1; }
-printf '#!/bin/bash\n' >ci/lib/comply-added
+grep -qF 'red at `ci/lib/comply-added base HEAD`: a.ts:1:1 no-x' "$tmp/reason" || { echo "FAIL $group: comply-added red passed: $(cat "$tmp/reason")" >&2; exit 1; }
+printf '#!/bin/bash\n' >ci/lib/comply-added && commit ci/lib/comply-added
 expect pass "$check" '' tests "$tmp/c.md" base
-rm -r ci
+touch dirty && expect deny "$check" '' tests "$tmp/c.md" base && grep -q 'uncommitted' "$tmp/reason" || { echo "FAIL $group: dirty tree passed" >&2; exit 1; }; rm dirty
+git rm -rq ci && commit
 cd "$tmp/repo" || exit 1
 
 group=overlap_shared_file_holds
@@ -478,6 +480,11 @@ for c in 'mbx gc --dry-run' 'cargo fmt --all' "git commit -m 'cargo check ok'" '
   [ -z "$(in_slot "$c")" ] || fail "compile guard too wide: $c"
 done
 [ "$(guard 'cargo check')" = allow ] || fail "compile outside a loop worktree denied"
+echo false >"$tmp/roomy-if"
+for c in 'cargo check' 'ci/rust-tests' './ci/lib/comply-added origin/main HEAD'; do [ "$(guard "$c")" = deny ] || fail "compile under 30 GB beside a gate: $c"; done
+for c in 'mbx gc' 'mbx gc --dry-run' 'cargo fmt --all' 'cat ci/rust-tests'; do [ "$(guard "$c")" = allow ] || fail "disk guard too wide: $c"; done
+[ -z "$(in_slot 'ci/lib/comply-added origin/main HEAD')" ] || fail "comply-added refused in a loop worktree"
+echo "[ ! -d $tmp/wts/issue-1 ]" >"$tmp/roomy-if"
 [ -z "$(jq -cn '{tool_input: {command: "cargo check"}, cwd: "/a/x-worktrees/issue-3"}' | "$slot" stack-guard)" ] || fail "issue- is no loop worktree"
 kill "$fake"; wait "$fake" 2>/dev/null
 bash -c 'sleep 30; :' -n ci/check & fake=$!
@@ -626,7 +633,8 @@ for p in 'merge-1.md (merge-queue red: `cargo check --workspace` finds no cache)
   'removing it fails pnpm check with TS2345) — an FP' 'incl. clippy disallowed_methods on Pool::begin: fix each'; do
   expect pass "$guard" "$(spawn loop-builder "$p")"
 done
-expect pass "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/audit-2026-11-15/01-x.md. Label needs-triage only.')"
+expect deny "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/audit-2026-11-15/01-x.md. Label needs-triage only.')"
+mkdir -p "$tmp/audit-1" && echo DRAFT-OK >"$tmp/audit-1/review-1.md" && expect pass "$guard" "$(spawn issue-publisher "Draft: $tmp/audit-1/01-x.md. Label needs-triage only.")"
 expect deny "$guard" "$(spawn issue-publisher 'Draft: /r/loop-1/issue-2604/split/a.md. Labels needs-triage.')"
 
 group=builder_no_tests

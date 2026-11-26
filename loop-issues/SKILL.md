@@ -111,6 +111,7 @@ previous run's Step 0 — repo docs/config only (CLAUDE.md, `package.json` scrip
   `<default>` but the closing MR. It lives in its own worktree
   `<worktrees dir>/loop-<date>` (env `loop-<date>.env` = slot 1's), created at the first merge and kept
   until the closing merges.
+- **Commitments** — when `origin` is `rbaumier/accior-private-gpt`, resolve `<root>` as the parent of the directory holding the main checkout (`git rev-parse --path-format=absolute --git-common-dir`, two levels up from its `.git`). `<report-root>` is `<root>/loop-reports`, never `loop-<n>`, and each lot's `<report-dir>` is `<report-root>/issue-<n>`. If `<root>/contexte/engagements.md` or `<report-root>/engagements.md` is missing, stop before any spawn.
 - **Worktree wiring** — deps, `.env`, codegen a fresh worktree needs.
   Rust: `CARGO_TARGET_DIR` stays unset, in every spawn and every
   gate: `cargo` goes through the `mbx` shim, which gives each
@@ -215,7 +216,7 @@ any other, at the notification of the next lot that finishes (step
 watchdog, one line `🐢 disk — <stderr> — free disk space, then
 /loop-issues`. Phases of lots already in flight are never held.
 
-1. **Select** — first replay Step 0's fresh-instructions test and
+1. **Select** — Never select an issue listed in `<report-root>/decisions-attendues.md`, even one named in the invocation. Only Romain removes a line from that file. First replay Step 0's fresh-instructions test and
    `state.sh fresh` (not `model`: the session's model is set); behind
    on a clean checkout → `git pull --ff-only`. An issue named in the invocation arguments is
    selected as is, whatever its labels, and the loop stops after its
@@ -276,7 +277,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      ```
      now come up with a much simpler solution that provides 80% of the benefits we are talking about here
 
-     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion, constraint, table row (oracle included) or element of the validated mockup of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
+     Rewrite contract.md in place: keep `Besoin`; redo `Formes`, `Réutilise`, `Tests`, `Tranches` for that simpler solution. Add `## Simplification`, one line per thing dropped — what, and the property it costs; no acceptance criterion, constraint, table row (oracle included), `B<k>`'s test (front lot: its `e2e/` one) or element of the validated mockup of the issue may be dropped. End with the same `CONTRACTED <contract.md>` line.
      ```
      → `CONTRACTED`. Then check `Formes`, a closed `Tests` list,
      `Tranches`, and run, in `<main-repo>`, `LOOP_BASE=origin/<integration>
@@ -294,6 +295,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
      2026-10-19: « c'est pas grave si il y a des fichiers en commun,
      il faut toujours 3 agents »). The lot always builds on
      `<integration>`.
+     When `<report-dir>/../engagements.md` exists, the contract review always runs. `CONTRACT-STOP <path>` sends the lot to step 5, never back to `contract` and never to `build 1`.
      One slice under ~150 changed lines and no new table, route or
      dependency in `Formes`, or a lot touching only tests, → `build 1`, no contract review: small
      issues ship in 30-60 min that way, where a contract review
@@ -365,7 +367,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    removed and append `integrated: #<n> !<mr> <report-dir>` to
    `state.md`. The issue stays open, `picked-by-agent`, until the
    closing MR merges (only a merge into `<default>` closes it).
-   Both modes, after the merge or the draft, and at step 5: clean up
+   Both modes, as the lot leaves its slot (queued or draft) and at step 5, the whole block (`mbx` line included): clean up
    behind the issue — everything it created, nothing else.
    ```bash
    wt=$(git -C ../<repo>-worktrees/slot-<s> rev-parse --show-toplevel)
@@ -435,7 +437,7 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    registry and run `/issue` step 2's review on that dir: per round ONE
    `issue-reviewer` handed `<report-root>/constats.md` as the ask (no
    briefing), the dir and `REVIEWER.md`; a `DRAFT-REWORK` → a
-   `loop-mechanic` amends the drafts and writes `review-response-<c>.md`;
+   `loop-mechanic` amends the drafts and writes `review-response-<c>.md`; a `CONTEST` or a `Contest` finding → it deletes that draft and marks its entries `[x] … — contesté <contest.md or review-<c>.md>`, never a rewrite; the rung-1 action it names → one `🐢` line;
    no `DRAFT-OK` after round 3 → its entries stay `[ ]`. On `DRAFT-OK`,
    per draft the `issue-publisher`
    (`~/.claude/skills/issue/SKILL.md` step 4) with the label
@@ -447,10 +449,11 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
 5. **Failure** — never merge, close the MR if opened, comment the
    issue with the summary, run step 4's cleanup block (worktree,
    branch, databases). NEEDS-CLARIFICATION, autonomous: a non-obvious
-   question on money, production, a dropped criterion or an unspecified
-   visible behaviour → both labels off + `agent-failed`; any other (an obvious one, a fix keeping
+   question on money, production, a dropped criterion, an unspecified
+   visible behaviour, a departure from engagements.md or a point left open there → both labels off + `agent-failed`; any other (an obvious one, a fix keeping
    the ADRs that adds no visible behaviour) is decided and announced (`decision.md`, a-savoir
    line), its split published by `/issue` and queued; draft → skip list.
+   When `<report-dir>/../engagements.md` exists, read it before deciding any NEEDS-CLARIFICATION yourself. A `CONTRACT-STOP`, a NEEDS-CLARIFICATION whose `questions.md` starts with `Engagement : E<n>`, or a doubt on whether a question touches `engagements.md` (then `<E n>` reads `à identifier`), stops the lot, never as « Other »: remove the agent labels and add `agent-failed` when they exist on the forge, append `#<n>` to `<report-root>/decisions-attendues.md`, comment the issue with « Décision de Romain attendue » and nothing else, write the summary line `❓ #<n> needs clarification`, never `❌ #<n> failed → re-queued`, and report at once `🐢 #<n> — lot arrêté — décision de Romain attendue sur <E n>`.
    Other: autonomous → `ready-for-agent` + `agent-failed`; draft →
    skip list.
 
@@ -470,9 +473,13 @@ watchdog, one line `🐢 disk — <stderr> — free disk space, then
    `planned:`. Each summary line ends with the output of
    `hooks/state.sh count <state.md>` (counter and rework rate), then
    the lines of the lot's `lenteurs.md`; every reply ends with that
-   counter. Nothing else
-   reaches the chat but 🐢 and a question: the rest goes to `<report-root>/a-savoir-<loop>.md`.
-   A phase transition that ends no lot writes NOTHING in the chat —
+   counter (closing: every reply replaces it with where it stands, what
+   remains, estimated %; unasked, the same plus tests passed / total and
+   prod ETA in Paris time at each milestone — gate, QA, merge, deploy —
+   and at each expiry of the pass's reds Monitor, every 20 min). Nothing else
+   reaches the chat but 🐢 and a question (the conversation's title,
+   never a worktree id, the action expected, each answer's cost): the rest goes to `<report-root>/a-savoir-<loop>.md`.
+   A phase transition that ends no lot, closing milestones aside, writes NOTHING in the chat —
    no recap of a report, no "slot 2 is building", no decision
    explained: the turn ends on the spawn. A reply is a summary line
    (with its counter), a 🐢, a 🔧, or the answer to the user's own
@@ -508,12 +515,12 @@ lane's passes until 5:
    `git fetch origin && git switch --detach origin/<integration>`,
    `lane-head: <its sha> <the previous one>` (none: `git merge-base
    origin/<default> HEAD`), then, launch pack's closing env, `hooks/slot.sh
-   env-check ci/check` (exit 2 names the unset: a brake), then ONE
-   `run_in_background` command: `ci/check; ci/e2e HEAD <the e2e
-   specs added or modified over lane-head:'s range> --repeat-each 3`
-   (none: skipped), logs `<closing>/check-<pass>.log` and
-   `<closing>/flaky-<pass>.log`. Exit wakes you: re-spawn the phases that ended `BLOCKED gate`. Lists every red; replays only what changed. Beside it, ONE
-   Monitor (`timeout_ms` max, re-armed at expiry, TaskStop at the
+   env-check ci/check` (exit 2 names the unset: a brake), then
+   `ci/check`, at its exit `ci/e2e HEAD <the e2e specs added or
+   modified over lane-head:'s range> --repeat-each 3` (none: skipped),
+   each its own `run_in_background` command (one after `ci/check` in its shell never runs), logs `<closing>/check-<pass>.log` and
+   `<closing>/flaky-<pass>.log`. The second's exit wakes you: re-spawn the phases that ended `BLOCKED gate`. Lists every red; replays only what changed. Beside it, ONE
+   Monitor (`timeout_ms` 1200000, re-armed at expiry, TaskStop at the
    pass's verdict, `CLOSED` or replay): `hooks/reds.sh <closing>/reds-<pass>.seen <lane worktree>/e2e` on both
    logs and `<closing>/qa/reds-<pass>.md`; each event → 4 at once. Either log without
    its result line (`check: green`/`check: red:`, Playwright's summary) = refusal: brake (§ Slowness), replay 2.
@@ -539,8 +546,8 @@ lane's passes until 5:
    `<closing>/fix-<k>` with `issue.md` = its rows (`merge-gate.sh` reads them; a gate red: its line), `contract.md` = `## Tests modifiés`; handed
    paths and row ids (`<file stem>:<row>`), no row text (tests: BUILDER.md § ship). Pack (test
    guard), review (MERGEABLE: its `ship` fixes nothing more, its minors and nits under `## Constats non payés`, no new round), deliver, merge queue like any round; step 4 checks
-   MR, reviewer, disposition table only. A fix lot replays once only its
-   handed red rows (e2e: its specs on its branch, `--repeat-each 3` when named unstable), and its new tests once on `origin/<integration>` before the fix (green there = not a fix), before deliver — ONE `loop-mechanic`, the exact command, never the builder (its hook refuses) — never the full gate nor the e2e tier; no bisect, no retry: an unstable red is a red, its cause paid.
+   MR, reviewer, disposition table and a `replay.log` showing the handed rows green on the branch (and the new tests red before the fix) only (none: back to that replay). A fix lot replays once only its
+   handed red rows (e2e: its specs on its branch, `--repeat-each 3` when named unstable), and its new tests once on `origin/<integration>` before the fix (green there = not a fix), before deliver — ONE `loop-mechanic`, each exact command teed to `<report dir>/replay.log` (pre-fix run first), never the builder (its hook refuses) — never the full gate nor the e2e tier; no bisect, no retry: an unstable red is a red, its cause paid.
    No cap on passes. Fix lot failed, not converged, or every row
    refuted (no MR) → 🐢 naming it, closing waits for the user, except a refuted mockup gap, one without a validated mockup, or an issue rewritten after its lot:
    `/issue` (`needs-triage`), `<row id> → #<m> <its url>` in `qa/deferred.md`, closing goes on. No fix reaches `<integration>` outside this path.
